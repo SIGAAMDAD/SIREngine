@@ -146,6 +146,31 @@ static bool sirCookRun( const std::filesystem::path& sRoot )
 	                    "DXIL recipe" ) ) {
 		return false;
 	}
+	request.eBackend = SIR_GRAPHICS_BACKEND_D3D9;
+	request.nStage = SIR_GRAPHICS_STAGE_VERTEX;
+	request.nShaderMajor = 2;
+	if ( !sirCookCheck( sirShaderCookPreprocess( request, &second, &sError ) == SIR_SHADER_COOK_OK && second.sProfile == "vs_2_0" &&
+	                        !second.bSpirv,
+	                    "D3D9 SM2 vertex profile" ) ) {
+		return false;
+	}
+	request.nStage = SIR_GRAPHICS_STAGE_FRAGMENT;
+	request.nShaderMajor = 3;
+	if ( !sirCookCheck( sirShaderCookPreprocess( request, &second, &sError ) == SIR_SHADER_COOK_OK && second.sProfile == "ps_3_0",
+	                    "D3D9 SM3 fragment profile" ) ) {
+		return false;
+	}
+	request.nShaderMajor = 4;
+	if ( !sirCookCheck( sirShaderCookPreprocess( request, &second, &sError ) == SIR_SHADER_COOK_UNSUPPORTED,
+	                    "reject unsupported D3D9 SM4" ) ) {
+		return false;
+	}
+	request.nShaderMajor = 0;
+	request.nStage = SIR_GRAPHICS_STAGE_COMPUTE;
+	if ( !sirCookCheck( sirShaderCookPreprocess( request, &second, &sError ) == SIR_SHADER_COOK_UNSUPPORTED, "reject D3D9 compute" ) ) {
+		return false;
+	}
+	request.nStage = SIR_GRAPHICS_STAGE_COMPUTE;
 	request.eBackend = SIR_GRAPHICS_BACKEND_OPENGL;
 	if ( !sirCookCheck( sirShaderCookPreprocess( request, &second, &sError ) == SIR_SHADER_COOK_UNSUPPORTED && second.szFiles.empty(),
 	                    "GL requires cross compiler" ) ) {

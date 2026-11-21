@@ -84,17 +84,35 @@ static int sirCookRunCompiler( const std::vector<std::string>& szArguments )
 #endif
 }
 
-static bool sirCookValidateBinary( const std::filesystem::path& sBinary, bool bSpirv )
+static bool sirCookValidateBinary( const std::filesystem::path& sBinary, bool bSpirv, const std::string& sProfile, uint32_t nStage )
 {
+	const bool bD3D9 = sProfile.size() == 6 && sProfile[3] != '6';
 	std::error_code eError;
 	const uintmax_t nBytes = std::filesystem::file_size( sBinary, eError );
-	if ( eError || nBytes < 32 || nBytes > ( 64U << 20 ) || ( bSpirv && nBytes % 4 != 0 ) ) {
+	if ( eError || nBytes < ( bD3D9 ? 8U : 32U ) || nBytes > ( bD3D9 ? ( 1U << 20 ) : ( 64U << 20 ) ) ||
+	     ( ( bSpirv || bD3D9 ) && nBytes % 4 != 0 ) ) {
 		return false;
 	}
 	std::ifstream stream( sBinary, std::ios::binary );
 	char szMagic[4] = {};
 	stream.read( szMagic, sizeof( szMagic ) );
-	return stream.good() && ( bSpirv ? std::memcmp( szMagic, "\x03\x02\x23\x07", 4 ) == 0 : std::memcmp( szMagic, "DXBC", 4 ) == 0 );
+	if ( !stream ) {
+		return false;
+	}
+	if ( !bD3D9 ) {
+		return bSpirv ? std::memcmp( szMagic, "\x03\x02\x23\x07", 4 ) == 0 : std::memcmp( szMagic, "DXBC", 4 ) == 0;
+	}
+	const uint32_t nFirst = ( uint32_t )( unsigned char )szMagic[0] | ( ( uint32_t )( unsigned char )szMagic[1] << 8 ) |
+	                        ( ( uint32_t )( unsigned char )szMagic[2] << 16 ) | ( ( uint32_t )( unsigned char )szMagic[3] << 24 );
+	const uint32_t nExpected = nStage == SIR_GRAPHICS_STAGE_VERTEX ? 0xfffe0000U : 0xffff0000U;
+	if ( ( nFirst & 0xffff0000U ) != nExpected || ( nFirst & 0xffU ) != 0 ||
+	     ( ( nFirst >> 8 ) & 0xffU ) != ( uint32_t )( sProfile[3] - '0' ) ) {
+		return false;
+	}
+	stream.seekg( ( std::streamoff )nBytes - 4 );
+	char szEnd[4] = {};
+	stream.read( szEnd, sizeof( szEnd ) );
+	return stream.good() && ( unsigned char )szEnd[0] == 0xff && ( unsigned char )szEnd[1] == 0xff && szEnd[2] == 0 && szEnd[3] == 0;
 }
 
 static bool sirCookParseCommand( int nArgs, const char *const *pszArgs, sirShaderCookRequest_t *pRequest, std::filesystem::path *pCompiler,
@@ -119,7 +137,13 @@ static bool sirCookParseCommand( int nArgs, const char *const *pszArgs, sirShade
 		} else if ( sFlag == "--backend" ) {
 			pRequest->eBackend = sValue == "vulkan"  ? SIR_GRAPHICS_BACKEND_VULKAN
 			                     : sValue == "d3d12" ? SIR_GRAPHICS_BACKEND_D3D12
+			                     : sValue == "d3d9"  ? SIR_GRAPHICS_BACKEND_D3D9
 			                                         : SIR_GRAPHICS_BACKEND_AUTO;
+		} else if ( sFlag == "--shader-model" ) {
+			if ( sValue != "2" && sValue != "3" ) {
+				return false;
+			}
+			pRequest->nShaderMajor = sValue == "2" ? 2 : 3;
 		} else if ( sFlag == "--stage" ) {
 			pRequest->nStage = sValue == "vertex"     ? SIR_GRAPHICS_STAGE_VERTEX
 			                   : sValue == "fragment" ? SIR_GRAPHICS_STAGE_FRAGMENT
@@ -150,15 +174,15 @@ int main( int nArgs, const char *const *pszArgs )
 	std::filesystem::path sCompiler;
 	std::filesystem::path sOutput;
 	if ( !sirCookParseCommand( nArgs, pszArgs, &request, &sCompiler, &sOutput ) ) {
-		std::fprintf( stderr, "Usage: SIRShaderCooker --root dir --source relative.hlsl --entry name --backend vulkan|d3d12 "
-		                      "--stage compute|vertex|fragment|geometry|hull|domain|mesh|task --compiler /abs/path/dxc "
-		                      "--output file [--define NAME=VALUE]\n" );
+		std::fprintf( stderr, "Usage: SIRShaderCooker --root dir --source relative.hlsl --entry name --backend vulkan|d3d12|d3d9 "
+		                      "--stage compute|vertex|fragment|geometry|hull|domain|mesh|task --compiler /abs/path/dxc-or-fxc "
+		                      "--output file [--shader-model 2|3] [--define NAME=VALUE]\n" );
 		return 2;
 	}
 	std::error_code eError;
 	sCompiler = std::filesystem::canonical( sCompiler, eError );
 	if ( eError || !std::filesystem::is_regular_file( sCompiler ) ) {
-		std::fprintf( stderr, "ShaderCooker: offline DXC executable missing\n" );
+		std::fprintf( stderr, "ShaderCooker: offline compiler executable missing\n" );
 		return 3;
 	}
 	const uint64_t nCompilerFingerprint = sirCookFileFingerprint( sCompiler );
@@ -190,14 +214,18 @@ int main( int nArgs, const char *const *pszArgs )
 			return 5;
 		}
 	}
-	std::vector<std::string> szArgs = { sCompiler.string(),   "-nologo", "-HV",           "2021", "-O3", "-T", manifest.sProfile, "-E",
-	                                    manifest.sEntryPoint, "-Fo",     sOutput.string() };
+	const bool bD3D9 = request.eBackend == SIR_GRAPHICS_BACKEND_D3D9;
+	std::vector<std::string> szArgs =
+	    bD3D9 ? std::vector<std::string>{ sCompiler.string(),   "/nologo", "/O3",           "/T", manifest.sProfile, "/E",
+		                                  manifest.sEntryPoint, "/Fo",     sOutput.string() }
+		      : std::vector<std::string>{ sCompiler.string(),   "-nologo", "-HV",           "2021", "-O3", "-T", manifest.sProfile, "-E",
+		                                  manifest.sEntryPoint, "-Fo",     sOutput.string() };
 	if ( manifest.bSpirv ) {
 		szArgs.push_back( "-spirv" );
 		szArgs.push_back( "-fspv-target-env=vulkan1.3" );
 	}
 	for ( const sirShaderCookDefine_t& definition : manifest.szDefines ) {
-		szArgs.push_back( "-D" );
+		szArgs.push_back( bD3D9 ? "/D" : "-D" );
 		szArgs.push_back( definition.sName + "=" + definition.sValue );
 	}
 	szArgs.push_back( sInput.string() );
@@ -205,19 +233,24 @@ int main( int nArgs, const char *const *pszArgs )
 	std::filesystem::remove( sInput, eError );
 	if ( nCompilerResult != 0 ) {
 		std::filesystem::remove( sOutput, eError );
-		std::fprintf( stderr, "ShaderCooker: DXC exited with %d\n", nCompilerResult );
+		std::fprintf( stderr, "ShaderCooker: offline compiler exited with %d\n", nCompilerResult );
 		return 6;
 	}
 	const uint64_t nBinaryHash = sirCookFileFingerprint( sOutput );
-	if ( nBinaryHash == 0 || !sirCookValidateBinary( sOutput, manifest.bSpirv ) ) {
+	if ( nBinaryHash == 0 || !sirCookValidateBinary( sOutput, manifest.bSpirv, manifest.sProfile, request.nStage ) ) {
 		std::filesystem::remove( sOutput, eError );
-		std::fprintf( stderr, "ShaderCooker: DXC did not emit a valid target binary\n" );
+		std::fprintf( stderr, "ShaderCooker: offline compiler did not emit a valid target binary\n" );
 		return 7;
 	}
 	std::ofstream meta( sManifest, std::ios::binary | std::ios::trunc );
 	meta << "SIR_SHADER_COOK_RECIPE=1\n"
 	     << "BACKEND=" << ( uint32_t )request.eBackend << '\n'
 	     << "PROFILE=" << manifest.sProfile << '\n'
+	     << "BINARY_FORMAT="
+	     << ( bD3D9             ? "D3D9_TOKENS"
+	          : manifest.bSpirv ? "SPIRV"
+	                            : "DXBC" )
+	     << '\n'
 	     << "ENTRY=" << manifest.sEntryPoint << '\n'
 	     << "SOURCE=" << manifest.nSourceHash << '\n'
 	     << "INCLUDES=" << manifest.nClosureHash << '\n'

@@ -11,6 +11,10 @@ add_library(SIRVulkan STATIC
     SIRVulkanPools.cpp
     SIRVulkanShaders.cpp
     SIRVulkanPipelines.cpp
+    SIRVulkanRaster.cpp
+    SIRVulkanDraw.cpp
+    SIRVulkanDescriptors.cpp
+    SIRVulkanBindings.cpp
     SIRVulkanCommands.cpp
     SIRVulkanRecordedCommands.cpp
     SIRVulkanGraphics.cpp

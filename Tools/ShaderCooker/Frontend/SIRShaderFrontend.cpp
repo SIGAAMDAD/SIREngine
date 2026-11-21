@@ -469,6 +469,18 @@ sirShaderCookResult_t sirShaderCookPreprocess( const sirShaderCookRequest_t& req
 		*pDiagnostic = "shader target or stage is unsupported";
 		return eTarget;
 	}
+	if ( request.eBackend == SIR_GRAPHICS_BACKEND_D3D9 ) {
+		if ( request.nShaderMajor != 0 && request.nShaderMajor != 2 && request.nShaderMajor != 3 ) {
+			*pDiagnostic = "D3D9 supports only shader models 2 or 3";
+			return SIR_SHADER_COOK_UNSUPPORTED;
+		}
+		if ( request.nShaderMajor == 2 ) {
+			pManifest->sProfile[3] = '2';
+		}
+	} else if ( request.nShaderMajor != 0 ) {
+		*pDiagnostic = "shader model override unsupported for this backend";
+		return SIR_SHADER_COOK_UNSUPPORTED;
+	}
 	pManifest->bSpirv = bSpirv;
 	pManifest->nRecipeVersion = SIR_COOK_RECIPE_VERSION;
 	pManifest->sEntryPoint = request.sEntryPoint;

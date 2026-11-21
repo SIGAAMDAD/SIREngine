@@ -57,6 +57,10 @@ public:
 	sirGraphicsResult_t initialize( bool bSoftware, const sirGraphicsDeviceCreateDesc_t& desc,
 	                                const sirD3D12NativeDeviceConfig_t& nativeConfig,
 	                                const sirD3D12SealedPoolConfig_t *pSealedPools ) noexcept;
+	// Native-only cache persistence, keeping the shared rendering ABI unchanged.
+	sirGraphicsResult_t loadNativePipelineCache( const void *pData, uint64_t nBytes ) noexcept;
+	sirGraphicsResult_t serializeNativePipelineCache( void *pData, uint64_t *pBytes ) const noexcept;
+	sirGraphicsResult_t queryNativePipelineCacheStats( sirD3D12PipelineCacheStats_t *pStats ) const noexcept;
 	// Native-only snapshot for debug tools and hardware test harnesses.
 	sirGraphicsResult_t queryNativeDiagnostics( sirD3D12DiagnosticSnapshot_t *pSnapshot ) noexcept;
 	sirGraphicsResult_t queryNativeAdapterInfo( sirD3D12AdapterInfo_t *pInfo ) const noexcept;

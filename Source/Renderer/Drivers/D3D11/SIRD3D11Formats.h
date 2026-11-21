@@ -47,5 +47,7 @@ sirGraphicsResult_t sirD3D11ValidateTextureSupport( const sirGraphicsTextureDesc
 sirGraphicsResult_t sirD3D11QueryFormatSupport( void *pNativeDevice, sirGraphicsFormat_t eFormat,
                                                 sirD3D11FormatSupport_t *pSupport ) noexcept;
 uint32_t sirD3D11GetMaxSampleCount( const sirD3D11FormatSupport_t *pSupport ) noexcept;
+// Native DXGI_FORMAT numeric value; the signature remains platform-neutral.
+uint32_t sirD3D11GetNativeFormatCode( sirGraphicsFormat_t eFormat ) noexcept;
 
 #endif // __SIRENGINE_SIRD3D11FORMATS_H__

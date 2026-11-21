@@ -18,16 +18,15 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <SIRPCH.hpp>
 
-// clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
-	#pragma once
+#pragma once
 #endif
-// clang-format on
 
 #include <Renderer/SIRRenderingDevice.h>
 #include <Renderer/SIRGraphicsABIOperations.h>
 #include <Renderer/Drivers/D3D11/SIRD3D11FeatureLevels.h>
 #include <Renderer/Drivers/D3D11/SIRD3D11Formats.h>
+#include <Renderer/Drivers/D3D11/SIRD3D11Handles.h>
 
 // The public class holds opaque, singly owned COM references. No Windows SDK
 // types cross this header. Device creation occurs in the driver implementation.
@@ -89,6 +88,10 @@ private:
 	void *m_pNativeDevice = nullptr;
 	void *m_pImmediateContext = nullptr;
 	sirD3D11FeatureProfile_t m_profile = {};
+	SIRD3D11Handles m_handles;
+	uint64_t m_nPeakCommittedBytes = 0;
+	uint64_t m_nUploadMappedBytes = 0;
+	uint64_t m_nReadbackMappedBytes = 0;
 	uint64_t m_nResidentBudgetBytes = 0;
 	uint32_t m_nFramesInFlight = 0;
 	uint32_t m_nDeviceGeneration = 0;

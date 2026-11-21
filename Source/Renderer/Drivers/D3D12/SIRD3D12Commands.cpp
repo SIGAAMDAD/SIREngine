@@ -14,6 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Renderer/Drivers/D3D12/SIRD3D12Commands.h>
+#include <Renderer/Drivers/D3D12/SIRD3D12Validation.h>
 #include <Renderer/SIRGraphicsValidation.h>
 #include <limits.h>
 
@@ -403,6 +404,9 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 	// Prevalidate the entire batch before retaining references or encoding GPU work.
 	// A later failure must not leave earlier transitions recorded.
 	sirGraphicsHandle_t szPending[s_nReferenceCapacity] = {};
+	const sirD3D12ResourceSlot_t *szSlots[64] = {};
+	const sirD3D12ResourceSlot_t *szAliasedSlots[64] = {};
+	uint32_t szPlaneCounts[64] = {};
 	uint32_t nPendingCount = 0;
 	for ( uint32_t iPreflight = 0; iPreflight < nCount; ++iPreflight ) {
 		const sirGraphicsBarrier_t& source = pBarriers[iPreflight];
@@ -413,6 +417,7 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 		if ( source.eType > SIR_GRAPHICS_BARRIER_ALIAS ) {
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
+		szSlots[iPreflight] = pSlot;
 		if ( m_eQueue == SIR_GRAPHICS_QUEUE_COPY && source.eType != SIR_GRAPHICS_BARRIER_TRANSITION ) {
 			return SIR_GRAPHICS_UNSUPPORTED;
 		}
@@ -452,6 +457,7 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 			if ( pAliased == nullptr || pAliased->getNativeResource() == nullptr ) {
 				return SIR_GRAPHICS_INVALID_HANDLE;
 			}
+			szAliasedSlots[iPreflight] = pAliased;
 		}
 		const bool bEnhancedTexture = m_pEnhancedCommands != nullptr && pSlot->eMemory == SIR_GRAPHICS_MEMORY_GPU_LOCAL &&
 		                              ( source.eType == SIR_GRAPHICS_BARRIER_TRANSITION || source.eType == SIR_GRAPHICS_BARRIER_UAV );
@@ -467,6 +473,7 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 			     formatInfo.PlaneCount == 0 ) {
 				return SIR_GRAPHICS_UNSUPPORTED;
 			}
+			szPlaneCounts[iPreflight] = formatInfo.PlaneCount;
 		}
 		const uint32_t nBarrierReferences = source.eType == SIR_GRAPHICS_BARRIER_ALIAS ? 2 : 1;
 		for ( uint32_t iHandle = 0; iHandle < nBarrierReferences; ++iHandle ) {
@@ -508,77 +515,26 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 			return ePinned;
 		}
 	}
+	// Every native call below is void. The entire batch and its resource lifetimes
+	// have been validated and pinned, so encoding cannot return partial success.
 	for ( uint32_t iBarrier = 0; iBarrier < nCount; ++iBarrier ) {
 		const sirGraphicsBarrier_t& source = pBarriers[iBarrier];
-		const sirD3D12ResourceSlot_t *pSlot = m_pResources->querySlot( source.hResource );
-		if ( pSlot == nullptr || pSlot->getNativeResource() == nullptr ) {
-			return SIR_GRAPHICS_INVALID_HANDLE;
-		}
-		if ( source.eType > SIR_GRAPHICS_BARRIER_ALIAS ) {
-			return SIR_GRAPHICS_INVALID_ARGUMENT;
-		}
-		if ( m_eQueue == SIR_GRAPHICS_QUEUE_COPY && source.eType != SIR_GRAPHICS_BARRIER_TRANSITION ) {
-			return SIR_GRAPHICS_UNSUPPORTED;
-		}
+		const sirD3D12ResourceSlot_t *pSlot = szSlots[iBarrier];
 		D3D12_RESOURCE_BARRIER native = {};
 		native.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
 		if ( source.eType == SIR_GRAPHICS_BARRIER_TRANSITION ) {
-			if ( source.eAfter == SIR_GRAPHICS_STATE_UNDEFINED || source.eBefore > SIR_GRAPHICS_STATE_PRESENT ||
-			     source.eAfter > SIR_GRAPHICS_STATE_PRESENT || !sirD3D12ValidResourceState( pSlot->eType, source.eBefore ) ||
-			     !sirD3D12ValidResourceState( pSlot->eType, source.eAfter ) ) {
-				return SIR_GRAPHICS_INVALID_ARGUMENT;
-			}
-			if ( ( source.eBefore != SIR_GRAPHICS_STATE_UNDEFINED && !sirD3D12ValidQueueState( m_eQueue, source.eBefore ) ) ||
-			     !sirD3D12ValidQueueState( m_eQueue, source.eAfter ) ) {
-				return SIR_GRAPHICS_UNSUPPORTED;
-			}
-			const uint32_t nMips = pSlot->eType == SIR_GRAPHICS_HANDLE_TEXTURE ? pSlot->nMips : 1;
-			const uint32_t nLayers =
-			    pSlot->eType == SIR_GRAPHICS_HANDLE_TEXTURE && pSlot->eDimension != SIR_GRAPHICS_TEXTURE_3D ? pSlot->nLayers : 1;
-			if ( pSlot->eType == SIR_GRAPHICS_HANDLE_BUFFER ) {
-				if ( source.nBaseMip != 0 || source.nMipCount != 0 || source.nBaseLayer != 0 || source.nLayerCount != 0 ) {
-					return SIR_GRAPHICS_INVALID_ARGUMENT;
-				}
-			} else if ( !sirGraphicsTextureBarrierRangeValid( source, nMips, nLayers ) ) {
-				return SIR_GRAPHICS_INVALID_ARGUMENT;
-			}
-			// Discard-first-use of owned default-heap resources maps their
-			// native COMMON creation state in legacy D3D12; enhanced barriers
-			// admit NO_ACCESS/UNDEFINED before their first native use.
-			if ( source.eBefore == SIR_GRAPHICS_STATE_UNDEFINED &&
-			     ( pSlot->eMemory != SIR_GRAPHICS_MEMORY_GPU_LOCAL || pSlot->pExternalResource != nullptr ) ) {
-				return SIR_GRAPHICS_UNSUPPORTED;
-			}
 			native.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 			native.Transition.pResource = pSlot->getNativeResource();
 			native.Transition.StateBefore = sirD3D12BarrierState( source.eBefore, m_eQueue );
 			native.Transition.StateAfter = sirD3D12BarrierState( source.eAfter, m_eQueue );
 			native.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 		} else if ( source.eType == SIR_GRAPHICS_BARRIER_UAV ) {
-			if ( ( pSlot->nUsage & SIR_GRAPHICS_USAGE_STORAGE ) == 0 ) {
-				return SIR_GRAPHICS_INVALID_ARGUMENT;
-			}
 			native.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
 			native.UAV.pResource = pSlot->getNativeResource();
 		} else {
-			if ( m_eQueue == SIR_GRAPHICS_QUEUE_COPY ) {
-				return SIR_GRAPHICS_UNSUPPORTED;
-			}
-			const sirD3D12ResourceSlot_t *pAliased = m_pResources->querySlot( source.hAliasedResource );
-			if ( pAliased == nullptr || pAliased->getNativeResource() == nullptr ) {
-				return SIR_GRAPHICS_INVALID_HANDLE;
-			}
-			const sirGraphicsResult_t eAliased = pin( source.hAliasedResource );
-			if ( eAliased != SIR_GRAPHICS_SUCCESS ) {
-				return eAliased;
-			}
 			native.Type = D3D12_RESOURCE_BARRIER_TYPE_ALIASING;
 			native.Aliasing.pResourceBefore = pSlot->getNativeResource();
-			native.Aliasing.pResourceAfter = pAliased->getNativeResource();
-		}
-		const sirGraphicsResult_t ePinned = pin( source.hResource );
-		if ( ePinned != SIR_GRAPHICS_SUCCESS ) {
-			return ePinned;
+			native.Aliasing.pResourceAfter = szAliasedSlots[iBarrier]->getNativeResource();
 		}
 		// A resource created in a legacy non-COMMON heap state must continue using
 		// the legacy barrier API. Only DEFAULT GPU memory uses this enhanced path.
@@ -596,13 +552,6 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 			D3D12_BARRIER_GROUP group = {};
 			group.NumBarriers = 1;
 			if ( pSlot->eType == SIR_GRAPHICS_HANDLE_TEXTURE ) {
-				D3D12_FEATURE_DATA_FORMAT_INFO formatInfo = {};
-				formatInfo.Format = pSlot->getNativeResource()->GetDesc().Format;
-				if ( FAILED( m_pNative->getNativeDevice()->CheckFeatureSupport( D3D12_FEATURE_FORMAT_INFO, &formatInfo,
-				                                                                sizeof( formatInfo ) ) ) ||
-				     formatInfo.PlaneCount == 0 ) {
-					return SIR_GRAPHICS_UNSUPPORTED;
-				}
 				D3D12_TEXTURE_BARRIER barrier = {};
 				barrier.SyncBefore = eSyncBefore;
 				barrier.SyncAfter = eSyncAfter;
@@ -622,7 +571,7 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 					: source.nLayerCount == 0 ? ( pSlot->eDimension == SIR_GRAPHICS_TEXTURE_3D ? 1 : pSlot->nLayers ) - source.nBaseLayer
 					                          : source.nLayerCount;
 				barrier.Subresources.FirstPlane = 0;
-				barrier.Subresources.NumPlanes = formatInfo.PlaneCount;
+				barrier.Subresources.NumPlanes = szPlaneCounts[iBarrier];
 				group.Type = D3D12_BARRIER_TYPE_TEXTURE;
 				group.pTextureBarriers = &barrier;
 				m_pEnhancedCommands->Barrier( 1, &group );
@@ -644,18 +593,11 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 		if ( source.eType == SIR_GRAPHICS_BARRIER_TRANSITION && pSlot->eType == SIR_GRAPHICS_HANDLE_TEXTURE &&
 		     ( source.nBaseMip != 0 || source.nBaseLayer != 0 || ( source.nMipCount != 0 && source.nMipCount != pSlot->nMips ) ||
 		       ( source.nLayerCount != 0 && source.nLayerCount != pSlot->nLayers ) ) ) {
-			D3D12_FEATURE_DATA_FORMAT_INFO formatInfo = {};
-			formatInfo.Format = pSlot->getNativeResource()->GetDesc().Format;
-			if ( FAILED(
-			         m_pNative->getNativeDevice()->CheckFeatureSupport( D3D12_FEATURE_FORMAT_INFO, &formatInfo, sizeof( formatInfo ) ) ) ||
-			     formatInfo.PlaneCount == 0 ) {
-				return SIR_GRAPHICS_UNSUPPORTED;
-			}
 			const uint32_t nMips = pSlot->nMips;
 			const uint32_t nLayers = pSlot->eDimension == SIR_GRAPHICS_TEXTURE_3D ? 1 : pSlot->nLayers;
 			const uint32_t nMipCount = source.nMipCount == 0 ? nMips - source.nBaseMip : source.nMipCount;
 			const uint32_t nLayerCount = source.nLayerCount == 0 ? nLayers - source.nBaseLayer : source.nLayerCount;
-			for ( uint32_t iPlane = 0; iPlane < formatInfo.PlaneCount; ++iPlane ) {
+			for ( uint32_t iPlane = 0; iPlane < szPlaneCounts[iBarrier]; ++iPlane ) {
 				for ( uint32_t iLayer = source.nBaseLayer; iLayer < source.nBaseLayer + nLayerCount; ++iLayer ) {
 					for ( uint32_t iMip = source.nBaseMip; iMip < source.nBaseMip + nMipCount; ++iMip ) {
 						native.Transition.Subresource = iMip + iLayer * nMips + iPlane * nMips * nLayers;
@@ -689,12 +631,19 @@ sirGraphicsResult_t SIRD3D12CommandList::copyBuffer( sirGraphicsHandle_t hDestin
 	     hDestination.nSlot == hSource.nSlot ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
+	const uint32_t nOriginalReferenceCount = m_nReferenceCount;
 	sirGraphicsResult_t ePinned = pin( hDestination );
 	if ( ePinned != SIR_GRAPHICS_SUCCESS ) {
 		return ePinned;
 	}
 	ePinned = pin( hSource );
 	if ( ePinned != SIR_GRAPHICS_SUCCESS ) {
+		// Retaining the source may fail at the bounded command-reference capacity.
+		// Do not keep a newly pinned destination if no copy was recorded.
+		while ( m_nReferenceCount > nOriginalReferenceCount ) {
+			const sirGraphicsHandle_t& ref = m_szReferences[--m_nReferenceCount];
+			m_pResources->releaseCommandReference( ref );
+		}
 		return ePinned;
 	}
 	m_pCommands->CopyBufferRegion( pDst->getNativeResource(), nDstOffset, pSrc->getNativeResource(), nSrcOffset, nBytes );
@@ -722,16 +671,10 @@ sirGraphicsResult_t SIRD3D12CommandList::copyBufferTexture( const sirGraphicsBuf
 	}
 	const uint32_t nMipWidth = pTexture->nWidth >> copy.nMip ? pTexture->nWidth >> copy.nMip : 1;
 	const uint32_t nMipHeight = pTexture->nHeight >> copy.nMip ? pTexture->nHeight >> copy.nMip : 1;
-	if ( copy.nX > nMipWidth || copy.nY > nMipHeight || copy.nWidth > nMipWidth - copy.nX || copy.nHeight > nMipHeight - copy.nY ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
-	}
-	if ( copy.nBytesPerRow == 0 || copy.nBytesPerRow % D3D12_TEXTURE_DATA_PITCH_ALIGNMENT != 0 || copy.nRowsPerImage != copy.nHeight ||
-	     copy.nBufferOffset % D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT != 0 || ( uint64_t )copy.nWidth * nTexelBytes > copy.nBytesPerRow ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
-	}
-	const uint64_t nNeeded = ( uint64_t )copy.nBytesPerRow * copy.nHeight;
-	if ( copy.nBufferOffset > pBuffer->nSizeBytes || nNeeded > pBuffer->nSizeBytes - copy.nBufferOffset ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	const sirD3D12CopyLimits_t limits = { nMipWidth, nMipHeight, nTexelBytes, pBuffer->nSizeBytes };
+	const sirGraphicsResult_t eLayout = sirD3D12ValidateCopyRegion( copy, limits );
+	if ( eLayout != SIR_GRAPHICS_SUCCESS ) {
+		return eLayout;
 	}
 	if ( copy.bBufferToTexture ) {
 		if ( ( pBuffer->nUsage & SIR_GRAPHICS_USAGE_COPY_SOURCE ) == 0 ||
@@ -742,12 +685,18 @@ sirGraphicsResult_t SIRD3D12CommandList::copyBufferTexture( const sirGraphicsBuf
 	            ( pBuffer->nUsage & SIR_GRAPHICS_USAGE_COPY_DESTINATION ) == 0 ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
+	const uint32_t nOriginalReferenceCount = m_nReferenceCount;
 	sirGraphicsResult_t ePinned = pin( copy.hBuffer );
 	if ( ePinned != SIR_GRAPHICS_SUCCESS ) {
 		return ePinned;
 	}
 	ePinned = pin( copy.hTexture );
 	if ( ePinned != SIR_GRAPHICS_SUCCESS ) {
+		// A failed texture pin leaves no buffer-to-texture copy encoded.
+		while ( m_nReferenceCount > nOriginalReferenceCount ) {
+			const sirGraphicsHandle_t& ref = m_szReferences[--m_nReferenceCount];
+			m_pResources->releaseCommandReference( ref );
+		}
 		return ePinned;
 	}
 	D3D12_TEXTURE_COPY_LOCATION placed = {};
@@ -783,30 +732,55 @@ sirGraphicsResult_t SIRD3D12CommandList::beginRenderPass( const sirGraphicsRende
 	if ( pass.nColorCount > D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT || ( pass.nColorCount != 0 && pass.pColors == nullptr ) ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	D3D12_CPU_DESCRIPTOR_HANDLE szColors[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
-	D3D12_CPU_DESCRIPTOR_HANDLE depth = {};
-	for ( uint32_t iColor = 0; iColor < pass.nColorCount; ++iColor ) {
-		const sirGraphicsColorAttachment_t& attachment = pass.pColors[iColor];
-		if ( !m_pResources->queryDescriptor( attachment.hView, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, &szColors[iColor] ) ) {
-			return SIR_GRAPHICS_INVALID_HANDLE;
-		}
-		const sirGraphicsResult_t ePinned = pin( attachment.hView );
-		if ( ePinned != SIR_GRAPHICS_SUCCESS ) {
-			return ePinned;
-		}
-	}
 	const bool bDepth = pass.hDepthView.nGeneration != 0;
 	if ( pass.nColorCount == 0 && !bDepth ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( bDepth ) {
-		if ( !m_pResources->queryDescriptor( pass.hDepthView, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, &depth ) ) {
+	if ( pass.bClearDepth && ( !bDepth || !( pass.fClearDepth >= 0.0f && pass.fClearDepth <= 1.0f ) || pass.nClearStencil > UINT8_MAX ) ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	// Validate every color and depth descriptor before retaining any view. An
+	// invalid later attachment must not leave an earlier view pinned.
+	D3D12_CPU_DESCRIPTOR_HANDLE szColors[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
+	D3D12_CPU_DESCRIPTOR_HANDLE depth = {};
+	for ( uint32_t iColor = 0; iColor < pass.nColorCount; ++iColor ) {
+		if ( !m_pResources->queryDescriptor( pass.pColors[iColor].hView, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, &szColors[iColor] ) ) {
 			return SIR_GRAPHICS_INVALID_HANDLE;
 		}
-		const sirGraphicsResult_t ePinned = pin( pass.hDepthView );
-		if ( ePinned != SIR_GRAPHICS_SUCCESS ) {
-			return ePinned;
+	}
+	if ( bDepth && !m_pResources->queryDescriptor( pass.hDepthView, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, &depth ) ) {
+		return SIR_GRAPHICS_INVALID_HANDLE;
+	}
+	bool bStencil = false;
+	if ( bDepth ) {
+		const sirD3D12ResourceSlot_t *pDepthView = m_pResources->querySlot( pass.hDepthView );
+		const sirD3D12ResourceSlot_t *pDepthResource = pDepthView != nullptr ? m_pResources->querySlot( pDepthView->hParent ) : nullptr;
+		if ( pDepthResource == nullptr ) {
+			return SIR_GRAPHICS_INVALID_HANDLE;
 		}
+		bStencil = pDepthResource->eFormat == SIR_GRAPHICS_FORMAT_D24_UNORM_S8_UINT;
+		if ( pass.bClearDepth && !bStencil && pass.nClearStencil != 0 ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+	}
+	const uint32_t nOriginalReferenceCount = m_nReferenceCount;
+	sirGraphicsResult_t ePinned = SIR_GRAPHICS_SUCCESS;
+	for ( uint32_t iColor = 0; iColor < pass.nColorCount; ++iColor ) {
+		ePinned = pin( pass.pColors[iColor].hView );
+		if ( ePinned != SIR_GRAPHICS_SUCCESS ) {
+			break;
+		}
+	}
+	if ( ePinned == SIR_GRAPHICS_SUCCESS && bDepth ) {
+		ePinned = pin( pass.hDepthView );
+	}
+	if ( ePinned != SIR_GRAPHICS_SUCCESS ) {
+		// All failing retention paths precede native command encoding.
+		while ( m_nReferenceCount > nOriginalReferenceCount ) {
+			const sirGraphicsHandle_t& ref = m_szReferences[--m_nReferenceCount];
+			m_pResources->releaseCommandReference( ref );
+		}
+		return ePinned;
 	}
 	m_pCommands->OMSetRenderTargets( pass.nColorCount, pass.nColorCount == 0 ? nullptr : szColors, FALSE, bDepth ? &depth : nullptr );
 	for ( uint32_t iColor = 0; iColor < pass.nColorCount; ++iColor ) {
@@ -816,7 +790,9 @@ sirGraphicsResult_t SIRD3D12CommandList::beginRenderPass( const sirGraphicsRende
 		}
 	}
 	if ( bDepth && pass.bClearDepth ) {
-		m_pCommands->ClearDepthStencilView( depth, D3D12_CLEAR_FLAG_DEPTH, pass.fClearDepth, ( UINT8 )pass.nClearStencil, 0, nullptr );
+		const D3D12_CLEAR_FLAGS eClearFlags =
+		    bStencil ? ( D3D12_CLEAR_FLAGS )( D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL ) : D3D12_CLEAR_FLAG_DEPTH;
+		m_pCommands->ClearDepthStencilView( depth, eClearFlags, pass.fClearDepth, ( UINT8 )pass.nClearStencil, 0, nullptr );
 	}
 	m_bRenderPass = true;
 	return SIR_GRAPHICS_SUCCESS;
@@ -977,9 +953,9 @@ sirGraphicsResult_t SIRD3D12CommandList::setViewport( const sirGraphicsViewport_
 	if ( m_eQueue != SIR_GRAPHICS_QUEUE_DIRECT ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
-	if ( !( viewport.fWidth > 0.0f ) || !( viewport.fHeight > 0.0f ) || viewport.fMinimumDepth < 0.0f || viewport.fMaximumDepth > 1.0f ||
-	     viewport.fMinimumDepth > viewport.fMaximumDepth || scissor.nLeft >= scissor.nRight || scissor.nTop >= scissor.nBottom ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	const sirGraphicsResult_t eViewport = sirD3D12ValidateViewport( viewport, scissor );
+	if ( eViewport != SIR_GRAPHICS_SUCCESS ) {
+		return eViewport;
 	}
 	D3D12_VIEWPORT native = {};
 	native.TopLeftX = viewport.fX;
