@@ -1,258 +1,390 @@
 {
-  "name": "SIREngine VS Code Agent Suite",
-  "date": "2026-11-20",
-  "scope": "Copilot harness workspace instructions, agents, skills and validation",
-  "counts": {
-    "agents": 9,
-    "instructions": 14,
-    "skills": 9,
-    "files_excluding_manifest": 49
-  },
-  "entries": [
+  "edition": "optimized-v2",
+  "created_utc": "2026-11-21",
+  "files": [
+    {
+      "path": ".github/agents/sir-ai-programmer.agent.md",
+      "sha256": "bcd31e6e2f882f9f0f0a14a0bd0f786c34996946641a62bc12c9ed7444ad4dfe"
+    },
+    {
+      "path": ".github/agents/sir-alsa-programmer.agent.md",
+      "sha256": "8ec942e514a660eb7ce39cfa7935c05919213d54870affe9e303e259fc63f360"
+    },
+    {
+      "path": ".github/agents/sir-animation-programmer.agent.md",
+      "sha256": "694bed3eae306a9ad344c3d6d6a6aa227bfbef8940a8e19a349c2edeea05297f"
+    },
     {
       "path": ".github/agents/sir-architect.agent.md",
-      "sha256": "461816fd3c6f57db3407d3df86cb1f336d136f2e05f24ad7b9d9ffbb6c5ead57",
-      "bytes": 894
+      "sha256": "461816fd3c6f57db3407d3df86cb1f336d136f2e05f24ad7b9d9ffbb6c5ead57"
+    },
+    {
+      "path": ".github/agents/sir-assets-programmer.agent.md",
+      "sha256": "e3a6fbd71b7a7f707583fa10527e34cf03de06f3271eaf3f9f536c0078fff922"
+    },
+    {
+      "path": ".github/agents/sir-audio-systems-programmer.agent.md",
+      "sha256": "632580cf24abf63f015167c78fa37d68499406b5987524216d4c59e0f56aada8"
     },
     {
       "path": ".github/agents/sir-build-engineer.agent.md",
-      "sha256": "05a9b309cb7e2ac993d8d234462e9321e96829af62dc0f2d30a1d3f533ac4dc8",
-      "bytes": 786
+      "sha256": "05a9b309cb7e2ac993d8d234462e9321e96829af62dc0f2d30a1d3f533ac4dc8"
+    },
+    {
+      "path": ".github/agents/sir-cinematics-programmer.agent.md",
+      "sha256": "2b5bc156cdf918261955358e0ab5d28d9f4ee7ff072fd5bb50290cb04e2c0f23"
+    },
+    {
+      "path": ".github/agents/sir-d3d10-programmer.agent.md",
+      "sha256": "7d3194e680faa9b4022df135439c309f1221926a56873f932f43b95064c381e6"
+    },
+    {
+      "path": ".github/agents/sir-d3d11-programmer.agent.md",
+      "sha256": "f4e1d72ba9cf880cd94935969788ead95285affc2894857f18a7f91f5a50316c"
+    },
+    {
+      "path": ".github/agents/sir-d3d12-programmer.agent.md",
+      "sha256": "f3fcd58f20d0c4611f45f347c7791caf36c116b02b472733551aaa483ef47862"
+    },
+    {
+      "path": ".github/agents/sir-d3d7-programmer.agent.md",
+      "sha256": "547e6ce2c451968c7ccdb37fa96677e7ff408ab33d08069c9f5086209d9c831a"
+    },
+    {
+      "path": ".github/agents/sir-d3d8-programmer.agent.md",
+      "sha256": "35db5fa0f019d962540634ad43fc28b6d7a2a2cec3aa7c43e61904ac1a2c04fc"
+    },
+    {
+      "path": ".github/agents/sir-d3d9-programmer.agent.md",
+      "sha256": "1ab2a2b2c76b63eff8525a9e3077c20c4220b02fe8c0d473ea8fb85b7f6cd4a3"
     },
     {
       "path": ".github/agents/sir-director.agent.md",
-      "sha256": "bba2bee348357f9b9c5e404537e560e716c395f1da2e83223370d75035d1230c",
-      "bytes": 1881
+      "sha256": "af29e96e18f94bc2ffa25ee9a18e82ba2a762782981925413c4c02a778b9e907"
     },
     {
       "path": ".github/agents/sir-documentarian.agent.md",
-      "sha256": "7fab8d3c871ddbf628a80d80d8951088fa42710812712206e5efd8128e223050",
-      "bytes": 646
+      "sha256": "7fab8d3c871ddbf628a80d80d8951088fa42710812712206e5efd8128e223050"
+    },
+    {
+      "path": ".github/agents/sir-fmod-programmer.agent.md",
+      "sha256": "c5cd2250184f72854b41e4cf21c1ed0f7473026a8cef354d179776cdaac27bc9"
+    },
+    {
+      "path": ".github/agents/sir-game-designer.agent.md",
+      "sha256": "6fc5a4e21adcdcddac57fa83bec7895d56e3c1d25420a1548d252f563cb86d0d"
+    },
+    {
+      "path": ".github/agents/sir-game-systems-programmer.agent.md",
+      "sha256": "0d4a6eae44ecacbdff483c1a9c09c53e2aacb55a135d20ffe460d874765dfb29"
+    },
+    {
+      "path": ".github/agents/sir-gameplay-programmer.agent.md",
+      "sha256": "3b9ce8f5b576e94a95d1db30cf0a25685b18d1f7685490d0e35be9c2874f98b7"
+    },
+    {
+      "path": ".github/agents/sir-gpu-compute-programmer.agent.md",
+      "sha256": "d08c5088ad3299dbba283f5c0bbfbacc67081d74cd862def45d495276079556d"
     },
     {
       "path": ".github/agents/sir-implementer.agent.md",
-      "sha256": "b6dc6eaec0ef797911940ca0f5b491d7fb722ff66ac4d7260e116b847a2e1988",
-      "bytes": 1074
+      "sha256": "2e020fadd7974bf46a2f881d6d858a67b7493c4b68a81598182423ebacd6e7e2"
     },
     {
-      "path": ".github/agents/sir-integration-engineer.agent.md",
-      "sha256": "8176b4db6997b0c987768b5b57d64fb34b14da2ff9fd00e629630e860cff6256",
-      "bytes": 764
+      "path": ".github/agents/sir-input-programmer.agent.md",
+      "sha256": "790fc9f10d00e25819fb86799c8ba80595c3213c2b2b90d25ff997d0b495bf1d"
+    },
+    {
+      "path": ".github/agents/sir-integration-programmer.agent.md",
+      "sha256": "36ff075b6a2ac74c4b31003d8cfd01f01a792c23b3830bd4d91c0ac94f914af0"
+    },
+    {
+      "path": ".github/agents/sir-jobs-programmer.agent.md",
+      "sha256": "0b5fa596f4b2463d773d4a461159feca45385150188a348b14d13b283d5f5e48"
+    },
+    {
+      "path": ".github/agents/sir-level-designer.agent.md",
+      "sha256": "3588ff7735f4a59e8a6e86c952ae87f74c8825ceaba8208d98577782097ad435"
+    },
+    {
+      "path": ".github/agents/sir-memory-programmer.agent.md",
+      "sha256": "386fbb3d7114ba5ed165dafa64a32371e79af59db990427435c65c1d8270010c"
+    },
+    {
+      "path": ".github/agents/sir-mesh-programmer.agent.md",
+      "sha256": "88bc4d39d646639720895086d767ae77254cb922e81417471f738b84db774bce"
+    },
+    {
+      "path": ".github/agents/sir-narrative-designer.agent.md",
+      "sha256": "5719a6995548d48f3cc5bcbf94c8fc3f654f9bdfde57510f56e5a1a1cacb7a1f"
+    },
+    {
+      "path": ".github/agents/sir-narrative-systems-programmer.agent.md",
+      "sha256": "d468e87c4d2423bcf1658e9450a17cf52a153d38bedf1ffd5016f06196e78a02"
+    },
+    {
+      "path": ".github/agents/sir-navigation-programmer.agent.md",
+      "sha256": "8267b78e96826e1cd407361960f4cffdf2e3ce02469ce01a9976b434a3e3e3f1"
+    },
+    {
+      "path": ".github/agents/sir-networking-programmer.agent.md",
+      "sha256": "bfc8e69a426ae204b9b997db8f5b6781ead445c6eb99ec59b220d92824455358"
+    },
+    {
+      "path": ".github/agents/sir-openal-programmer.agent.md",
+      "sha256": "5134ba34d64de38d8b5dd124c4b414f64003d97bf00c1d763d42d2cf6efd9fe9"
+    },
+    {
+      "path": ".github/agents/sir-opengl-programmer.agent.md",
+      "sha256": "c0f46d7b3a272dc98672aa95e136eef95d8d3a22795b34891e6c1fec417f52d2"
     },
     {
       "path": ".github/agents/sir-performance-auditor.agent.md",
-      "sha256": "ee7943f5c1f9aa3afa41c1cc0817c82393ae009b7b1c84d204207935f8848f52",
-      "bytes": 803
+      "sha256": "ee7943f5c1f9aa3afa41c1cc0817c82393ae009b7b1c84d204207935f8848f52"
+    },
+    {
+      "path": ".github/agents/sir-physics-programmer.agent.md",
+      "sha256": "f004fe6f4b9740d565c9cce1969dab358e32d4f946ac5d09f695d4b1fabfbb46"
+    },
+    {
+      "path": ".github/agents/sir-platform-programmer.agent.md",
+      "sha256": "856134d3c646ddaf020f6b59329f2dd70341b0c191e6049829294c022a4f5ff1"
+    },
+    {
+      "path": ".github/agents/sir-pulseaudio-programmer.agent.md",
+      "sha256": "98396f34a494830f3b98bb18e168a4a5551f33f206813dec99b1b2fa5501d543"
+    },
+    {
+      "path": ".github/agents/sir-quests-programmer.agent.md",
+      "sha256": "17deb260b2dea0b1dd7c02e6c1f6834607bb062298af0660cb9f44fbc4641b5e"
+    },
+    {
+      "path": ".github/agents/sir-renderer-programmer.agent.md",
+      "sha256": "b1d2279b47157654b36a192769bd0c4ae8c13259a43cf6f6858c79fd4da148f7"
     },
     {
       "path": ".github/agents/sir-researcher.agent.md",
-      "sha256": "b7e924a1cbf50537c0dbc9972a732168063b11e97ad8b98fb79fb86d44cd491b",
-      "bytes": 785
+      "sha256": "b7e924a1cbf50537c0dbc9972a732168063b11e97ad8b98fb79fb86d44cd491b"
+    },
+    {
+      "path": ".github/agents/sir-scripting-programmer.agent.md",
+      "sha256": "7431a564a16576c27ead0f5f509abe7fc4ad00c68b10054ada7468ef823be87a"
+    },
+    {
+      "path": ".github/agents/sir-serialization-programmer.agent.md",
+      "sha256": "0ba0d6ebd8153ef3ca08ab7f2e63fb7f60de36783726d7f0225e65e8e7a6405b"
+    },
+    {
+      "path": ".github/agents/sir-shader-programmer.agent.md",
+      "sha256": "734f6c3cbe5440cd99643bc5ba588545da70a7ebe6719e808512e87eda88261e"
+    },
+    {
+      "path": ".github/agents/sir-streaming-programmer.agent.md",
+      "sha256": "8fd4d60ef1390b870271d916641053b2de79d611821bf91bbdd9aace656e2965"
+    },
+    {
+      "path": ".github/agents/sir-terrain-programmer.agent.md",
+      "sha256": "be6a204be439c86e41e3c119857357350786630eb8a5189d74daa589fe7d91a0"
+    },
+    {
+      "path": ".github/agents/sir-tools-programmer.agent.md",
+      "sha256": "8cd56265dcbce723189051cc61fe6da4f8dbe893dfb95c5a6d972c5bacd8675a"
+    },
+    {
+      "path": ".github/agents/sir-ui-programmer.agent.md",
+      "sha256": "9209fb16822a3710672cf0df556ebbbe11c88cccfcfd91cb0c3c19c664b54d53"
     },
     {
       "path": ".github/agents/sir-verifier.agent.md",
-      "sha256": "d162dbcf563c55b60a16a02b3329ced57d8e9f05e1904b443edd01b85b06ebf2",
-      "bytes": 933
+      "sha256": "d162dbcf563c55b60a16a02b3329ced57d8e9f05e1904b443edd01b85b06ebf2"
+    },
+    {
+      "path": ".github/agents/sir-virtual-texturing-programmer.agent.md",
+      "sha256": "10309ed9695d48a215a7898325bdce0fa66498832e908be476f4df3271de9bf4"
+    },
+    {
+      "path": ".github/agents/sir-vulkan-programmer.agent.md",
+      "sha256": "f48c161a373bac3af33ff68bb3aa04374fd9c5d4c1c6f296776021a54a949c63"
+    },
+    {
+      "path": ".github/agents/sir-winaudio-programmer.agent.md",
+      "sha256": "d4e3e73b847cfccd882e45a99893bad69958b066e6e091145af8c5479ade8cfc"
+    },
+    {
+      "path": ".github/agents/sir-wwise-programmer.agent.md",
+      "sha256": "a0131de10c66610daa0590eee8f4f758978819ba0304226583815c8fbdd1a0c1"
+    },
+    {
+      "path": ".github/agents/sir-xaudio-programmer.agent.md",
+      "sha256": "917445b7a0e802827c7ea2510c33c206d6a478d2ca04fb31e5a7f70fe86b14b4"
     },
     {
       "path": ".github/instructions/audio.instructions.md",
-      "sha256": "39639e0201f5d9135930938be95dc31ef685e406a58d3795816930ed31b3f2cf",
-      "bytes": 677
+      "sha256": "39639e0201f5d9135930938be95dc31ef685e406a58d3795816930ed31b3f2cf"
     },
     {
       "path": ".github/instructions/build.instructions.md",
-      "sha256": "4b088a43bc0014f448b13ff8e357675397f357319ea628d546679c5a2e25f6d4",
-      "bytes": 1273
+      "sha256": "73e5a425f24cd8ff2cd83a70ab11b7ccdc5ef054917e8405844ee049f5897169"
     },
     {
       "path": ".github/instructions/cpp-style.instructions.md",
-      "sha256": "19f19c4e033c0829a904860bb9cc8c894390be4975e1523b50f390bcb7bbefe7",
-      "bytes": 2542
+      "sha256": "a0551c6f9bebe3f8a0b6d9f3ba4c557bcf7e1259e1f4013b15a4b04065ee975a"
     },
     {
       "path": ".github/instructions/cpp-types.instructions.md",
-      "sha256": "ea51ae3b1cb85079fed02a2f415c11e123853439e01ee0580d5571b76d4473a4",
-      "bytes": 1650
+      "sha256": "ea51ae3b1cb85079fed02a2f415c11e123853439e01ee0580d5571b76d4473a4"
     },
     {
       "path": ".github/instructions/docs.instructions.md",
-      "sha256": "9a865744b9be6ba75d8a7e017c3c7f7506b1e5516e37d0cb9e7952ae4a6ca16b",
-      "bytes": 828
+      "sha256": "9a865744b9be6ba75d8a7e017c3c7f7506b1e5516e37d0cb9e7952ae4a6ca16b"
     },
     {
       "path": ".github/instructions/editor-scripting.instructions.md",
-      "sha256": "ef122075bce2686a803c948c7a85a41c3ec3b66e98eea7f4614c87148beb5e75",
-      "bytes": 883
+      "sha256": "ef122075bce2686a803c948c7a85a41c3ec3b66e98eea7f4614c87148beb5e75"
     },
     {
       "path": ".github/instructions/memory.instructions.md",
-      "sha256": "8efcf47d9ea25e9ce1a1443ae14cf5a66bebe5763661bae8a014d8781d4bda2b",
-      "bytes": 1648
+      "sha256": "8efcf47d9ea25e9ce1a1443ae14cf5a66bebe5763661bae8a014d8781d4bda2b"
     },
     {
       "path": ".github/instructions/platform.instructions.md",
-      "sha256": "4770954bbc473f8541e17dd92c457abb9865470e87c42266c4253e864a66f0b0",
-      "bytes": 957
+      "sha256": "4770954bbc473f8541e17dd92c457abb9865470e87c42266c4253e864a66f0b0"
     },
     {
       "path": ".github/instructions/registration.instructions.md",
-      "sha256": "e1bee3ae799c03c93f69e207bf37bf909f70281a576a388f87e5b64adc03197d",
-      "bytes": 883
+      "sha256": "e1bee3ae799c03c93f69e207bf37bf909f70281a576a388f87e5b64adc03197d"
     },
     {
       "path": ".github/instructions/rendering.instructions.md",
-      "sha256": "d7e91b23cdb0b2e62b63abe9e7700cc05945a91a787fd0741a353cf31a1b7ddb",
-      "bytes": 1319
+      "sha256": "d7e91b23cdb0b2e62b63abe9e7700cc05945a91a787fd0741a353cf31a1b7ddb"
     },
     {
       "path": ".github/instructions/resource-cooking.instructions.md",
-      "sha256": "f232b5f472205394aecf8c7a74b0c60498b3d92c5c12eee2bf03e27f5c5f667c",
-      "bytes": 762
+      "sha256": "f232b5f472205394aecf8c7a74b0c60498b3d92c5c12eee2bf03e27f5c5f667c"
     },
     {
       "path": ".github/instructions/tests.instructions.md",
-      "sha256": "560fa4c7070bfbaf5aa20c5f74d0ef0963fd939353b4f566c6d748e9765dd5fd",
-      "bytes": 1286
+      "sha256": "560fa4c7070bfbaf5aa20c5f74d0ef0963fd939353b4f566c6d748e9765dd5fd"
     },
     {
       "path": ".github/instructions/threading.instructions.md",
-      "sha256": "d3fdf21822b5aa836fea0193d5f615992fe29da34fa74ba68abebd500cb3ca55",
-      "bytes": 1241
+      "sha256": "f62d5ecbf0661be6311fab9320aaca2a6f07a97224756b575c36461c3c573e6a"
     },
     {
       "path": ".github/instructions/world-streaming.instructions.md",
-      "sha256": "560411fa67c6f1f07738047cdb24429addd999e93804a0dd9cee1288e062a2cb",
-      "bytes": 756
+      "sha256": "560411fa67c6f1f07738047cdb24429addd999e93804a0dd9cee1288e062a2cb"
     },
     {
       "path": ".github/skills/sir-architecture-plan/SKILL.md",
-      "sha256": "594137fd0cf8929107dcdde47b58426b189cd5e1d4bc9dda06779d3d14630c63",
-      "bytes": 1058
+      "sha256": "594137fd0cf8929107dcdde47b58426b189cd5e1d4bc9dda06779d3d14630c63"
     },
     {
       "path": ".github/skills/sir-complete-issue/SKILL.md",
-      "sha256": "e41e8168d7537e4fcfc7f017d232c45640bfe982de89f289907fc15b82d1543e",
-      "bytes": 1556
+      "sha256": "e41e8168d7537e4fcfc7f017d232c45640bfe982de89f289907fc15b82d1543e"
     },
     {
       "path": ".github/skills/sir-document/SKILL.md",
-      "sha256": "abb40235e38a7dec22fd7a247a735168f7f66d5acdff1e5f9c023e4bf5ed03ab",
-      "bytes": 646
+      "sha256": "abb40235e38a7dec22fd7a247a735168f7f66d5acdff1e5f9c023e4bf5ed03ab"
     },
     {
       "path": ".github/skills/sir-implement/SKILL.md",
-      "sha256": "5bded25c9c3d686ed80a4e8166cd8a600d06ee91153a99a85bfea229a839cfda",
-      "bytes": 1009
+      "sha256": "5bded25c9c3d686ed80a4e8166cd8a600d06ee91153a99a85bfea229a839cfda"
+    },
+    {
+      "path": ".github/skills/sir-improve-system/SKILL.md",
+      "sha256": "c08c9e19001e24e3d94fbc0ae9d025816f702c8b0f838ecbe3c13f1731157a7f"
     },
     {
       "path": ".github/skills/sir-integration/SKILL.md",
-      "sha256": "18d5abaa585d1fa2a1f3e1dd2d2096f26f507957246ce076dec9faae90e816b2",
-      "bytes": 867
+      "sha256": "18d5abaa585d1fa2a1f3e1dd2d2096f26f507957246ce076dec9faae90e816b2"
     },
     {
       "path": ".github/skills/sir-investigate/SKILL.md",
-      "sha256": "8c0cd378a01312ade4334de658ed760676fcb450a504e24ab88e6f4f539769b8",
-      "bytes": 919
+      "sha256": "8c0cd378a01312ade4334de658ed760676fcb450a504e24ab88e6f4f539769b8"
     },
     {
       "path": ".github/skills/sir-profile/SKILL.md",
-      "sha256": "5fbc7115a6cab5036bab7abf9d6344b1c44d503d4d8bfedcd339ba32a639017e",
-      "bytes": 885
+      "sha256": "5fbc7115a6cab5036bab7abf9d6344b1c44d503d4d8bfedcd339ba32a639017e"
     },
     {
       "path": ".github/skills/sir-refactor/SKILL.md",
-      "sha256": "cf767a654307a0bd08321c6df0d5f342c9acb9825deb48dd3b3a4915eeca3adc",
-      "bytes": 952
+      "sha256": "cf767a654307a0bd08321c6df0d5f342c9acb9825deb48dd3b3a4915eeca3adc"
     },
     {
       "path": ".github/skills/sir-verify/SKILL.md",
-      "sha256": "e81700ce0b6bc545cc18c968f25aeb72dfef3094d08ca04a8feccf1dca59719f",
-      "bytes": 1070
+      "sha256": "e81700ce0b6bc545cc18c968f25aeb72dfef3094d08ca04a8feccf1dca59719f"
     },
     {
       "path": ".vscode/settings.agent-suite.example.json",
-      "sha256": "8aa0b270843cabbf10f408245c6fcf628cdfcb4a0ef658c2c36ec31fcddc41ba",
-      "bytes": 94
+      "sha256": "8aa0b270843cabbf10f408245c6fcf628cdfcb4a0ef658c2c36ec31fcddc41ba"
     },
     {
       "path": "AGENTS.md",
-      "sha256": "edc752842d4abfa08d90404d2f47dbb18df71a6b5ae88d71df7f5cf3fac9ccd8",
-      "bytes": 5625
+      "sha256": "c17131b2d46fecff1757e2a437013578c08bc317d0c8d39d73f561162a05a897"
+    },
+    {
+      "path": "Docs/Agents/Changes-v2.md",
+      "sha256": "4828edd1875d3527b0521d4571dc444e9a891a4970134281883acc13557d4c1b"
     },
     {
       "path": "Docs/Agents/CompactPrompts.md",
-      "sha256": "dd726bdff1fbc467dbabe1ac7a8f565361f3052c8296e5c2dad4b3dee6e4293a",
-      "bytes": 976
+      "sha256": "4c3bd352a41da6a3f895237ad2f10cd754c062a15d098a79c2c78a0b596a108c"
     },
     {
       "path": "Docs/Agents/ContextCache.md",
-      "sha256": "2ac6dd9f5cd31daa7f30253f9848954d177fd52c76a6f1d5c813ff8aa8c17c03",
-      "bytes": 1458
+      "sha256": "2ac6dd9f5cd31daa7f30253f9848954d177fd52c76a6f1d5c813ff8aa8c17c03"
     },
     {
       "path": "Docs/Agents/Delegation.md",
-      "sha256": "541407b606360a2869e70f49a0512a19f8f6cb3dd86200a9b8ede791098d86ea",
-      "bytes": 1246
+      "sha256": "fea1f5a9b0794975f50bf0620378d4563bc5e0092fadeff6639921be76998210"
+    },
+    {
+      "path": "Docs/Agents/ImprovementLoop.md",
+      "sha256": "b5961afb90917dd90ec90f9e30c0c77e63a18bfd876facbb8bea80c1ebe28019"
     },
     {
       "path": "Docs/Agents/Installation.md",
-      "sha256": "6255d498b78656394c7574a8508c6af2f14c6cb3fff31ae962966547fb0bd63a",
-      "bytes": 2957
+      "sha256": "cea69b0b6e8a6d5aeb298d8f0c1708f435ac0c8bc863f26fba999a56b70e2440"
     },
     {
       "path": "Docs/Agents/Models.md",
-      "sha256": "b5b93f66ee226fafeda049417a42abd06af9bbe5b7f27a189e5090f1cc70801b",
-      "bytes": 1858
+      "sha256": "b5b93f66ee226fafeda049417a42abd06af9bbe5b7f27a189e5090f1cc70801b"
     },
     {
       "path": "Docs/Agents/Operations.md",
-      "sha256": "56ed51db837e37a25e1886a0b249ae9e22a2a480f9e321110d8fe907d0b688de",
-      "bytes": 1989
+      "sha256": "84a5095b0b51cb94a749f23f5c9afad1c79f4bb16c9c2fed090d7746c114befd"
     },
     {
       "path": "Docs/Agents/PolicyDelta.md",
-      "sha256": "55aec4455b6f49ff1ed914568f2902d475b060b4fd0c4d3d67a88d03a5419a21",
-      "bytes": 2260
+      "sha256": "8caa3a2c0e9835c8c3eefa4fe66c801a3d5ac5966c1419c01f78ea1a3f257f2b"
     },
     {
       "path": "Docs/Agents/README.md",
-      "sha256": "baa9544b9ec9e33222a029dcb814e0a443c634a486382c0d524159c2c56d9a4f",
-      "bytes": 2367
+      "sha256": "26bcdc24e0cdcbe1182bf8e560207fe76a628f3b205c0d22adfa96e31a03687f"
     },
     {
       "path": "Docs/Agents/Receipts.md",
-      "sha256": "fe0f6065b574e4de98c1d6f71484b72f8aeb511e699b3843aa561e55a25786c5",
-      "bytes": 1035
+      "sha256": "fe0f6065b574e4de98c1d6f71484b72f8aeb511e699b3843aa561e55a25786c5"
+    },
+    {
+      "path": "Docs/Agents/Roles.md",
+      "sha256": "0a1209a5272e5993b1b5b2d585379d0761535faa43ff1c03272960a63ee2d9df"
     },
     {
       "path": "Docs/Agents/SourceMap.md",
-      "sha256": "435433381c0cfaaf52a8085cfdc719c56ae595b57defee41c834721e2824d786",
-      "bytes": 1117
-    },
-    {
-      "path": "Docs/Agents/ValidationResults.md",
-      "sha256": "5dbd53012d7da1989fa290a44572c3b59131824f0644bba2f48542ef7aa141c3",
-      "bytes": 857
+      "sha256": "435433381c0cfaaf52a8085cfdc719c56ae595b57defee41c834721e2824d786"
     },
     {
       "path": "Docs/Agents/Verification.md",
-      "sha256": "2ca95ee63213c056669136eb0df0d95931dd1f2102ae29ce0b5a50119f58c3d5",
-      "bytes": 2334
+      "sha256": "2ca95ee63213c056669136eb0df0d95931dd1f2102ae29ce0b5a50119f58c3d5"
     },
     {
       "path": "Tools/AgentConfig/README.md",
-      "sha256": "5d6176818934a01dcb66a2a0e572fadff18777125fc8b3632faec913f8d49255",
-      "bytes": 504
-    },
-    {
-      "path": "Tools/AgentConfig/TESTING.md",
-      "sha256": "6375e86d6f640230a194cf30e28613c491ad137d9d732f0ff73980b771b968c4",
-      "bytes": 597
+      "sha256": "3c21c51ffc92abb2e9f4591084cfabee33de5c389bc6faa5f3e5c145aa4a6e54"
     },
     {
       "path": "Tools/AgentConfig/validate_suite.py",
-      "sha256": "652400aa57dbb36ec46b6cf3f19a2e1b2364de717edba8a78ad8c93bb3d93615",
-      "bytes": 8228
+      "sha256": "3fc7a94cd93bebc580a74f345405324f6ff286e0eae77a410bb47389feea2f6a"
     }
   ]
 }

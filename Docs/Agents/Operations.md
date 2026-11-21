@@ -1,36 +1,9 @@
-# Director operating procedure
+# Agent execution
 
-## Task intake
+SIR Director classifies each task as read-only inspection, planning, implementation, port, integration or benchmark. For editing, resolve branch/SHA, dirty tree, target build and acceptance checks; delegate by [Roles](Roles.md).
 
-Record task ID and requirements; current source branch/SHA; dirty files; explicit branch/commit/push/issue permissions; affected systems; acceptance tests; external dependencies.
+Small edits use one specialist directly. Cross-system work uses mutually exclusive WRITE sets and locked API boundaries. Integrate only approved changes, then run cumulative verification. Independently review high-risk diffs; don't claim unrun platform/hardware tests passed.
 
-### Work modes
+After first acceptance, each writing specialist follows [ImprovementLoop](ImprovementLoop.md), default one measurable experiment. Do not carry out unrelated enhancements, unlimited loops or unauthorized Git actions.
 
-| Request | Expected mode |
-| --- | --- |
-| Explain, inspect, audit | Read only; return source-grounded findings. |
-| Plan, design, split | No source edits; produce contracts, negative tests and ownership plan. |
-| Implement, fix, complete | Apply authorized source changes and test; don't stop at a plan. |
-| Port | Preserve external behavior and origin/provenance; separate redesign. |
-| Integrate | Verify exact patches/SHAs and reconcile into one source baseline. |
-| Benchmark | Measure actual baseline/candidate with matched settings. |
-
-## Delegation threshold
-
-Use the main agent for small direct changes. Delegate when investigations are broad, independent review improves correctness, or disjoint code work genuinely permits parallelism. Delegation is not a performance optimization if coordination or rework exceeds the saved time.
-
-## Native subagents
-
-Use `SIR Director` with the `agent` alias in Copilot custom-agent frontmatter; the runtime uses native `task`. Each worker has separate conversational context, not automatically separate filesystem ownership. Review actual tool activity. Never assume subagents launched because the director described a plan.
-
-## Evidence gates
-
-- Source/read audit: actual path and symbol references.
-- Modified code: diff and changed owned files only.
-- Formatting: specific formatter version and command.
-- Compiler: actual target/compiler, `CMakePresets.json` and compile exit.
-- Tests: actual CTest/test binary command, tests run and failures.
-- Hardware: driver/API/OS GPU proof only when actually available.
-- GitHub: final issue/PR/commit URL and state readback only after authorized mutation.
-
-See [Delegation](Delegation.md), [Verification](Verification.md) and [Receipts](Receipts.md).
+Report branch/SHA, changed paths, exact commands with PASS/FAIL/NOT RUN, measured improvements and outstanding gaps.

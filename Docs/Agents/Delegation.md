@@ -1,22 +1,17 @@
-# Bounded worker contract
+# Worker handoff contract
 
-Every delegated task must include:
+Use a single compact record:
 
+```text
+TASK: <bounded objective>
+BASELINE: <branch + exact SHA; dirty files noted>
+OWNER: <specialist>
+READ: <relevant paths/context references>
+WRITE: <exclusive file paths or NONE>
+LOCKED: <shared public ABI, serialized formats, ownership, thread boundaries>
+CHECKS: <target build, tests, negative cases, measurement metric if any>
+AUTHORITY: <no branch/commit/push/merge unless explicitly approved>
+RETURN: <changed paths, commands, exits, defects, improvement deltas, unresolved work>
 ```
-TASK: <one objective>
-BASELINE: <branch and immutable commit SHA>
-READ: <paths/entrypoints to inspect>
-WRITE: <exclusive files or NONE>
-LOCKED: <public APIs, ABI, serialization, ownership, threading constraints>
-DEPENDENCIES: <other workers/interfaces and order>
-CHECKS: <target compile, tests, formatting, negative cases>
-AUTHORITY: no branch/commit/push/merge/issue-close unless specifically approved
-RETURN: files, reasoning, exact commands, exits, failures, known gaps
-```
 
-- No two writing subagents may own the same file, generated artifacts, shared header or build script simultaneously.
-- If a worker discovers it must edit outside `WRITE`, stop and escalate to director for redistribution.
-- Integrator must re-evaluate contracts from actual source; independent workers are not their own verification authorities.
-- Worktrees or branch isolation can be used **only when explicitly authorized**, and their creation is never implied by a request to delegate.
-- Read-only subagents can investigate concurrently without extra worktrees when they do not modify the tree.
-- The director remains responsible for cumulative test coverage and reconciled, single-tree acceptance.
+Only the Director assigns shared headers and resolves collisions. Read-only research/review may overlap. The specialist may delegate once to a read-only researcher or verifier when useful; avoid recursive or competing writer subagents. All specialists use [ImprovementLoop](ImprovementLoop.md) after task acceptance.

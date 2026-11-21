@@ -1,39 +1,21 @@
-# Short prompt patterns
+# Compact prompt examples
 
-With `SIR Director` selected:
+Select **SIR Director**, then specify what to do:
 
+```text
+Complete issue #39. Route each subsystem to its specialist; run final integration verification.
 ```
-Complete issue #39. Delegate source inspection and independent verification.
+```text
+D3D11 device-loss bug: delegate D3D11 Programmer and Verifier; implement/test within driver files.
 ```
-
+```text
+FMOD memory budget issue: fix it, verify FMOD SDK lifetime, then run the bounded improvement pass.
 ```
-Investigate the FrameGraph resource lifetime. Read-only; return source evidence.
+```text
+Review current inventory for D3D8 support, research feasibility, plan only. No source edits.
 ```
-
-```
-Refactor Source/Core/Containers/<type> with behavior and ABI unchanged. Implement and test.
-```
-
-```
-Plan a three-worker split for <subsystem>. Freeze APIs and file ownership. Do not edit.
-```
-
-```
-Integrate the approved worker patches from baseline <SHA>. Verify and report receipts.
+```text
+/sir-improve-system Source/Core/Containers/ metric=allocations, budget=3 experiments
 ```
 
-```
-Profile:memory <container> against <baseline SHA> with matching workload.
-```
-
-Explicit skills:
-
-```
-/sir-complete-issue #39
-/sir-investigate GPU resource eviction
-/sir-architecture-plan streaming ownership refactor
-/sir-verify current working diff
-/sir-profile allocator growth
-```
-
-The compact prompt supplies the goal, not the entire instruction policy. Agents must still discover current source, permissions and target-specific requirements.
+The Director assigns specific paths, source SHA and acceptance checks. Do not restate normal coding policy in every prompt.

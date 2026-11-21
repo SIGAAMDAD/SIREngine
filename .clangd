@@ -7,6 +7,8 @@
 CompileFlags:
   CompilationDatabase: Ancestors
   BuiltinHeaders: Clangd
+  Add:
+    - -IC:Source/
 
 Index:
   Background: Build
