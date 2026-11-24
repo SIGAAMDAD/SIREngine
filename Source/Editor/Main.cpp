@@ -13,7 +13,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#include <Core/Platform/Window/SIRNativeWindowHost.h>
+#include <Core/Platform/Shared/Window/SIRNativeWindowHost.h>
 #include <Editor/Host/SIREditorApplication.h>
 #include <Editor/Host/SIREditorSceneWorkspace.h>
 #include <Editor/Host/SIREditorWorkflow.h>
@@ -252,7 +252,8 @@ int main( int nArgs, char **pszArgs )
 		return sirEditorInspectScene( pszArgs[2] );
 	}
 	if ( nArgs == 2 && strcmp( pszArgs[1], "--native-window" ) == 0 ) {
-		return sirRunNativeWindowHost( { "SIREngine Editor", 1280, 720 } );
+		const sirWindowCreateDesc_t window{ "SIREngine Editor", 1280, 720 };
+		return SIRNativeWindowHost::runNative( &window, 1 );
 	}
 	sirEditorPrintHelp();
 	return 2;

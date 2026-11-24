@@ -146,8 +146,8 @@ SIRResourceResult sirShaderProjectMaterial( const SIRResourceView& view, const s
 SIRResourceResult sirShaderProjectMaterialPass( const sirShaderMaterialProjection_t& material, uint32_t nPass,
                                                 sirShaderMaterialPassRecord_t *pOut ) noexcept
 {
-	if ( pOut == nullptr || !material.view.isValid() || material.bytes.m_pData == nullptr || nPass < SIRShaderPass::SIR_SHADER_PASS_COLOR ||
-	     nPass > SIRShaderPass::SIR_SHADER_PASS_COMPUTE ) {
+	if ( pOut == nullptr || !material.view.isValid() || material.bytes.m_pData == nullptr || nPass < static_cast<uint32_t>(SIRShaderPass::SIR_SHADER_PASS_COLOR) ||
+	     nPass > static_cast<uint32_t>(SIRShaderPass::SIR_SHADER_PASS_COMPUTE) ) {
 		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	for ( uint32_t iPass = 0; iPass < material.header.nPassCount; ++iPass ) {

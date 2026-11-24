@@ -71,7 +71,7 @@ static SIRGraphicsResult sirHiZValidateRecording( const sirHiZCommandResources_t
 	     pyramid.eMemory != SIRGraphicsMemoryClass::SIR_GRAPHICS_MEMORY_GPU_LOCAL ) {
 		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	constexpr uint32_t REQUIRED_USAGE = SIRGraphicsUsage::SIR_GRAPHICS_USAGE_SAMPLED | SIRGraphicsUsage::SIR_GRAPHICS_USAGE_STORAGE;
+	constexpr uint32_t REQUIRED_USAGE = static_cast<uint32_t>(SIRGraphicsUsage::SIR_GRAPHICS_USAGE_SAMPLED) | static_cast<uint32_t>(SIRGraphicsUsage::SIR_GRAPHICS_USAGE_STORAGE);
 	if ( ( pyramid.nUsage & REQUIRED_USAGE ) != REQUIRED_USAGE ) {
 		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}

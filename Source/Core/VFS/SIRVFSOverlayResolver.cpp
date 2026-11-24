@@ -33,7 +33,7 @@ SIRVFSResult SIRVFSOverlayResolver::resolveRead( const sirVFSPath_t& path, sirVF
 	// Acquire a generation-pinned mount view under one lock. Backend metadata
 	// callbacks run outside that lock, including reentrant mount operations.
 	sirVFSCandidateList_t candidates {};
-	const SIRVFSResult eAcquire = m_Table.acquireCandidates( path, SIRVFSAccess::SIR_VFS_ACCESS_READ, &candidates );
+	const SIRVFSResult eAcquire = m_Table.acquireCandidates( path, static_cast<uint32_t>( SIRVFSAccess::SIR_VFS_ACCESS_READ ), &candidates );
 	if ( eAcquire != SIRVFSResult::SIR_VFS_OK ) {
 		return eAcquire;
 	}

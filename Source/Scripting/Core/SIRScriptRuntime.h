@@ -26,7 +26,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Scripting/Core/SIRScriptIngress.h>
 #include <Scripting/Core/SIRScriptScheduler.h>
 
-#include <Core/Platform/SIRThread.h>
+#include <Core/Platform/Shared/Threading/SIRThread.h>
 
 typedef struct sirScriptBackendSlot_s
 {

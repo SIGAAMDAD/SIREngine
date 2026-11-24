@@ -156,8 +156,8 @@ sir_configure_owned_target(SIRPlatformContextTests)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     add_executable(SIRWaylandWindowDriverProtocolTests
         ${PROJECT_SOURCE_DIR}/Tests/Unit/SIRWaylandWindowDriverProtocolTests.cpp
-        "${PROJECT_SOURCE_DIR}/Source/Core/Platform/Window/Linux/SIRWindowDriverWayland.cpp"
-        "${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRWaylandInputBridge.cpp")
+        "${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/Window/SIRWindowDriverWayland.cpp"
+        "${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/Input/SIRWaylandInputBridge.cpp")
     target_include_directories(SIRWaylandWindowDriverProtocolTests BEFORE PRIVATE
         "${PROJECT_SOURCE_DIR}/Tests/Unit/Fixtures/Wayland")
     target_link_libraries(SIRWaylandWindowDriverProtocolTests PRIVATE SIR::Core)

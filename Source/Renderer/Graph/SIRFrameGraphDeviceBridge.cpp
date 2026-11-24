@@ -26,50 +26,50 @@ static uint32_t sirFrameGraphDeviceQuery( void *pContext, sirGraphicsABICapabili
 {
 	sirFrameGraphDeviceBridge_t *pBridge = static_cast<sirFrameGraphDeviceBridge_t *>(pContext);
 	if ( pBridge == nullptr || pCaps == nullptr || pCaps->nSize < sizeof( *pCaps ) ) {
-		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
+		return static_cast<uint32_t>(SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT);
 	}
 	sirGraphicsCapabilities_t caps {};
 	const SIRGraphicsResult eResult = pBridge->pDevice->queryCapabilities( &caps );
 	if ( eResult != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
-		return eResult;
+		return static_cast<uint32_t>(eResult);
 	}
 	*pCaps = {};
 	pCaps->nSize = sizeof( *pCaps );
 	pCaps->nDeviceGeneration = caps.nDeviceGeneration;
 	pCaps->nEnabledQueues = caps.nQueueMask;
 	pCaps->nEnabledFeatures = caps.nFeatureMask;
-	pCaps->nBackend = caps.eBackend;
-	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
+	pCaps->nBackend = static_cast<uint32_t>(caps.eBackend);
+	return static_cast<uint32_t>(SIRGraphicsResult::SIR_GRAPHICS_SUCCESS);
 }
 
 static uint32_t sirFrameGraphDeviceReset( void *pCommands ) noexcept
 {
-	return pCommands != nullptr ? static_cast<SIRGraphicsCommandList *>(pCommands)->reset() : SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
+	return static_cast<uint32_t>(pCommands != nullptr ? static_cast<SIRGraphicsCommandList *>(pCommands)->reset() : SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT);
 }
 
 static uint32_t sirFrameGraphDeviceBarrier( void *pCommands, const sirGraphicsBarrier_t *pBarriers, uint32_t nCount ) noexcept
 {
-	return pCommands != nullptr ? static_cast<SIRGraphicsCommandList *>(pCommands)->barrier( pBarriers, nCount ) : SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
+	return static_cast<uint32_t>(pCommands != nullptr ? static_cast<SIRGraphicsCommandList *>(pCommands)->barrier( pBarriers, nCount ) : SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT);
 }
 
 static uint32_t sirFrameGraphDeviceClose( void *pCommands ) noexcept
 {
-	return pCommands != nullptr ? static_cast<SIRGraphicsCommandList *>(pCommands)->close() : SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
+	return static_cast<uint32_t>(pCommands != nullptr ? static_cast<SIRGraphicsCommandList *>(pCommands)->close() : SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT);
 }
 
 static uint32_t sirFrameGraphDeviceAcquire( void *pContext, uint32_t nQueue, sirGraphicsABICommandList_t *pCommands ) noexcept
 {
 	sirFrameGraphDeviceBridge_t *pBridge = static_cast<sirFrameGraphDeviceBridge_t *>(pContext);
-	if ( pBridge == nullptr || pCommands == nullptr || pCommands->nSize < sizeof( *pCommands ) || nQueue >= SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT ) {
-		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
+	if ( pBridge == nullptr || pCommands == nullptr || pCommands->nSize < sizeof( *pCommands ) || nQueue >= static_cast<uint32_t>(SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT) ) {
+		return static_cast<uint32_t>(SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT);
 	}
 	SIRGraphicsCommandList *pNative = nullptr;
 	const SIRGraphicsResult eAcquire = pBridge->pDevice->acquireCommands( static_cast<SIRGraphicsQueue>(nQueue), &pNative );
 	if ( eAcquire != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
-		return eAcquire;
+		return static_cast<uint32_t>(eAcquire);
 	}
 	if ( pNative == nullptr ) {
-		return SIRGraphicsResult::SIR_GRAPHICS_DRIVER_ERROR;
+		return static_cast<uint32_t>(SIRGraphicsResult::SIR_GRAPHICS_DRIVER_ERROR);
 	}
 	*pCommands = {};
 	pCommands->nSize = sizeof( *pCommands );
@@ -79,7 +79,7 @@ static uint32_t sirFrameGraphDeviceAcquire( void *pContext, uint32_t nQueue, sir
 	pCommands->pReset = sirFrameGraphDeviceReset;
 	pCommands->pBarrier = sirFrameGraphDeviceBarrier;
 	pCommands->pClose = sirFrameGraphDeviceClose;
-	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
+	return static_cast<uint32_t>(SIRGraphicsResult::SIR_GRAPHICS_SUCCESS);
 }
 
 static uint32_t sirFrameGraphDeviceSubmit( void *pContext, uint32_t nQueue, const sirGraphicsABISubmission_t *pBatch,
@@ -88,13 +88,13 @@ static uint32_t sirFrameGraphDeviceSubmit( void *pContext, uint32_t nQueue, cons
 	sirFrameGraphDeviceBridge_t *pBridge = static_cast<sirFrameGraphDeviceBridge_t *>(pContext);
 	if ( pBridge == nullptr || pBatch == nullptr || pCompletion == nullptr || pBatch->nSize < sizeof( *pBatch ) ||
 		 pBatch->nCommandListCount > SIR_FRAMEGRAPH_MAX_PASSES || ( pBatch->nCommandListCount != 0 && pBatch->ppCommandLists == nullptr ) ||
-		 ( pBatch->nWaitCount != 0 && pBatch->pWaits == nullptr ) || nQueue >= SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT ) {
-		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
+		 ( pBatch->nWaitCount != 0 && pBatch->pWaits == nullptr ) || nQueue >= static_cast<uint32_t>(SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT) ) {
+		return static_cast<uint32_t>(SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT);
 	}
 	SIRGraphicsCommandList *szCommands[SIR_FRAMEGRAPH_MAX_PASSES] = {};
 	for ( uint32_t iCommand = 0; iCommand < pBatch->nCommandListCount; ++iCommand ) {
 		if ( pBatch->ppCommandLists[iCommand] == nullptr ) {
-			return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
+			return static_cast<uint32_t>(SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT);
 		}
 		szCommands[iCommand] = static_cast<SIRGraphicsCommandList *>(const_cast<void *>(pBatch->ppCommandLists[iCommand]));
 	}
@@ -105,7 +105,7 @@ static uint32_t sirFrameGraphDeviceSubmit( void *pContext, uint32_t nQueue, cons
 	submission.nWaitCount = pBatch->nWaitCount;
 	submission.pAcquisitions = pBatch->pAcquisitions;
 	submission.nAcquisitionCount = pBatch->nAcquisitionCount;
-	return pBridge->pDevice->submit( static_cast<SIRGraphicsQueue>(nQueue), submission, pCompletion );
+	return static_cast<uint32_t>(pBridge->pDevice->submit( static_cast<SIRGraphicsQueue>(nQueue), submission, pCompletion ));
 }
 
 static SIRGraphicsResult sirFrameGraphDeviceRecord( uint32_t nPass, sirGraphicsABICommandList_t *pCommands, void *pContext ) noexcept

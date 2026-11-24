@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#include <Core/Platform/Windows/SIRWindowsRawDecode.h>
-#include <Core/Platform/Windows/SIRWindowsRawBackend.h>
+#include <Core/Platform/Windows/Input/SIRWindowsRawDecode.h>
+#include <Core/Platform/Windows/Input/SIRWindowsRawBackend.h>
 #include <Core/Input/SIRInputService.h>
 #include <stdio.h>
 

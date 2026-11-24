@@ -26,7 +26,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Scripting/Core/SIRScriptOptimizationProtocol.h>
 #include <Scripting/Core/SIRScriptCachedProgramSource.h>
-#include <Core/Platform/SIRThread.h>
+#include <Core/Platform/Shared/Threading/SIRThread.h>
 
 // Transport owns its process and full-framed IPC. Each receive returns either
 // one complete 200-byte reply, BUSY for no reply, or a terminal error. Sending

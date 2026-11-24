@@ -24,7 +24,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-#include <Core/Platform/SIRPlatformFile.h>
+#include <Core/Platform/Shared/File/SIRPlatformFile.h>
 #include <Terrain/Data/SIRTerrainRegionBundle.h>
 
 enum class SIRTerrainPersistenceResult : uint8_t {

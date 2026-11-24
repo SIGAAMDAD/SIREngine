@@ -25,7 +25,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-#include <Core/Platform/SIRSync.h>
+#include <Core/Platform/Shared/Threading/SIRSync.h>
 #include <atomic>
 #include <cstdint>
 

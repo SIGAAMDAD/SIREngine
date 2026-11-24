@@ -30,23 +30,22 @@ sirGraphicsABIResult_t SIRWindowABISurface::create( SIRWindowSystem& windows, si
 		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	sirWindowSnapshot_t snapshot {};
-	const SIRWindowResult eSnapshot = windows.querySnapshot( hWindow, &snapshot );
-	if ( eSnapshot == SIRWindowResult::SIR_WINDOW_INVALID_HANDLE ) {
+	const sirWindowResult eSnapshot = windows.querySnapshot( hWindow, &snapshot );
+	if ( eSnapshot == sirWindowResult::SIR_WINDOW_INVALID_HANDLE ) {
 		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_HANDLE;
 	}
-	if ( eSnapshot != SIRWindowResult::SIR_WINDOW_OK || !snapshot.bReady || snapshot.bCloseRequested || snapshot.nWidth == 0 || snapshot.nHeight == 0 ) {
+	if ( eSnapshot != sirWindowResult::SIR_WINDOW_OK || !snapshot.bReady || snapshot.bCloseRequested || snapshot.nWidth == 0 || snapshot.nHeight == 0 ) {
 		return SIRGraphicsResult::SIR_GRAPHICS_SURFACE_CHANGED;
 	}
 	sirGraphicsNativeSurface_t native {};
-	sirWindowNativeLease_t lease {};
-	const SIRGraphicsResult eAcquire = sirGraphicsAcquireWindowSurface( windows, hWindow, &native, &lease );
+	const SIRGraphicsResult eAcquire = sirGraphicsAcquireWindowSurface( windows, hWindow, &native, &m_hLease );
 	if ( eAcquire != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 		return eAcquire;
 	}
 	sirWindowSnapshot_t after {};
-	if ( windows.querySnapshot( hWindow, &after ) != SIRWindowResult::SIR_WINDOW_OK || !after.bReady || after.bCloseRequested ||
+	if ( windows.querySnapshot( hWindow, &after ) != sirWindowResult::SIR_WINDOW_OK || !after.bReady || after.bCloseRequested ||
 	     after.nMetricsRevision != snapshot.nMetricsRevision || after.nWindowGeneration != native.nWindowGeneration ) {
-		static_cast<void>(windows.releaseNativeLease( lease ));
+		static_cast<void>(m_hLease.reset());
 		return SIRGraphicsResult::SIR_GRAPHICS_SURFACE_CHANGED;
 	}
 	const sirGraphicsABINativeSurface_t abiNative = { sizeof( abiNative ), static_cast<uint32_t>(native.ePlatform), native.pWindow,
@@ -57,13 +56,12 @@ sirGraphicsABIResult_t SIRWindowABISurface::create( SIRWindowSystem& windows, si
 	sirGraphicsHandle_t hSurface {};
 	const sirGraphicsABIResult_t eCreate = sirGraphicsCreateABISurface( pDevice, &abiNative, &present, &hSurface );
 	if ( eCreate != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
-		static_cast<void>(windows.releaseNativeLease( lease ));
+		static_cast<void>(m_hLease.reset());
 		return eCreate;
 	}
 	m_pWindows = &windows;
 	m_pDevice = pDevice;
 	m_hWindow = hWindow;
-	m_hLease = lease;
 	m_Native = native;
 	m_hSurface = hSurface;
 	m_nMetricsRevision = after.nMetricsRevision;
@@ -83,7 +81,7 @@ sirGraphicsABIResult_t SIRWindowABISurface::acquireImage( sirGraphicsSurfaceImag
 		return SIRGraphicsResult::SIR_GRAPHICS_BUSY;
 	}
 	sirWindowSnapshot_t snapshot {};
-	if ( m_pWindows->querySnapshot( m_hWindow, &snapshot ) != SIRWindowResult::SIR_WINDOW_OK || !snapshot.bReady || snapshot.bCloseRequested ||
+	if ( m_pWindows->querySnapshot( m_hWindow, &snapshot ) != sirWindowResult::SIR_WINDOW_OK || !snapshot.bReady || snapshot.bCloseRequested ||
 	     snapshot.nWindowGeneration != m_Native.nWindowGeneration || snapshot.nMetricsRevision != m_nMetricsRevision ) {
 		return SIRGraphicsResult::SIR_GRAPHICS_SURFACE_CHANGED;
 	}
@@ -129,7 +127,7 @@ sirGraphicsABIResult_t SIRWindowABISurface::resize( const sirGraphicsABIPresentD
 		return SIRGraphicsResult::SIR_GRAPHICS_BUSY;
 	}
 	sirWindowSnapshot_t snapshot {};
-	if ( m_pWindows->querySnapshot( m_hWindow, &snapshot ) != SIRWindowResult::SIR_WINDOW_OK || !snapshot.bReady || snapshot.bCloseRequested ||
+	if ( m_pWindows->querySnapshot( m_hWindow, &snapshot ) != sirWindowResult::SIR_WINDOW_OK || !snapshot.bReady || snapshot.bCloseRequested ||
 	     snapshot.nWindowGeneration != m_Native.nWindowGeneration || snapshot.nWidth == 0 || snapshot.nHeight == 0 ) {
 		return SIRGraphicsResult::SIR_GRAPHICS_SURFACE_CHANGED;
 	}
@@ -168,16 +166,15 @@ sirGraphicsABIResult_t SIRWindowABISurface::retire( const sirGraphicsCompletionS
 	if ( eRetire != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 		return eRetire;
 	}
-	const SIRWindowResult eRelease = m_pWindows->releaseNativeLease( m_hLease );
+	const sirWindowResult eRelease = m_hLease.reset();
 	m_pWindows = nullptr;
 	m_pDevice = nullptr;
 	m_hWindow = {};
-	m_hLease = {};
 	m_Native = {};
 	m_hSurface = {};
 	m_nMetricsRevision = 0;
 	m_Present = {};
 	m_Acquired = {};
 	m_bImageAcquired = false;
-	return eRelease == SIRWindowResult::SIR_WINDOW_OK ? SIRGraphicsResult::SIR_GRAPHICS_SUCCESS : SIRGraphicsResult::SIR_GRAPHICS_DRIVER_ERROR;
+	return eRelease == sirWindowResult::SIR_WINDOW_OK ? SIRGraphicsResult::SIR_GRAPHICS_SUCCESS : SIRGraphicsResult::SIR_GRAPHICS_DRIVER_ERROR;
 }

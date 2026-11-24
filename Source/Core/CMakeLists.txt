@@ -32,45 +32,48 @@ block(SCOPE_FOR VARIABLES)
 # -- Core/Platform --
 # Native OS services belong to the Core library and share its lifecycle.
 set(SIR_CORE_PLATFORM_COMMON
-    ${PROJECT_SOURCE_DIR}/Source/Core/Platform/SIRPlatformUtils.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Core/Platform/SIRPlatformNativeWindow.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Window/SIRWindowSystem.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Window/SIRNativeWindowHost.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Window/Headless/SIRWindowDriverHeadless.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Core/Platform/SIRVirtualMemory.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Core/Platform/SIRCPUInfo.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Core/Platform/SIRThread.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Core/Platform/SIRSync.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Core/Platform/SIRSyncAdvanced.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Core/Platform/SIRPlatformRootDirectory.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Core/Platform/SIRPlatformAtomicFile.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Shared/Window/SIRPlatformNativeWindow.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Shared/Window/SIRNativeWindowLease.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Shared/Window/SIRWindowSystem.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Shared/Window/SIRNativeWindowHost.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Headless/SIRWindowDriverHeadless.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Shared/Memory/SIRVirtualMemory.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Shared/Diagnostics/SIRCPUInfo.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Shared/Threading/SIRSync.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Shared/Threading/SIRSyncAdvanced.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Shared/File/SIRPlatformRootDirectory.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Shared/File/SIRPlatformAtomicFile.cpp
 )
 
 if(WIN32)
     set(SIR_CORE_PLATFORM_OS
-        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRPlatformFileWindows.cpp
-        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRPlatformContextWindows.cpp
-        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRPlatformRootDirectoryWindows.cpp
-        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRPlatformFileMappingWindows.cpp
-        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRPlatformPipeWindows.cpp
-        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRSemaphoreWindows.cpp
-        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRVirtualMemoryWindows.cpp
-        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRPlatformMemoryWindows.cpp
-        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRCPUInfoWindows.cpp
-        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRSystemInfoWindows.cpp
-        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRDynamicLibraryWindows.cpp
-        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRPlatformTimeWindows.cpp
-        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRPlatformProcessWindows.cpp
-        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Window/Windows/SIRWindowDriverWin32.cpp
-        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Window/Windows/SIRWGLBootstrapWindow.cpp
-        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRWin32InputBridge.cpp
-        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRWindowsRawBackend.cpp
-        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRWindowsRawDecode.cpp
-        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRWindowsXInputBackend.cpp
-        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRChildProcessWindows.cpp
-        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRFileLockWindows.cpp
-        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRPlatformFileSystemWindows.cpp
-        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRPlatformThreadControlWindows.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/Window/SIRNativeWindowHostWindows.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/Window/SIRNativeInputHostWindows.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/Threading/SIRThreadWindows.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/Threading/SIRSyncWindows.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/File/SIRPlatformFileWindows.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/Diagnostics/SIRPlatformContextWindows.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/File/SIRPlatformRootDirectoryWindows.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/File/SIRPlatformFileMappingWindows.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/Process/SIRPlatformPipeWindows.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/Threading/SIRSemaphoreWindows.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/Memory/SIRVirtualMemoryWindows.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/Memory/SIRPlatformMemoryWindows.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/Diagnostics/SIRCPUInfoWindows.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/Diagnostics/SIRSystemInfoWindows.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/Library/SIRDynamicLibraryWindows.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/Diagnostics/SIRPlatformTimeWindows.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/Threading/SIRThreadSchedulingWindows.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/Window/SIRWindowDriverWin32.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/Window/SIRWGLBootstrapWindow.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/Input/SIRWin32InputBridge.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/Input/SIRWindowsRawBackend.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/Input/SIRWindowsRawDecode.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/Input/SIRWindowsXInputBackend.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/Process/SIRChildProcessWindows.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/File/SIRFileLockWindows.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/File/SIRPlatformFileSystemWindows.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/Threading/SIRPlatformThreadControlWindows.cpp
     )
     # GameInput is first-party Windows controller I/O. The runtime is loaded
     # from the OS, while its v1 SDK header is an explicitly pinned build input.
@@ -97,8 +100,8 @@ if(WIN32)
         endif()
         if(SIR_GAMEINPUT_INCLUDE_DIR AND SIR_GAMEINPUT_SDK_IS_V1)
             list(APPEND SIR_CORE_PLATFORM_OS
-                ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRWindowsGameInputBackend.cpp
-                ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRWindowsGameInputCodec.cpp)
+                ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/Input/SIRWindowsGameInputBackend.cpp
+                ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/Input/SIRWindowsGameInputCodec.cpp)
             target_include_directories(SIRCore PRIVATE "${SIR_GAMEINPUT_INCLUDE_DIR}")
             target_compile_definitions(SIRCore PUBLIC SIR_INPUT_GAMEINPUT_AVAILABLE=1)
         elseif(SIR_REQUIRE_GAMEINPUT_SDK)
@@ -112,24 +115,28 @@ if(WIN32)
     target_link_libraries(SIRCore PRIVATE psapi user32 imm32)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     set(SIR_CORE_PLATFORM_OS
-        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRPlatformFileLinux.cpp
-        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRPlatformContextLinux.cpp
-        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRPlatformRootDirectoryLinux.cpp
-        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRPlatformFileMappingLinux.cpp
-        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRPlatformPipeLinux.cpp
-        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRSemaphoreLinux.cpp
-        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRVirtualMemoryLinux.cpp
-        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRPlatformMemoryLinux.cpp
-        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRCPUInfoLinux.cpp
-        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRSystemInfoLinux.cpp
-        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRDynamicLibraryLinux.cpp
-        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRPlatformTimeLinux.cpp
-        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRPlatformProcessLinux.cpp
-        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRLinuxEvdevBackend.cpp
-        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRChildProcessLinux.cpp
-        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRFileLockLinux.cpp
-        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRPlatformFileSystemLinux.cpp
-        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRPlatformThreadControlLinux.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/Window/SIRNativeWindowHostLinux.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/Window/SIRNativeInputHostLinux.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/Threading/SIRThreadLinux.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/Threading/SIRSyncLinux.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/File/SIRPlatformFileLinux.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/Diagnostics/SIRPlatformContextLinux.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/File/SIRPlatformRootDirectoryLinux.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/File/SIRPlatformFileMappingLinux.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/Process/SIRPlatformPipeLinux.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/Threading/SIRSemaphoreLinux.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/Memory/SIRVirtualMemoryLinux.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/Memory/SIRPlatformMemoryLinux.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/Diagnostics/SIRCPUInfoLinux.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/Diagnostics/SIRSystemInfoLinux.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/Library/SIRDynamicLibraryLinux.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/Diagnostics/SIRPlatformTimeLinux.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/Threading/SIRThreadSchedulingLinux.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/Input/SIRLinuxEvdevBackend.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/Process/SIRChildProcessLinux.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/File/SIRFileLockLinux.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/File/SIRPlatformFileSystemLinux.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/Threading/SIRPlatformThreadControlLinux.cpp
     )
     if(SIR_WITH_WAYLAND_WINDOW)
         find_package(PkgConfig QUIET)
@@ -195,7 +202,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
                 ${SIR_WAYLAND_POINTER_GENERATED} ${SIR_WAYLAND_FRACTIONAL_GENERATED})
             add_dependencies(SIRCore SIRWindowWaylandProtocol)
             list(APPEND SIR_CORE_PLATFORM_OS
-                ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Window/Linux/SIRWindowDriverWayland.cpp
+                ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/Window/SIRWindowDriverWayland.cpp
                 "${SIR_WAYLAND_PROTOCOL_C}"
                 ${SIR_WAYLAND_POINTER_GENERATED}
                 ${SIR_WAYLAND_FRACTIONAL_GENERATED})
@@ -205,7 +212,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
             if(SIR_WITH_WAYLAND_INPUT)
                 pkg_check_modules(SIR_WAYLAND_XKB QUIET IMPORTED_TARGET xkbcommon)
                 if(SIR_WAYLAND_XKB_FOUND)
-                    list(APPEND SIR_CORE_PLATFORM_OS ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRWaylandInputBridge.cpp)
+                    list(APPEND SIR_CORE_PLATFORM_OS ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/Input/SIRWaylandInputBridge.cpp)
                     target_link_libraries(SIRCore PRIVATE PkgConfig::SIR_WAYLAND_XKB)
                     target_compile_definitions(SIRCore PUBLIC SIR_INPUT_WAYLAND_AVAILABLE=1)
                     target_compile_definitions(SIRCore PRIVATE SIR_WAYLAND_XKB_AVAILABLE=1)
@@ -235,7 +242,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         if(X11_FOUND)
             if(SIR_WITH_X11_WINDOW)
                 list(APPEND SIR_CORE_PLATFORM_OS
-                    "${PROJECT_SOURCE_DIR}/Source/Core/Platform/Window/Linux/SIRWindowDriverX11.cpp")
+                    "${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/Window/SIRWindowDriverX11.cpp")
                 target_compile_definitions(SIRCore PUBLIC SIR_WINDOW_X11_AVAILABLE=1)
                 if(X11_Xrandr_FOUND AND TARGET X11::Xrandr)
                     target_link_libraries(SIRCore PRIVATE X11::Xrandr)
@@ -244,8 +251,8 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
             endif()
             if(SIR_WITH_X11_INPUT)
                 list(APPEND SIR_CORE_PLATFORM_OS
-                    "${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRLinuxX11Backend.cpp"
-                    "${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRX11InputBridge.cpp")
+                    "${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/Input/SIRLinuxX11Backend.cpp"
+                    "${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/Input/SIRX11InputBridge.cpp")
                 target_compile_definitions(SIRCore PUBLIC SIR_INPUT_X11_AVAILABLE=1)
                 if(X11_Xi_FOUND AND TARGET X11::Xi)
                     target_link_libraries(SIRCore PRIVATE X11::Xi)

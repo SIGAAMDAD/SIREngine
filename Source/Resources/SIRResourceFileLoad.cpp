@@ -17,7 +17,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Resources/SIRResourceFileLoad.h>
 
-#include <Core/Platform/SIRPlatformFileMapping.h>
+#include <Core/Platform/Shared/File/SIRPlatformFileMapping.h>
 
 #include <limits.h>
 #include <stdlib.h>
@@ -25,7 +25,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 SIRResourceFileLoad::SIRResourceFileLoad( SIRResourceGraph& rGraph, SIRTaskScheduler& rScheduler ) noexcept
     : m_pGraph( &rGraph ), m_pScheduler( &rScheduler ), m_File(), m_Request{}, m_Staging{}, m_Bytes{}, m_Task{ UINT32_MAX, 0 },
-      m_eTransferResult( SIRFileResult::SIR_FILE_OK ), m_eLastFileResult( SIRFileResult::SIR_FILE_OK ), m_bActive( false ), m_bDiscard( false )
+      m_eTransferResult( sirFileResult::SIR_FILE_OK ), m_eLastFileResult( sirFileResult::SIR_FILE_OK ), m_bActive( false ), m_bDiscard( false )
 {
 }
 
@@ -43,7 +43,7 @@ bool SIRResourceFileLoad::isActive( void ) const noexcept
 	return m_bActive;
 }
 
-SIRFileResult SIRResourceFileLoad::getLastFileResult( void ) const noexcept
+sirFileResult SIRResourceFileLoad::getLastFileResult( void ) const noexcept
 {
 	return m_eLastFileResult;
 }
@@ -96,19 +96,19 @@ SIRResourceResult SIRResourceFileLoad::begin( const char *pszUtf8Path, const sir
 	     ( rRequest.nDependencyCount != 0 && rRequest.pDependencies == nullptr ) ) {
 		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
-	m_eLastFileResult = m_File.open( pszUtf8Path, SIRFileOpenFlag::SIR_FILE_OPEN_READ );
-	if ( m_eLastFileResult != SIRFileResult::SIR_FILE_OK ) {
+	m_eLastFileResult = m_File.open( pszUtf8Path, static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_READ ) );
+	if ( m_eLastFileResult != sirFileResult::SIR_FILE_OK ) {
 		return SIRResourceResult::SIR_RESOURCE_RESULT_FAILED;
 	}
 	uint64_t nFileSize = 0;
 	m_eLastFileResult = m_File.getSize( &nFileSize );
-	if ( m_eLastFileResult != SIRFileResult::SIR_FILE_OK ) {
+	if ( m_eLastFileResult != sirFileResult::SIR_FILE_OK ) {
 		m_File.close();
 		return SIRResourceResult::SIR_RESOURCE_RESULT_FAILED;
 	}
 	if ( rRequest.nFileOffset >= nFileSize || rRequest.nFileBytes > nFileSize - rRequest.nFileOffset ||
 	     rRequest.nFileOffset > static_cast<uint64_t>(INT64_MAX) || rRequest.nFileBytes > static_cast<uint64_t>(INT64_MAX) - rRequest.nFileOffset ) {
-		m_eLastFileResult = SIRFileResult::SIR_FILE_OUT_OF_RANGE;
+		m_eLastFileResult = sirFileResult::SIR_FILE_OUT_OF_RANGE;
 		m_File.close();
 		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
@@ -123,7 +123,7 @@ SIRResourceResult SIRResourceFileLoad::begin( const char *pszUtf8Path, const sir
 	m_Request = rRequest;
 	m_Staging = hStaging;
 	m_Bytes = bytes;
-	m_eTransferResult = SIRFileResult::SIR_FILE_OK;
+	m_eTransferResult = sirFileResult::SIR_FILE_OK;
 	m_bDiscard = false;
 	m_bActive = true;
 	m_Task = { UINT32_MAX, 0 };
@@ -144,8 +144,8 @@ SIRTaskResult SIRResourceFileLoad::readTask( void *pContext, sirTaskHandle_t hTa
 	if ( pLoad->m_Request.eMode == SIRResourceFileReadMode::SIR_RESOURCE_FILE_READ_MAPPED ) {
 		SIRPlatformFileMapping mapping;
 		pLoad->m_eTransferResult =
-		    mapping.map( pLoad->m_File, pLoad->m_Request.nFileOffset, pLoad->m_Request.nFileBytes, SIRFileMapMode::SIR_FILE_MAP_READ_ONLY );
-		if ( pLoad->m_eTransferResult != SIRFileResult::SIR_FILE_OK ) {
+		    mapping.map( pLoad->m_File, pLoad->m_Request.nFileOffset, pLoad->m_Request.nFileBytes, sirFileMapMode::SIR_FILE_MAP_READ_ONLY );
+		if ( pLoad->m_eTransferResult != sirFileResult::SIR_FILE_OK ) {
 			return SIRTaskResult::SIR_TASK_RESULT_FAILURE;
 		}
 		memcpy( pLoad->m_Bytes.m_pData, mapping.getData(), static_cast<size_t>(pLoad->m_Request.nFileBytes) );
@@ -155,7 +155,7 @@ SIRTaskResult SIRResourceFileLoad::readTask( void *pContext, sirTaskHandle_t hTa
 		pLoad->m_eTransferResult =
 		    pLoad->m_File.readAt( pLoad->m_Request.nFileOffset, pLoad->m_Bytes.m_pData, pLoad->m_Request.nFileBytes, &nTransferred );
 	}
-	return pLoad->m_eTransferResult == SIRFileResult::SIR_FILE_OK ? SIRTaskResult::SIR_TASK_RESULT_SUCCESS : SIRTaskResult::SIR_TASK_RESULT_FAILURE;
+	return pLoad->m_eTransferResult == sirFileResult::SIR_FILE_OK ? SIRTaskResult::SIR_TASK_RESULT_SUCCESS : SIRTaskResult::SIR_TASK_RESULT_FAILURE;
 }
 
 SIRResourceResult SIRResourceFileLoad::cancel( void ) noexcept
@@ -201,7 +201,7 @@ SIRResourceResult SIRResourceFileLoad::poll( SIRResourceHandle *pResource ) noex
 	}
 	m_eLastFileResult = m_eTransferResult;
 	SIRResourceResult eResult = SIRResourceResult::SIR_RESOURCE_RESULT_FAILED;
-	if ( !m_bDiscard && eState == SIRTaskState::SIR_TASK_COMPLETED && m_eTransferResult == SIRFileResult::SIR_FILE_OK ) {
+	if ( !m_bDiscard && eState == SIRTaskState::SIR_TASK_COMPLETED && m_eTransferResult == sirFileResult::SIR_FILE_OK ) {
 		const SIRResourceChunkPublication chunk = { m_Request.idChunk, m_Request.keyContent, m_Staging, false };
 		const SIRResourcePublication publication = {
 		    m_Request.keyResource,   m_Request.eKind,           m_Request.nSchemaVersion, m_Request.nFormatId, &chunk, 1,

@@ -125,7 +125,7 @@ SIRLangEffectError SIRLangAnalyzeEffects( const sirLangEffectInputs_t& inputs, s
 				summary.nOwnerLane = pCapability->nOwnerLane;
 			}
 			summary.nDirectEffects |= pCapability->nEffects;
-			if ( pCapability->nEffects & SIRLangCapabilityEffect::SIR_LANG_EFFECT_SUSPEND ) {
+			if ( pCapability->nEffects & static_cast<uint32_t>( SIRLangCapabilityEffect::SIR_LANG_EFFECT_SUSPEND ) ) {
 				for ( uint32_t iAncestor = 0; iAncestor < inputs.pTree->nNodeCount; ++iAncestor ) {
 					const sirLangSyntaxNode_t& ancestor = inputs.pTree->pNodes[iAncestor];
 					const sirLangSyntaxNode_t& callNode = inputs.pTree->pNodes[iNode];
@@ -162,7 +162,7 @@ SIRLangEffectError SIRLangAnalyzeEffects( const sirLangEffectInputs_t& inputs, s
 	}
 	for ( uint32_t i = 0; i < pOutput->nCount; ++i ) {
 		sirLangEffectFunction_t& summary = pOutput->pFunctions[i];
-		summary.bDeterministic = ( summary.nTransitiveEffects & SIRLangCapabilityEffect::SIR_LANG_EFFECT_NONDETERMINISTIC ) == 0;
+		summary.bDeterministic = ( summary.nTransitiveEffects & static_cast<uint32_t>( SIRLangCapabilityEffect::SIR_LANG_EFFECT_NONDETERMINISTIC ) ) == 0;
 		if ( pOutput->bRequireDeterministic && !summary.bDeterministic ) {
 			return sirLangEffectReport( pOutput, SIRLangEffectError::SIR_LANG_EFFECT_NONDETERMINISTIC_CALL, summary.iDeclarationNode );
 		}

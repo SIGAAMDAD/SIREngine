@@ -14,7 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Editor/Scene/SIREditorFileSave.h>
-#include <Core/Platform/SIRPlatformFileSystem.h>
+#include <Core/Platform/Shared/File/SIRPlatformFileSystem.h>
 
 #include <assert.h>
 #include <stdlib.h>
@@ -128,11 +128,11 @@ int main( void )
 	sirFileSystemAtomicWriteRequest_t platform = { szDestination, szTemporary, pszOriginal, strlen( pszOriginal ) };
 	platform.pExpectedBytes = pszOriginal;
 	platform.nExpectedBytes = strlen( pszOriginal );
-	assert( SIRPlatformFileSystem::writeAtomically( platform ) == SIR_ATOMIC_SAVE_OK );
+	assert( SIRPlatformFileSystem::writeAtomically( platform ) == sirPlatformAtomicResult::SIR_ATOMIC_SAVE_OK );
 	sirEditorTestReadExact( szDestination, pszOriginal, strlen( pszOriginal ) );
 	platform.pExpectedBytes = "stale revision";
 	platform.nExpectedBytes = strlen( "stale revision" );
-	assert( SIRPlatformFileSystem::writeAtomically( platform ) == SIR_ATOMIC_SAVE_CONFLICT );
+	assert( SIRPlatformFileSystem::writeAtomically( platform ) == sirPlatformAtomicResult::SIR_ATOMIC_SAVE_CONFLICT );
 	sirEditorTestReadExact( szDestination, pszOriginal, strlen( pszOriginal ) );
 	assert( fopen( szTemporary, "rb" ) == nullptr );
 	sirEditorFileWriteRequest_t request = { szDestination, szTemporary, pszReplacement, strlen( pszReplacement ) };

@@ -37,7 +37,7 @@ SIRGraphicsResult sirVisibilityValidateMethod( const sirVisibilityMethodDesc_t& 
 	if ( method.eDepthConvention != SIRVisibilityDepthConvention::SIR_VISIBILITY_REVERSE_Z ) {
 		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
-	constexpr uint64_t REQUIRED = SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_COMPUTE | SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_SHADER_STORAGE | SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_INDIRECT_DRAW;
+	constexpr uint64_t REQUIRED = static_cast<uint64_t>(SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_COMPUTE) | static_cast<uint64_t>(SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_SHADER_STORAGE) | static_cast<uint64_t>(SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_INDIRECT_DRAW);
 	if ( ( capabilities.nFeatureMask & REQUIRED ) != REQUIRED ) {
 		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}

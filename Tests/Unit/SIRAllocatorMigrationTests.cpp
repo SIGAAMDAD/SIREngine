@@ -34,7 +34,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Memory/Allocators/SIRSizeClassAllocator.h>
 #include <Core/Memory/Allocators/SIRReclaimableSizeClassAllocator.h>
 #include <Core/Memory/Allocators/SIRCompactBucketAllocator.h>
-#include <Core/Platform/SIRVirtualMemory.h>
+#include <Core/Platform/Shared/Memory/SIRVirtualMemory.h>
 
 #include <stdio.h>
 #include <stdint.h>

@@ -13,7 +13,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#include <Core/Platform/Linux/SIRLinuxEvdevBackend.h>
+#include <Core/Platform/Linux/Input/SIRLinuxEvdevBackend.h>
 #include <linux/input.h>
 #include <errno.h>
 #include <fcntl.h>

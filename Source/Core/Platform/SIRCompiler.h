@@ -46,12 +46,12 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #define SIR_CPP_IS_11 ( SIR_CPP_VERSION >= 201103L && SIR_CPP_VERSION < 201402L )
 #define SIR_CPP_IS_14 ( SIR_CPP_VERSION >= 201402L && SIR_CPP_VERSION < 201703L )
 #define SIR_CPP_IS_17 ( SIR_CPP_VERSION >= 201703L && SIR_CPP_VERSION < 202002L )
-#define SIR_CPP_IS_20 ( SIR_CPP_VERSION >= 202002L && SIR_CPP_VERSION < 202302L )
-#define SIR_CPP_IS_23 ( SIR_CPP_VERSION >= 202302L && SIR_CPP_VERSION < 202400L )
+#define SIR_CPP_IS_20 ( SIR_CPP_VERSION >= 202002L && SIR_CPP_VERSION < 202003L )
+#define SIR_CPP_IS_23 ( SIR_CPP_VERSION >= 202003L && SIR_CPP_VERSION < 202400L )
 #define SIR_CPP_IS_26 ( SIR_CPP_VERSION >= 202400L )
 #define SIR_CPP_AT_LEAST_17 ( SIR_CPP_VERSION >= 201703L )
 #define SIR_CPP_AT_LEAST_20 ( SIR_CPP_VERSION >= 202002L )
-#define SIR_CPP_AT_LEAST_23 ( SIR_CPP_VERSION >= 202302L )
+#define SIR_CPP_AT_LEAST_23 ( SIR_CPP_VERSION >= 202003L )
 #define SIR_CPP_AT_LEAST_26 ( SIR_CPP_VERSION >= 202400L )
 #define SIR_CPP_VERSION_AT_LEAST( nYearMonth ) ( SIR_CPP_VERSION >= ( nYearMonth ) )
 
@@ -71,9 +71,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #define SIR_CPP_STANDARD 0
 #endif
 
-// Applications can raise the floor before including this header. The engine
-// itself is currently C++17, although newer source experiments may select
-// 20/23.
+// Applications can raise the floor before including this header. Compilers
+// may report a preliminary value above 202002L for their C++23 mode.
 #ifndef SIR_CPP_REQUIRED_VERSION
 #define SIR_CPP_REQUIRED_VERSION SIR_CPP_MINIMUM
 #endif
@@ -698,15 +697,15 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 // ===========================================================================
 // Attributes, optimization, ABI and diagnostics. Forcible function inlining
-// must use __SIR_FORCEINLI_H__; there is no ordinary inline macro.
+// must use SIR_FORCEINLINE; there is no ordinary inline macro.
 // ===========================================================================
 #if SIR_COMPILER_MSVC_ABI
-#define __SIR_FORCEINLI_H__ __forceinline
+#define SIR_FORCEINLINE __forceinline
 #define SIR_NOINLINE __declspec( noinline )
 #define SIR_RESTRICT __restrict
 #define SIR_ALIGN_DECL( nAlignment ) __declspec( align( nAlignment ) )
 #else
-#define __SIR_FORCEINLI_H__ inline __attribute__( ( always_inline ) )
+#define SIR_FORCEINLINE inline __attribute__( ( always_inline ) )
 #define SIR_NOINLINE __attribute__( ( noinline ) )
 #define SIR_RESTRICT __restrict__
 #define SIR_ALIGN_DECL( nAlignment ) __attribute__( ( aligned( nAlignment ) ) )

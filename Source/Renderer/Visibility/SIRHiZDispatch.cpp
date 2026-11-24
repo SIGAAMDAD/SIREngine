@@ -51,7 +51,7 @@ SIRGraphicsResult sirHiZPlanDispatches( const sirHiZLayout_t& layout, const sirH
 	     source.eFormat != SIRGraphicsFormat::SIR_GRAPHICS_FORMAT_D32_FLOAT ) {
 		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( ( source.nUsage & SIRGraphicsUsage::SIR_GRAPHICS_USAGE_SAMPLED ) == 0 || ( source.nUsage & SIRGraphicsUsage::SIR_GRAPHICS_USAGE_DEPTH_STENCIL ) == 0 ) {
+	if ( ( source.nUsage & static_cast<uint32_t>(SIRGraphicsUsage::SIR_GRAPHICS_USAGE_SAMPLED) ) == 0 || ( source.nUsage & static_cast<uint32_t>(SIRGraphicsUsage::SIR_GRAPHICS_USAGE_DEPTH_STENCIL) ) == 0 ) {
 		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( depth.eConvention != SIRVisibilityDepthConvention::SIR_VISIBILITY_REVERSE_Z ) {
@@ -83,7 +83,7 @@ SIRGraphicsResult sirHiZPlanDispatches( const sirHiZLayout_t& layout, const sirH
 	                 1,
 	                 layout.nMipCount,
 	                 1,
-	                 SIRGraphicsUsage::SIR_GRAPHICS_USAGE_SAMPLED | SIRGraphicsUsage::SIR_GRAPHICS_USAGE_STORAGE,
+	                 static_cast<uint32_t>(SIRGraphicsUsage::SIR_GRAPHICS_USAGE_SAMPLED) | static_cast<uint32_t>(SIRGraphicsUsage::SIR_GRAPHICS_USAGE_STORAGE),
 	                 SIRGraphicsTextureDimension::SIR_GRAPHICS_TEXTURE_2D,
 	                 SIRGraphicsFormat::SIR_GRAPHICS_FORMAT_R32_FLOAT,
 	                 SIRGraphicsMemoryClass::SIR_GRAPHICS_MEMORY_GPU_LOCAL };

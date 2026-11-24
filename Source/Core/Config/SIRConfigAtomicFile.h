@@ -18,7 +18,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/SIRPCH.h>
 #include <Core/Config/SIRConfigTypes.h>
-#include <Core/Platform/SIRPlatformFile.h>
+#include <Core/Platform/Shared/File/SIRPlatformFile.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED

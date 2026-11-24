@@ -33,7 +33,7 @@ typedef struct sirFrameGraphProviderLaneMap_s
 	uint32_t nProviderGeneration;
 	uint32_t nDeviceGeneration;
 	uint32_t nLaneCount;
-	uint32_t szQueueToLane[SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT];
+	uint32_t szQueueToLane[static_cast<uint32_t>(SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT)];
 } sirFrameGraphProviderLaneMap_t;
 
 // Build retirement REQUIREMENTS from submitted fence values. This result

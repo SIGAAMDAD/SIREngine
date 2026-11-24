@@ -59,7 +59,7 @@ SIRAudioResult SIRFMODVoiceBackend::configure( SIRFMODContext *pContext, const s
 	       ( ops.setListenerSpatial == nullptr || ops.setListenerCount == nullptr || ops.setListenerWeight == nullptr ) ) ) {
 		return SIRAudioResult::SIR_AUDIO_INVALID_ARGUMENT;
 	}
-	if ( !sirPlatformCaptureContext( &m_Platform ) ) {
+	if ( !SIRPlatformContext::capture( &m_Platform ) ) {
 		return SIRAudioResult::SIR_AUDIO_BACKEND_ERROR;
 	}
 	m_pContext = pContext;

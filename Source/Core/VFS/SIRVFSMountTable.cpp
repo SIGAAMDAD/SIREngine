@@ -14,7 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Core/VFS/SIRVFSMountTable.h>
-#include <Core/Platform/SIRScopedLock.h>
+#include <Core/Platform/Shared/Threading/SIRScopedLock.h>
 
 #include <string.h>
 
@@ -87,7 +87,7 @@ uint64_t SIRVFSMountTable::getRevision( void ) const noexcept
 SIRVFSResult SIRVFSMountTable::mount( const sirVFSMountDescriptor_t& descriptor, sirVFSMountHandle_t *pHandle ) noexcept
 {
 	if ( pHandle == nullptr || descriptor.nSourceId == 0 || descriptor.nAllowedOps == 0 ||
-	     ( descriptor.nAllowedOps & ~static_cast<uint32_t>( SIRVFSAccess::SIR_VFS_ACCESS_READ | SIRVFSAccess::SIR_VFS_ACCESS_WRITE | SIRVFSAccess::SIR_VFS_ACCESS_ENUMERATE ) ) != 0 ||
+	     ( descriptor.nAllowedOps & ~( static_cast<uint32_t>( SIRVFSAccess::SIR_VFS_ACCESS_READ ) | static_cast<uint32_t>( SIRVFSAccess::SIR_VFS_ACCESS_WRITE ) | static_cast<uint32_t>( SIRVFSAccess::SIR_VFS_ACCESS_ENUMERATE ) ) ) != 0 ||
 	     descriptor.eKind > SIRVFSBackendKind::SIR_VFS_BACKEND_GENERATED ) {
 		return SIRVFSResult::SIR_VFS_INVALID_ARGUMENT;
 	}
@@ -97,7 +97,7 @@ SIRVFSResult SIRVFSMountTable::mount( const sirVFSMountDescriptor_t& descriptor,
 		return SIRVFSResult::SIR_VFS_INVALID_ARGUMENT;
 	}
 	const bool bWritable = strcmp( szNamespace, "user" ) == 0 || strcmp( szNamespace, "cache" ) == 0;
-	if ( ( descriptor.nAllowedOps & SIRVFSAccess::SIR_VFS_ACCESS_WRITE ) != 0 && ( !bWritable || descriptor.eKind == SIRVFSBackendKind::SIR_VFS_BACKEND_SIRPACK ) ) {
+	if ( ( descriptor.nAllowedOps & static_cast<uint32_t>( SIRVFSAccess::SIR_VFS_ACCESS_WRITE ) ) != 0 && ( !bWritable || descriptor.eKind == SIRVFSBackendKind::SIR_VFS_BACKEND_SIRPACK ) ) {
 		return SIRVFSResult::SIR_VFS_FORBIDDEN;
 	}
 	if ( !descriptor.bTrusted && strcmp( szNamespace, "mods" ) != 0 ) {
@@ -168,7 +168,7 @@ SIRVFSResult SIRVFSMountTable::acquireCandidates( const sirVFSPath_t& path, uint
                                                     sirVFSCandidateList_t *pCandidates ) noexcept
 {
 	if ( pCandidates == nullptr || !sirVFSCheckPath( path ) ||
-	     ( nOperation != SIRVFSAccess::SIR_VFS_ACCESS_READ && nOperation != SIRVFSAccess::SIR_VFS_ACCESS_ENUMERATE ) ) {
+	     ( nOperation != static_cast<uint32_t>( SIRVFSAccess::SIR_VFS_ACCESS_READ ) && nOperation != static_cast<uint32_t>( SIRVFSAccess::SIR_VFS_ACCESS_ENUMERATE ) ) ) {
 		return SIRVFSResult::SIR_VFS_INVALID_ARGUMENT;
 	}
 	const SIRScopedLock<SIRMutex> guard( m_Mutex );
@@ -233,7 +233,7 @@ SIRVFSResult SIRVFSMountTable::acquireWriteTarget( const sirVFSPath_t& path, sir
 	if ( !slot.bActive || slot.nGeneration != handle.nGeneration ) {
 		return SIRVFSResult::SIR_VFS_STALE_HANDLE;
 	}
-	if ( !sirVFSNamespaceMatches( slot.descriptor, path ) || ( slot.descriptor.nAllowedOps & SIRVFSAccess::SIR_VFS_ACCESS_WRITE ) == 0 ) {
+	if ( !sirVFSNamespaceMatches( slot.descriptor, path ) || ( slot.descriptor.nAllowedOps & static_cast<uint32_t>( SIRVFSAccess::SIR_VFS_ACCESS_WRITE ) ) == 0 ) {
 		return SIRVFSResult::SIR_VFS_FORBIDDEN;
 	}
 	if ( m_nNextToken == UINT64_MAX ) {

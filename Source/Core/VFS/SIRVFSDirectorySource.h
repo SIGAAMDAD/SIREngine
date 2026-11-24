@@ -24,8 +24,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-#include <Core/Platform/SIRPlatformRootDirectory.h>
-#include <Core/Platform/SIRSync.h>
+#include <Core/Platform/Shared/File/SIRPlatformRootDirectory.h>
+#include <Core/Platform/Shared/Threading/SIRSync.h>
 #include <Core/VFS/SIRVFSFileHandleTable.h>
 
 // Binds one immutable VFS source generation to one OS-anchored directory.
@@ -48,7 +48,7 @@ public:
 
 protected:
 private:
-	static SIRVFSResult fileResult( SIRFileResult eResult ) noexcept;
+	static SIRVFSResult fileResult( sirFileResult eResult ) noexcept;
 
 	mutable SIRMutex m_Mutex;
 	SIRPlatformRootDirectory m_Root;

@@ -132,10 +132,10 @@ int main( void )
 	sirVFSDirectoryRequire( source.openRead( files, borrowed.borrow, &native ) == SIR_VFS_OK, "open trusted borrowed path" );
 	char szContent[10] = {};
 	uint64_t nTransferred = 0;
-	sirVFSDirectoryRequire( native.readAt( 0, szContent, 9, &nTransferred ) == SIR_FILE_OK && nTransferred == 9, "physical read" );
+	sirVFSDirectoryRequire( native.readAt( 0, szContent, 9, &nTransferred ) == sirFileResult::SIR_FILE_OK && nTransferred == 9, "physical read" );
 	sirVFSDirectoryRequire( strcmp( szContent, "DIRECTORY" ) == 0, "read expected bytes" );
 	sirVFSDirectoryRequire( source.openRead( files, borrowed.borrow, &native ) == SIR_VFS_INVALID_ARGUMENT, "reject already open output" );
-	sirVFSDirectoryRequire( native.close() == SIR_FILE_OK, "native close" );
+	sirVFSDirectoryRequire( native.close() == sirFileResult::SIR_FILE_OK, "native close" );
 
 	// A second mount can deliberately use identical public descriptor fields.
 	// The directory source must still enforce the actual slot/generation.
@@ -182,9 +182,9 @@ int main( void )
 	sirVFSDirectoryRequire( mounts.unmount( mount ) == SIR_VFS_OK, "unmount while borrow retained" );
 	sirVFSDirectoryRequire( source.openRead( files, borrowed.borrow, &native ) == SIR_VFS_OK, "open after retirement via pinned view" );
 	sirVFSDirectoryRequire( files.releaseBorrow( borrowed.borrow ) == SIR_VFS_OK, "release final original borrow" );
-	sirVFSDirectoryRequire( native.readAt( 0, szContent, 9, &nTransferred ) == SIR_FILE_OK, "native handle independent of VFS lease" );
+	sirVFSDirectoryRequire( native.readAt( 0, szContent, 9, &nTransferred ) == sirFileResult::SIR_FILE_OK, "native handle independent of VFS lease" );
 	sirVFSDirectoryRequire( source.openRead( files, borrowed.borrow, &native ) == SIR_VFS_INVALID_ARGUMENT, "reject open output file" );
-	sirVFSDirectoryRequire( native.close() == SIR_FILE_OK, "native file cleanup" );
+	sirVFSDirectoryRequire( native.close() == sirFileResult::SIR_FILE_OK, "native file cleanup" );
 	sirVFSDirectoryRequire( source.openRead( files, borrowed.borrow, &native ) == SIR_VFS_STALE_HANDLE, "reject released view" );
 	sirVFSDirectoryRequire( source.close() == SIR_VFS_OK, "close bound source" );
 	sirVFSDirectoryRequire( source.openRead( files, borrowed.borrow, &native ) == SIR_VFS_STOPPED, "closed source rejects lookup" );

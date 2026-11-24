@@ -38,25 +38,25 @@ static uint32_t sirShaderCountBits( uint64_t nValue ) noexcept
 
 static uint64_t sirShaderStageRequirements( uint32_t nStage ) noexcept
 {
-	if ( nStage == SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_COMPUTE ) {
-		return SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_COMPUTE;
+	if ( nStage == static_cast<uint32_t>(SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_COMPUTE) ) {
+		return static_cast<uint64_t>(SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_COMPUTE);
 	}
-	uint64_t nRequired = SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_GRAPHICS;
-	if ( nStage == SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_GEOMETRY ) {
-		nRequired |= SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_GEOMETRY_SHADER;
+	uint64_t nRequired = static_cast<uint64_t>(SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_GRAPHICS);
+	if ( nStage == static_cast<uint32_t>(SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_GEOMETRY) ) {
+		nRequired |= static_cast<uint64_t>(SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_GEOMETRY_SHADER);
 	}
-	if ( nStage == SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_TESS_CONTROL || nStage == SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_TESS_EVALUATION ) {
-		nRequired |= SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_TESSELLATION;
+	if ( nStage == static_cast<uint32_t>(SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_TESS_CONTROL) || nStage == static_cast<uint32_t>(SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_TESS_EVALUATION) ) {
+		nRequired |= static_cast<uint64_t>(SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_TESSELLATION);
 	}
-	if ( nStage == SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_MESH || nStage == SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_TASK ) {
-		nRequired |= SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_MESH_SHADER;
+	if ( nStage == static_cast<uint32_t>(SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_MESH) || nStage == static_cast<uint32_t>(SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_TASK) ) {
+		nRequired |= static_cast<uint64_t>(SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_MESH_SHADER);
 	}
 	return nRequired;
 }
 
 bool sirShaderIsStageValid( uint32_t nStage ) noexcept
 {
-	constexpr uint32_t VALID_STAGES = ( SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_TASK << 1 ) - 1U;
+	constexpr uint32_t VALID_STAGES = ( static_cast<uint32_t>(SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_TASK) << 1 ) - 1U;
 	return nStage != 0 && ( nStage & ( nStage - 1U ) ) == 0 && ( nStage & ~VALID_STAGES ) == 0;
 }
 
@@ -93,7 +93,7 @@ SIRGraphicsResult sirShaderBuildCacheKey( const sirShaderCacheDescriptor_t& desc
 	if ( desc.eFormat != eExpected || !sirShaderIsStageValid( desc.nStage ) ) {
 		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	constexpr uint64_t VALID_FEATURES = ( SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_PRESENT << 1 ) - 1ULL;
+	constexpr uint64_t VALID_FEATURES = ( static_cast<uint64_t>(SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_PRESENT) << 1 ) - 1ULL;
 	if ( ( desc.nRequiredFeatures & ~VALID_FEATURES ) != 0 ) {
 		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
@@ -135,7 +135,7 @@ SIRGraphicsResult sirShaderValidateVariant( const sirShaderVariant_t& variant ) 
 	if ( variant.nDeviceId != 0 && variant.nVendorId == 0 ) {
 		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	constexpr uint64_t VALID_FEATURES = ( SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_PRESENT << 1 ) - 1ULL;
+	constexpr uint64_t VALID_FEATURES = ( static_cast<uint64_t>(SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_PRESENT) << 1 ) - 1ULL;
 	if ( ( variant.nRequiredFeatures & ~VALID_FEATURES ) != 0 ) {
 		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}

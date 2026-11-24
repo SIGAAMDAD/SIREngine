@@ -19,7 +19,7 @@ SIRGraphicsResult SIRModernPipelineCompiler::validate( const sirGraphicsPipeline
 	if ( eValidation != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 		return eValidation;
 	}
-	if ( caps.nModel != SIRGraphicsPipelineModel::SIR_GRAPHICS_PIPELINE_MODEL_MODERN || pipeline.eModel != SIRGraphicsPipelineModel::SIR_GRAPHICS_PIPELINE_MODEL_MODERN ||
+	if ( caps.nModel != static_cast<uint32_t>( SIRGraphicsPipelineModel::SIR_GRAPHICS_PIPELINE_MODEL_MODERN ) || pipeline.eModel != SIRGraphicsPipelineModel::SIR_GRAPHICS_PIPELINE_MODEL_MODERN ||
 	     pipeline.pModern == nullptr ) {
 		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
@@ -32,8 +32,8 @@ SIRGraphicsResult SIRModernPipelineCompiler::validate( const sirGraphicsPipeline
 	const sirGraphicsShaderCode_t *shaders[3] = { &pipeline.vertexShader, &pipeline.pixelShader, &pipeline.computeShader };
 	for ( uint32_t i = 0; i < 3; ++i ) {
 		const sirGraphicsShaderCode_t& shader = *shaders[i];
-		if ( shader.nByteCount != 0 && ( shader.eFormat == 0 || shader.eFormat > SIRGraphicsShaderFormat::SIR_GRAPHICS_SHADER_FIXED_FUNCTION ||
-		                                 ( caps.nShaderFormatMask & ( 1U << ( shader.eFormat - 1 ) ) ) == 0 ) ) {
+		if ( shader.nByteCount != 0 && ( static_cast<uint32_t>( shader.eFormat ) == 0 || shader.eFormat > SIRGraphicsShaderFormat::SIR_GRAPHICS_SHADER_FIXED_FUNCTION ||
+		                                 ( caps.nShaderFormatMask & ( 1U << ( static_cast<uint32_t>( shader.eFormat ) - 1 ) ) ) == 0 ) ) {
 			return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 		}
 	}
@@ -169,16 +169,16 @@ SIRGraphicsResult SIRModernDrawCompiler::validate( const sirModernDraw_t& draw, 
 SIRGraphicsResult SIRModernSynchronizationPlanner::validateQueue( const sirModernBatch_t& batch,
                                                                     const sirGraphicsABIPipelineModelCaps_t& caps ) noexcept
 {
-	if ( batch.eQueue >= SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT || ( caps.nQueueMask & ( 1U << batch.eQueue ) ) == 0 ) {
+	if ( batch.eQueue >= SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT || ( caps.nQueueMask & ( 1U << static_cast<uint32_t>( batch.eQueue ) ) ) == 0 ) {
 		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
-	if ( batch.eQueue == SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COMPUTE && ( caps.nRequiredFeatureMask & SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_ASYNC_COMPUTE ) == 0 ) {
+	if ( batch.eQueue == SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COMPUTE && ( caps.nRequiredFeatureMask & static_cast<uint64_t>( SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_ASYNC_COMPUTE ) ) == 0 ) {
 		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
-	if ( batch.eQueue == SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COPY && ( caps.nRequiredFeatureMask & SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_COPY_QUEUE ) == 0 ) {
+	if ( batch.eQueue == SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COPY && ( caps.nRequiredFeatureMask & static_cast<uint64_t>( SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_COPY_QUEUE ) ) == 0 ) {
 		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
-	if ( caps.nExecutionModel == SIRGraphicsExecutionModel::SIR_GRAPHICS_EXECUTION_STATEFUL_SERIAL && batch.eQueue != SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_DIRECT ) {
+	if ( caps.nExecutionModel == static_cast<uint32_t>( SIRGraphicsExecutionModel::SIR_GRAPHICS_EXECUTION_STATEFUL_SERIAL ) && batch.eQueue != SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_DIRECT ) {
 		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
 	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
@@ -190,7 +190,7 @@ SIRGraphicsResult SIRGraphicsModernRHI::admit( const sirModernBatch_t& batch, co
 	if ( eCaps != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 		return eCaps;
 	}
-	if ( caps.nModel != SIRGraphicsPipelineModel::SIR_GRAPHICS_PIPELINE_MODEL_MODERN ) {
+	if ( caps.nModel != static_cast<uint32_t>( SIRGraphicsPipelineModel::SIR_GRAPHICS_PIPELINE_MODEL_MODERN ) ) {
 		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
 	if ( batch.nDeviceGeneration == 0 || batch.nDeviceGeneration != caps.nDeviceGeneration ||
@@ -215,7 +215,7 @@ SIRGraphicsResult SIRGraphicsModernRHI::admit( const sirModernBatch_t& batch, co
 	}
 	if ( batch.pPass != nullptr || batch.nDrawCount != 0 ) {
 		if ( batch.pPass == nullptr || batch.eQueue != SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_DIRECT ||
-		     ( caps.nRequiredFeatureMask & SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_GRAPHICS ) == 0 ) {
+		     ( caps.nRequiredFeatureMask & static_cast<uint64_t>( SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_GRAPHICS ) ) == 0 ) {
 			return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 		}
 		if ( batch.nDrawCount != 0 && ( batch.pViewport == nullptr || batch.pScissor == nullptr ) ) {
@@ -267,8 +267,8 @@ SIRGraphicsResult SIRGraphicsModernRHI::admit( const sirModernBatch_t& batch, co
 		}
 	}
 	if ( batch.nDispatchCount != 0 ) {
-		if ( batch.nDrawCount != 0 || batch.pPass != nullptr || ( caps.nShaderStageMask & SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_COMPUTE ) == 0 ||
-		     ( caps.nRequiredFeatureMask & SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_COMPUTE ) == 0 ) {
+		if ( batch.nDrawCount != 0 || batch.pPass != nullptr || ( caps.nShaderStageMask & static_cast<uint32_t>( SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_COMPUTE ) ) == 0 ||
+		     ( caps.nRequiredFeatureMask & static_cast<uint64_t>( SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_COMPUTE ) ) == 0 ) {
 			return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 		}
 		for ( uint32_t i = 0; i < batch.nDispatchCount; ++i ) {

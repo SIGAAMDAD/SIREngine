@@ -89,8 +89,8 @@ SIRLangLowerError SIRLangBuildHIR( const sirLangSyntaxTree_t *pTree, const sirLa
 		    syntax.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_ASSIGNMENT && iLhs < pTree->nNodeCount && pTree->pNodes[iLhs].eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_MEMBER;
 		if ( syntax.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_MUTATE || bWorldAssignment || syntax.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_SPAWN ||
 		     syntax.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_DESTROY || syntax.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_EMIT || syntax.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_AFTER ) {
-			hir.nEffects |= syntax.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_EMIT || syntax.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_AFTER ? SIRLangCapabilityEffect::SIR_LANG_EFFECT_EMIT
-			                                                                                              : SIRLangCapabilityEffect::SIR_LANG_EFFECT_STATE_WRITE;
+			hir.nEffects |= syntax.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_EMIT || syntax.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_AFTER ? static_cast<uint32_t>( SIRLangCapabilityEffect::SIR_LANG_EFFECT_EMIT )
+			                                                                                              : static_cast<uint32_t>( SIRLangCapabilityEffect::SIR_LANG_EFFECT_STATE_WRITE );
 		}
 		pOutput->nAggregatedEffects |= hir.nEffects;
 		if ( syntax.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_ERROR ) {

@@ -36,11 +36,12 @@ enum class SIRSystemResult : uint8_t {
 class SIREngineSystem
 {
 public:
-	SIREngineSystem( void ) noexcept = default;
-	SIREngineSystem( const SIREngineSystem& ) = delete;
-	virtual ~SIREngineSystem( void ) noexcept;
+	constexpr explicit SIREngineSystem( void ) noexcept = default;
+	constexpr explicit SIREngineSystem( const SIREngineSystem& ) noexcept = delete;
+	constexpr explicit SIREngineSystem( SIREngineSystem&& ) noexcept = delete;
 
-	SIREngineSystem& operator=( const SIREngineSystem& ) = delete;
+	const SIREngineSystem& operator=( const SIREngineSystem& ) noexcept = delete;
+	const SIREngineSystem& operator=( SIREngineSystem&& ) noexcept = delete;
 
 	virtual SIRSystemResult initialize( void ) noexcept = 0;
 	virtual void update( float fDeltaSeconds ) noexcept;
@@ -48,7 +49,7 @@ public:
 	virtual SIRSystemResult shutdown( void ) noexcept = 0;
 
 protected:
-private:
+	virtual ~SIREngineSystem() noexcept = 0;
 };
 
 #endif // __SIR_ENGINESYSTEM_H__

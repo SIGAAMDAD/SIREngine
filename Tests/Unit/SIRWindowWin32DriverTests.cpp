@@ -13,12 +13,25 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#include <Core/Platform/Window/SIRWindowSystem.h>
-#include <Core/Platform/Window/Windows/SIRWindowDriverWin32.h>
-#include <Core/Platform/Windows/SIRWin32InputBridge.h>
-#include <Core/Platform/Windows/SIRWindowsRawBackend.h>
+#include <Core/Platform/Shared/Window/SIRNativeWindowLease.h>
+#include <Core/Platform/Shared/Window/SIRWindowSystem.h>
+#include <Core/Platform/Windows/Window/SIRWindowDriverWin32.h>
+#include <Core/Platform/Windows/Input/SIRWin32InputBridge.h>
+#include <Core/Platform/Windows/Input/SIRWindowsRawBackend.h>
 #include <assert.h>
 #include <stdio.h>
+
+
+static sirWindowResult sirAcquireTestLease( SIRWindowSystem& system, sirWindowHandle_t handle, SIRNativeWindowLease& lease, sirWindowNativeView_t& view ) noexcept
+{
+    if ( lease.isValid() ) {
+        SIRNativeWindowLease probe;
+        return system.acquireNativeLease( handle, probe );
+    }
+    const sirWindowResult result = system.acquireNativeLease( handle, lease );
+    if ( result == sirWindowResult::SIR_WINDOW_OK ) { view = lease.getView(); }
+    return result;
+}
 
 static sirWindowWin32Dispatch_t sirConsumeNativeClose( const sirWindowWin32Message_t& message, void *pContext ) noexcept
 {
@@ -36,7 +49,7 @@ static void sirCountNativeWin32( void *pContext, const sirWindowBackendEvent_t& 
 {
 	sirWin32NativePumpCount_t *pCount = ( sirWin32NativePumpCount_t * )pContext;
 	++pCount->nDelivered;
-	if ( event.eKind == SIR_WINDOW_EVENT_CLOSE_REQUESTED ) {
+	if ( event.eKind == sirWindowEventKind::SIR_WINDOW_EVENT_CLOSE_REQUESTED ) {
 		++pCount->nClose;
 	}
 }
@@ -44,11 +57,11 @@ static void sirCountNativeWin32( void *pContext, const sirWindowBackendEvent_t& 
 static bool sirTestWin32BoundedNativeEvents( void ) noexcept
 {
 	SIRWindowDriverWin32 driver;
-	if ( driver.initialize() != SIR_WINDOW_OK ) {
+	if ( driver.initialize() != sirWindowResult::SIR_WINDOW_OK ) {
 		return false;
 	}
 	sirWindowNativeView_t view = {};
-	if ( driver.createWindow( { "pump-budget", 640, 480 }, 0, &view ) != SIR_WINDOW_OK ) {
+	if ( driver.createWindow( { "pump-budget", 640, 480 }, 0, &view ) != sirWindowResult::SIR_WINDOW_OK ) {
 		driver.shutdown();
 		return false;
 	}
@@ -58,12 +71,12 @@ static bool sirTestWin32BoundedNativeEvents( void ) noexcept
 	}
 	( void )SendMessageW( ( HWND )view.nNativeWindow, WM_CLOSE, 0, 0 );
 	sirWin32NativePumpCount_t count = {};
-	const bool bFirst = driver.pumpEvents( 1, sirCountNativeWin32, &count ) == SIR_WINDOW_OK && count.nDelivered == 1 && count.nClose == 1;
+	const bool bFirst = driver.pumpEvents( 1, sirCountNativeWin32, &count ) == sirWindowResult::SIR_WINDOW_OK && count.nDelivered == 1 && count.nClose == 1;
 	for ( uint32_t i = 0; i < 32; ++i ) {
 		( void )driver.pumpEvents( 2, sirCountNativeWin32, &count );
 	}
 	const bool bClosed = count.nClose == 1;
-	const bool bDestroyed = driver.destroyWindow( 0 ) == SIR_WINDOW_OK;
+	const bool bDestroyed = driver.destroyWindow( 0 ) == sirWindowResult::SIR_WINDOW_OK;
 	driver.shutdown();
 	return bFirst && bClosed && bDestroyed;
 }
@@ -87,14 +100,14 @@ static bool sirTestWin32MultiwindowInputRouting( void ) noexcept
 		return false;
 	}
 	sirWindowHandle_t first = {}, second = {};
-	if ( windows.createWindow( { "first-input", 640, 480 }, &first ) != SIR_WINDOW_OK ||
-	     windows.createWindow( { "second-input", 640, 480 }, &second ) != SIR_WINDOW_OK ) {
+	if ( windows.createWindow( { "first-input", 640, 480 }, &first ) != sirWindowResult::SIR_WINDOW_OK ||
+	     windows.createWindow( { "second-input", 640, 480 }, &second ) != sirWindowResult::SIR_WINDOW_OK ) {
 		return false;
 	}
-	sirWindowNativeLease_t firstLease = {}, secondLease = {};
+	SIRNativeWindowLease firstLease, secondLease;
 	sirWindowNativeView_t firstView = {}, secondView = {};
-	if ( windows.acquireNativeLease( first, &firstLease, &firstView ) != SIR_WINDOW_OK ||
-	     windows.acquireNativeLease( second, &secondLease, &secondView ) != SIR_WINDOW_OK || !bridge.bind( input, native, firstView ) ||
+	if ( sirAcquireTestLease( windows, first, firstLease, firstView ) != sirWindowResult::SIR_WINDOW_OK ||
+	     sirAcquireTestLease( windows, second, secondLease, secondView ) != sirWindowResult::SIR_WINDOW_OK || !bridge.bind( input, native, firstView ) ||
 	     !bridge.registerWindow( secondView ) || bridge.registerWindow( secondView ) || !bridge.acceptsWindow( firstView.nNativeWindow ) ||
 	     !bridge.acceptsWindow( secondView.nNativeWindow ) || !driver.setMessageSink( sirRouteWin32Input, &bridge ) ) {
 		return false;
@@ -110,8 +123,8 @@ static bool sirTestWin32MultiwindowInputRouting( void ) noexcept
 	}
 	( void )driver.setMessageSink( nullptr, nullptr );
 	bridge.unbind();
-	if ( windows.releaseNativeLease( secondLease ) != SIR_WINDOW_OK || windows.releaseNativeLease( firstLease ) != SIR_WINDOW_OK ||
-	     windows.destroyWindow( second ) != SIR_WINDOW_OK || windows.destroyWindow( first ) != SIR_WINDOW_OK ||
+	if ( secondLease.reset() != sirWindowResult::SIR_WINDOW_OK || firstLease.reset() != sirWindowResult::SIR_WINDOW_OK ||
+	     windows.destroyWindow( second ) != sirWindowResult::SIR_WINDOW_OK || windows.destroyWindow( first ) != sirWindowResult::SIR_WINDOW_OK ||
 	     windows.shutdown() != SIR_SYSTEM_OK ) {
 		return false;
 	}
@@ -142,13 +155,13 @@ static bool sirTestWindowStateCannotBeSwallowedByInput( void ) noexcept
 		return false;
 	}
 	sirWindowHandle_t hWindow = {};
-	if ( windows.createWindow( { "native-state-owner", 640, 480 }, &hWindow ) != SIR_WINDOW_OK ||
+	if ( windows.createWindow( { "native-state-owner", 640, 480 }, &hWindow ) != sirWindowResult::SIR_WINDOW_OK ||
 	     !driver.setMessageSink( sirConsumeNativeState, &windows ) ) {
 		return false;
 	}
-	sirWindowNativeLease_t lease = {};
+	SIRNativeWindowLease lease;
 	sirWindowNativeView_t view = {};
-	if ( windows.acquireNativeLease( hWindow, &lease, &view ) != SIR_WINDOW_OK ) {
+	if ( sirAcquireTestLease( windows, hWindow, lease, view ) != sirWindowResult::SIR_WINDOW_OK ) {
 		return false;
 	}
 	const HWND hNative = ( HWND )view.nNativeWindow;
@@ -156,7 +169,7 @@ static bool sirTestWindowStateCannotBeSwallowedByInput( void ) noexcept
 	( void )SendMessageW( hNative, WM_KILLFOCUS, 0, 0 );
 	( void )SendMessageW( hNative, WM_SETFOCUS, 0, 0 );
 	sirWindowSnapshot_t snapshot = {};
-	if ( windows.pumpEvents( 256 ) != SIR_WINDOW_OK || windows.querySnapshot( hWindow, &snapshot ) != SIR_WINDOW_OK ||
+	if ( windows.pumpEvents( 256 ) != sirWindowResult::SIR_WINDOW_OK || windows.querySnapshot( hWindow, &snapshot ) != sirWindowResult::SIR_WINDOW_OK ||
 	     snapshot.nWidth != 853 || snapshot.nHeight != 491 || !snapshot.bFocused ) {
 		return false;
 	}
@@ -168,7 +181,7 @@ static bool sirTestWindowStateCannotBeSwallowedByInput( void ) noexcept
 		return false;
 	}
 	( void )driver.setMessageSink( nullptr, nullptr );
-	return windows.releaseNativeLease( lease ) == SIR_WINDOW_OK && windows.destroyWindow( hWindow ) == SIR_WINDOW_OK &&
+	return lease.reset() == sirWindowResult::SIR_WINDOW_OK && windows.destroyWindow( hWindow ) == sirWindowResult::SIR_WINDOW_OK &&
 	       windows.shutdown() == SIR_SYSTEM_OK;
 }
 
@@ -180,12 +193,12 @@ static bool sirTestFullscreenRoundTrip( void ) noexcept
 		return false;
 	}
 	sirWindowHandle_t handle = {};
-	if ( windows.createWindow( { "fullscreen-roundtrip", 640, 480 }, &handle ) != SIR_WINDOW_OK ) {
+	if ( windows.createWindow( { "fullscreen-roundtrip", 640, 480 }, &handle ) != sirWindowResult::SIR_WINDOW_OK ) {
 		return false;
 	}
-	sirWindowNativeLease_t lease = {};
+	SIRNativeWindowLease lease;
 	sirWindowNativeView_t view = {};
-	if ( windows.acquireNativeLease( handle, &lease, &view ) != SIR_WINDOW_OK ) {
+	if ( sirAcquireTestLease( windows, handle, lease, view ) != sirWindowResult::SIR_WINDOW_OK ) {
 		return false;
 	}
 	const HWND hWindow = ( HWND )view.nNativeWindow;
@@ -193,13 +206,13 @@ static bool sirTestFullscreenRoundTrip( void ) noexcept
 	original.length = sizeof( original );
 	const DWORD nOriginalStyle = ( DWORD )GetWindowLongPtrW( hWindow, GWL_STYLE );
 	if ( !GetWindowPlacement( hWindow, &original ) ||
-	     windows.mutateWindow( handle, { SIR_WINDOW_MUTATION_FULLSCREEN_ENTER, nullptr, 0, 0 } ) != SIR_WINDOW_OK ||
+	     windows.mutateWindow( handle, { sirWindowMutationKind::SIR_WINDOW_MUTATION_FULLSCREEN_ENTER, nullptr, 0, 0 } ) != sirWindowResult::SIR_WINDOW_OK ||
 	     ( ( DWORD )GetWindowLongPtrW( hWindow, GWL_STYLE ) & WS_OVERLAPPEDWINDOW ) != 0 ||
-	     windows.mutateWindow( handle, { SIR_WINDOW_MUTATION_FULLSCREEN_ENTER, nullptr, 0, 0 } ) != SIR_WINDOW_OK ||
-	     windows.mutateWindow( handle, { SIR_WINDOW_MUTATION_FULLSCREEN_EXIT, nullptr, 0, 0 } ) != SIR_WINDOW_OK ||
+	     windows.mutateWindow( handle, { sirWindowMutationKind::SIR_WINDOW_MUTATION_FULLSCREEN_ENTER, nullptr, 0, 0 } ) != sirWindowResult::SIR_WINDOW_OK ||
+	     windows.mutateWindow( handle, { sirWindowMutationKind::SIR_WINDOW_MUTATION_FULLSCREEN_EXIT, nullptr, 0, 0 } ) != sirWindowResult::SIR_WINDOW_OK ||
 	     ( DWORD )GetWindowLongPtrW( hWindow, GWL_STYLE ) != nOriginalStyle ||
-	     windows.mutateWindow( handle, { SIR_WINDOW_MUTATION_FULLSCREEN_EXIT, nullptr, 0, 0 } ) != SIR_WINDOW_OK ||
-	     windows.releaseNativeLease( lease ) != SIR_WINDOW_OK || windows.destroyWindow( handle ) != SIR_WINDOW_OK ||
+	     windows.mutateWindow( handle, { sirWindowMutationKind::SIR_WINDOW_MUTATION_FULLSCREEN_EXIT, nullptr, 0, 0 } ) != sirWindowResult::SIR_WINDOW_OK ||
+	     lease.reset() != sirWindowResult::SIR_WINDOW_OK || windows.destroyWindow( handle ) != sirWindowResult::SIR_WINDOW_OK ||
 	     windows.shutdown() != SIR_SYSTEM_OK ) {
 		return false;
 	}
@@ -210,13 +223,13 @@ static bool sirTestWindowClassRetirementOrder( void ) noexcept
 {
 	SIRWindowDriverWin32 first;
 	SIRWindowDriverWin32 second;
-	if ( first.initialize() != SIR_WINDOW_OK || second.initialize() != SIR_WINDOW_OK ) {
+	if ( first.initialize() != sirWindowResult::SIR_WINDOW_OK || second.initialize() != sirWindowResult::SIR_WINDOW_OK ) {
 		return false;
 	}
 	first.shutdown();
 	sirWindowNativeView_t view = {};
-	if ( second.createWindow( { "remaining-owner", 320, 240 }, 0, &view ) != SIR_WINDOW_OK || view.nNativeWindow == 0 ||
-	     second.destroyWindow( 0 ) != SIR_WINDOW_OK ) {
+	if ( second.createWindow( { "remaining-owner", 320, 240 }, 0, &view ) != sirWindowResult::SIR_WINDOW_OK || view.nNativeWindow == 0 ||
+	     second.destroyWindow( 0 ) != sirWindowResult::SIR_WINDOW_OK ) {
 		return false;
 	}
 	second.shutdown();
@@ -235,47 +248,47 @@ static bool sirTestConcurrentWin32WindowClassOwners( void ) noexcept
 	const sirWindowCreateDesc_t description = { "native-window-registration", 640, 480 };
 	sirWindowHandle_t firstWindow = {};
 	sirWindowHandle_t secondWindow = {};
-	if ( first.createWindow( description, &firstWindow ) != SIR_WINDOW_OK ||
-	     second.createWindow( description, &secondWindow ) != SIR_WINDOW_OK ) {
+	if ( first.createWindow( description, &firstWindow ) != sirWindowResult::SIR_WINDOW_OK ||
+	     second.createWindow( description, &secondWindow ) != sirWindowResult::SIR_WINDOW_OK ) {
 		return false;
 	}
-	sirWindowNativeLease_t lease = {};
+	SIRNativeWindowLease lease;
 	sirWindowNativeView_t view = {};
-	if ( second.acquireNativeLease( secondWindow, &lease, &view ) != SIR_WINDOW_OK || view.ePlatform != SIR_WINDOW_PLATFORM_WIN32 ||
+	if ( sirAcquireTestLease( second, secondWindow, lease, view ) != sirWindowResult::SIR_WINDOW_OK || view.ePlatform != sirWindowPlatform::SIR_WINDOW_PLATFORM_WIN32 ||
 	     view.nNativeWindow == 0 || !secondDriver.setMessageSink( sirConsumeNativeClose, &second ) ) {
 		return false;
 	}
 	// Even a subscriber that claims WM_CLOSE cannot consume the native close.
 	( void )SendMessageW( ( HWND )view.nNativeWindow, WM_CLOSE, 0, 0 );
 	sirWindowSnapshot_t snapshot = {};
-	sirWindowNativeLease_t rejected = {};
+	SIRNativeWindowLease rejected;
 	sirWindowNativeView_t rejectedView = {};
-	if ( second.pumpEvents( 32 ) != SIR_WINDOW_OK || second.querySnapshot( secondWindow, &snapshot ) != SIR_WINDOW_OK ||
-	     !snapshot.bCloseRequested || snapshot.bReady || second.destroyWindow( secondWindow ) != SIR_WINDOW_BUSY ||
-	     second.acquireNativeLease( secondWindow, &rejected, &rejectedView ) != SIR_WINDOW_NOT_READY ||
-	     second.releaseNativeLease( lease ) != SIR_WINDOW_OK || second.destroyWindow( secondWindow ) != SIR_WINDOW_OK ||
+	if ( second.pumpEvents( 32 ) != sirWindowResult::SIR_WINDOW_OK || second.querySnapshot( secondWindow, &snapshot ) != sirWindowResult::SIR_WINDOW_OK ||
+	     !snapshot.bCloseRequested || snapshot.bReady || second.destroyWindow( secondWindow ) != sirWindowResult::SIR_WINDOW_BUSY ||
+	     sirAcquireTestLease( second, secondWindow, rejected, rejectedView ) != sirWindowResult::SIR_WINDOW_NOT_READY ||
+	     lease.reset() != sirWindowResult::SIR_WINDOW_OK || second.destroyWindow( secondWindow ) != sirWindowResult::SIR_WINDOW_OK ||
 	     second.shutdown() != SIR_SYSTEM_OK ) {
 		return false;
 	}
-	sirWindowNativeLease_t firstLease = {};
+	SIRNativeWindowLease firstLease;
 	sirWindowNativeView_t firstView = {};
-	if ( first.acquireNativeLease( firstWindow, &firstLease, &firstView ) != SIR_WINDOW_OK ) {
+	if ( sirAcquireTestLease( first, firstWindow, firstLease, firstView ) != sirWindowResult::SIR_WINDOW_OK ) {
 		return false;
 	}
 	sirWindowSnapshot_t beforeTopology = {}, afterTopology = {};
-	if ( first.querySnapshot( firstWindow, &beforeTopology ) != SIR_WINDOW_OK ) {
+	if ( first.querySnapshot( firstWindow, &beforeTopology ) != sirWindowResult::SIR_WINDOW_OK ) {
 		return false;
 	}
 	( void )SendMessageW( ( HWND )firstView.nNativeWindow, WM_DISPLAYCHANGE, 32, MAKELPARAM( 1920, 1080 ) );
-	if ( first.pumpEvents( 32 ) != SIR_WINDOW_OK || first.querySnapshot( firstWindow, &afterTopology ) != SIR_WINDOW_OK ||
+	if ( first.pumpEvents( 32 ) != sirWindowResult::SIR_WINDOW_OK || first.querySnapshot( firstWindow, &afterTopology ) != sirWindowResult::SIR_WINDOW_OK ||
 	     afterTopology.nMetricsRevision <= beforeTopology.nMetricsRevision || afterTopology.nWidth == 0 || afterTopology.nHeight == 0 ||
-	     first.releaseNativeLease( firstLease ) != SIR_WINDOW_OK ) {
+	     firstLease.reset() != sirWindowResult::SIR_WINDOW_OK ) {
 		return false;
 	}
 	// Shutting down the second user must not unregister the first user's class.
-	const sirWindowMutation_t title = { SIR_WINDOW_MUTATION_TITLE, "still-registered", 0, 0 };
-	if ( first.mutateWindow( firstWindow, title ) != SIR_WINDOW_OK || first.pumpEvents( 32 ) != SIR_WINDOW_OK ||
-	     first.destroyWindow( firstWindow ) != SIR_WINDOW_OK || first.shutdown() != SIR_SYSTEM_OK ) {
+	const sirWindowMutation_t title = { sirWindowMutationKind::SIR_WINDOW_MUTATION_TITLE, "still-registered", 0, 0 };
+	if ( first.mutateWindow( firstWindow, title ) != sirWindowResult::SIR_WINDOW_OK || first.pumpEvents( 32 ) != sirWindowResult::SIR_WINDOW_OK ||
+	     first.destroyWindow( firstWindow ) != sirWindowResult::SIR_WINDOW_OK || first.shutdown() != SIR_SYSTEM_OK ) {
 		return false;
 	}
 	return true;

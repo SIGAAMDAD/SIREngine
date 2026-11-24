@@ -13,7 +13,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#include <Core/Platform/Window/Windows/SIRWGLBootstrapWindow.h>
+#include <Core/Platform/Windows/Window/SIRWGLBootstrapWindow.h>
 #include <stdio.h>
 
 int main( void )

@@ -3,8 +3,8 @@
 #define SIR_READ_MOSTLY_MAP_H
 #include <Core/Containers/SIRFrozenHashIndex.h>
 #include <atomic>
-#include <Core/Platform/SIRSync.h>
-#include <Core/Platform/SIRScopedLock.h>
+#include <Core/Platform/Shared/Threading/SIRSync.h>
+#include <Core/Platform/Shared/Threading/SIRScopedLock.h>
 #include <new>
 
 template <typename K, typename V, typename Hash = std::hash<K>, typename Equal = std::equal_to<K>>

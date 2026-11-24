@@ -118,7 +118,7 @@ static SIRGraphicsResult sirHiZBindingsUpload( SIRRenderingDevice& device, const
 	sirGraphicsBufferDesc_t buffer {};
 	buffer.nSizeBytes = nTotalBytes;
 	buffer.nAlignmentBytes = pBindings->nParameterStride;
-	buffer.nUsage = SIRGraphicsUsage::SIR_GRAPHICS_USAGE_CONSTANT;
+	buffer.nUsage = static_cast<uint32_t>(SIRGraphicsUsage::SIR_GRAPHICS_USAGE_CONSTANT);
 	buffer.eMemory = SIRGraphicsMemoryClass::SIR_GRAPHICS_MEMORY_CPU_UPLOAD;
 	SIRGraphicsResult eResult = device.createBuffer( buffer, &pBindings->hParameterBuffer );
 	if ( eResult != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
@@ -183,19 +183,19 @@ SIRGraphicsResult sirHiZBindingsCreate( SIRRenderingDevice& device, const sirHiZ
 	depthView.nBaseMip = 0;
 	depthView.nMipLevels = 1;
 	depthView.nLayers = 1;
-	depthView.nUsage = SIRGraphicsUsage::SIR_GRAPHICS_USAGE_SAMPLED;
+	depthView.nUsage = static_cast<uint32_t>(SIRGraphicsUsage::SIR_GRAPHICS_USAGE_SAMPLED);
 	eResult = device.createView( depthView, &pBindings->hDepthView );
 	if ( eResult != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 		return eResult;
 	}
 	for ( uint32_t iMip = 0; iMip < pBindings->nPassCount; ++iMip ) {
 		eResult =
-		    sirHiZBindingsCreateView( device, desc.hPyramidTexture, iMip, SIRGraphicsUsage::SIR_GRAPHICS_USAGE_SAMPLED, &pBindings->szSampleViews[iMip] );
+		    sirHiZBindingsCreateView( device, desc.hPyramidTexture, iMip, static_cast<uint32_t>(SIRGraphicsUsage::SIR_GRAPHICS_USAGE_SAMPLED), &pBindings->szSampleViews[iMip] );
 		if ( eResult != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 			return eResult;
 		}
 		eResult =
-		    sirHiZBindingsCreateView( device, desc.hPyramidTexture, iMip, SIRGraphicsUsage::SIR_GRAPHICS_USAGE_STORAGE, &pBindings->szStorageViews[iMip] );
+		    sirHiZBindingsCreateView( device, desc.hPyramidTexture, iMip, static_cast<uint32_t>(SIRGraphicsUsage::SIR_GRAPHICS_USAGE_STORAGE), &pBindings->szStorageViews[iMip] );
 		if ( eResult != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 			return eResult;
 		}

@@ -16,7 +16,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 #include <Core/Containers/SIRRawStorage.h>
 #include <Core/Containers/SIRReadOnlyVectorView.h>
-#include <Core/Platform/SIRVirtualMemory.h>
+#include <Core/Platform/Shared/Memory/SIRVirtualMemory.h>
 #include <Core/Memory/SIRMemorySegment.h>
 #include <new>
 #include <stdlib.h>

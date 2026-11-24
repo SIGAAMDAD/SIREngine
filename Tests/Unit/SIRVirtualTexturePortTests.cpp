@@ -14,6 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
+#include <Core/Platform/Shared/File/SIRPlatformFileSystem.h>
 #include <Renderer/VirtualTexturing/SIRVirtualTextureFeedback.h>
 #include <Renderer/VirtualTexturing/SIRVirtualTexturePackage.h>
 #include <Renderer/VirtualTexturing/SIRVirtualTexturePackReader.h>
@@ -345,10 +346,10 @@ static bool testNativeClusterDecode( void )
 	// File-backed metadata-only cluster decoding uses the same validated V1 records.
 	const char *pszPath = "sir_vt_decode_native_test.pack";
 	SIRPlatformFile file;
-	SIR_TEST( file.open( pszPath, SIR_FILE_OPEN_WRITE | SIR_FILE_OPEN_CREATE | SIR_FILE_OPEN_TRUNCATE ) == SIR_FILE_OK );
+	SIR_TEST( file.open( pszPath, static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_WRITE ) | static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_CREATE ) | static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_TRUNCATE ) ) == sirFileResult::SIR_FILE_OK );
 	uint64_t nWritten = 0;
-	SIR_TEST( file.write( bytes.data(), bytes.size(), &nWritten ) == SIR_FILE_OK && nWritten == bytes.size() );
-	SIR_TEST( file.close() == SIR_FILE_OK );
+	SIR_TEST( file.write( bytes.data(), bytes.size(), &nWritten ) == sirFileResult::SIR_FILE_OK && nWritten == bytes.size() );
+	SIR_TEST( file.close() == sirFileResult::SIR_FILE_OK );
 	std::vector<uint8_t> metadata( ( size_t )view.header.nPayloadDataOffset );
 	SIRVirtualTexturePackFileSource source;
 	sirVirtualTexturePackView_t fromDisk = {};
@@ -363,7 +364,7 @@ static bool testNativeClusterDecode( void )
 	fromDisk.header.nPackageGeneration++;
 	SIR_TEST( !source.readCluster( fromDisk, 0, buffers, nullptr ) && source.getReadCount() == 1 );
 	source.close();
-	SIR_TEST( SIRPlatformFile::remove( pszPath ) == SIR_FILE_OK );
+	SIR_TEST( SIRPlatformFileSystem::removeFile( pszPath ) == sirFileResult::SIR_FILE_OK );
 	return true;
 }
 
@@ -479,10 +480,10 @@ static bool testPackFileSource( void )
 	static constexpr const char *pszPath = "sir_vt_sparse_v1_native_test.pack";
 	std::vector<uint8_t> bytes = makeValidPack();
 	SIRPlatformFile writer;
-	SIR_TEST( writer.open( pszPath, SIR_FILE_OPEN_WRITE | SIR_FILE_OPEN_CREATE | SIR_FILE_OPEN_TRUNCATE ) == SIR_FILE_OK );
+	SIR_TEST( writer.open( pszPath, static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_WRITE ) | static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_CREATE ) | static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_TRUNCATE ) ) == sirFileResult::SIR_FILE_OK );
 	uint64_t nWritten = 0;
-	SIR_TEST( writer.write( bytes.data(), bytes.size(), &nWritten ) == SIR_FILE_OK && nWritten == bytes.size() );
-	SIR_TEST( writer.close() == SIR_FILE_OK );
+	SIR_TEST( writer.write( bytes.data(), bytes.size(), &nWritten ) == sirFileResult::SIR_FILE_OK && nWritten == bytes.size() );
+	SIR_TEST( writer.close() == sirFileResult::SIR_FILE_OK );
 	std::vector<uint8_t> metadata( 8192 );
 	SIRVirtualTexturePackFileSource source;
 	sirVirtualTexturePackView_t view = {};
@@ -500,14 +501,14 @@ static bool testPackFileSource( void )
 	source.close();
 	SIR_TEST( !source.isOpen() && !source.readPayload( 0, szPayload, 64 ) );
 	bytes.back() ^= 0x55;
-	SIR_TEST( writer.open( pszPath, SIR_FILE_OPEN_WRITE | SIR_FILE_OPEN_TRUNCATE ) == SIR_FILE_OK );
-	SIR_TEST( writer.write( bytes.data(), bytes.size(), &nWritten ) == SIR_FILE_OK && nWritten == bytes.size() );
-	SIR_TEST( writer.close() == SIR_FILE_OK );
+	SIR_TEST( writer.open( pszPath, static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_WRITE ) | static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_TRUNCATE ) ) == sirFileResult::SIR_FILE_OK );
+	SIR_TEST( writer.write( bytes.data(), bytes.size(), &nWritten ) == sirFileResult::SIR_FILE_OK && nWritten == bytes.size() );
+	SIR_TEST( writer.close() == sirFileResult::SIR_FILE_OK );
 	SIR_TEST( !source.open( pszPath, buffer, true, &view ) && !source.isOpen() );
 	SIR_TEST( source.open( pszPath, buffer, false, &view ) && source.isOpen() );
 	SIR_TEST( view.bMetadataOnly && view.szDirectories[SIR_VT_PACK_PAYLOAD_DATA].pData == nullptr );
 	source.close();
-	SIR_TEST( SIRPlatformFile::remove( pszPath ) == SIR_FILE_OK );
+	SIR_TEST( SIRPlatformFileSystem::removeFile( pszPath ) == sirFileResult::SIR_FILE_OK );
 	return true;
 }
 

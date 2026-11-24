@@ -24,12 +24,12 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-#include <Core/Platform/SIRDynamicLibrary.h>
+#include <Core/Platform/Shared/Library/SIRDynamicLibrary.h>
 #include <Renderer/SIRGraphicsDriverABI.h>
 
 typedef struct sirGraphicsABIModule_s
 {
-	sirDynamicLibrary_t library;
+	SIRDynamicLibrary library {};
 	sirGraphicsABIDriver_t driver;
 	void *szActiveDevices[16];
 	uint32_t nActiveDevices;

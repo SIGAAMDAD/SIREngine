@@ -14,7 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Core/Memory/SIRMemoryLayoutPlanner.h>
-#include <Core/Platform/SIRVirtualMemory.h>
+#include <Core/Platform/Shared/Memory/SIRVirtualMemory.h>
 
 #include <stdint.h>
 #include <stdio.h>

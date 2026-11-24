@@ -13,12 +13,13 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
+#include <Core/Platform/Shared/File/SIRPlatformFileSystem.h>
 #include <Core/Jobs/SIRTaskScheduler.h>
 #include <Core/Memory/SIRMemoryManager.h>
 #include <Core/Memory/SIRMemorySegment.h>
-#include <Core/Platform/SIRPlatformFile.h>
-#include <Core/Platform/SIRPlatformFileMapping.h>
-#include <Core/Platform/SIRVirtualMemory.h>
+#include <Core/Platform/Shared/File/SIRPlatformFile.h>
+#include <Core/Platform/Shared/File/SIRPlatformFileMapping.h>
+#include <Core/Platform/Shared/Memory/SIRVirtualMemory.h>
 #include <Resources/SIRResourceFileLoad.h>
 
 #include <benchmark/benchmark.h>
@@ -103,7 +104,7 @@ public:
 		for ( uint64_t i = 0; i < SIR_GRDG_BENCHMARK_FILE_BYTES; ++i ) {
 			m_Bytes[( size_t )i] = ( uint8_t )( ( i * 83 + ( i >> 8 ) + 41 ) & 255 );
 		}
-		SIRPlatformFile::remove( SIR_GRDG_BENCHMARK_FILE );
+		SIRPlatformFileSystem::removeFile( SIR_GRDG_BENCHMARK_FILE );
 		if ( m_File.open( SIR_GRDG_BENCHMARK_FILE, SIR_FILE_OPEN_WRITE | SIR_FILE_OPEN_CREATE | SIR_FILE_OPEN_TRUNCATE ) != SIR_FILE_OK ) {
 			return false;
 		}
@@ -118,7 +119,7 @@ public:
 	~SIRGRDGBenchmarkFixture( void )
 	{
 		m_File.close();
-		SIRPlatformFile::remove( SIR_GRDG_BENCHMARK_FILE );
+		SIRPlatformFileSystem::removeFile( SIR_GRDG_BENCHMARK_FILE );
 	}
 };
 

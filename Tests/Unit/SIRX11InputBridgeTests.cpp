@@ -12,11 +12,24 @@ express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
-#include <Core/Platform/Window/Linux/SIRWindowDriverX11.h>
-#include <Core/Platform/Window/SIRWindowSystem.h>
-#include <Core/Platform/Linux/SIRX11InputBridge.h>
+#include <Core/Platform/Shared/Window/SIRNativeWindowLease.h>
+#include <Core/Platform/Linux/Window/SIRWindowDriverX11.h>
+#include <Core/Platform/Shared/Window/SIRWindowSystem.h>
+#include <Core/Platform/Linux/Input/SIRX11InputBridge.h>
 #include <X11/Xlib.h>
 #include <stdio.h>
+
+
+static sirWindowResult sirAcquireTestLease( SIRWindowSystem& system, sirWindowHandle_t handle, SIRNativeWindowLease& lease, sirWindowNativeView_t& view ) noexcept
+{
+    if ( lease.isValid() ) {
+        SIRNativeWindowLease probe;
+        return system.acquireNativeLease( handle, probe );
+    }
+    const sirWindowResult result = system.acquireNativeLease( handle, lease );
+    if ( result == sirWindowResult::SIR_WINDOW_OK ) { view = lease.getView(); }
+    return result;
+}
 
 static void sirBridgeDispatchEvent( const XEvent& event, void *pContext ) noexcept
 {
@@ -35,13 +48,13 @@ int main( void )
 	}
 	const sirWindowCreateDesc_t desc = { "Input bridge", 600, 400 };
 	sirWindowHandle_t first = {}, second = {};
-	if ( windows.createWindow( desc, &first ) != SIR_WINDOW_OK || windows.createWindow( desc, &second ) != SIR_WINDOW_OK ) {
+	if ( windows.createWindow( desc, &first ) != sirWindowResult::SIR_WINDOW_OK || windows.createWindow( desc, &second ) != sirWindowResult::SIR_WINDOW_OK ) {
 		return 2;
 	}
-	sirWindowNativeLease_t lease = {}, secondLease = {};
+	SIRNativeWindowLease lease, secondLease;
 	sirWindowNativeView_t view = {}, secondView = {};
-	if ( windows.acquireNativeLease( first, &lease, &view ) != SIR_WINDOW_OK ||
-	     windows.acquireNativeLease( second, &secondLease, &secondView ) != SIR_WINDOW_OK || !bridge.bind( input, backend, view ) ||
+	if ( sirAcquireTestLease( windows, first, lease, view ) != sirWindowResult::SIR_WINDOW_OK ||
+	     sirAcquireTestLease( windows, second, secondLease, secondView ) != sirWindowResult::SIR_WINDOW_OK || !bridge.bind( input, backend, view ) ||
 	     bridge.bind( input, backend, view ) || !bridge.registerWindow( secondView ) || bridge.registerWindow( secondView ) ||
 	     !driver.setEventSink( sirBridgeDispatchEvent, &bridge ) ) {
 		return 3;
@@ -52,7 +65,7 @@ int main( void )
 		return 12;
 	}
 	foreign = secondView;
-	foreign.ePlatform = SIR_WINDOW_PLATFORM_WIN32;
+	foreign.ePlatform = sirWindowPlatform::SIR_WINDOW_PLATFORM_WIN32;
 	if ( bridge.registerWindow( foreign ) ) {
 		return 13;
 	}
@@ -69,7 +82,7 @@ int main( void )
 	XSendEvent( pDisplay, ( Window )view.nNativeWindow, False, FocusChangeMask, &focus );
 	XSync( pDisplay, False );
 	for ( uint32_t i = 0; i < 8; ++i ) {
-		if ( windows.pumpEvents( 128 ) != SIR_WINDOW_OK ) {
+		if ( windows.pumpEvents( 128 ) != sirWindowResult::SIR_WINDOW_OK ) {
 			return 5;
 		}
 	}
@@ -126,9 +139,9 @@ int main( void )
 	}
 	( void )driver.setEventSink( nullptr, nullptr );
 	bridge.unbind();
-	if ( bridge.isBound() || windows.releaseNativeLease( lease ) != SIR_WINDOW_OK ||
-	     windows.releaseNativeLease( secondLease ) != SIR_WINDOW_OK || windows.destroyWindow( second ) != SIR_WINDOW_OK ||
-	     windows.destroyWindow( first ) != SIR_WINDOW_OK || windows.shutdown() != SIR_SYSTEM_OK ) {
+	if ( bridge.isBound() || lease.reset() != sirWindowResult::SIR_WINDOW_OK ||
+	     secondLease.reset() != sirWindowResult::SIR_WINDOW_OK || windows.destroyWindow( second ) != sirWindowResult::SIR_WINDOW_OK ||
+	     windows.destroyWindow( first ) != sirWindowResult::SIR_WINDOW_OK || windows.shutdown() != SIR_SYSTEM_OK ) {
 		return 8;
 	}
 	input.shutdown();

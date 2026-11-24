@@ -25,11 +25,11 @@ SIRResourceMemoryAdapter::SIRResourceMemoryAdapter( void ) noexcept : m_pHeaps{}
 
 bool SIRResourceMemoryAdapter::bindDomain( SIRMemoryDomain eDomain, SIRGeneralHeap *pHeap ) noexcept
 {
-	if ( eDomain >= SIRMemoryDomain::SIR_MEMORY_DOMAIN_COUNT || pHeap == nullptr || m_pHeaps[eDomain] != nullptr ||
+	if ( eDomain >= SIRMemoryDomain::SIR_MEMORY_DOMAIN_COUNT || pHeap == nullptr || m_pHeaps[static_cast<uint32_t>( eDomain )] != nullptr ||
 	     !pHeap->isConfiguredForDomain( eDomain ) ) {
 		return false;
 	}
-	m_pHeaps[eDomain] = pHeap;
+	m_pHeaps[static_cast<uint32_t>( eDomain )] = pHeap;
 	return true;
 }
 
@@ -41,7 +41,7 @@ SIRResourceAllocator SIRResourceMemoryAdapter::getAllocator( void ) noexcept
 void *SIRResourceMemoryAdapter::allocate( void *pContext, uint64_t nBytes, uint32_t nAlignment, uint32_t nDomain ) noexcept
 {
 	if ( pContext == nullptr || nBytes == 0 || nBytes > SIZE_MAX || nAlignment == 0 || ( nAlignment & ( nAlignment - 1 ) ) != 0 ||
-	     nDomain >= SIRMemoryDomain::SIR_MEMORY_DOMAIN_COUNT ) {
+	     nDomain >= static_cast<uint32_t>( SIRMemoryDomain::SIR_MEMORY_DOMAIN_COUNT ) ) {
 		return nullptr;
 	}
 	SIRResourceMemoryAdapter *pAdapter = static_cast<SIRResourceMemoryAdapter *>(pContext);
@@ -56,7 +56,7 @@ void SIRResourceMemoryAdapter::release( void *pContext, void *pData, uint64_t nB
 	if ( pData == nullptr ) {
 		return;
 	}
-	if ( pContext == nullptr || nDomain >= SIRMemoryDomain::SIR_MEMORY_DOMAIN_COUNT ) {
+	if ( pContext == nullptr || nDomain >= static_cast<uint32_t>( SIRMemoryDomain::SIR_MEMORY_DOMAIN_COUNT ) ) {
 		abort();
 	}
 	SIRResourceMemoryAdapter *pAdapter = static_cast<SIRResourceMemoryAdapter *>(pContext);

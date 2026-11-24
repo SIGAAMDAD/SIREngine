@@ -25,7 +25,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <Scripting/Core/SIRScriptBindingRegistry.h>
-#include <Core/Platform/SIRThread.h>
+#include <Core/Platform/Shared/Threading/SIRThread.h>
 
 // An externally produced artifact. The build fingerprint is an opaque cache
 // identity, NOT an integrity proof; the resource provider validates its bytes.

@@ -70,7 +70,7 @@ SIRGraphicsResult SIRFrameGraph::submitNative( const sirFrameGraphCompiled_t& co
 		return eCapabilities;
 	}
 	if ( caps.nSize < sizeof( caps ) || caps.nDeviceGeneration == 0 ||
-		 ( caps.nEnabledQueues & ( 1U << SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_DIRECT ) ) == 0 ) {
+		 ( caps.nEnabledQueues & ( 1U << static_cast<uint32_t>(SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_DIRECT) ) ) == 0 ) {
 		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 
@@ -80,7 +80,7 @@ SIRGraphicsResult SIRFrameGraph::submitNative( const sirFrameGraphCompiled_t& co
 		return ePlan;
 	}
 	for ( uint32_t iPass = 0; iPass < plan.nPassCount; ++iPass ) {
-		if ( ( caps.nEnabledQueues & ( 1U << plan.szPasses[iPass].eQueue ) ) == 0 ) {
+		if ( ( caps.nEnabledQueues & ( 1U << static_cast<uint32_t>(plan.szPasses[iPass].eQueue) ) ) == 0 ) {
 			return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 		}
 	}
@@ -190,13 +190,13 @@ SIRGraphicsResult SIRFrameGraph::submitNative( const sirFrameGraphCompiled_t& co
 			return eSubmit;
 		}
 		if ( completion.nDeviceGeneration != caps.nDeviceGeneration || completion.eQueue != pass.eQueue || completion.nValue == 0 ||
-			 completion.nValue <= pOutput->completion.szQueueValues[pass.eQueue] ) {
+			 completion.nValue <= pOutput->completion.szQueueValues[static_cast<uint32_t>(pass.eQueue)] ) {
 			pOutput->bUnknownCompletion = true;
 			return SIRGraphicsResult::SIR_GRAPHICS_DRIVER_ERROR;
 		}
 		szCompletions[iOrder] = completion;
-		pOutput->completion.nQueueMask |= ( 1U << pass.eQueue );
-		pOutput->completion.szQueueValues[pass.eQueue] = completion.nValue;
+		pOutput->completion.nQueueMask |= ( 1U << static_cast<uint32_t>(pass.eQueue) );
+		pOutput->completion.szQueueValues[static_cast<uint32_t>(pass.eQueue)] = completion.nValue;
 		++pOutput->nSubmittedPassCount;
 	}
 	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;

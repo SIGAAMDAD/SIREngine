@@ -13,6 +13,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
+#include <Core/Platform/Shared/File/SIRPlatformFileSystem.h>
 #include <Terrain/Integration/SIRTerrainRegionPersistence.h>
 
 #include <limits.h>
@@ -32,24 +33,24 @@ SIRTerrainPersistenceResult SIRTerrainRegionPersistence::saveAtomic( const char 
 	}
 
 	SIRPlatformFile file;
-	const SIRFileResult eOpen = file.open( pszStaging, SIRFileOpenFlag::SIR_FILE_OPEN_WRITE | SIRFileOpenFlag::SIR_FILE_OPEN_CREATE | SIRFileOpenFlag::SIR_FILE_OPEN_EXCLUSIVE );
-	if ( eOpen == SIRFileResult::SIR_FILE_ALREADY_EXISTS ) {
+	const sirFileResult eOpen = file.open( pszStaging, sirFileOpenFlag::SIR_FILE_OPEN_WRITE | sirFileOpenFlag::SIR_FILE_OPEN_CREATE | sirFileOpenFlag::SIR_FILE_OPEN_EXCLUSIVE );
+	if ( eOpen == sirFileResult::SIR_FILE_ALREADY_EXISTS ) {
 		return SIRTerrainPersistenceResult::SIR_TERRAIN_PERSISTENCE_STAGING_EXISTS;
 	}
-	if ( eOpen != SIRFileResult::SIR_FILE_OK ) {
+	if ( eOpen != sirFileResult::SIR_FILE_OK ) {
 		return SIRTerrainPersistenceResult::SIR_TERRAIN_PERSISTENCE_IO_ERROR;
 	}
 
 	uint64_t nTransferred = 0;
-	const SIRFileResult eWrite = file.writeAt( 0, packed.pData, packed.nCapacity, &nTransferred );
-	const SIRFileResult eFlush = eWrite == SIRFileResult::SIR_FILE_OK && nTransferred == packed.nCapacity ? file.flush() : SIRFileResult::SIR_FILE_IO_ERROR;
-	const SIRFileResult eClose = file.close();
-	if ( eWrite != SIRFileResult::SIR_FILE_OK || nTransferred != packed.nCapacity || eFlush != SIRFileResult::SIR_FILE_OK || eClose != SIRFileResult::SIR_FILE_OK ) {
-		static_cast<void>(SIRPlatformFile::remove( pszStaging ));
+	const sirFileResult eWrite = file.writeAt( 0, packed.pData, packed.nCapacity, &nTransferred );
+	const sirFileResult eFlush = eWrite == sirFileResult::SIR_FILE_OK && nTransferred == packed.nCapacity ? file.flush() : sirFileResult::SIR_FILE_IO_ERROR;
+	const sirFileResult eClose = file.close();
+	if ( eWrite != sirFileResult::SIR_FILE_OK || nTransferred != packed.nCapacity || eFlush != sirFileResult::SIR_FILE_OK || eClose != sirFileResult::SIR_FILE_OK ) {
+		static_cast<void>(SIRPlatformFileSystem::removeFile( pszStaging ));
 		return SIRTerrainPersistenceResult::SIR_TERRAIN_PERSISTENCE_IO_ERROR;
 	}
-	if ( SIRPlatformFile::renameReplace( pszStaging, pszDestination ) != SIRFileResult::SIR_FILE_OK ) {
-		static_cast<void>(SIRPlatformFile::remove( pszStaging ));
+	if ( SIRPlatformFileSystem::renameFileReplace( pszStaging, pszDestination ) != sirFileResult::SIR_FILE_OK ) {
+		static_cast<void>(SIRPlatformFileSystem::removeFile( pszStaging ));
 		return SIRTerrainPersistenceResult::SIR_TERRAIN_PERSISTENCE_IO_ERROR;
 	}
 	return SIRTerrainPersistenceResult::SIR_TERRAIN_PERSISTENCE_SUCCESS;
@@ -62,16 +63,16 @@ SIRTerrainPersistenceResult SIRTerrainRegionPersistence::load( const char *pszPa
 		return SIRTerrainPersistenceResult::SIR_TERRAIN_PERSISTENCE_INVALID_ARGUMENT;
 	}
 	SIRPlatformFile file;
-	const SIRFileResult eOpen = file.open( pszPath, SIRFileOpenFlag::SIR_FILE_OPEN_READ );
-	if ( eOpen == SIRFileResult::SIR_FILE_NOT_FOUND ) {
+	const sirFileResult eOpen = file.open( pszPath, sirFileOpenFlag::SIR_FILE_OPEN_READ );
+	if ( eOpen == sirFileResult::SIR_FILE_NOT_FOUND ) {
 		return SIRTerrainPersistenceResult::SIR_TERRAIN_PERSISTENCE_NOT_FOUND;
 	}
-	if ( eOpen != SIRFileResult::SIR_FILE_OK ) {
+	if ( eOpen != sirFileResult::SIR_FILE_OK ) {
 		return SIRTerrainPersistenceResult::SIR_TERRAIN_PERSISTENCE_IO_ERROR;
 	}
 
 	uint64_t nFileBytes = 0;
-	if ( file.getSize( &nFileBytes ) != SIRFileResult::SIR_FILE_OK ) {
+	if ( file.getSize( &nFileBytes ) != sirFileResult::SIR_FILE_OK ) {
 		return SIRTerrainPersistenceResult::SIR_TERRAIN_PERSISTENCE_IO_ERROR;
 	}
 	if ( nFileBytes > storage.nCapacity ) {
@@ -82,11 +83,11 @@ SIRTerrainPersistenceResult SIRTerrainRegionPersistence::load( const char *pszPa
 	}
 
 	uint64_t nTransferred = 0;
-	const SIRFileResult eRead = file.readAt( 0, storage.pData, nFileBytes, &nTransferred );
-	if ( eRead != SIRFileResult::SIR_FILE_OK || nTransferred != nFileBytes ) {
+	const sirFileResult eRead = file.readAt( 0, storage.pData, nFileBytes, &nTransferred );
+	if ( eRead != sirFileResult::SIR_FILE_OK || nTransferred != nFileBytes ) {
 		return SIRTerrainPersistenceResult::SIR_TERRAIN_PERSISTENCE_IO_ERROR;
 	}
-	if ( file.close() != SIRFileResult::SIR_FILE_OK ) {
+	if ( file.close() != sirFileResult::SIR_FILE_OK ) {
 		return SIRTerrainPersistenceResult::SIR_TERRAIN_PERSISTENCE_IO_ERROR;
 	}
 

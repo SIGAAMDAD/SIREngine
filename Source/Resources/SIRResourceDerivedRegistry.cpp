@@ -663,7 +663,7 @@ SIRResourceResult SIRResourceDerivedRegistry::publishSharedDeviceBacking( SIRDer
 			return SIRResourceResult::SIR_RESOURCE_RESULT_BUSY;
 		}
 	}
-	const uint32_t iSpace = SIRMemorySpace::SIR_MEMORY_SPACE_DEVICE;
+	const uint32_t iSpace = static_cast<uint32_t>( SIRMemorySpace::SIR_MEMORY_SPACE_DEVICE );
 	if ( rSlot.physical.nCommittedBytes > UINT64_MAX - m_Stats.nCommittedBytes[iSpace] ||
 	     rSlot.physical.nResidentBytes > UINT64_MAX - m_Stats.nResidentBytes[iSpace] ) {
 		return SIRResourceResult::SIR_RESOURCE_RESULT_OUT_OF_BUDGET;

@@ -540,7 +540,7 @@ bool SIRFrameGraph::requiresOrdering( const sirFrameGraphAccess_t& previous, con
 
 SIRGraphicsResult SIRFrameGraph::validateCapabilities( const sirGraphicsCapabilities_t& caps, const uint8_t *pLive ) const noexcept
 {
-	if ( caps.nDeviceGeneration == 0 || ( caps.nQueueMask & ( 1U << SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_DIRECT ) ) == 0 ) {
+	if ( caps.nDeviceGeneration == 0 || ( caps.nQueueMask & ( 1U << static_cast<uint32_t>( SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_DIRECT ) ) ) == 0 ) {
 		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	for ( uint32_t iPass = 0; iPass < m_nPassCount; ++iPass ) {
@@ -548,13 +548,13 @@ SIRGraphicsResult SIRFrameGraph::validateCapabilities( const sirGraphicsCapabili
 		if ( !pLive[iPass] ) {
 			continue;
 		}
-		if ( ( caps.nQueueMask & ( 1U << pass.eQueue ) ) == 0 || ( pass.nRequiredFeatures & ~caps.nFeatureMask ) != 0 ) {
+		if ( ( caps.nQueueMask & ( 1U << static_cast<uint32_t>( pass.eQueue ) ) ) == 0 || ( pass.nRequiredFeatures & ~caps.nFeatureMask ) != 0 ) {
 			return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 		}
-		if ( pass.eQueue == SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COMPUTE && ( caps.nFeatureMask & SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_ASYNC_COMPUTE ) == 0 ) {
+		if ( pass.eQueue == SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COMPUTE && ( caps.nFeatureMask & static_cast<uint64_t>( SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_ASYNC_COMPUTE ) ) == 0 ) {
 			return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 		}
-		if ( pass.eQueue == SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COPY && ( caps.nFeatureMask & SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_COPY_QUEUE ) == 0 ) {
+		if ( pass.eQueue == SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COPY && ( caps.nFeatureMask & static_cast<uint64_t>( SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_COPY_QUEUE ) ) == 0 ) {
 			return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 		}
 	}

@@ -25,7 +25,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <Core/Jobs/SIRTaskScheduler.h>
-#include <Core/Platform/SIRPlatformFile.h>
+#include <Core/Platform/Shared/File/SIRPlatformFile.h>
 #include <Resources/SIRResourceGraph.h>
 
 enum class SIRResourceFileReadMode : uint8_t {
@@ -77,7 +77,7 @@ public:
 	SIRResourceResult cancel( void ) noexcept;
 	bool isActive( void ) const noexcept;
 	// Meaningful after begin() rejects a file or poll() returns terminal.
-	SIRFileResult getLastFileResult( void ) const noexcept;
+	sirFileResult getLastFileResult( void ) const noexcept;
 
 private:
 	static SIRTaskResult readTask( void *pContext, sirTaskHandle_t hTask ) noexcept;
@@ -91,8 +91,8 @@ private:
 	SIRResourceStagingHandle m_Staging;
 	SIRResourceMutableBytes m_Bytes;
 	sirTaskHandle_t m_Task;
-	SIRFileResult m_eTransferResult;
-	SIRFileResult m_eLastFileResult;
+	sirFileResult m_eTransferResult;
+	sirFileResult m_eLastFileResult;
 	bool m_bActive;
 	bool m_bDiscard;
 };

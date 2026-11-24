@@ -24,7 +24,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-#include <Core/Platform/SIRPlatformContext.h>
+#include <Core/Platform/Shared/Diagnostics/SIRPlatformContext.h>
 #include <Core/Input/SIRInputActions.h>
 #include <Core/Input/SIRInputBackend.h>
 #include <Core/Input/SIRInputDeviceRegistry.h>

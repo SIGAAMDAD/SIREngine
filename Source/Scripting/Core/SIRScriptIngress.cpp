@@ -15,11 +15,14 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Scripting/Core/SIRScriptIngress.h>
 
-#include <Core/Platform/SIRPlatformProcess.h>
+#include <Core/Platform/Shared/Memory/SIRVirtualMemory.h>
+#include <Core/Platform/Shared/Diagnostics/SIRPlatformTime.h>
+#include <Core/Platform/Shared/Diagnostics/SIRCPUInfo.h>
+#include <Core/Platform/Shared/Threading/SIRThread.h>
 
 SIRScriptIngress::SIRScriptIngress( void ) noexcept : m_nActiveProducers( 0 ), m_bClosed( false )
 {
-	for ( uint32_t iPhase = 0; iPhase < SIRScriptPhase::SIR_SCRIPT_PHASE_COUNT; ++iPhase ) {
+	for ( uint32_t iPhase = 0; iPhase < static_cast<uint32_t>( SIRScriptPhase::SIR_SCRIPT_PHASE_COUNT ); ++iPhase ) {
 		sirScriptIngressQueue_t& queue = m_szQueues[iPhase];
 		queue.nHead = 0;
 		queue.nTail.store( 0, std::memory_order_relaxed );
@@ -46,7 +49,7 @@ SIRScriptResult SIRScriptIngress::tryPost( SIRScriptPhase ePhase, const sirScrip
 		return SIRScriptResult::SIR_SCRIPT_BUSY;
 	}
 
-	sirScriptIngressQueue_t& queue = m_szQueues[ePhase];
+	sirScriptIngressQueue_t& queue = m_szQueues[static_cast<uint32_t>( ePhase )];
 	uint64_t nPosition = queue.nTail.load( std::memory_order_relaxed );
 	for ( ;; ) {
 		sirScriptIngressSlot_t& slot = queue.szSlots[nPosition & ( CAPACITY - 1 )];
@@ -76,7 +79,7 @@ bool SIRScriptIngress::tryPop( SIRScriptPhase ePhase, uint64_t nEndTicket, sirSc
 	if ( ePhase >= SIRScriptPhase::SIR_SCRIPT_PHASE_COUNT || pPacket == nullptr ) {
 		return false;
 	}
-	sirScriptIngressQueue_t& queue = m_szQueues[ePhase];
+	sirScriptIngressQueue_t& queue = m_szQueues[static_cast<uint32_t>( ePhase )];
 	const uint64_t nPosition = queue.nHead;
 	if ( nPosition >= nEndTicket ) {
 		return false;
@@ -94,25 +97,25 @@ bool SIRScriptIngress::tryPop( SIRScriptPhase ePhase, uint64_t nEndTicket, sirSc
 
 uint64_t SIRScriptIngress::snapshotTail( SIRScriptPhase ePhase ) const noexcept
 {
-	return ePhase < SIRScriptPhase::SIR_SCRIPT_PHASE_COUNT ? m_szQueues[ePhase].nTail.load( std::memory_order_acquire ) : 0;
+	return ePhase < SIRScriptPhase::SIR_SCRIPT_PHASE_COUNT ? m_szQueues[static_cast<uint32_t>( ePhase )].nTail.load( std::memory_order_acquire ) : 0;
 }
 
 uint32_t SIRScriptIngress::pendingCount( SIRScriptPhase ePhase ) const noexcept
 {
-	return ePhase < SIRScriptPhase::SIR_SCRIPT_PHASE_COUNT ? m_szQueues[ePhase].nCount.load( std::memory_order_relaxed ) : 0;
+	return ePhase < SIRScriptPhase::SIR_SCRIPT_PHASE_COUNT ? m_szQueues[static_cast<uint32_t>( ePhase )].nCount.load( std::memory_order_relaxed ) : 0;
 }
 
 void SIRScriptIngress::close( void ) noexcept
 {
 	m_bClosed.store( true, std::memory_order_release );
 	while ( m_nActiveProducers.load( std::memory_order_acquire ) != 0 ) {
-		SIRPlatformProcess::yieldThread();
+		SIRThread::yieldThread();
 	}
 }
 
 void SIRScriptIngress::clear( void ) noexcept
 {
-	for ( uint32_t iPhase = 0; iPhase < SIRScriptPhase::SIR_SCRIPT_PHASE_COUNT; ++iPhase ) {
+	for ( uint32_t iPhase = 0; iPhase < static_cast<uint32_t>( SIRScriptPhase::SIR_SCRIPT_PHASE_COUNT ); ++iPhase ) {
 		const SIRScriptPhase ePhase = static_cast<SIRScriptPhase>(iPhase);
 		sirScriptIngressPacket_t packet {};
 		const uint64_t nEndTicket = snapshotTail( ePhase );

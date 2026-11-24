@@ -15,7 +15,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/Jobs/SIRTaskScheduler.h>
 #include <Core/Memory/SIRMemoryManager.h>
-#include <Core/Platform/SIRVirtualMemory.h>
+#include <Core/Platform/Shared/Memory/SIRVirtualMemory.h>
 
 #include <atomic>
 #include <errno.h>

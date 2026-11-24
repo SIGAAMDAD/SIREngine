@@ -25,7 +25,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-#include <Core/Platform/SIRPlatformFile.h>
+#include <Core/Platform/Shared/File/SIRPlatformFile.h>
 #include <Renderer/VirtualTexturing/SIRVirtualTextureClusterDecode.h>
 
 typedef struct sirVirtualTexturePackMetadataBuffer_s

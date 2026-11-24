@@ -641,7 +641,8 @@ static bool testDeviceRequestPreflightMatrix( sirGraphicsABIModule_t *pModule, c
 	request.nAdapterIndex = 255;
 	CHECK_DEVICE_REQUEST( sirGraphicsCreateABIDevice( pModule, &request, &output ), SIR_GRAPHICS_UNSUPPORTED,
 	                      "nonexistent selected adapter" );
-	sirGraphicsABIModule_t saturated = *pModule;
+	sirGraphicsABIModule_t saturated {};
+	saturated.driver = pModule->driver;
 	saturated.nActiveDevices = 16;
 	CHECK_DEVICE_REQUEST( sirGraphicsCreateABIDevice( &saturated, &valid, &output ), SIR_GRAPHICS_CAPACITY_EXCEEDED,
 	                      "native module device capacity" );
@@ -729,7 +730,7 @@ static bool testModelProviderContractMatrix( const sirGraphicsABIDevice_t *pDevi
 
 static bool testModuleLifecyclePreflightMatrix( const sirGraphicsABIHost_t& host, const sirGraphicsABIModule_t& live ) noexcept
 {
-	sirGraphicsABIModule_t empty = {};
+	sirGraphicsABIModule_t empty {};
 #define CHECK_MODULE_PREFLIGHT( expression, expected, label )                                                                              \
 	if ( ( expression ) != expected ) {                                                                                                    \
 		fputs( "Module boundary: " label "\n", stderr );                                                                                   \
@@ -742,11 +743,13 @@ static bool testModuleLifecyclePreflightMatrix( const sirGraphicsABIHost_t& host
 	empty.driver.pDriver = &empty;
 	CHECK_MODULE_PREFLIGHT( sirGraphicsLoadABIModule( SIR_TEST_ABI_MODULE_PATH, &host, &empty ), SIR_GRAPHICS_INVALID_ARGUMENT,
 	                        "dirty native driver identity" );
-	empty = {};
+	empty.driver = {};
+	empty.nActiveDevices = 0;
 	empty.nActiveDevices = 1;
 	CHECK_MODULE_PREFLIGHT( sirGraphicsLoadABIModule( SIR_TEST_ABI_MODULE_PATH, &host, &empty ), SIR_GRAPHICS_INVALID_ARGUMENT,
 	                        "dirty active device count" );
-	empty = {};
+	empty.driver = {};
+	empty.nActiveDevices = 0;
 	sirGraphicsABIHost_t invalidHost = host;
 	invalidHost.pFree = nullptr;
 	CHECK_MODULE_PREFLIGHT( sirGraphicsLoadABIModule( SIR_TEST_ABI_MODULE_PATH, &invalidHost, &empty ), SIR_GRAPHICS_INVALID_ARGUMENT,
@@ -760,7 +763,7 @@ static bool testModuleLifecyclePreflightMatrix( const sirGraphicsABIHost_t& host
 	                        "destroy with invalid driver" );
 	CHECK_MODULE_PREFLIGHT( sirGraphicsUnloadABIModule( nullptr ), SIR_GRAPHICS_INVALID_ARGUMENT, "null module unload" );
 	CHECK_MODULE_PREFLIGHT( sirGraphicsUnloadABIModule( &empty ), SIR_GRAPHICS_INVALID_ARGUMENT, "empty module unload" );
-	empty.library.pNativeHandle = &empty;
+	
 	CHECK_MODULE_PREFLIGHT( sirGraphicsUnloadABIModule( &empty ), SIR_GRAPHICS_INVALID_ARGUMENT,
 	                        "module with invalid driver cannot unload" );
 	sirGraphicsABIAdapter_t adapter = {};
@@ -772,7 +775,7 @@ static bool testModuleLifecyclePreflightMatrix( const sirGraphicsABIHost_t& host
 	CHECK_MODULE_PREFLIGHT( sirGraphicsQueryABIAdapter( &live, 0, &adapter ), SIR_GRAPHICS_INVALID_ARGUMENT,
 	                        "adapter query truncated output" );
 	adapter.nSize = sizeof( adapter );
-	empty = live;
+	empty.driver = live.driver;
 	empty.driver.nMajor = SIR_GRAPHICS_DRIVER_ABI_MAJOR + 1;
 	CHECK_MODULE_PREFLIGHT( sirGraphicsQueryABIAdapter( &empty, 0, &adapter ), SIR_GRAPHICS_VERSION_MISMATCH,
 	                        "adapter query invalid driver ABI version" );
@@ -1004,7 +1007,8 @@ static uint32_t testDescribeRankedAdapter( void *, sirGraphicsABIAdapter_t *pAda
 
 static bool testAdapterRankingBoundaries( const sirGraphicsABIModule_t *pModule ) noexcept
 {
-	sirGraphicsABIModule_t synthetic = *pModule;
+	sirGraphicsABIModule_t synthetic {};
+	synthetic.driver = pModule->driver;
 	synthetic.driver.pAdapterCount = testCountRankedAdapters;
 	synthetic.driver.pQueryAdapter = testDescribeRankedAdapter;
 	const sirGraphicsABIModule_t *modules[] = { &synthetic };
@@ -1046,7 +1050,8 @@ static bool testAdapterRankingBoundaries( const sirGraphicsABIModule_t *pModule 
 	policy.nMinimumApiMinor = 0;
 	const sirGraphicsABIModule_t *missing[] = { nullptr };
 	CHECK_ADAPTER( sirGraphicsSelectABIModuleAdapter( missing, 1, &policy, &choice ), SIR_GRAPHICS_INVALID_ARGUMENT, "null module record" );
-	sirGraphicsABIModule_t broken = synthetic;
+	sirGraphicsABIModule_t broken {};
+	broken.driver = synthetic.driver;
 	broken.driver.pQueryAdapter = nullptr;
 	const sirGraphicsABIModule_t *invalid[] = { &broken };
 	CHECK_ADAPTER( sirGraphicsSelectABIModuleAdapter( invalid, 1, &policy, &choice ), SIR_GRAPHICS_INVALID_ARGUMENT,
@@ -1089,7 +1094,8 @@ static bool testAdapterRankingBoundaries( const sirGraphicsABIModule_t *pModule 
 	s_nSyntheticAdapterMode = 8;
 	CHECK_ADAPTER( sirGraphicsSelectABIModuleAdapter( modules, 1, &policy, &choice ), SIR_GRAPHICS_DEVICE_LOST,
 	               "provider enumerate device loss" );
-	sirGraphicsABIModule_t d3d12 = synthetic;
+	sirGraphicsABIModule_t d3d12 {};
+	d3d12.driver = synthetic.driver;
 	d3d12.driver.nBackend = SIR_GRAPHICS_BACKEND_D3D12;
 	const sirGraphicsABIModule_t *both[] = { &d3d12, &synthetic };
 	s_nSyntheticAdapterMode = 0;
@@ -1136,7 +1142,7 @@ static bool testProviderFaultCoverage( sirGraphicsABIModule_t *pModule, sirGraph
 	host.pFree = testFree;
 	host.pLog = testLog;
 	if ( sirGraphicsLoadABIModule( SIR_TEST_ABI_MODULE_PATH, &host, &rejectedModule ) != SIR_GRAPHICS_ABI_VERSION_MISMATCH ||
-	     rejectedModule.library.pNativeHandle != nullptr ) {
+	     rejectedModule.library.isOpen() ) {
 		return false;
 	}
 	pMode( 42 );
@@ -1383,7 +1389,8 @@ static uint32_t testCrossBackendAdapter( void *, sirGraphicsABIAdapter_t *pAdapt
 
 static bool testDifferentBackendRanking( const sirGraphicsABIModule_t *pLiveModule ) noexcept
 {
-	sirGraphicsABIModule_t synthetic = *pLiveModule;
+	sirGraphicsABIModule_t synthetic {};
+	synthetic.driver = pLiveModule->driver;
 	synthetic.driver.nBackend = SIR_GRAPHICS_BACKEND_D3D12;
 	synthetic.driver.pQueryAdapter = testCrossBackendAdapter;
 	const sirGraphicsABIModule_t *ppModules[] = { &synthetic, pLiveModule };
@@ -1440,12 +1447,12 @@ static bool testBinaryModule( void ) noexcept
 	host.pLog = testLog;
 	sirGraphicsABIModule_t module = {};
 	if ( sirGraphicsLoadABIModule( "/not/a/real/graphics-driver", &host, &module ) != SIR_GRAPHICS_ABI_UNSUPPORTED ||
-	     module.library.pNativeHandle != nullptr ) {
+	     module.library.isOpen() ) {
 		return false;
 	}
 	// A loadable DSO with no graphics ABI factory must be rejected and unloaded.
 	if ( sirGraphicsLoadABIModule( SIR_TEST_NO_ABI_MODULE_PATH, &host, &module ) != SIR_GRAPHICS_ABI_UNSUPPORTED ||
-	     module.library.pNativeHandle != nullptr ) {
+	     module.library.isOpen() ) {
 		return false;
 	}
 	if ( sirGraphicsLoadABIModule( SIR_TEST_ABI_MODULE_PATH, &host, &module ) != SIR_GRAPHICS_ABI_SUCCESS ) {
@@ -1457,7 +1464,9 @@ static bool testBinaryModule( void ) noexcept
 	if ( !testModuleLifecyclePreflightMatrix( host, module ) ) {
 		return false;
 	}
-	const sirMockSetMode_t pMode = ( sirMockSetMode_t )SIRDynamicLibrary::findSymbol( &module.library, "SIRSetGraphicsABIMockMode" );
+	void *pModeSymbol = nullptr;
+	static_cast<void>( module.library.findSymbol( "SIRSetGraphicsABIMockMode", &pModeSymbol ) );
+	const sirMockSetMode_t pMode = reinterpret_cast<sirMockSetMode_t>( pModeSymbol );
 	if ( pMode == nullptr ) {
 		return false;
 	}
@@ -2876,7 +2885,7 @@ static bool testBinaryModule( void ) noexcept
 	if ( sirGraphicsDestroyABIDevice( &module, &device ) != SIR_GRAPHICS_ABI_INVALID_ARGUMENT ) {
 		return false;
 	}
-	if ( sirGraphicsUnloadABIModule( &module ) != SIR_GRAPHICS_ABI_SUCCESS || module.library.pNativeHandle != nullptr ) {
+	if ( sirGraphicsUnloadABIModule( &module ) != SIR_GRAPHICS_ABI_SUCCESS || module.library.isOpen() ) {
 		return false;
 	}
 	if ( sirGraphicsUnloadABIModule( &module ) != SIR_GRAPHICS_ABI_INVALID_ARGUMENT ) {
@@ -2890,13 +2899,13 @@ static bool testBinaryModule( void ) noexcept
 		return false;
 	}
 	s_bRejectNextDLUnload = true;
-	if ( sirGraphicsUnloadABIModule( &unloadFailure ) != SIR_GRAPHICS_DRIVER_ERROR || unloadFailure.library.pNativeHandle == nullptr ||
+	if ( sirGraphicsUnloadABIModule( &unloadFailure ) != SIR_GRAPHICS_DRIVER_ERROR || !unloadFailure.library.isOpen() ||
 	     s_bRejectNextDLUnload ) {
 		return false;
 	}
 	// Release has already run. Close the DSO directly, avoiding a second
 	// release callback when verifying the failed unload case.
-	if ( __real_dlclose( unloadFailure.library.pNativeHandle ) != 0 ) {
+	if ( unloadFailure.library.unload() != sirLibraryResult::SIR_LIBRARY_OK ) {
 		return false;
 	}
 #endif

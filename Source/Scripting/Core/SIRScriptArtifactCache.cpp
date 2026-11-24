@@ -14,7 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Scripting/Core/SIRScriptArtifactCache.h>
-#include <Core/Platform/SIRFileLock.h>
+#include <Core/Platform/Shared/File/SIRFileLock.h>
 #include <Scripting/Core/SIRScriptSHA256.h>
 
 #include <atomic>

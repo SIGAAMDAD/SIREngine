@@ -14,26 +14,26 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Editor/Scene/SIREditorFileSave.h>
-#include <Core/Platform/SIRPlatformFileSystem.h>
+#include <Core/Platform/Shared/File/SIRPlatformFileSystem.h>
 
-static SIREditorFileSaveResult sirEditorMapFileResult( SIRPlatformAtomicResult eResult ) noexcept
+static SIREditorFileSaveResult sirEditorMapFileResult( sirPlatformAtomicResult eResult ) noexcept
 {
 	switch ( eResult ) {
-	case SIRPlatformAtomicResult::SIR_ATOMIC_SAVE_OK:
+	case sirPlatformAtomicResult::SIR_ATOMIC_SAVE_OK:
 		return SIREditorFileSaveResult::SIR_EDITOR_FILE_SAVE_OK;
-	case SIRPlatformAtomicResult::SIR_ATOMIC_SAVE_INVALID_ARGUMENT:
+	case sirPlatformAtomicResult::SIR_ATOMIC_SAVE_INVALID_ARGUMENT:
 		return SIREditorFileSaveResult::SIR_EDITOR_FILE_SAVE_INVALID_ARGUMENT;
-	case SIRPlatformAtomicResult::SIR_ATOMIC_SAVE_INVALID_PATH:
+	case sirPlatformAtomicResult::SIR_ATOMIC_SAVE_INVALID_PATH:
 		return SIREditorFileSaveResult::SIR_EDITOR_FILE_SAVE_INVALID_PATH;
-	case SIRPlatformAtomicResult::SIR_ATOMIC_SAVE_TEMP_EXISTS:
+	case sirPlatformAtomicResult::SIR_ATOMIC_SAVE_TEMP_EXISTS:
 		return SIREditorFileSaveResult::SIR_EDITOR_FILE_SAVE_TEMP_EXISTS;
-	case SIRPlatformAtomicResult::SIR_ATOMIC_SAVE_IO_ERROR:
+	case sirPlatformAtomicResult::SIR_ATOMIC_SAVE_IO_ERROR:
 		return SIREditorFileSaveResult::SIR_EDITOR_FILE_SAVE_IO_ERROR;
-	case SIRPlatformAtomicResult::SIR_ATOMIC_SAVE_REPLACE_FAILED:
+	case sirPlatformAtomicResult::SIR_ATOMIC_SAVE_REPLACE_FAILED:
 		return SIREditorFileSaveResult::SIR_EDITOR_FILE_SAVE_REPLACE_FAILED;
-	case SIRPlatformAtomicResult::SIR_ATOMIC_SAVE_COMMITTED_NOT_DURABLE:
+	case sirPlatformAtomicResult::SIR_ATOMIC_SAVE_COMMITTED_NOT_DURABLE:
 		return SIREditorFileSaveResult::SIR_EDITOR_FILE_SAVE_COMMITTED_NOT_DURABLE;
-	case SIRPlatformAtomicResult::SIR_ATOMIC_SAVE_CONFLICT:
+	case sirPlatformAtomicResult::SIR_ATOMIC_SAVE_CONFLICT:
 		return SIREditorFileSaveResult::SIR_EDITOR_FILE_SAVE_CONFLICT;
 	default:
 		return SIREditorFileSaveResult::SIR_EDITOR_FILE_SAVE_IO_ERROR;

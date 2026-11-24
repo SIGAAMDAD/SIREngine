@@ -13,11 +13,14 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#include <Core/Platform/SIRSyncAdvanced.h>
+#include <Core/Platform/Shared/Threading/SIRSyncAdvanced.h>
 #include <atomic>
-#include <Core/Platform/SIRPlatformUtils.h>
-#include <Core/Platform/SIRScopedLock.h>
-#include <Core/Platform/SIRThread.h>
+#include <Core/Platform/Shared/Memory/SIRVirtualMemory.h>
+#include <Core/Platform/Shared/Diagnostics/SIRPlatformTime.h>
+#include <Core/Platform/Shared/Diagnostics/SIRCPUInfo.h>
+#include <Core/Platform/Shared/Threading/SIRThread.h>
+#include <Core/Platform/Shared/Threading/SIRScopedLock.h>
+#include <Core/Platform/Shared/Threading/SIRThread.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -153,11 +156,11 @@ static void testMCSOrderedHandoff( void )
 	lock.lock( owner );
 	SIR_TEST( firstThread.start( orderedMCSWorker, &first ) );
 	while ( owner.pNext.load( std::memory_order_acquire ) == nullptr ) {
-		SIRPlatformUtils::yieldThread();
+		SIRThread::yieldThread();
 	}
 	SIR_TEST( secondThread.start( orderedMCSWorker, &second ) );
 	while ( first.node.pNext.load( std::memory_order_acquire ) == nullptr ) {
-		SIRPlatformUtils::yieldThread();
+		SIRThread::yieldThread();
 	}
 	lock.unlock( owner );
 
@@ -203,9 +206,9 @@ static void testAdaptiveMutex( void )
 		SIR_TEST( workers[iThread].start( adaptiveWorker, &context ) );
 	}
 	while ( started.load( std::memory_order_acquire ) != N_THREADS ) {
-		SIRPlatformUtils::yieldThread();
+		SIRThread::yieldThread();
 	}
-	SIRPlatformUtils::sleepThread( 3 );
+	SIRThread::sleepThread( 3 );
 	mutex.unlock();
 
 	for ( uint32_t iThread = 0; iThread < N_THREADS; ++iThread ) {
@@ -320,9 +323,9 @@ static void testReadWriteSleepingReaders( void )
 			SIR_TEST( readers[iReader].start( blockedReaderWorker, &test ) );
 		}
 		while ( started.load( std::memory_order_acquire ) != N_READERS ) {
-			SIRPlatformUtils::yieldThread();
+			SIRThread::yieldThread();
 		}
-		SIRPlatformUtils::sleepThread( 1 );
+		SIRThread::sleepThread( 1 );
 		SIR_TEST( completed.load() == 0 );
 		lock.unlock();
 
@@ -359,20 +362,20 @@ static void testReadWriteWriterPreference( void )
 	lock.lockRead();
 	SIR_TEST( writer.start( writerPreferenceWorker, &context ) );
 	while ( !started.load( std::memory_order_acquire ) ) {
-		SIRPlatformUtils::yieldThread();
+		SIRThread::yieldThread();
 	}
 
 	// Hold the first reader while the writer queues. New readers must then
 	// be rejected, so the queued writer cannot be starved indefinitely.
-	const uint64_t nDeadline = SIRPlatformUtils::getMonotonicNanoseconds() + 3000000000ULL;
+	const uint64_t nDeadline = SIRPlatformTime::getMonotonicNanoseconds() + 3000000000ULL;
 	bool bRejected = false;
-	while ( SIRPlatformUtils::getMonotonicNanoseconds() < nDeadline ) {
+	while ( SIRPlatformTime::getMonotonicNanoseconds() < nDeadline ) {
 		if ( !lock.tryLockRead() ) {
 			bRejected = true;
 			break;
 		}
 		lock.unlockRead();
-		SIRPlatformUtils::yieldThread();
+		SIRThread::yieldThread();
 	}
 
 	lock.unlockRead();
@@ -483,9 +486,9 @@ static void testReadMostlyBlockedWakeup( void )
 			SIR_TEST( readers[iReader].start( readMostlyBlockedWorker, &context ) );
 		}
 		while ( started.load( std::memory_order_acquire ) != N_READERS ) {
-			SIRPlatformUtils::yieldThread();
+			SIRThread::yieldThread();
 		}
-		SIRPlatformUtils::sleepThread( 1 );
+		SIRThread::sleepThread( 1 );
 		SIR_TEST( completed.load() == 0 );
 		lock.unlock();
 
@@ -522,18 +525,18 @@ static void testReadMostlyWriterPreference( void )
 	lock.lockRead();
 	SIR_TEST( writer.start( readMostlyPreferenceWorker, &context ) );
 	while ( !started.load( std::memory_order_acquire ) ) {
-		SIRPlatformUtils::yieldThread();
+		SIRThread::yieldThread();
 	}
 
-	const uint64_t nDeadline = SIRPlatformUtils::getMonotonicNanoseconds() + 3000000000ULL;
+	const uint64_t nDeadline = SIRPlatformTime::getMonotonicNanoseconds() + 3000000000ULL;
 	bool bRejected = false;
-	while ( SIRPlatformUtils::getMonotonicNanoseconds() < nDeadline ) {
+	while ( SIRPlatformTime::getMonotonicNanoseconds() < nDeadline ) {
 		if ( !lock.tryLockRead() ) {
 			bRejected = true;
 			break;
 		}
 		lock.unlockRead();
-		SIRPlatformUtils::yieldThread();
+		SIRThread::yieldThread();
 	}
 	lock.unlockRead();
 	SIR_TEST( writer.join() );
@@ -552,7 +555,7 @@ static void eventProducer( void *pUserData )
 {
 	sirEventTest_t *pTest = ( sirEventTest_t * )pUserData;
 	while ( !pTest->pStart->load( std::memory_order_acquire ) ) {
-		SIRPlatformUtils::cpuRelax();
+		SIRThread::cpuRelax();
 	}
 	pTest->pEvent->countDown();
 }
@@ -783,7 +786,7 @@ static void singleWriterReadWorker( void *pUserData )
 		if ( pTest->pWriterActive->load( std::memory_order_seq_cst ) != 0 ) {
 			pTest->pErrors->fetch_add( 1 );
 		}
-		SIRPlatformUtils::cpuRelax();
+		SIRThread::cpuRelax();
 		pTest->pActiveReaders->fetch_sub( 1, std::memory_order_seq_cst );
 		pTest->pMutex->unlockRead();
 	}
@@ -798,7 +801,7 @@ static void singleWriterWriteWorker( void *pUserData )
 		if ( pTest->pActiveReaders->load( std::memory_order_seq_cst ) != 0 ) {
 			pTest->pErrors->fetch_add( 1 );
 		}
-		SIRPlatformUtils::cpuRelax();
+		SIRThread::cpuRelax();
 		pTest->pWriterActive->store( 0, std::memory_order_seq_cst );
 		pTest->pMutex->unlock();
 	}

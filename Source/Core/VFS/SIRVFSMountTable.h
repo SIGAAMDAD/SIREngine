@@ -24,7 +24,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-#include <Core/Platform/SIRSync.h>
+#include <Core/Platform/Shared/Threading/SIRSync.h>
 #include <Core/VFS/SIRVFSPath.h>
 
 constexpr uint32_t SIR_VFS_MAX_MOUNTS = 32;

@@ -25,7 +25,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <Audio/FMOD/SIRFMODContext.h>
-#include <Core/Platform/SIRPlatformContext.h>
+#include <Core/Platform/Shared/Diagnostics/SIRPlatformContext.h>
 #include <Audio/SIRAudioBackend.h>
 #include <Core/Containers/SIRContainerResult.h>
 

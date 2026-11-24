@@ -15,7 +15,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Scripting/Core/SIRScriptOptimizerProcessTransport.h>
 
-#include <Core/Platform/SIRScopedLock.h>
+#include <Core/Platform/Shared/Threading/SIRScopedLock.h>
 
 #include <string.h>
 

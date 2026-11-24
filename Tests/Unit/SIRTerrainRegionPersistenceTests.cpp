@@ -13,6 +13,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
+#include <Core/Platform/Shared/File/SIRPlatformFileSystem.h>
 #include <Terrain/Integration/SIRTerrainRegionPersistence.h>
 
 #include <stdio.h>
@@ -31,8 +32,8 @@ int main( void )
 {
 	static const char *pszTarget = "sir-terrain-persistence-roundtrip.bundle";
 	static const char *pszStage = "sir-terrain-persistence-roundtrip.stage";
-	( void )SIRPlatformFile::remove( pszTarget );
-	( void )SIRPlatformFile::remove( pszStage );
+	( void )SIRPlatformFileSystem::removeFile( pszTarget );
+	( void )SIRPlatformFileSystem::removeFile( pszStage );
 
 	const float szHeights[4] = { -10.0f, 0.0f, 2.0f, 9.0f };
 	sirTerrainRegionDescriptor_t descriptor = { -3, 7, 2, -10.0f, 9.0f, 1 };
@@ -73,20 +74,20 @@ int main( void )
 	CHECK( found.nCapacity == encoded.size() && memcmp( found.pData, encoded.data(), encoded.size() ) == 0 );
 
 	SIRPlatformFile existingStage;
-	CHECK( existingStage.open( pszStage, SIR_FILE_OPEN_WRITE | SIR_FILE_OPEN_CREATE | SIR_FILE_OPEN_EXCLUSIVE ) == SIR_FILE_OK );
+	CHECK( existingStage.open( pszStage, static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_WRITE ) | static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_CREATE ) | static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_EXCLUSIVE ) ) == sirFileResult::SIR_FILE_OK );
 	const uint8_t nMarker = 0xBD;
 	uint64_t nTransferred = 0;
-	CHECK( existingStage.writeAt( 0, &nMarker, 1, &nTransferred ) == SIR_FILE_OK && nTransferred == 1 );
-	CHECK( existingStage.close() == SIR_FILE_OK );
+	CHECK( existingStage.writeAt( 0, &nMarker, 1, &nTransferred ) == sirFileResult::SIR_FILE_OK && nTransferred == 1 );
+	CHECK( existingStage.close() == sirFileResult::SIR_FILE_OK );
 	CHECK( SIRTerrainRegionPersistence::saveAtomic( pszTarget, pszStage, packed ) == SIR_TERRAIN_PERSISTENCE_STAGING_EXISTS );
 	CHECK( SIRTerrainRegionPersistence::load( pszTarget, { scratch.data(), scratch.size() }, view, nLoaded ) ==
 	       SIR_TERRAIN_PERSISTENCE_SUCCESS );
 	SIRPlatformFile stageReader;
-	CHECK( stageReader.open( pszStage, SIR_FILE_OPEN_READ ) == SIR_FILE_OK );
+	CHECK( stageReader.open( pszStage, static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_READ ) ) == sirFileResult::SIR_FILE_OK );
 	uint8_t nStageByte = 0;
-	CHECK( stageReader.readAt( 0, &nStageByte, 1, &nTransferred ) == SIR_FILE_OK && nStageByte == nMarker );
-	CHECK( stageReader.close() == SIR_FILE_OK );
-	CHECK( SIRPlatformFile::remove( pszStage ) == SIR_FILE_OK );
+	CHECK( stageReader.readAt( 0, &nStageByte, 1, &nTransferred ) == sirFileResult::SIR_FILE_OK && nStageByte == nMarker );
+	CHECK( stageReader.close() == sirFileResult::SIR_FILE_OK );
+	CHECK( SIRPlatformFileSystem::removeFile( pszStage ) == sirFileResult::SIR_FILE_OK );
 
 	std::vector<uint8_t> invalid = bundle;
 	invalid[invalid.size() - 1] ^= 1;
@@ -97,10 +98,10 @@ int main( void )
 	CHECK( memcmp( scratch.data(), bundle.data(), bundle.size() ) == 0 );
 
 	SIRPlatformFile corrupt;
-	CHECK( corrupt.open( pszTarget, SIR_FILE_OPEN_WRITE ) == SIR_FILE_OK );
+	CHECK( corrupt.open( pszTarget, static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_WRITE ) ) == sirFileResult::SIR_FILE_OK );
 	const uint8_t nCorruption = ( uint8_t )( bundle.back() ^ 1 );
-	CHECK( corrupt.writeAt( bundle.size() - 1, &nCorruption, 1, &nTransferred ) == SIR_FILE_OK && nTransferred == 1 );
-	CHECK( corrupt.close() == SIR_FILE_OK );
+	CHECK( corrupt.writeAt( bundle.size() - 1, &nCorruption, 1, &nTransferred ) == sirFileResult::SIR_FILE_OK && nTransferred == 1 );
+	CHECK( corrupt.close() == sirFileResult::SIR_FILE_OK );
 	const sirTerrainRegionBundleView_t lastView = view;
 	nLoaded = 999;
 	CHECK( SIRTerrainRegionPersistence::load( pszTarget, { scratch.data(), scratch.size() }, view, nLoaded ) ==
@@ -119,8 +120,8 @@ int main( void )
 	sirTerrainRegionDescriptor_t loadedDescriptor = {};
 	CHECK( SIRTerrainHeightfieldCodec::inspect( found, loadedDescriptor ) == SIR_TERRAIN_CODEC_SUCCESS );
 	CHECK( loadedDescriptor.nRevision == 2 );
-	CHECK( SIRPlatformFile::getInfo( pszStage, nullptr ) == SIR_FILE_INVALID_ARGUMENT );
-	CHECK( SIRPlatformFile::remove( pszTarget ) == SIR_FILE_OK );
-	CHECK( SIRPlatformFile::remove( pszStage ) == SIR_FILE_NOT_FOUND );
+	CHECK( SIRPlatformFileSystem::getFileInfo( pszStage, nullptr ) == sirFileResult::SIR_FILE_INVALID_ARGUMENT );
+	CHECK( SIRPlatformFileSystem::removeFile( pszTarget ) == sirFileResult::SIR_FILE_OK );
+	CHECK( SIRPlatformFileSystem::removeFile( pszStage ) == sirFileResult::SIR_FILE_NOT_FOUND );
 	return 0;
 }

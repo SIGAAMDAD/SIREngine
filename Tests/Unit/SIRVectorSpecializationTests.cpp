@@ -13,7 +13,7 @@
 #include <Core/Containers/SIRAoSoAMultiVector.h>
 #include <Core/Containers/SIRColony.h>
 #include <vector>
-#include <Core/Platform/SIRThread.h>
+#include <Core/Platform/Shared/Threading/SIRThread.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>

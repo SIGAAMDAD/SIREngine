@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIR_GRAPHICSTYPES_H__
-#define __SIR_GRAPHICSTYPES_H__
+#ifndef __SIR_GRAPHICS_TYPES_H__
+#define __SIR_GRAPHICS_TYPES_H__
 
 #include <Core/SIRPCH.h>
 
@@ -23,6 +23,13 @@ of merchantability, fitness for a particular purpose and noninfringement.
 	#pragma once
 #endif
 // clang-format on
+
+enum class sirGraphicsDriver : uint8_t {
+	SIR_GRAPHICS_DRIVER_AMD = 0,
+	SIR_GRAPHICS_DRIVER_NVIDIA = 1,
+	SIR_GRAPHICS_DRIVER_INTEL = 2,
+	SIR_GRAPHICS_DRIVER_APPLE = 3
+};
 
 // Driver-neutral contract. No D3D, Vulkan, OpenGL, DXGI, SDL, or GRDG types.
 // Explicit capability results govern APIs with no compute/descriptor support.
@@ -177,7 +184,7 @@ enum class SIRGraphicsShaderFormat : uint32_t {
 
 // Pipeline era and API execution style are independent capability axes.
 // Values are stable within the still-unreleased shared graphics ABI v1.
-enum class SIRGraphicsPipelineModel : uint32_t {
+enum class SIRGraphicsPipelineModel : uint8_t {
 	SIR_GRAPHICS_PIPELINE_MODEL_MODERN = 1,
 	SIR_GRAPHICS_PIPELINE_MODEL_PROGRAMMABLE = 2,
 	SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION = 3
@@ -354,7 +361,7 @@ typedef struct sirGraphicsCompletionSet_s
 {
 	uint32_t nDeviceGeneration;
 	uint32_t nQueueMask;
-	uint64_t szQueueValues[SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT];
+	uint64_t szQueueValues[static_cast<uint32_t>( SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT )];
 } sirGraphicsCompletionSet_t;
 
 typedef struct sirGraphicsCapabilities_s
@@ -651,4 +658,4 @@ static_assert( sizeof( sirGraphicsHandle_t ) == 16, "portable GPU resource handl
 static_assert( sizeof( sirGraphicsCompletion_t ) == 16, "portable GPU fence tokens must occupy 16 bytes" );
 static_assert( sizeof( sirGraphicsViewDesc_t ) == 56, "portable graphics view descriptors must occupy 56 bytes" );
 
-#endif // __SIR_GRAPHICSTYPES_H__
+#endif // __SIR_GRAPHICS_TYPES_H__

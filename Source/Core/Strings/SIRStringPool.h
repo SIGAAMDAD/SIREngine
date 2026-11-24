@@ -17,7 +17,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/SIRPCH.h>
 #include <Core/Containers/SIRContainerResult.h>
-#include <Core/Platform/SIRSync.h>
+#include <Core/Platform/Shared/Threading/SIRSync.h>
 #include <atomic>
 #include <stddef.h>
 #include <stdint.h>

@@ -10,7 +10,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 */
 #include <Resources/SIRResourceGraphSync.h>
 #include <atomic>
-#include <Core/Platform/SIRScopedLock.h>
+#include <Core/Platform/Shared/Threading/SIRScopedLock.h>
 #include <assert.h>
 
 int main( void )

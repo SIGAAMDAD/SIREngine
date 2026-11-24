@@ -19,7 +19,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Scheduling/SIRSimulationSchedule.h>
 #include <Core/Jobs/SIRTaskScheduler.h>
 #include <Core/Memory/SIRMemoryManager.h>
-#include <Core/Platform/SIRThread.h>
+#include <Core/Platform/Shared/Threading/SIRThread.h>
 #include <atomic>
 #include <thread>
 #include <cstdio>

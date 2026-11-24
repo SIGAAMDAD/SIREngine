@@ -27,7 +27,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Audio/FMOD/SIRFMODRuntime.h>
 #include <Audio/SIRAudioQueue.h>
-#include <Core/Platform/SIRThread.h>
+#include <Core/Platform/Shared/Threading/SIRThread.h>
 #include <condition_variable>
 #include <mutex>
 

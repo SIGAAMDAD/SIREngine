@@ -25,8 +25,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <Core/Jobs/SIRTaskTypes.h>
-#include <Core/Platform/SIRSync.h>
-#include <Core/Platform/SIRThread.h>
+#include <Core/Platform/Shared/Threading/SIRSync.h>
+#include <Core/Platform/Shared/Threading/SIRThread.h>
 #include <thread>
 
 class SIRMemoryManager;
@@ -136,7 +136,7 @@ private:
 	std::thread::id m_OwnerThread;
 	std::thread::id m_ProviderOwners[3];
 	bool m_bProviderBound[3];
-	sirTaskQueue_t m_GlobalQueues[SIRTaskExecutor::SIR_TASK_EXEC_COUNT];
+	sirTaskQueue_t m_GlobalQueues[static_cast<uint32_t>( SIRTaskExecutor::SIR_TASK_EXEC_COUNT )];
 	uint32_t m_nFreeHead;
 	uint32_t m_nFreeEdgeHead;
 	uint32_t m_nDependencyCapacity;

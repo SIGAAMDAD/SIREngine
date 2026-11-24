@@ -15,9 +15,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
+#include <Core/Platform/Shared/File/SIRPlatformFileSystem.h>
 #include <Core/Jobs/SIRTaskScheduler.h>
 #include <Core/Memory/SIRMemoryManager.h>
-#include <Core/Platform/SIRPlatformFile.h>
+#include <Core/Platform/Shared/File/SIRPlatformFile.h>
 #include <Resources/SIRResourceFileLoad.h>
 
 #include <atomic>
@@ -207,7 +208,7 @@ static void testConcurrentReads( const uint8_t *pData )
 		SIR_IO_CHECK( mapped.poll( &second ) == SIR_RESOURCE_RESULT_SUCCESS );
 		SIR_IO_CHECK( first.m_nSlot == requested.m_nSlot && first.m_nGeneration == requested.m_nGeneration );
 		SIR_IO_CHECK( !direct.isActive() && !mapped.isActive() );
-		SIR_IO_CHECK( direct.getLastFileResult() == SIR_FILE_OK && mapped.getLastFileResult() == SIR_FILE_OK );
+		SIR_IO_CHECK( direct.getLastFileResult() == sirFileResult::SIR_FILE_OK && mapped.getLastFileResult() == sirFileResult::SIR_FILE_OK );
 		SIR_IO_CHECK( graph.getStats().m_nUniqueChunks == 1 && graph.getStats().m_nPayloadBytes == SIR_IO_RANGE );
 		{
 			SIRResourceReadScope scope( graph );
@@ -285,10 +286,10 @@ static void testBoundsAndStagingReuse( void )
 		SIRResourceFileLoad second( graph, scheduler );
 		sirResourceFileLoadRequest_t request = sirIORequest( 3001, SIR_RESOURCE_FILE_READ_AT );
 		SIR_IO_CHECK( first.begin( "sir_grdg_io_missing_file.bin", request ) == SIR_RESOURCE_RESULT_FAILED );
-		SIR_IO_CHECK( first.getLastFileResult() == SIR_FILE_NOT_FOUND );
+		SIR_IO_CHECK( first.getLastFileResult() == sirFileResult::SIR_FILE_NOT_FOUND );
 		request.nFileOffset = SIR_IO_BYTES;
 		SIR_IO_CHECK( first.begin( SIR_IO_PATH, request ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
-		SIR_IO_CHECK( first.getLastFileResult() == SIR_FILE_OUT_OF_RANGE );
+		SIR_IO_CHECK( first.getLastFileResult() == sirFileResult::SIR_FILE_OUT_OF_RANGE );
 		request.nFileOffset = SIR_IO_OFFSET;
 		request.nFileBytes = 0;
 		SIR_IO_CHECK( first.begin( SIR_IO_PATH, request ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
@@ -370,7 +371,7 @@ static void testDiscardAfterTerminalTransfer( void )
 		SIR_IO_CHECK( scheduler.pumpCPU( 1 ) == 1 );
 		SIR_IO_CHECK( load.cancel() == SIR_RESOURCE_RESULT_SUCCESS );
 		SIR_IO_CHECK( load.poll( &resource ) == SIR_RESOURCE_RESULT_FAILED );
-		SIR_IO_CHECK( load.getLastFileResult() == SIR_FILE_IO_ERROR );
+		SIR_IO_CHECK( load.getLastFileResult() == sirFileResult::SIR_FILE_IO_ERROR );
 		SIR_IO_CHECK( alloc.nOutstanding.load() == nBaseline );
 #endif
 
@@ -531,7 +532,7 @@ static void testInjectedResourceTransferFailures( void )
 		sirResourceFileLoadRequest_t request = sirIORequest( 5001, SIR_RESOURCE_FILE_READ_AT );
 		s_nFailFstatOrdinal.store( 2, std::memory_order_relaxed );
 		SIR_IO_CHECK( load.begin( SIR_IO_PATH, request ) == SIR_RESOURCE_RESULT_FAILED );
-		SIR_IO_CHECK( load.getLastFileResult() == SIR_FILE_IO_ERROR && !load.isActive() );
+		SIR_IO_CHECK( load.getLastFileResult() == sirFileResult::SIR_FILE_IO_ERROR && !load.isActive() );
 		SIR_IO_CHECK( s_nFailFstatOrdinal.load( std::memory_order_relaxed ) == 0 );
 		request = sirIORequest( 5002, SIR_RESOURCE_FILE_READ_MAPPED );
 		SIR_IO_CHECK( load.begin( SIR_IO_PATH, request ) == SIR_RESOURCE_RESULT_SUCCESS );
@@ -539,27 +540,27 @@ static void testInjectedResourceTransferFailures( void )
 		SIR_IO_CHECK( scheduler.pumpCPU( 8 ) == 1 );
 		SIRResourceHandle ignored = {};
 		SIR_IO_CHECK( load.poll( &ignored ) == SIR_RESOURCE_RESULT_FAILED );
-		SIR_IO_CHECK( load.getLastFileResult() == SIR_FILE_ACCESS_DENIED );
+		SIR_IO_CHECK( load.getLastFileResult() == sirFileResult::SIR_FILE_ACCESS_DENIED );
 		SIR_IO_CHECK( !load.isActive() );
 		request = sirIORequest( 5003, SIR_RESOURCE_FILE_READ_AT );
 		SIR_IO_CHECK( load.begin( SIR_IO_PATH, request ) == SIR_RESOURCE_RESULT_SUCCESS );
 		s_nFailPreadMode.store( 1, std::memory_order_relaxed );
 		SIR_IO_CHECK( scheduler.pumpCPU( 8 ) == 1 );
 		SIR_IO_CHECK( load.poll( &ignored ) == SIR_RESOURCE_RESULT_FAILED );
-		SIR_IO_CHECK( load.getLastFileResult() == SIR_FILE_IO_ERROR );
+		SIR_IO_CHECK( load.getLastFileResult() == sirFileResult::SIR_FILE_IO_ERROR );
 		request = sirIORequest( 5004, SIR_RESOURCE_FILE_READ_AT );
 		SIR_IO_CHECK( load.begin( SIR_IO_PATH, request ) == SIR_RESOURCE_RESULT_SUCCESS );
 		s_nFailPreadMode.store( 2, std::memory_order_relaxed );
 		SIR_IO_CHECK( scheduler.pumpCPU( 8 ) == 1 );
 		SIR_IO_CHECK( load.poll( &ignored ) == SIR_RESOURCE_RESULT_FAILED );
-		SIR_IO_CHECK( load.getLastFileResult() == SIR_FILE_END_OF_FILE );
+		SIR_IO_CHECK( load.getLastFileResult() == sirFileResult::SIR_FILE_END_OF_FILE );
 		SIR_IO_CHECK( !load.isActive() );
 		request = sirIORequest( 5005, SIR_RESOURCE_FILE_READ_MAPPED );
 		SIR_IO_CHECK( load.begin( SIR_IO_PATH, request ) == SIR_RESOURCE_RESULT_SUCCESS );
 		s_bFailMappedUnmap.store( true, std::memory_order_relaxed );
 		SIR_IO_CHECK( scheduler.pumpCPU( 8 ) == 1 );
 		SIR_IO_CHECK( load.poll( &ignored ) == SIR_RESOURCE_RESULT_FAILED );
-		SIR_IO_CHECK( load.getLastFileResult() == SIR_FILE_IO_ERROR );
+		SIR_IO_CHECK( load.getLastFileResult() == sirFileResult::SIR_FILE_IO_ERROR );
 		SIR_IO_CHECK( !load.isActive() );
 		SIR_IO_CHECK( scheduler.shutdown() );
 	}
@@ -574,12 +575,12 @@ int main( void )
 	for ( uint32_t i = 0; i < SIR_IO_BYTES; ++i ) {
 		bytes[i] = ( uint8_t )( ( i * 37 + 19 ) & 255 );
 	}
-	SIRPlatformFile::remove( SIR_IO_PATH );
+	SIRPlatformFileSystem::removeFile( SIR_IO_PATH );
 	SIRPlatformFile file;
-	SIR_IO_CHECK( file.open( SIR_IO_PATH, SIR_FILE_OPEN_WRITE | SIR_FILE_OPEN_CREATE | SIR_FILE_OPEN_TRUNCATE ) == SIR_FILE_OK );
+	SIR_IO_CHECK( file.open( SIR_IO_PATH, static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_WRITE ) | static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_CREATE ) | static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_TRUNCATE ) ) == sirFileResult::SIR_FILE_OK );
 	uint64_t nTransferred = 0;
-	SIR_IO_CHECK( file.writeAt( 0, bytes, SIR_IO_BYTES, &nTransferred ) == SIR_FILE_OK && nTransferred == SIR_IO_BYTES );
-	SIR_IO_CHECK( file.close() == SIR_FILE_OK );
+	SIR_IO_CHECK( file.writeAt( 0, bytes, SIR_IO_BYTES, &nTransferred ) == sirFileResult::SIR_FILE_OK && nTransferred == SIR_IO_BYTES );
+	SIR_IO_CHECK( file.close() == sirFileResult::SIR_FILE_OK );
 	testConcurrentReads( bytes );
 	testCancellationAndStaleRevision();
 	testBoundsAndStagingReuse();
@@ -590,7 +591,7 @@ int main( void )
 	testInjectedResourceTransferFailures();
 	testCancellationOfRunningNativeRead();
 #endif
-	SIR_IO_CHECK( SIRPlatformFile::remove( SIR_IO_PATH ) == SIR_FILE_OK );
+	SIR_IO_CHECK( SIRPlatformFileSystem::removeFile( SIR_IO_PATH ) == sirFileResult::SIR_FILE_OK );
 	printf( "PASS: native file reads, mapped GRDG staging, Core Jobs, deduplication, revision and cancellation\n" );
 	return 0;
 }

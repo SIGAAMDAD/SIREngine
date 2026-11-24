@@ -8,7 +8,7 @@
 | Linux x86-64 | Required | Required | Required after integration | Vulkan 1.4+, OpenGL 4.6 |
 | macOS | Manual preview only | Deferred | Deferred | Native strategy to be decided after other OS targets |
 
-The foundation C++17 Core/Launcher tests verify compilation, linking and startup contracts, not a complete editor or renderer. Native Release builds and packaging run at night for Windows and Linux. Editor and native graphics acceptance will be added when those systems have been ported and can be exercised on their target platforms.
+The foundation C++23 Core/Launcher tests verify compilation, linking and startup contracts, not a complete editor or renderer. Native Release builds and packaging run at night for Windows and Linux. Editor and native graphics acceptance will be added when those systems have been ported and can be exercised on their target platforms.
 
 ## OS boundary
 

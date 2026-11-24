@@ -21,7 +21,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 static bool sirVTReadFull( const SIRPlatformFile& file, uint64_t nOffset, void *pDestination, uint64_t nBytes ) noexcept
 {
 	uint64_t nTransferred = 0;
-	return file.readAt( nOffset, pDestination, nBytes, &nTransferred ) == SIRFileResult::SIR_FILE_OK && nTransferred == nBytes;
+	return file.readAt( nOffset, pDestination, nBytes, &nTransferred ) == sirFileResult::SIR_FILE_OK && nTransferred == nBytes;
 }
 
 SIRVirtualTexturePackFileSource::SIRVirtualTexturePackFileSource( void ) noexcept
@@ -81,13 +81,13 @@ bool SIRVirtualTexturePackFileSource::open( const char *pszPath, const sirVirtua
 		*pView = {};
 	}
 	if ( pView == nullptr || pszPath == nullptr || *pszPath == '\0' || buffer.pBytes == nullptr ||
-	     buffer.nCapacity < SIR_VT_PACK_HEADER_BYTES || m_File.open( pszPath, SIRFileOpenFlag::SIR_FILE_OPEN_READ ) != SIRFileResult::SIR_FILE_OK ) {
+	     buffer.nCapacity < SIR_VT_PACK_HEADER_BYTES || m_File.open( pszPath, sirFileOpenFlag::SIR_FILE_OPEN_READ ) != sirFileResult::SIR_FILE_OK ) {
 		return false;
 	}
 	bool bSuccess = false;
 	do {
 		uint64_t nLength = 0;
-		if ( m_File.getSize( &nLength ) != SIRFileResult::SIR_FILE_OK || nLength < SIR_VT_PACK_HEADER_BYTES || nLength > INT64_MAX ) {
+		if ( m_File.getSize( &nLength ) != sirFileResult::SIR_FILE_OK || nLength < SIR_VT_PACK_HEADER_BYTES || nLength > INT64_MAX ) {
 			break;
 		}
 		sirVirtualTexturePackHeader_t header {};

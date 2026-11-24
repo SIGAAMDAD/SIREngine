@@ -26,7 +26,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <atomic>
-#include <Core/Platform/SIRSync.h>
+#include <Core/Platform/Shared/Threading/SIRSync.h>
 
 class SIRMemoryManager;
 class SIRMemorySegment;

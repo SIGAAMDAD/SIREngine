@@ -13,15 +13,28 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
+#include <Core/Platform/Shared/Window/SIRNativeWindowLease.h>
 #include <Core/Input/SIRInputService.h>
-#include <Core/Platform/Window/SIRWindowSystem.h>
-#include <Core/Platform/Window/Linux/SIRWindowDriverX11.h>
-#include <Core/Platform/Linux/SIRX11InputBridge.h>
-#include <Core/Platform/Linux/SIRLinuxX11Backend.h>
+#include <Core/Platform/Shared/Window/SIRWindowSystem.h>
+#include <Core/Platform/Linux/Window/SIRWindowDriverX11.h>
+#include <Core/Platform/Linux/Input/SIRX11InputBridge.h>
+#include <Core/Platform/Linux/Input/SIRLinuxX11Backend.h>
 
 #include <X11/Xlib.h>
 #include <stdio.h>
 #include <unistd.h>
+
+
+static sirWindowResult sirAcquireTestLease( SIRWindowSystem& system, sirWindowHandle_t handle, SIRNativeWindowLease& lease, sirWindowNativeView_t& view ) noexcept
+{
+    if ( lease.isValid() ) {
+        SIRNativeWindowLease probe;
+        return system.acquireNativeLease( handle, probe );
+    }
+    const sirWindowResult result = system.acquireNativeLease( handle, lease );
+    if ( result == sirWindowResult::SIR_WINDOW_OK ) { view = lease.getView(); }
+    return result;
+}
 
 static bool s_bRejectedNativeIME = false;
 
@@ -48,17 +61,17 @@ int main( void )
 	}
 	const sirWindowCreateDesc_t desc = { "X11 IME fallback", 800, 450 };
 	sirWindowHandle_t hWindow = {};
-	if ( windows.createWindow( desc, &hWindow ) != SIR_WINDOW_OK ) {
+	if ( windows.createWindow( desc, &hWindow ) != sirWindowResult::SIR_WINDOW_OK ) {
 		return 1;
 	}
-	sirWindowNativeLease_t lease = {};
+	SIRNativeWindowLease lease;
 	sirWindowNativeView_t view = {};
-	if ( windows.acquireNativeLease( hWindow, &lease, &view ) != SIR_WINDOW_OK || !bridge.bind( input, backend, view ) ||
+	if ( sirAcquireTestLease( windows, hWindow, lease, view ) != sirWindowResult::SIR_WINDOW_OK || !bridge.bind( input, backend, view ) ||
 	     !s_bRejectedNativeIME ) {
 		fputs( "SIRInputX11IMEFallbackTests did not exercise unavailable XIM context\n", stderr );
 		return 1;
 	}
-	if ( !input.begin( 1 ) || !bridge.beginFrame() || windows.pumpEvents( 128 ) != SIR_WINDOW_OK || input.activeDeviceCount() != 2 ) {
+	if ( !input.begin( 1 ) || !bridge.beginFrame() || windows.pumpEvents( 128 ) != sirWindowResult::SIR_WINDOW_OK || input.activeDeviceCount() != 2 ) {
 		fputs( "SIRInputX11IMEFallbackTests failed native input without XIM context\n", stderr );
 		return 1;
 	}
@@ -68,7 +81,7 @@ int main( void )
 		return 1;
 	}
 	bridge.unbind();
-	if ( windows.releaseNativeLease( lease ) != SIR_WINDOW_OK || windows.destroyWindow( hWindow ) != SIR_WINDOW_OK ||
+	if ( lease.reset() != sirWindowResult::SIR_WINDOW_OK || windows.destroyWindow( hWindow ) != sirWindowResult::SIR_WINDOW_OK ||
 	     windows.shutdown() != SIR_SYSTEM_OK ) {
 		return 1;
 	}

@@ -13,7 +13,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#include <Core/Platform/SIRChildProcess.h>
+#include <Core/Platform/Shared/Process/SIRChildProcess.h>
 
 #include <chrono>
 #include <cstdio>
@@ -57,40 +57,40 @@ int main( int argc, char **argv )
 	SIRChildProcess process;
 	const char *szExitArgs[] = { "--exit-19" };
 	const sirChildProcessLaunch_t exitLaunch = { szExecutable.c_str(), szExitArgs, 1, nullptr };
-	sirCheckProcess( process.start( exitLaunch ) == SIR_CHILD_PROCESS_OK, "launch" );
+	sirCheckProcess( process.start( exitLaunch ) == sirChildProcessResult::SIR_CHILD_PROCESS_OK, "launch" );
 	sirCheckProcess( process.getProcessId() > 0, "process identity" );
-	sirCheckProcess( process.start( exitLaunch ) == SIR_CHILD_PROCESS_ALREADY_OPEN, "no duplicate start" );
+	sirCheckProcess( process.start( exitLaunch ) == sirChildProcessResult::SIR_CHILD_PROCESS_ALREADY_OPEN, "no duplicate start" );
 	uint32_t nExitCode = 0;
-	sirCheckProcess( process.wait( &nExitCode ) == SIR_CHILD_PROCESS_OK && nExitCode == 19, "exit code" );
+	sirCheckProcess( process.wait( &nExitCode ) == sirChildProcessResult::SIR_CHILD_PROCESS_OK && nExitCode == 19, "exit code" );
 	bool bExited = false;
-	sirCheckProcess( process.poll( &bExited, &nExitCode ) == SIR_CHILD_PROCESS_OK && bExited && nExitCode == 19, "cached exit" );
-	sirCheckProcess( process.close() == SIR_CHILD_PROCESS_OK, "reap and release" );
-	sirCheckProcess( process.wait( nullptr ) == SIR_CHILD_PROCESS_CLOSED, "closed wait" );
+	sirCheckProcess( process.poll( &bExited, &nExitCode ) == sirChildProcessResult::SIR_CHILD_PROCESS_OK && bExited && nExitCode == 19, "cached exit" );
+	sirCheckProcess( process.close() == sirChildProcessResult::SIR_CHILD_PROCESS_OK, "reap and release" );
+	sirCheckProcess( process.wait( nullptr ) == sirChildProcessResult::SIR_CHILD_PROCESS_CLOSED, "closed wait" );
 	const char *szArgumentArgs[] = { "--check-arguments", "two words", "quote\"and\\slash" };
 	const sirChildProcessLaunch_t argumentLaunch = { szExecutable.c_str(), szArgumentArgs, 3, nullptr };
-	sirCheckProcess( process.start( argumentLaunch ) == SIR_CHILD_PROCESS_OK, "argument start" );
-	sirCheckProcess( process.wait( &nExitCode ) == SIR_CHILD_PROCESS_OK && nExitCode == 0, "argument fidelity" );
-	sirCheckProcess( process.close() == SIR_CHILD_PROCESS_OK, "close argument child" );
+	sirCheckProcess( process.start( argumentLaunch ) == sirChildProcessResult::SIR_CHILD_PROCESS_OK, "argument start" );
+	sirCheckProcess( process.wait( &nExitCode ) == sirChildProcessResult::SIR_CHILD_PROCESS_OK && nExitCode == 0, "argument fidelity" );
+	sirCheckProcess( process.close() == sirChildProcessResult::SIR_CHILD_PROCESS_OK, "close argument child" );
 	const char *szSleepArgs[] = { "--sleep-200" };
 	const sirChildProcessLaunch_t sleepLaunch = { szExecutable.c_str(), szSleepArgs, 1, nullptr };
-	sirCheckProcess( process.start( sleepLaunch ) == SIR_CHILD_PROCESS_OK, "slow start" );
-	sirCheckProcess( process.waitFor( 0, &nExitCode ) == SIR_CHILD_PROCESS_TIMED_OUT, "zero deadline" );
-	sirCheckProcess( process.waitFor( 2000, &nExitCode ) == SIR_CHILD_PROCESS_OK && nExitCode == 7, "timed success" );
-	sirCheckProcess( process.close() == SIR_CHILD_PROCESS_OK, "close slow child" );
-	sirCheckProcess( process.start( sleepLaunch ) == SIR_CHILD_PROCESS_OK, "terminate start" );
-	sirCheckProcess( process.terminate() == SIR_CHILD_PROCESS_OK, "terminate and reap" );
-	sirCheckProcess( process.close() == SIR_CHILD_PROCESS_OK, "terminate close" );
+	sirCheckProcess( process.start( sleepLaunch ) == sirChildProcessResult::SIR_CHILD_PROCESS_OK, "slow start" );
+	sirCheckProcess( process.waitFor( 0, &nExitCode ) == sirChildProcessResult::SIR_CHILD_PROCESS_TIMED_OUT, "zero deadline" );
+	sirCheckProcess( process.waitFor( 2000, &nExitCode ) == sirChildProcessResult::SIR_CHILD_PROCESS_OK && nExitCode == 7, "timed success" );
+	sirCheckProcess( process.close() == sirChildProcessResult::SIR_CHILD_PROCESS_OK, "close slow child" );
+	sirCheckProcess( process.start( sleepLaunch ) == sirChildProcessResult::SIR_CHILD_PROCESS_OK, "terminate start" );
+	sirCheckProcess( process.terminate() == sirChildProcessResult::SIR_CHILD_PROCESS_OK, "terminate and reap" );
+	sirCheckProcess( process.close() == sirChildProcessResult::SIR_CHILD_PROCESS_OK, "terminate close" );
 	const sirChildProcessLaunch_t invalidLaunch = { "/no-such-sir-executable", nullptr, 0, nullptr };
-	sirCheckProcess( process.start( invalidLaunch ) == SIR_CHILD_PROCESS_SPAWN_FAILED, "invalid executable" );
+	sirCheckProcess( process.start( invalidLaunch ) == sirChildProcessResult::SIR_CHILD_PROCESS_SPAWN_FAILED, "invalid executable" );
 	std::filesystem::path pathDirectory = std::filesystem::current_path() / "sir-process-cwd-test";
 	std::filesystem::create_directories( pathDirectory );
 	const std::string szDirectory = pathDirectory.string();
 	const char *szMarkerArgs[] = { "--write-marker" };
 	const sirChildProcessLaunch_t cwdLaunch = { szExecutable.c_str(), szMarkerArgs, 1, szDirectory.c_str() };
-	sirCheckProcess( process.start( cwdLaunch ) == SIR_CHILD_PROCESS_OK, "working-directory spawn" );
-	sirCheckProcess( process.wait( &nExitCode ) == SIR_CHILD_PROCESS_OK && nExitCode == 0, "working-directory child" );
+	sirCheckProcess( process.start( cwdLaunch ) == sirChildProcessResult::SIR_CHILD_PROCESS_OK, "working-directory spawn" );
+	sirCheckProcess( process.wait( &nExitCode ) == sirChildProcessResult::SIR_CHILD_PROCESS_OK && nExitCode == 0, "working-directory child" );
 	sirCheckProcess( std::filesystem::exists( pathDirectory / "child-process-marker.tmp" ), "working-directory output" );
-	sirCheckProcess( process.close() == SIR_CHILD_PROCESS_OK, "working-directory close" );
+	sirCheckProcess( process.close() == sirChildProcessResult::SIR_CHILD_PROCESS_OK, "working-directory close" );
 	std::filesystem::remove_all( pathDirectory );
 	return 0;
 }

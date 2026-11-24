@@ -18,7 +18,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Memory/SIRMemorySegment.h>
 #include <Core/Memory/Allocators/SIRCompactBucketAllocator.h>
 #include <Core/SIRMath.h>
-#include <Core/Platform/SIRVirtualMemory.h>
+#include <Core/Platform/Shared/Memory/SIRVirtualMemory.h>
 #include <limits>
 
 static bool sirAddLayoutBytes( uint64_t *pTotal, uint64_t nBytes )

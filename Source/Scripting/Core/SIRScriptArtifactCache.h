@@ -25,7 +25,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <Scripting/Core/SIRScriptCodeManager.h>
-#include <Core/Platform/SIRThread.h>
+#include <Core/Platform/Shared/Threading/SIRThread.h>
 
 // SHA-256 of a canonical, versioned build recipe: source/dependencies, schema,
 // frontend/compiler version, platform ABI, target CPU and optimizer switches.

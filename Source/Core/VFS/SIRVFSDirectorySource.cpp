@@ -14,7 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Core/VFS/SIRVFSDirectorySource.h>
-#include <Core/Platform/SIRScopedLock.h>
+#include <Core/Platform/Shared/Threading/SIRScopedLock.h>
 
 #include <string.h>
 
@@ -34,20 +34,20 @@ bool SIRVFSDirectorySource::isOpen( void ) const noexcept
 	return m_bReady;
 }
 
-SIRVFSResult SIRVFSDirectorySource::fileResult( SIRFileResult eResult ) noexcept
+SIRVFSResult SIRVFSDirectorySource::fileResult( sirFileResult eResult ) noexcept
 {
 	switch ( eResult ) {
-	case SIRFileResult::SIR_FILE_OK:
+	case sirFileResult::SIR_FILE_OK:
 		return SIRVFSResult::SIR_VFS_OK;
-	case SIRFileResult::SIR_FILE_NOT_FOUND:
+	case sirFileResult::SIR_FILE_NOT_FOUND:
 		return SIRVFSResult::SIR_VFS_NOT_FOUND;
-	case SIRFileResult::SIR_FILE_ACCESS_DENIED:
+	case sirFileResult::SIR_FILE_ACCESS_DENIED:
 		return SIRVFSResult::SIR_VFS_FORBIDDEN;
-	case SIRFileResult::SIR_FILE_INVALID_ARGUMENT:
+	case sirFileResult::SIR_FILE_INVALID_ARGUMENT:
 		return SIRVFSResult::SIR_VFS_INVALID_ARGUMENT;
-	case SIRFileResult::SIR_FILE_CLOSED:
+	case sirFileResult::SIR_FILE_CLOSED:
 		return SIRVFSResult::SIR_VFS_STOPPED;
-	case SIRFileResult::SIR_FILE_NO_SPACE:
+	case sirFileResult::SIR_FILE_NO_SPACE:
 		return SIRVFSResult::SIR_VFS_NO_CAPACITY;
 	default:
 		return SIRVFSResult::SIR_VFS_IO_ERROR;
@@ -70,7 +70,7 @@ SIRVFSResult SIRVFSDirectorySource::bind( SIRVFSMountTable& table, sirVFSMountLe
 	if ( eRetain != SIRVFSResult::SIR_VFS_OK ) {
 		return eRetain;
 	}
-	if ( retained.descriptor.eKind != SIRVFSBackendKind::SIR_VFS_BACKEND_DIRECTORY || ( retained.descriptor.nAllowedOps & SIRVFSAccess::SIR_VFS_ACCESS_READ ) == 0 ) {
+	if ( retained.descriptor.eKind != SIRVFSBackendKind::SIR_VFS_BACKEND_DIRECTORY || ( retained.descriptor.nAllowedOps & static_cast<uint32_t>( SIRVFSAccess::SIR_VFS_ACCESS_READ ) ) == 0 ) {
 		static_cast<void>(table.release( retained.lease ));
 		return SIRVFSResult::SIR_VFS_FORBIDDEN;
 	}
@@ -104,7 +104,7 @@ SIRVFSResult SIRVFSDirectorySource::openRead( SIRVFSFileHandleTable& files, sirV
 	const uint32_t nNamespaceLength = retained.path.nNamespaceLength;
 	const bool bMatch = files.usesMountTable( *m_pMountTable ) && retained.sourceMount.nSlot == m_MountLease.nSlot &&
 	                    retained.sourceMount.nGeneration == m_MountLease.nGeneration && source.eKind == SIRVFSBackendKind::SIR_VFS_BACKEND_DIRECTORY &&
-	                    ( source.nAllowedOps & SIRVFSAccess::SIR_VFS_ACCESS_READ ) != 0 && source.nSourceId == m_Descriptor.nSourceId &&
+	                    ( source.nAllowedOps & static_cast<uint32_t>( SIRVFSAccess::SIR_VFS_ACCESS_READ ) ) != 0 && source.nSourceId == m_Descriptor.nSourceId &&
 	                    source.nSourceRevision == m_Descriptor.nSourceRevision && source.nOwnerScope == m_Descriptor.nOwnerScope &&
 	                    source.bTrusted == m_Descriptor.bTrusted && strcmp( source.szNamespace, m_Descriptor.szNamespace ) == 0 &&
 	                    nNamespaceLength == strlen( m_Descriptor.szNamespace ) &&

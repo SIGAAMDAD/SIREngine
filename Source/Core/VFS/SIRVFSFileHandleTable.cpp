@@ -14,7 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Core/VFS/SIRVFSFileHandleTable.h>
-#include <Core/Platform/SIRScopedLock.h>
+#include <Core/Platform/Shared/Threading/SIRScopedLock.h>
 
 #include <stdlib.h>
 #include <string.h>
@@ -102,7 +102,7 @@ SIRVFSResult SIRVFSFileHandleTable::openResolved( const sirVFSPath_t& path, sirV
 	if ( eRetain != SIRVFSResult::SIR_VFS_OK ) {
 		return eRetain;
 	}
-	if ( ( retained.descriptor.nAllowedOps & SIRVFSAccess::SIR_VFS_ACCESS_READ ) == 0 ||
+	if ( ( retained.descriptor.nAllowedOps & static_cast<uint32_t>( SIRVFSAccess::SIR_VFS_ACCESS_READ ) ) == 0 ||
 	     strlen( retained.descriptor.szNamespace ) != path.nNamespaceLength ||
 	     memcmp( retained.descriptor.szNamespace, path.szPath, path.nNamespaceLength ) != 0 ) {
 		static_cast<void>(m_Table.release( retained.lease ));

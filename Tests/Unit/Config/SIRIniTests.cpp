@@ -13,6 +13,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
+#include <Core/Platform/Shared/File/SIRPlatformFileSystem.h>
 #include <Core/Config/Formats/INI/SIRIni.h>
 #include <Core/Config/SIRConfigAtomicFile.h>
 #ifdef NDEBUG
@@ -90,8 +91,8 @@ int main( void )
 
 	const char *pszTarget = "sir-p5-archive-unit.ini";
 	const char *pszTemporary = "sir-p5-archive-unit.tmp";
-	SIRPlatformFile::remove( pszTemporary );
-	SIRPlatformFile::remove( pszTarget );
+	SIRPlatformFileSystem::removeFile( pszTemporary );
+	SIRPlatformFileSystem::removeFile( pszTarget );
 	SIRConfigAtomicFile atomic;
 	assert( atomic.open( pszTarget, pszTemporary, 1024 ) == SIR_CONFIG_OK );
 	const char *pszOld = "[CVars]\nr.alpha = \"old\"\n";
@@ -112,6 +113,6 @@ int main( void )
 	SIRConfigAtomicFile denied;
 	assert( denied.open( pszTarget, pszTemporary, 1024 ) == SIR_CONFIG_IO_ERROR );
 	atomic.cancel();
-	assert( SIRPlatformFile::remove( pszTarget ) == SIR_FILE_OK );
+	assert( SIRPlatformFileSystem::removeFile( pszTarget ) == SIR_FILE_OK );
 	return 0;
 }

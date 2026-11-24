@@ -18,7 +18,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <string.h>
 
 #if defined( _WIN32 )
-#include <Core/Platform/Window/Windows/SIRWGLBootstrapWindow.h>
+#include <Core/Platform/Windows/Window/SIRWGLBootstrapWindow.h>
 #include <windows.h>
 #else
 #include <dlfcn.h>

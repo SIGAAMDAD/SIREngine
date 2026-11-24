@@ -18,7 +18,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
 #pragma once
 #endif
-#include <Core/Platform/SIRSync.h>
+#include <Core/Platform/Shared/Threading/SIRSync.h>
 #include <stdint.h>
 #include <type_traits>
 

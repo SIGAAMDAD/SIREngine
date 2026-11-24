@@ -9,7 +9,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 ===========================================================================
 */
 #include <Core/SIRApplication.h>
-#include <Core/Platform/SIRPlatformTime.h>
+#include <Core/Platform/Shared/Diagnostics/SIRPlatformTime.h>
 
 bool SIRApplication::attachTimeline( SIRTimelineCoordinator& timeline ) noexcept
 {

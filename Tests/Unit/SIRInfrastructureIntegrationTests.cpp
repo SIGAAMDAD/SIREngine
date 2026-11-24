@@ -13,9 +13,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
+#include <Core/Platform/Shared/File/SIRPlatformFileSystem.h>
 #include <Core/Jobs/SIRTaskScheduler.h>
 #include <Core/Memory/SIRMemoryManager.h>
-#include <Core/Platform/SIRPlatformFile.h>
+#include <Core/Platform/Shared/File/SIRPlatformFile.h>
 #include <Resources/SIRResourceFileLoad.h>
 
 #include <atomic>
@@ -123,14 +124,14 @@ static sirResourceFileLoadRequest_t sirInfrastructureRequest( uint64_t nAsset, s
 
 static void sirInfrastructureMakeFile( const std::vector<uint8_t>& rBytes )
 {
-	SIRPlatformFile::remove( SIR_INTEGRATION_FILE );
+	SIRPlatformFileSystem::removeFile( SIR_INTEGRATION_FILE );
 	SIRPlatformFile file;
-	SIR_INTEGRATION_CHECK( file.open( SIR_INTEGRATION_FILE, SIR_FILE_OPEN_WRITE | SIR_FILE_OPEN_CREATE | SIR_FILE_OPEN_TRUNCATE ) ==
-	                       SIR_FILE_OK );
+	SIR_INTEGRATION_CHECK( file.open( SIR_INTEGRATION_FILE, static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_WRITE ) | static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_CREATE ) | static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_TRUNCATE ) ) ==
+	                       sirFileResult::SIR_FILE_OK );
 	uint64_t nWritten = 0;
-	SIR_INTEGRATION_CHECK( file.writeAt( 0, rBytes.data(), rBytes.size(), &nWritten ) == SIR_FILE_OK );
+	SIR_INTEGRATION_CHECK( file.writeAt( 0, rBytes.data(), rBytes.size(), &nWritten ) == sirFileResult::SIR_FILE_OK );
 	SIR_INTEGRATION_CHECK( nWritten == rBytes.size() );
-	SIR_INTEGRATION_CHECK( file.close() == SIR_FILE_OK );
+	SIR_INTEGRATION_CHECK( file.close() == sirFileResult::SIR_FILE_OK );
 }
 
 static void sirInfrastructureVerify( SIRResourceGraph& rGraph, SIRResourceHandle hResource, const std::vector<uint8_t>& rBytes,
@@ -174,7 +175,7 @@ static void sirInfrastructureRunMatrix( const std::vector<uint8_t>& rBytes )
 					SIR_INTEGRATION_CHECK( load.poll( &published ) == SIR_RESOURCE_RESULT_SUCCESS );
 					sirInfrastructureVerify( graph, published, rBytes, nOffset, nCount, 1 );
 					SIR_INTEGRATION_CHECK( !load.isActive() );
-					SIR_INTEGRATION_CHECK( load.getLastFileResult() == SIR_FILE_OK );
+					SIR_INTEGRATION_CHECK( load.getLastFileResult() == sirFileResult::SIR_FILE_OK );
 				}
 			}
 		}
@@ -343,7 +344,7 @@ int main( void )
 	sirInfrastructureRunConcurrentWorkers( bytes );
 	sirInfrastructureRunRevisionChurn( bytes );
 	sirInfrastructureRunRejections();
-	SIR_INTEGRATION_CHECK( SIRPlatformFile::remove( SIR_INTEGRATION_FILE ) == SIR_FILE_OK );
+	SIR_INTEGRATION_CHECK( SIRPlatformFileSystem::removeFile( SIR_INTEGRATION_FILE ) == sirFileResult::SIR_FILE_OK );
 	printf( "PASS: GRDG/native I/O matrix, scheduler backpressure, multithreaded reads, revision churn and failures\n" );
 	return 0;
 }

@@ -82,7 +82,7 @@ SIRAudioResult SIRAudioSystem::initialize( const sirAudioSystemConfig_t& config,
 		shutdown();
 		return SIRAudioResult::SIR_AUDIO_CAPACITY;
 	}
-	if ( !sirPlatformCaptureContext( &m_Platform ) ) {
+	if ( !SIRPlatformContext::capture( &m_Platform ) ) {
 		shutdown();
 		return SIRAudioResult::SIR_AUDIO_BACKEND_ERROR;
 	}

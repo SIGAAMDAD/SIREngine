@@ -60,7 +60,7 @@ SIRScriptResult SIRScriptBindingRegistry::registerType( const sirScriptTypeDescr
 	}
 	if ( descriptor.nTypeId == 0 || !isValidAlignment( descriptor.nAlignment ) || descriptor.nBytes == 0 ||
 	     descriptor.nBytes % descriptor.nAlignment != 0 ||
-	     ( descriptor.nFlags & ~( SIRScriptTypeFlags::SIR_SCRIPT_TYPE_PLAIN_BYTES | SIRScriptTypeFlags::SIR_SCRIPT_TYPE_NO_POINTERS ) ) != 0 ) {
+	     ( descriptor.nFlags & ~( static_cast<uint32_t>( SIRScriptTypeFlags::SIR_SCRIPT_TYPE_PLAIN_BYTES ) | static_cast<uint32_t>( SIRScriptTypeFlags::SIR_SCRIPT_TYPE_NO_POINTERS ) ) ) != 0 ) {
 		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 	if ( findType( descriptor.nTypeId ) != nullptr ) {
@@ -281,8 +281,8 @@ SIRScriptResult SIRScriptBindingRegistry::validateQueuedFrame( uint64_t nTypeId,
 	if ( !checkReadFrame( frame, nBytes, nAlignment ) ) {
 		return SIRScriptResult::SIR_SCRIPT_TYPE_MISMATCH;
 	}
-	if ( pType != nullptr && ( pType->nFlags & ( SIRScriptTypeFlags::SIR_SCRIPT_TYPE_PLAIN_BYTES | SIRScriptTypeFlags::SIR_SCRIPT_TYPE_NO_POINTERS ) ) !=
-	                             ( SIRScriptTypeFlags::SIR_SCRIPT_TYPE_PLAIN_BYTES | SIRScriptTypeFlags::SIR_SCRIPT_TYPE_NO_POINTERS ) ) {
+	if ( pType != nullptr && ( pType->nFlags & ( static_cast<uint32_t>( SIRScriptTypeFlags::SIR_SCRIPT_TYPE_PLAIN_BYTES ) | static_cast<uint32_t>( SIRScriptTypeFlags::SIR_SCRIPT_TYPE_NO_POINTERS ) ) ) !=
+	                             ( static_cast<uint32_t>( SIRScriptTypeFlags::SIR_SCRIPT_TYPE_PLAIN_BYTES ) | static_cast<uint32_t>( SIRScriptTypeFlags::SIR_SCRIPT_TYPE_NO_POINTERS ) ) ) {
 		return SIRScriptResult::SIR_SCRIPT_TYPE_MISMATCH;
 	}
 	return SIRScriptResult::SIR_SCRIPT_OK;

@@ -15,7 +15,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/Input/SIRInputService.h>
 
-#include <Core/Platform/SIRPlatformTime.h>
+#include <Core/Platform/Shared/Diagnostics/SIRPlatformTime.h>
 
 static bool sirInputRumbleOutput( void *pContext, sirInputDeviceId_t hDevice, uint16_t nLeft, uint16_t nRight ) noexcept
 {
@@ -26,7 +26,7 @@ SIRInputService::SIRInputService( void ) noexcept
     : m_Actions(), m_Text(), m_Haptics(), m_ReplayFrame{}, m_Registry(), m_State(), m_pBackends{}, m_nBackendCount( 0 ),
       m_bStopping( false ), m_bHapticsPaused( false ), m_bReplayActive( false ), m_bReplayQueued( false ), m_nCollectingTick( 0 )
 {
-	static_cast<void>(sirPlatformCaptureContext( &m_Platform ));
+	static_cast<void>(SIRPlatformContext::capture( &m_Platform ));
 }
 
 const sirPlatformContext_t& SIRInputService::platformContext( void ) const noexcept
@@ -349,7 +349,7 @@ bool SIRInputService::describePlatformDevice( sirInputDeviceId_t hDevice, sirPla
 		return false;
 	}
 	*pOut = { descriptor.key.nNativeId, descriptor.key.nPhysicalId, descriptor.id.nGeneration,
-	          static_cast<uint32_t>( SIRPlatformDeviceBackend::SIR_PLATFORM_DEVICE_INPUT_BASE ) | static_cast<uint32_t>( descriptor.key.eBackend ), static_cast<uint32_t>( descriptor.key.eClass ) };
+	          static_cast<uint32_t>( sirPlatformDeviceBackend::SIR_PLATFORM_DEVICE_INPUT_BASE ) | static_cast<uint32_t>( descriptor.key.eBackend ), static_cast<uint32_t>( descriptor.key.eClass ) };
 	return true;
 }
 

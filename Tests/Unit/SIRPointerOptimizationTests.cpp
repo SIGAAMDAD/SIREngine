@@ -26,7 +26,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Memory/Pointers/SIRDeferredPtr.h>
 #include <Core/Memory/Pointers/SIRFenceRetiredPtr.h>
 #include <Core/Memory/Pointers/SIRArenaPtr.h>
-#include <Core/Platform/SIRThread.h>
+#include <Core/Platform/Shared/Threading/SIRThread.h>
 
 #include <stdint.h>
 #include <stdio.h>

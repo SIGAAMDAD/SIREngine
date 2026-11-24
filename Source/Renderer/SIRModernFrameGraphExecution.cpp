@@ -32,7 +32,7 @@ SIRGraphicsResult SIRModernCompletionObserver::observe( const sirModernCompletio
 	uint32_t szLaneOwner[SIR_PROVIDER_MAX_LANES];
 	memset( szLaneOwner, 0, sizeof( szLaneOwner ) );
 	for ( uint32_t i = 0; i < SIR_PROVIDER_MAX_LANES; ++i ) {
-		szLaneOwner[i] = SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT;
+		szLaneOwner[i] = static_cast<uint32_t>( SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT );
 	}
 	staged.nProviderId = query.nProviderId;
 	staged.nProviderGeneration = query.nProviderGeneration;
@@ -40,14 +40,14 @@ SIRGraphicsResult SIRModernCompletionObserver::observe( const sirModernCompletio
 	for ( uint32_t i = 0; i < query.nTokenCount; ++i ) {
 		const sirGraphicsCompletion_t& token = query.pTokens[i];
 		if ( token.eQueue >= SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT || token.nValue == 0 || token.nDeviceGeneration == 0 ||
-		     token.nDeviceGeneration != device.getDeviceGeneration() || query.szQueueToProviderLane[token.eQueue] >= query.nLaneCount ) {
+		     token.nDeviceGeneration != device.getDeviceGeneration() || query.szQueueToProviderLane[static_cast<uint32_t>( token.eQueue )] >= query.nLaneCount ) {
 			return SIRGraphicsResult::SIR_GRAPHICS_INVALID_HANDLE;
 		}
-		const uint32_t nLane = query.szQueueToProviderLane[token.eQueue];
-		if ( szLaneOwner[nLane] != SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT && szLaneOwner[nLane] != token.eQueue ) {
+		const uint32_t nLane = query.szQueueToProviderLane[static_cast<uint32_t>( token.eQueue )];
+		if ( szLaneOwner[nLane] != static_cast<uint32_t>( SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT ) && szLaneOwner[nLane] != static_cast<uint32_t>( token.eQueue ) ) {
 			return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
-		szLaneOwner[nLane] = token.eQueue;
+		szLaneOwner[nLane] = static_cast<uint32_t>( token.eQueue );
 		bool bCompleted = false;
 		const SIRGraphicsResult ePoll = device.poll( token, &bCompleted );
 		if ( ePoll != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
@@ -141,7 +141,7 @@ SIRGraphicsResult SIRModernFrameGraphExecutor::validate( const sirModernFramePla
 	     plan.pCompiled->nDependencyCount > SIR_FRAMEGRAPH_MAX_DEPENDENCIES ) {
 		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( caps.nDeviceGeneration == 0 || caps.nModel != SIRGraphicsPipelineModel::SIR_GRAPHICS_PIPELINE_MODEL_MODERN ) {
+	if ( caps.nDeviceGeneration == 0 || caps.nModel != static_cast<uint32_t>( SIRGraphicsPipelineModel::SIR_GRAPHICS_PIPELINE_MODEL_MODERN ) ) {
 		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
 	// FrameGraph::record checks authoritative owner identity, revision,

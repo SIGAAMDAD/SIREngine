@@ -70,7 +70,7 @@ SIRTaskScheduler::SIRTaskScheduler( void ) noexcept
       m_nActive( 0 ), m_nPendingProviders( 0 ), m_nExecutingProviders( 0 ), m_nSubmitted( 0 ), m_nExecuted( 0 ), m_nStealAttempts( 0 ),
       m_nStealSucceeded( 0 ), m_bInitialized( false ), m_bClosing( false ), m_bEverInitialized( false )
 {
-	for ( uint32_t iQueue = 0; iQueue < SIRTaskExecutor::SIR_TASK_EXEC_COUNT; ++iQueue ) {
+	for ( uint32_t iQueue = 0; iQueue < static_cast<uint32_t>( SIRTaskExecutor::SIR_TASK_EXEC_COUNT ); ++iQueue ) {
 		for ( uint32_t iPriority = 0; iPriority < 3; ++iPriority ) {
 			m_GlobalQueues[iQueue].nHead[iPriority] = SIR_TASK_NONE;
 			m_GlobalQueues[iQueue].nTail[iPriority] = SIR_TASK_NONE;
@@ -235,7 +235,7 @@ void SIRTaskScheduler::enqueueLocked( uint32_t nSlot ) noexcept
 	const uint32_t nPriority = static_cast<uint32_t>(slot.ePriority);
 	// Tasks created or activated by a worker go to its local queue. External
 	// producers use the shared ingress queue, preserving FIFO admission.
-	const uint32_t nWorker = nExecutor == SIRTaskExecutor::SIR_TASK_EXEC_CPU && s_pRunningScheduler == this && s_nRunningWorker < m_nWorkerCount
+	const uint32_t nWorker = nExecutor == static_cast<uint32_t>( SIRTaskExecutor::SIR_TASK_EXEC_CPU ) && s_pRunningScheduler == this && s_nRunningWorker < m_nWorkerCount
 	                             ? s_nRunningWorker
 	                             : SIR_TASK_NONE;
 	sirTaskQueue_t& queue = nWorker == SIR_TASK_NONE ? m_GlobalQueues[nExecutor] : m_pLocalQueues[nWorker];
@@ -279,22 +279,22 @@ void SIRTaskScheduler::removeLocked( uint32_t nSlot ) noexcept
 
 uint32_t SIRTaskScheduler::selectPriorityLocked( sirTaskQueue_t& queue ) noexcept
 {
-	const bool bCritical = queue.nHead[SIRTaskPriority::SIR_TASK_PRIORITY_CRITICAL] != SIR_TASK_NONE;
-	const bool bNormal = queue.nHead[SIRTaskPriority::SIR_TASK_PRIORITY_NORMAL] != SIR_TASK_NONE;
-	const bool bBackground = queue.nHead[SIRTaskPriority::SIR_TASK_PRIORITY_BACKGROUND] != SIR_TASK_NONE;
+	const bool bCritical = queue.nHead[static_cast<uint32_t>( SIRTaskPriority::SIR_TASK_PRIORITY_CRITICAL )] != SIR_TASK_NONE;
+	const bool bNormal = queue.nHead[static_cast<uint32_t>( SIRTaskPriority::SIR_TASK_PRIORITY_NORMAL )] != SIR_TASK_NONE;
+	const bool bBackground = queue.nHead[static_cast<uint32_t>( SIRTaskPriority::SIR_TASK_PRIORITY_BACKGROUND )] != SIR_TASK_NONE;
 	if ( bCritical && ( queue.nCriticalStreak < 8 || ( !bNormal && !bBackground ) ) ) {
 		++queue.nCriticalStreak;
-		return SIRTaskPriority::SIR_TASK_PRIORITY_CRITICAL;
+		return static_cast<uint32_t>( SIRTaskPriority::SIR_TASK_PRIORITY_CRITICAL );
 	}
 	if ( bNormal && ( queue.nNormalStreak < 4 || !bBackground ) ) {
 		queue.nCriticalStreak = 0;
 		++queue.nNormalStreak;
-		return SIRTaskPriority::SIR_TASK_PRIORITY_NORMAL;
+		return static_cast<uint32_t>( SIRTaskPriority::SIR_TASK_PRIORITY_NORMAL );
 	}
 	if ( bBackground ) {
 		queue.nCriticalStreak = 0;
 		queue.nNormalStreak = 0;
-		return SIRTaskPriority::SIR_TASK_PRIORITY_BACKGROUND;
+		return static_cast<uint32_t>( SIRTaskPriority::SIR_TASK_PRIORITY_BACKGROUND );
 	}
 	return SIR_TASK_NONE;
 }
@@ -313,7 +313,7 @@ uint32_t SIRTaskScheduler::dequeueQueueLocked( sirTaskQueue_t& queue, bool bFrom
 uint32_t SIRTaskScheduler::dequeueLocked( SIRTaskExecutor eExecutor, uint32_t nWorker ) noexcept
 {
 	if ( eExecutor != SIRTaskExecutor::SIR_TASK_EXEC_CPU ) {
-		return dequeueQueueLocked( m_GlobalQueues[eExecutor], false );
+		return dequeueQueueLocked( m_GlobalQueues[static_cast<uint32_t>( eExecutor )], false );
 	}
 	if ( nWorker < m_nWorkerCount ) {
 		// LIFO improves local cache locality for spawned work. Stealers take
@@ -322,7 +322,7 @@ uint32_t SIRTaskScheduler::dequeueLocked( SIRTaskExecutor eExecutor, uint32_t nW
 		if ( nTask != SIR_TASK_NONE ) {
 			return nTask;
 		}
-		nTask = dequeueQueueLocked( m_GlobalQueues[SIRTaskExecutor::SIR_TASK_EXEC_CPU], false );
+		nTask = dequeueQueueLocked( m_GlobalQueues[static_cast<uint32_t>( SIRTaskExecutor::SIR_TASK_EXEC_CPU )], false );
 		if ( nTask != SIR_TASK_NONE ) {
 			return nTask;
 		}
@@ -338,7 +338,7 @@ uint32_t SIRTaskScheduler::dequeueLocked( SIRTaskExecutor eExecutor, uint32_t nW
 		return SIR_TASK_NONE;
 	}
 	// Explicit owner-thread pump, used only when worker count is zero.
-	return dequeueQueueLocked( m_GlobalQueues[SIRTaskExecutor::SIR_TASK_EXEC_CPU], false );
+	return dequeueQueueLocked( m_GlobalQueues[static_cast<uint32_t>( SIRTaskExecutor::SIR_TASK_EXEC_CPU )], false );
 }
 
 bool SIRTaskScheduler::submit( const sirTaskBatchTask_t& task, sirTaskHandle_t *pHandle ) noexcept
@@ -775,7 +775,7 @@ bool SIRTaskScheduler::bindProviderOwner( SIRTaskExecutor eExecutor ) noexcept
 		return false;
 	}
 	m_Mutex.lock();
-	const uint32_t nProvider = static_cast<uint32_t>(eExecutor - SIRTaskExecutor::SIR_TASK_EXEC_RENDER);
+	const uint32_t nProvider = static_cast<uint32_t>( eExecutor ) - static_cast<uint32_t>( SIRTaskExecutor::SIR_TASK_EXEC_RENDER );
 	const bool bAllowed =
 	    m_bInitialized && !m_bClosing && ( !m_bProviderBound[nProvider] || m_ProviderOwners[nProvider] == std::this_thread::get_id() );
 	if ( bAllowed ) {
@@ -806,9 +806,9 @@ bool SIRTaskScheduler::completeProvider( sirTaskHandle_t task, SIRTaskResult eRe
 	}
 	sirTaskSlot_t& slot = m_pSlots[task.nSlot];
 	const uint32_t nExecutor = static_cast<uint32_t>(slot.eExecutor);
-	if ( nExecutor < SIRTaskExecutor::SIR_TASK_EXEC_RENDER || nExecutor >= SIRTaskExecutor::SIR_TASK_EXEC_COUNT || slot.eState != SIRTaskState::SIR_TASK_AWAITING_PROVIDER ||
-	     !m_bProviderBound[nExecutor - SIRTaskExecutor::SIR_TASK_EXEC_RENDER] ||
-	     m_ProviderOwners[nExecutor - SIRTaskExecutor::SIR_TASK_EXEC_RENDER] != std::this_thread::get_id() ) {
+	if ( nExecutor < static_cast<uint32_t>( SIRTaskExecutor::SIR_TASK_EXEC_RENDER ) || nExecutor >= static_cast<uint32_t>( SIRTaskExecutor::SIR_TASK_EXEC_COUNT ) || slot.eState != SIRTaskState::SIR_TASK_AWAITING_PROVIDER ||
+	     !m_bProviderBound[nExecutor - static_cast<uint32_t>( SIRTaskExecutor::SIR_TASK_EXEC_RENDER )] ||
+	     m_ProviderOwners[nExecutor - static_cast<uint32_t>( SIRTaskExecutor::SIR_TASK_EXEC_RENDER )] != std::this_thread::get_id() ) {
 		m_Mutex.unlock();
 		return false;
 	}
@@ -826,8 +826,8 @@ uint32_t SIRTaskScheduler::pumpExecutor( SIRTaskExecutor eExecutor, uint32_t nMa
 	m_Mutex.lock();
 	const bool bOwner = eExecutor < SIRTaskExecutor::SIR_TASK_EXEC_RENDER
 	                        ? std::this_thread::get_id() == m_OwnerThread
-	                        : eExecutor < SIRTaskExecutor::SIR_TASK_EXEC_COUNT && m_bProviderBound[eExecutor - SIRTaskExecutor::SIR_TASK_EXEC_RENDER] &&
-	                              std::this_thread::get_id() == m_ProviderOwners[eExecutor - SIRTaskExecutor::SIR_TASK_EXEC_RENDER];
+	                        : eExecutor < SIRTaskExecutor::SIR_TASK_EXEC_COUNT && m_bProviderBound[static_cast<uint32_t>( eExecutor ) - static_cast<uint32_t>( SIRTaskExecutor::SIR_TASK_EXEC_RENDER )] &&
+	                              std::this_thread::get_id() == m_ProviderOwners[static_cast<uint32_t>( eExecutor ) - static_cast<uint32_t>( SIRTaskExecutor::SIR_TASK_EXEC_RENDER )];
 	m_Mutex.unlock();
 	if ( !bOwner ) {
 		return 0;

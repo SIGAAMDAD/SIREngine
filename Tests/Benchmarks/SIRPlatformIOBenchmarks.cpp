@@ -9,11 +9,11 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 ===========================================================================
 */
 
-#include <Core/Platform/SIRPlatformFile.h>
-#include <Core/Platform/SIRPlatformFileMapping.h>
-#include <Core/Platform/SIRPlatformFileSystem.h>
-#include <Core/Platform/SIRPlatformPipe.h>
-#include <Core/Platform/SIRSemaphore.h>
+#include <Core/Platform/Shared/File/SIRPlatformFile.h>
+#include <Core/Platform/Shared/File/SIRPlatformFileMapping.h>
+#include <Core/Platform/Shared/File/SIRPlatformFileSystem.h>
+#include <Core/Platform/Shared/Process/SIRPlatformPipe.h>
+#include <Core/Platform/Shared/Threading/SIRSemaphore.h>
 
 #include <benchmark/benchmark.h>
 
@@ -34,7 +34,7 @@ private:
 public:
 	bool init( void )
 	{
-		( void )SIRPlatformFile::remove( SIR_PLATFORM_IO_BENCH_PATH );
+		( void )SIRPlatformFileSystem::removeFile( SIR_PLATFORM_IO_BENCH_PATH );
 		m_szExpected.resize( SIR_PLATFORM_IO_BENCH_BYTES );
 		for ( uint32_t iByte = 0; iByte < SIR_PLATFORM_IO_BENCH_BYTES; ++iByte ) {
 			m_szExpected[iByte] = ( uint8_t )( ( iByte * 17 + ( iByte >> 6 ) ) & 255 );
@@ -51,7 +51,7 @@ public:
 	~SIRPlatformIOBenchmarkFixture( void )
 	{
 		( void )m_File.close();
-		( void )SIRPlatformFile::remove( SIR_PLATFORM_IO_BENCH_PATH );
+		( void )SIRPlatformFileSystem::removeFile( SIR_PLATFORM_IO_BENCH_PATH );
 	}
 
 	SIRPlatformFile& getFile( void ) noexcept
@@ -242,7 +242,7 @@ static void SIRBenchmarkPlatformFileInfo( benchmark::State& state )
 	for ( auto _ : state ) {
 		( void )_;
 		sirFileInfo_t info = {};
-		if ( SIRPlatformFile::getInfo( SIR_PLATFORM_IO_BENCH_PATH, &info ) != SIR_FILE_OK ||
+		if ( SIRPlatformFileSystem::getFileInfo( SIR_PLATFORM_IO_BENCH_PATH, &info ) != SIR_FILE_OK ||
 		     info.nSizeBytes != SIR_PLATFORM_IO_BENCH_BYTES ) {
 			state.SkipWithError( "file metadata query failed" );
 			break;
@@ -346,7 +346,7 @@ static void SIRBenchmarkPlatformPipeLifecycleTransfer( benchmark::State& state )
 	for ( auto _ : state ) {
 		( void )_;
 		SIRPlatformPipe pipe;
-		if ( pipe.create() != SIRPipeResult::SIR_PIPE_OK ) {
+		if ( pipe.create() != sirPipeResult::SIR_PIPE_OK ) {
 			state.SkipWithError( "pipe create failed" );
 			bFailed = true;
 			break;
@@ -354,14 +354,14 @@ static void SIRBenchmarkPlatformPipeLifecycleTransfer( benchmark::State& state )
 		bool bProducerOK = false;
 		std::thread producer( [&]() {
 			uint64_t nTransferred = 0;
-			bProducerOK = pipe.write( szInput.data(), nBytes, &nTransferred ) == SIRPipeResult::SIR_PIPE_OK && nTransferred == nBytes;
+			bProducerOK = pipe.write( szInput.data(), nBytes, &nTransferred ) == sirPipeResult::SIR_PIPE_OK && nTransferred == nBytes;
 			( void )pipe.closeWrite();
 		} );
 		uint64_t nConsumed = 0;
 		while ( nConsumed < nBytes ) {
 			uint64_t nTransferred = 0;
-			const SIRPipeResult eResult = pipe.read( szOutput.data() + nConsumed, nBytes - nConsumed, &nTransferred );
-			if ( eResult != SIRPipeResult::SIR_PIPE_OK || nTransferred == 0 ) {
+			const sirPipeResult eResult = pipe.read( szOutput.data() + nConsumed, nBytes - nConsumed, &nTransferred );
+			if ( eResult != sirPipeResult::SIR_PIPE_OK || nTransferred == 0 ) {
 				bFailed = true;
 				break;
 			}

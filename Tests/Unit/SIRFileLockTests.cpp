@@ -13,7 +13,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#include <Core/Platform/SIRFileLock.h>
+#include <Core/Platform/Shared/File/SIRFileLock.h>
 
 #include <atomic>
 #include <chrono>

@@ -8,7 +8,7 @@
 class SIRRenderResource
 {
 public:
-	SIRWeakPtr<SIRRenderingDevice> getDevice();
+	SIRWeakPtr<SIRRenderingDevice> getDevice( void );
 };
 
 #endif // __SIR_RENDER_RESOURCE_H__

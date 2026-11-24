@@ -1,5 +1,5 @@
 #include <Core/SIRApplication.h>
-#include <Core/Platform/SIRPlatformTime.h>
+#include <Core/Platform/Shared/Diagnostics/SIRPlatformTime.h>
 
 SIRApplication::SIRApplication( void ) noexcept
     : m_eState( SIRAppState::SIR_APP_UNINITIALIZED ), m_nTicks( 0 ), m_nLastFrameTimestampNs( 0 ), m_fFrameDeltaSeconds( 0.0f ),

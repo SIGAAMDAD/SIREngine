@@ -181,7 +181,7 @@ SIRScriptResult SIRScriptOptimizationProtocol::encodeReply( const sirScriptOptim
 	memset( szOutput, 0, REPLY_BYTES );
 	scriptProtocolHeader( szOutput, s_nOptimizationReplyKind );
 	scriptProtocolWrite64( szOutput + 16, reply.nJobId );
-	scriptProtocolWrite32( szOutput + 24, reply.eResult );
+	scriptProtocolWrite32( szOutput + 24, static_cast<uint32_t>( reply.eResult ) );
 	if ( reply.eResult == SIRScriptResult::SIR_SCRIPT_OK ) {
 		const sirScriptCachedArtifact_t& entry = reply.cached;
 		scriptProtocolEncodeArtifact( szOutput + 32, entry.artifact );
@@ -205,7 +205,7 @@ SIRScriptResult SIRScriptOptimizationProtocol::decodeReply( const uint8_t *pInpu
 	sirScriptOptimizationReply_t decoded {};
 	decoded.nJobId = scriptProtocolRead64( pInput + 16 );
 	const uint32_t nStatus = scriptProtocolRead32( pInput + 24 );
-	if ( nStatus > SIRScriptResult::SIR_SCRIPT_BACKEND_FAILURE ) {
+	if ( nStatus > static_cast<uint32_t>( SIRScriptResult::SIR_SCRIPT_BACKEND_FAILURE ) ) {
 		return SIRScriptResult::SIR_SCRIPT_TYPE_MISMATCH;
 	}
 	decoded.eResult = static_cast<SIRScriptResult>(nStatus);

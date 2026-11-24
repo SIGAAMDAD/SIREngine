@@ -152,7 +152,7 @@ sirGraphicsABIResult_t sirGraphicsSelectABIModuleAdapter( const sirGraphicsABIMo
 sirGraphicsABIResult_t sirGraphicsLoadABIModule( const char *pszPath, const sirGraphicsABIHost_t *pHost,
                                                  sirGraphicsABIModule_t *pModule ) noexcept
 {
-	if ( pszPath == nullptr || pszPath[0] == '\0' || pModule == nullptr || pModule->library.pNativeHandle != nullptr ||
+	if ( pszPath == nullptr || pszPath[0] == '\0' || pModule == nullptr || pModule->library.isOpen() ||
 	     pModule->driver.pDriver != nullptr || pModule->nActiveDevices != 0 ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
@@ -160,31 +160,29 @@ sirGraphicsABIResult_t sirGraphicsLoadABIModule( const char *pszPath, const sirG
 	if ( eHost != SIR_GRAPHICS_ABI_SUCCESS ) {
 		return eHost;
 	}
-	sirDynamicLibrary_t library {};
-	if ( !SIRDynamicLibrary::load( pszPath, &library ) ) {
+	if ( pModule->library.load( pszPath ) != sirLibraryResult::SIR_LIBRARY_OK ) {
 		return SIR_GRAPHICS_ABI_UNSUPPORTED;
 	}
-	const sirGraphicsABIFactory_t pFactory =
-	    reinterpret_cast<sirGraphicsABIFactory_t>(SIRDynamicLibrary::findSymbol( &library, SIR_GRAPHICS_DRIVER_ABI_ENTRY ));
-	if ( pFactory == nullptr ) {
-		SIRDynamicLibrary::unload( &library );
+	void *pSymbol = nullptr;
+	if ( pModule->library.findSymbol( SIR_GRAPHICS_DRIVER_ABI_ENTRY, &pSymbol ) != sirLibraryResult::SIR_LIBRARY_OK ) {
+		static_cast<void>( pModule->library.unload() );
 		return SIR_GRAPHICS_ABI_UNSUPPORTED;
 	}
+	const sirGraphicsABIFactory_t pFactory = reinterpret_cast<sirGraphicsABIFactory_t>( pSymbol );
 	sirGraphicsABIDriver_t driver {};
 	driver.nSize = sizeof( driver );
 	const sirGraphicsABIResult_t eStatus = sirGraphicsNegotiateDriverABI( pFactory, pHost, &driver );
 	if ( eStatus != SIR_GRAPHICS_ABI_SUCCESS ) {
-		SIRDynamicLibrary::unload( &library );
+		static_cast<void>( pModule->library.unload() );
 		return eStatus;
 	}
-	pModule->library = library;
 	pModule->driver = driver;
 	return SIR_GRAPHICS_ABI_SUCCESS;
 }
 
 sirGraphicsABIResult_t sirGraphicsUnloadABIModule( sirGraphicsABIModule_t *pModule ) noexcept
 {
-	if ( pModule == nullptr || pModule->library.pNativeHandle == nullptr ||
+	if ( pModule == nullptr || !pModule->library.isOpen() ||
 	     sirGraphicsValidateABIDriver( &pModule->driver ) != SIR_GRAPHICS_ABI_SUCCESS ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
@@ -192,10 +190,13 @@ sirGraphicsABIResult_t sirGraphicsUnloadABIModule( sirGraphicsABIModule_t *pModu
 		return SIRGraphicsResult::SIR_GRAPHICS_BUSY;
 	}
 	pModule->driver.pReleaseDriver( pModule->driver.pDriver );
-	if ( !SIRDynamicLibrary::unload( &pModule->library ) ) {
+	if ( pModule->library.unload() != sirLibraryResult::SIR_LIBRARY_OK ) {
 		return SIR_GRAPHICS_ABI_DRIVER_ERROR;
 	}
-	*pModule = {};
+	pModule->driver = {};
+	memset( pModule->szActiveDevices, 0, sizeof( pModule->szActiveDevices ) );
+	pModule->nActiveDevices = 0;
+	pModule->nReserved = 0;
 	return SIR_GRAPHICS_ABI_SUCCESS;
 }
 

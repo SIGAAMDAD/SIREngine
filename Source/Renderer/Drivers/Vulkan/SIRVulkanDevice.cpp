@@ -24,7 +24,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 static std::atomic<uint64_t> s_nNextVulkanSerial( 1 );
 
 SIRVulkanDevice::SIRVulkanDevice( void ) noexcept
-    : m_Library{ nullptr }, m_pfnGetInstanceProcAddr( nullptr ), m_pfnGetDeviceProcAddr( nullptr ), m_pfnDestroyInstance( nullptr ),
+    : m_Library{}, m_pfnGetInstanceProcAddr( nullptr ), m_pfnGetDeviceProcAddr( nullptr ), m_pfnDestroyInstance( nullptr ),
       m_pfnEnumeratePhysicalDevices( nullptr ), m_pfnGetPhysicalDeviceProperties( nullptr ),
       m_pfnGetPhysicalDeviceQueueFamilyProperties( nullptr ), m_pfnGetPhysicalDeviceMemoryProperties( nullptr ),
       m_pfnGetPhysicalDeviceFeatures2( nullptr ), m_pfnCreateDevice( nullptr ), m_pfnDestroyDevice( nullptr ),
@@ -272,7 +272,7 @@ bool SIRVulkanDevice::chooseAdapter( uint32_t nAdapterIndex ) noexcept
 
 SIRVulkanResult SIRVulkanDevice::initializeInstance( void ) noexcept
 {
-	if ( m_bReady || m_Library.pNativeHandle != nullptr ) {
+	if ( m_bReady || m_Library.isOpen() ) {
 		return SIRVulkanResult::SIR_VULKAN_INVALID_STATE;
 	}
 
@@ -281,11 +281,13 @@ SIRVulkanResult SIRVulkanDevice::initializeInstance( void ) noexcept
 #else
 	const char *szLoader = "libvulkan.so.1";
 #endif
-	if ( !SIRDynamicLibrary::load( szLoader, &m_Library ) ) {
+	if ( m_Library.load( szLoader ) != sirLibraryResult::SIR_LIBRARY_OK ) {
 		return SIRVulkanResult::SIR_VULKAN_LOADER_UNAVAILABLE;
 	}
 
-	m_pfnGetInstanceProcAddr = static_cast<PFN_vkGetInstanceProcAddr>(SIRDynamicLibrary)::findSymbol( &m_Library, "vkGetInstanceProcAddr" );
+	void *pGetInstanceProcAddr = nullptr;
+	static_cast<void>( m_Library.findSymbol( "vkGetInstanceProcAddr", &pGetInstanceProcAddr ) );
+	m_pfnGetInstanceProcAddr = reinterpret_cast<PFN_vkGetInstanceProcAddr>( pGetInstanceProcAddr );
 	if ( m_pfnGetInstanceProcAddr == nullptr ) {
 		shutdown();
 		return SIRVulkanResult::SIR_VULKAN_LOADER_UNAVAILABLE;
@@ -333,7 +335,7 @@ SIRVulkanResult SIRVulkanDevice::probeAdapters( uint32_t nAdapterIndex, uint32_t
 	if ( ( pCount == nullptr && pAdapter == nullptr ) || nAdapterIndex >= 32 ) {
 		return SIRVulkanResult::SIR_VULKAN_INVALID_ARGUMENT;
 	}
-	if ( m_bReady || m_Library.pNativeHandle != nullptr ) {
+	if ( m_bReady || m_Library.isOpen() ) {
 		return SIRVulkanResult::SIR_VULKAN_INVALID_STATE;
 	}
 	if ( pCount != nullptr ) {
@@ -362,7 +364,7 @@ SIRVulkanResult SIRVulkanDevice::probeAdapters( uint32_t nAdapterIndex, uint32_t
 
 SIRVulkanResult SIRVulkanDevice::initialize( const sirVulkanPoolBudget_t *pBudget, uint32_t nAdapterIndex ) noexcept
 {
-	if ( m_bReady || m_Library.pNativeHandle != nullptr ) {
+	if ( m_bReady || m_Library.isOpen() ) {
 		return SIRVulkanResult::SIR_VULKAN_INVALID_STATE;
 	}
 	if ( pBudget != nullptr && !sirVulkanValidatePoolBudget( pBudget ) ) {
@@ -505,8 +507,8 @@ bool SIRVulkanDevice::shutdown( void ) noexcept
 	}
 	m_Instance = VK_NULL_HANDLE;
 	m_PhysicalDevice = VK_NULL_HANDLE;
-	if ( m_Library.pNativeHandle != nullptr ) {
-		SIRDynamicLibrary::unload( &m_Library );
+	if ( m_Library.isOpen() ) {
+		static_cast<void>( m_Library.unload() );
 	}
 	memset( &m_Adapter, 0, sizeof( m_Adapter ) );
 	m_nDeviceSerial = 0;

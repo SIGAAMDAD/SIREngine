@@ -26,8 +26,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <Core/Events/SIREventTypes.h>
-#include <Core/Platform/SIRScopedLock.h>
-#include <Core/Platform/SIRSync.h>
+#include <Core/Platform/Shared/Threading/SIRScopedLock.h>
+#include <Core/Platform/Shared/Threading/SIRSync.h>
 #include <stdint.h>
 
 typedef struct sirRegisteredEvent_s

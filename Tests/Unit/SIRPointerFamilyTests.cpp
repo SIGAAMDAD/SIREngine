@@ -13,7 +13,7 @@
 #include <Core/Memory/Pointers/SIRRCUPtr.h>
 #include <Core/Memory/Pointers/SIRDeferredPtr.h>
 #include <Core/Memory/Pointers/SIRFenceRetiredPtr.h>
-#include <Core/Platform/SIRThread.h>
+#include <Core/Platform/Shared/Threading/SIRThread.h>
 #include <Core/Jobs/SIRTaskGraph.h>
 #include <Core/Jobs/SIRTaskScheduler.h>
 #include <Core/Memory/SIRMemoryManager.h>

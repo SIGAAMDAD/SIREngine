@@ -13,16 +13,22 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#include <Core/Platform/SIRPlatformUtils.h>
-#include <Core/Platform/SIRVirtualMemory.h>
-#include <Core/Platform/SIRDynamicLibrary.h>
-#include <Core/Platform/SIRPlatformTime.h>
-#include <Core/Platform/SIRPlatformProcess.h>
-#include <Core/Platform/SIRPlatformMemory.h>
-#include <Core/Platform/SIRCPUInfo.h>
-#include <Core/Platform/SIRSystemInfo.h>
-#include <Core/Platform/SIRThread.h>
-#include <Core/Platform/SIRSync.h>
+#include <Core/Platform/Shared/Memory/SIRVirtualMemory.h>
+#include <Core/Platform/Shared/Diagnostics/SIRPlatformTime.h>
+#include <Core/Platform/Shared/Diagnostics/SIRCPUInfo.h>
+#include <Core/Platform/Shared/Threading/SIRThread.h>
+#include <Core/Platform/Shared/Memory/SIRVirtualMemory.h>
+#include <Core/Platform/Shared/Library/SIRDynamicLibrary.h>
+#include <Core/Platform/Shared/Diagnostics/SIRPlatformTime.h>
+#include <Core/Platform/Shared/Memory/SIRVirtualMemory.h>
+#include <Core/Platform/Shared/Diagnostics/SIRPlatformTime.h>
+#include <Core/Platform/Shared/Diagnostics/SIRCPUInfo.h>
+#include <Core/Platform/Shared/Threading/SIRThread.h>
+#include <Core/Platform/Shared/Memory/SIRPlatformMemory.h>
+#include <Core/Platform/Shared/Diagnostics/SIRCPUInfo.h>
+#include <Core/Platform/Shared/Diagnostics/SIRSystemInfo.h>
+#include <Core/Platform/Shared/Threading/SIRThread.h>
+#include <Core/Platform/Shared/Threading/SIRSync.h>
 
 #include <atomic>
 #include <stdint.h>
@@ -53,60 +59,54 @@ static void runWorker( void *pUserData )
 
 static bool testVirtualMemory( void )
 {
-	const size_t nPage = SIRPlatformUtils::getPageSize();
-	if ( nPage == 0 || SIRPlatformUtils::commitVirtualMemory( nullptr, nPage ) ) {
+	const size_t nPage = SIRVirtualMemory::getPageSize();
+	if ( nPage == 0 || SIRVirtualMemory::commit( nullptr, nPage ) ) {
 		return false;
 	}
-	void *pAddress = SIRPlatformUtils::reserveVirtualMemory( nPage );
+	void *pAddress = SIRVirtualMemory::reserve( nPage );
 	if ( pAddress == nullptr ) {
 		return false;
 	}
-	bool bSuccess = SIRPlatformUtils::commitVirtualMemory( pAddress, nPage );
+	bool bSuccess = SIRVirtualMemory::commit( pAddress, nPage );
 	if ( bSuccess ) {
 		( ( uint8_t * )pAddress )[0] = 0x5a;
 		bSuccess = ( ( uint8_t * )pAddress )[0] == 0x5a;
 	}
 	if ( bSuccess ) {
-		bSuccess = SIRPlatformUtils::protectVirtualMemory( pAddress, nPage, SIR_MEMORY_READ_ONLY );
+		bSuccess = SIRVirtualMemory::protect( pAddress, nPage, sirMemoryProtection::SIR_MEMORY_READ_ONLY );
 	}
 	if ( bSuccess ) {
-		bSuccess = SIRPlatformUtils::protectVirtualMemory( pAddress, nPage, SIR_MEMORY_READ_WRITE );
+		bSuccess = SIRVirtualMemory::protect( pAddress, nPage, sirMemoryProtection::SIR_MEMORY_READ_WRITE );
 	}
 	if ( bSuccess ) {
-		bSuccess = SIRPlatformUtils::decommitVirtualMemory( pAddress, nPage );
+		bSuccess = SIRVirtualMemory::decommit( pAddress, nPage );
 	}
-	const bool bReleased = SIRPlatformUtils::releaseVirtualMemory( pAddress, nPage );
-	void *pBootstrap = SIRPlatformUtils::allocatePages( nPage );
+	const bool bReleased = SIRVirtualMemory::release( pAddress, nPage );
+	void *pBootstrap = SIRVirtualMemory::allocatePages( nPage );
 	if ( pBootstrap == nullptr ) {
 		return false;
 	}
-	return bReleased && bSuccess && SIRPlatformUtils::freePages( pBootstrap, nPage );
+	return bReleased && bSuccess && SIRVirtualMemory::freePages( pBootstrap, nPage );
 }
 
 static bool testDynamicLibrary( void )
 {
-	sirDynamicLibrary_t library = { nullptr };
-	if ( SIRPlatformUtils::loadDynamicLibrary( nullptr, &library ) ) {
-		return false;
-	}
+ SIRDynamicLibrary library;
+ if ( library.load( nullptr ) != sirLibraryResult::SIR_LIBRARY_INVALID_ARGUMENT ) { return false; }
 #if defined( _WIN32 )
-	const char *szName = "kernel32.dll";
-	const char *szSymbol = "GetCurrentProcessId";
+ const char *szName = "kernel32.dll";
+ const char *szSymbol = "GetCurrentProcessId";
 #else
-	const char *szName = "libm.so.6";
-	const char *szSymbol = "cos";
+ const char *szName = "libm.so.6";
+ const char *szSymbol = "cos";
 #endif
-	if ( !SIRPlatformUtils::loadDynamicLibrary( szName, &library ) ) {
-		char szError[256];
-		SIRPlatformUtils::getDynamicLibraryError( szError, sizeof( szError ) );
-		fprintf( stderr, "Library load: %s\n", szError );
-		return false;
-	}
-	const bool bFound = SIRPlatformUtils::findDynamicLibrarySymbol( &library, szSymbol ) != nullptr;
-	const bool bMissing = SIRPlatformUtils::findDynamicLibrarySymbol( &library, "sir_no_such_symbol_78283" ) == nullptr;
-	const bool bDoubleLoadRejected = !SIRPlatformUtils::loadDynamicLibrary( szName, &library );
-	const bool bClosed = SIRPlatformUtils::unloadDynamicLibrary( &library );
-	return bFound && bMissing && bDoubleLoadRejected && bClosed && library.pNativeHandle == nullptr;
+ if ( library.load( szName ) != sirLibraryResult::SIR_LIBRARY_OK ) { return false; }
+ void *pSymbol = nullptr;
+ if ( library.findSymbol( szSymbol, &pSymbol ) != sirLibraryResult::SIR_LIBRARY_OK || pSymbol == nullptr ) { return false; }
+ if ( library.findSymbol( "sir_no_such_symbol_78283", &pSymbol ) != sirLibraryResult::SIR_LIBRARY_SYMBOL_NOT_FOUND ) { return false; }
+ if ( library.load( szName ) != sirLibraryResult::SIR_LIBRARY_ALREADY_OPEN ) { return false; }
+ SIRDynamicLibrary moved( static_cast<SIRDynamicLibrary&&>( library ) );
+ return !library.isOpen() && moved.isOpen() && moved.unload() == sirLibraryResult::SIR_LIBRARY_OK && !moved.isOpen();
 }
 
 static bool testThreading( void )
@@ -163,11 +163,11 @@ static bool testLocks( void )
 static bool testSeparatedServices( void )
 {
 	const size_t nPage = SIRVirtualMemory::getPageSize();
-	if ( nPage == 0 || nPage != SIRPlatformUtils::getPageSize() || SIRVirtualMemory::getAllocationGranularity() < nPage ) {
+	if ( nPage == 0 || nPage != SIRVirtualMemory::getPageSize() || SIRVirtualMemory::getAllocationGranularity() < nPage ) {
 		return false;
 	}
 	if ( SIRVirtualMemory::reserve( 0 ) != nullptr || SIRVirtualMemory::commit( nullptr, nPage ) ||
-	     SIRVirtualMemory::protect( nullptr, nPage, SIR_MEMORY_READ_ONLY ) ) {
+	     SIRVirtualMemory::protect( nullptr, nPage, sirMemoryProtection::SIR_MEMORY_READ_ONLY ) ) {
 		return false;
 	}
 	void *pAddress = SIRVirtualMemory::reserve( nPage * 2 );
@@ -180,7 +180,7 @@ static bool testSeparatedServices( void )
 		bSuccess = ( ( uint8_t * )pAddress )[0] == 0x48;
 	}
 	if ( bSuccess ) {
-		bSuccess = !SIRVirtualMemory::protect( pAddress, nPage, ( sirMemoryProtection_t )255 );
+		bSuccess = !SIRVirtualMemory::protect( pAddress, nPage, ( sirMemoryProtection )255 );
 	}
 	if ( bSuccess ) {
 		bSuccess = SIRVirtualMemory::decommit( pAddress, nPage );
@@ -190,52 +190,20 @@ static bool testSeparatedServices( void )
 		return false;
 	}
 
-	sirDynamicLibrary_t library = { nullptr };
-	if ( SIRDynamicLibrary::load( "sir_absent_module_6b75e4a1.so", &library ) ) {
-		return false;
-	}
-	char szError[256];
-	if ( !SIRDynamicLibrary::getLastError( szError, sizeof( szError ) ) || szError[0] == '\0' ) {
-		return false;
-	}
-#if defined( _WIN32 )
-	const char *szName = "kernel32.dll";
-	const char *szSymbol = "GetCurrentProcessId";
-#else
-	const char *szName = "libm.so.6";
-	const char *szSymbol = "cos";
-#endif
-	if ( !SIRDynamicLibrary::load( szName, &library ) ) {
-		return false;
-	}
-	const bool bSymbolResolved = SIRDynamicLibrary::findSymbol( &library, szSymbol ) != nullptr;
-	const bool bSymbolRejected = SIRDynamicLibrary::findSymbol( &library, "sir_absent_symbol_6b75e4a1" ) == nullptr;
-	const bool bClosed = SIRDynamicLibrary::unload( &library );
-	const bool bDoubleCloseRejected = !SIRDynamicLibrary::unload( &library );
-	if ( !bSymbolResolved || !bSymbolRejected || !bClosed || !bDoubleCloseRejected ) {
-		return false;
-	}
-
-	sirDynamicLibrary_t module = { nullptr };
-	if ( !SIRDynamicLibrary::load( SIR_TEST_MODULE_PATH, &module ) ) {
-		char szModuleError[256];
-		SIRDynamicLibrary::getLastError( szModuleError, sizeof( szModuleError ) );
-		fprintf( stderr, "Test module load failed: %s\n", szModuleError );
-		return false;
-	}
+	SIRDynamicLibrary module;
+	if ( module.load( SIR_TEST_MODULE_PATH ) != sirLibraryResult::SIR_LIBRARY_OK ) { return false; }
+	void *pModuleAddress = nullptr;
+	if ( module.findSymbol( "sirPlatformTestValue", &pModuleAddress ) != sirLibraryResult::SIR_LIBRARY_OK ) { return false; }
 	typedef int ( *sirTestModuleFunction_t )( void );
-	sirTestModuleFunction_t pValue = ( sirTestModuleFunction_t )SIRDynamicLibrary::findSymbol( &module, "sirPlatformTestValue" );
-	const bool bModuleCalled = pValue != nullptr && pValue() == 42;
-	if ( !SIRDynamicLibrary::unload( &module ) || !bModuleCalled ) {
-		return false;
-	}
+	const sirTestModuleFunction_t pValue = reinterpret_cast<sirTestModuleFunction_t>( pModuleAddress );
+	if ( pValue == nullptr || pValue() != 42 || module.unload() != sirLibraryResult::SIR_LIBRARY_OK ) { return false; }
 
 	const uint64_t nBefore = SIRPlatformTime::getMonotonicNanoseconds();
-	SIRPlatformProcess::cpuRelax();
-	SIRPlatformProcess::yieldThread();
-	SIRPlatformProcess::sleepThread( 1 );
+	SIRThread::cpuRelax();
+	SIRThread::yieldThread();
+	SIRThread::sleepThread( 1 );
 	const uint64_t nAfter = SIRPlatformTime::getMonotonicNanoseconds();
-	return nBefore > 0 && nAfter >= nBefore && SIRPlatformProcess::getLogicalProcessorCount() > 0;
+	return nBefore > 0 && nAfter >= nBefore && SIRCPUInfo::getLogicalProcessorCount() > 0;
 }
 
 static bool testOperatingSystemMemory( void )
@@ -251,19 +219,19 @@ static bool testOperatingSystemMemory( void )
 	if ( system.nTotalPhysicalBytes == 0 || system.nAvailablePhysicalBytes > system.nTotalPhysicalBytes ) {
 		return false;
 	}
-	if ( ( system.nValidFields & SIR_SYSTEM_MEMORY_SWAP ) != 0 && system.nAvailableSwapBytes > system.nTotalSwapBytes ) {
+	if ( ( system.nValidFields & static_cast<uint64_t>( sirSystemMemoryField::SIR_SYSTEM_MEMORY_SWAP ) ) != 0 && system.nAvailableSwapBytes > system.nTotalSwapBytes ) {
 		return false;
 	}
-	if ( ( system.nValidFields & SIR_SYSTEM_MEMORY_GROUP_LIMIT ) != 0 && system.nGroupMemoryLimitBytes == 0 ) {
+	if ( ( system.nValidFields & static_cast<uint64_t>( sirSystemMemoryField::SIR_SYSTEM_MEMORY_GROUP_LIMIT ) ) != 0 && system.nGroupMemoryLimitBytes == 0 ) {
 		return false;
 	}
-	if ( ( process.nValidFields & SIR_PROCESS_MEMORY_RESIDENT ) == 0 || process.nResidentBytes == 0 ) {
+	if ( ( process.nValidFields & static_cast<uint64_t>( sirProcessMemoryField::SIR_PROCESS_MEMORY_RESIDENT ) ) == 0 || process.nResidentBytes == 0 ) {
 		return false;
 	}
-	if ( ( process.nValidFields & SIR_PROCESS_MEMORY_PEAK_RESIDENT ) != 0 && process.nPeakResidentBytes < process.nResidentBytes ) {
+	if ( ( process.nValidFields & static_cast<uint64_t>( sirProcessMemoryField::SIR_PROCESS_MEMORY_PEAK_RESIDENT ) ) != 0 && process.nPeakResidentBytes < process.nResidentBytes ) {
 		return false;
 	}
-	if ( ( process.nValidFields & SIR_PROCESS_MEMORY_VIRTUAL_ADDRESS ) != 0 && process.nVirtualAddressBytes < process.nResidentBytes ) {
+	if ( ( process.nValidFields & static_cast<uint64_t>( sirProcessMemoryField::SIR_PROCESS_MEMORY_VIRTUAL_ADDRESS ) ) != 0 && process.nVirtualAddressBytes < process.nResidentBytes ) {
 		return false;
 	}
 	// A live process can grow between snapshots; do not assert an allocation-sized RSS delta.
@@ -291,10 +259,10 @@ static bool testCPUInformation( void )
 	if ( cpu.nPhysicalCoreCount > cpu.nLogicalProcessorCount ) {
 		return false;
 	}
-	if ( ( cpu.nFeatures & SIR_CPU_FEATURE_AVX2 ) != 0 && ( cpu.nFeatures & SIR_CPU_FEATURE_AVX ) == 0 ) {
+	if ( ( cpu.nFeatures & static_cast<uint64_t>( sirCPUFeature::SIR_CPU_FEATURE_AVX2 ) ) != 0 && ( cpu.nFeatures & static_cast<uint64_t>( sirCPUFeature::SIR_CPU_FEATURE_AVX ) ) == 0 ) {
 		return false;
 	}
-	if ( ( cpu.nFeatures & SIR_CPU_FEATURE_FMA ) != 0 && ( cpu.nFeatures & SIR_CPU_FEATURE_AVX ) == 0 ) {
+	if ( ( cpu.nFeatures & static_cast<uint64_t>( sirCPUFeature::SIR_CPU_FEATURE_FMA ) ) != 0 && ( cpu.nFeatures & static_cast<uint64_t>( sirCPUFeature::SIR_CPU_FEATURE_AVX ) ) == 0 ) {
 		return false;
 	}
 #if defined( __x86_64__ ) || defined( _M_X64 )
@@ -317,13 +285,13 @@ static bool testSystemInformation( void )
 	if ( info.nProcessId == 0 || info.nPageSize != SIRVirtualMemory::getPageSize() || info.nAllocationGranularity < info.nPageSize ) {
 		return false;
 	}
-	if ( info.szOSName[0] == '\0' || info.szHostName[0] == '\0' || info.eArchitecture == SIR_ARCH_UNKNOWN ) {
+	if ( info.szOSName[0] == '\0' || info.szHostName[0] == '\0' || info.eArchitecture == sirCPUArchitecture::SIR_ARCH_UNKNOWN ) {
 		return false;
 	}
 #if defined( _WIN32 )
-	return info.eOS == SIR_OS_WINDOWS;
+	return info.eOS == sirOperatingSystem::SIR_OS_WINDOWS;
 #else
-	return info.eOS == SIR_OS_LINUX && info.szOSRelease[0] != '\0';
+	return info.eOS == sirOperatingSystem::SIR_OS_LINUX && info.szOSRelease[0] != '\0';
 #endif
 }
 
@@ -334,7 +302,7 @@ int main( void )
 		fputs( "SIRSystemTests failed\n", stderr );
 		return 1;
 	}
-	if ( SIRPlatformUtils::getMonotonicNanoseconds() == 0 || SIRPlatformUtils::getLogicalProcessorCount() == 0 ) {
+	if ( SIRPlatformTime::getMonotonicNanoseconds() == 0 || SIRCPUInfo::getLogicalProcessorCount() == 0 ) {
 		return 1;
 	}
 	return 0;

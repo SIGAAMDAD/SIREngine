@@ -13,7 +13,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#include <Core/Platform/SIRPlatformFileSystem.h>
+#include <Core/Platform/Shared/File/SIRPlatformFileSystem.h>
 
 #include <assert.h>
 #include <stdio.h>
@@ -56,30 +56,30 @@ int main( void )
 	const char szData[] = { 'A', '\0', '\n', 'B', '\0', 'C' };
 	sirTestWrite( szPath, szData, sizeof( szData ) );
 	size_t nBytes = 99;
-	assert( SIRPlatformFileSystem::readFile( szPath, nullptr, 0, &nBytes ) == SIR_FILESYSTEM_OK );
+	assert( SIRPlatformFileSystem::readFile( szPath, nullptr, 0, &nBytes ) == sirFileSystemResult::SIR_FILESYSTEM_OK );
 	assert( nBytes == sizeof( szData ) );
 	char szSmall[5] = { 'X', 'X', 'X', 'X', 'X' };
-	assert( SIRPlatformFileSystem::readFile( szPath, szSmall, sizeof( szSmall ), &nBytes ) == SIR_FILESYSTEM_OUT_OF_CAPACITY );
+	assert( SIRPlatformFileSystem::readFile( szPath, szSmall, sizeof( szSmall ), &nBytes ) == sirFileSystemResult::SIR_FILESYSTEM_OUT_OF_CAPACITY );
 	assert( nBytes == sizeof( szData ) );
 	for ( size_t i = 0; i < sizeof( szSmall ); ++i ) {
 		assert( szSmall[i] == 'X' );
 	}
 	char szOutput[16] = {};
-	assert( SIRPlatformFileSystem::readFile( szPath, szOutput, sizeof( szData ), &nBytes ) == SIR_FILESYSTEM_OK );
+	assert( SIRPlatformFileSystem::readFile( szPath, szOutput, sizeof( szData ), &nBytes ) == sirFileSystemResult::SIR_FILESYSTEM_OK );
 	assert( nBytes == sizeof( szData ) );
 	assert( memcmp( szOutput, szData, nBytes ) == 0 );
 
 	// Invalid inputs fail without writing a caller's existing buffer.
-	assert( SIRPlatformFileSystem::readFile( nullptr, nullptr, 0, &nBytes ) == SIR_FILESYSTEM_INVALID_PATH );
-	assert( SIRPlatformFileSystem::readFile( szPath, nullptr, 1, &nBytes ) == SIR_FILESYSTEM_INVALID_ARGUMENT );
-	assert( SIRPlatformFileSystem::readFile( szPath, szOutput, 0, &nBytes ) == SIR_FILESYSTEM_INVALID_ARGUMENT );
-	assert( SIRPlatformFileSystem::readFile( szPath, szOutput, sizeof( szOutput ), nullptr ) == SIR_FILESYSTEM_INVALID_ARGUMENT );
-	assert( SIRPlatformFileSystem::readFile( szMissing, nullptr, 0, &nBytes ) == SIR_FILESYSTEM_IO_ERROR );
-	assert( SIRPlatformFileSystem::readFile( szDirectory, nullptr, 0, &nBytes ) == SIR_FILESYSTEM_INVALID_PATH );
-	assert( SIRPlatformFileSystem::readFile( "", nullptr, 0, &nBytes ) == SIR_FILESYSTEM_INVALID_PATH );
+	assert( SIRPlatformFileSystem::readFile( nullptr, nullptr, 0, &nBytes ) == sirFileSystemResult::SIR_FILESYSTEM_INVALID_PATH );
+	assert( SIRPlatformFileSystem::readFile( szPath, nullptr, 1, &nBytes ) == sirFileSystemResult::SIR_FILESYSTEM_INVALID_ARGUMENT );
+	assert( SIRPlatformFileSystem::readFile( szPath, szOutput, 0, &nBytes ) == sirFileSystemResult::SIR_FILESYSTEM_INVALID_ARGUMENT );
+	assert( SIRPlatformFileSystem::readFile( szPath, szOutput, sizeof( szOutput ), nullptr ) == sirFileSystemResult::SIR_FILESYSTEM_INVALID_ARGUMENT );
+	assert( SIRPlatformFileSystem::readFile( szMissing, nullptr, 0, &nBytes ) == sirFileSystemResult::SIR_FILESYSTEM_IO_ERROR );
+	assert( SIRPlatformFileSystem::readFile( szDirectory, nullptr, 0, &nBytes ) == sirFileSystemResult::SIR_FILESYSTEM_INVALID_PATH );
+	assert( SIRPlatformFileSystem::readFile( "", nullptr, 0, &nBytes ) == sirFileSystemResult::SIR_FILESYSTEM_INVALID_PATH );
 	char szTooLong[SIR_FILESYSTEM_MAX_PATH_BYTES + 1] = {};
 	memset( szTooLong, 'z', SIR_FILESYSTEM_MAX_PATH_BYTES );
-	assert( SIRPlatformFileSystem::readFile( szTooLong, nullptr, 0, &nBytes ) == SIR_FILESYSTEM_INVALID_PATH );
+	assert( SIRPlatformFileSystem::readFile( szTooLong, nullptr, 0, &nBytes ) == sirFileSystemResult::SIR_FILESYSTEM_INVALID_PATH );
 
 #if !defined( _WIN32 )
 	char szLink[640] = {};
@@ -87,18 +87,18 @@ int main( void )
 	assert( snprintf( szLink, sizeof( szLink ), "%s/data.link", szDirectory ) > 0 );
 	assert( snprintf( szFifo, sizeof( szFifo ), "%s/data.fifo", szDirectory ) > 0 );
 	assert( symlink( szPath, szLink ) == 0 );
-	assert( SIRPlatformFileSystem::readFile( szLink, nullptr, 0, &nBytes ) == SIR_FILESYSTEM_INVALID_PATH );
+	assert( SIRPlatformFileSystem::readFile( szLink, nullptr, 0, &nBytes ) == sirFileSystemResult::SIR_FILESYSTEM_INVALID_PATH );
 	assert( unlink( szLink ) == 0 );
 	assert( mkfifo( szFifo, 0600 ) == 0 );
-	assert( SIRPlatformFileSystem::readFile( szFifo, nullptr, 0, &nBytes ) == SIR_FILESYSTEM_INVALID_PATH );
+	assert( SIRPlatformFileSystem::readFile( szFifo, nullptr, 0, &nBytes ) == sirFileSystemResult::SIR_FILESYSTEM_INVALID_PATH );
 	assert( unlink( szFifo ) == 0 );
 #endif
 
 	// Empty source files measure as zero; higher-level scene validation rejects them.
 	sirTestWrite( szPath, "", 0 );
-	assert( SIRPlatformFileSystem::readFile( szPath, nullptr, 0, &nBytes ) == SIR_FILESYSTEM_OK );
+	assert( SIRPlatformFileSystem::readFile( szPath, nullptr, 0, &nBytes ) == sirFileSystemResult::SIR_FILESYSTEM_OK );
 	assert( nBytes == 0 );
-	assert( SIRPlatformFileSystem::readFile( szPath, szOutput, sizeof( szOutput ), &nBytes ) == SIR_FILESYSTEM_OK );
+	assert( SIRPlatformFileSystem::readFile( szPath, szOutput, sizeof( szOutput ), &nBytes ) == sirFileSystemResult::SIR_FILESYSTEM_OK );
 
 	// Exercise reads spanning Windows 1 MiB I/O chunks and Linux short-read loops.
 	const size_t nLarge = 1024 * 1024 + 29;
@@ -109,9 +109,9 @@ int main( void )
 		pLarge[i] = ( char )( i * 13u );
 	}
 	sirTestWrite( szPath, pLarge, nLarge );
-	assert( SIRPlatformFileSystem::readFile( szPath, nullptr, 0, &nBytes ) == SIR_FILESYSTEM_OK );
+	assert( SIRPlatformFileSystem::readFile( szPath, nullptr, 0, &nBytes ) == sirFileSystemResult::SIR_FILESYSTEM_OK );
 	assert( nBytes == nLarge );
-	assert( SIRPlatformFileSystem::readFile( szPath, pRead, nLarge, &nBytes ) == SIR_FILESYSTEM_OK );
+	assert( SIRPlatformFileSystem::readFile( szPath, pRead, nLarge, &nBytes ) == sirFileSystemResult::SIR_FILESYSTEM_OK );
 	assert( nBytes == nLarge && memcmp( pRead, pLarge, nLarge ) == 0 );
 	free( pRead );
 	free( pLarge );

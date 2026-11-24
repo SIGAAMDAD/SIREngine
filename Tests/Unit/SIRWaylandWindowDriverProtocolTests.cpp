@@ -12,8 +12,8 @@ express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
-#include <Core/Platform/Window/Linux/SIRWindowDriverWayland.h>
-#include <Core/Platform/Linux/SIRWaylandInputBridge.h>
+#include <Core/Platform/Linux/Window/SIRWindowDriverWayland.h>
+#include <Core/Platform/Linux/Input/SIRWaylandInputBridge.h>
 #include <wayland-client.h>
 #include <xdg-shell-client-protocol.h>
 #include <fractional-scale-v1-client-protocol.h>
@@ -558,73 +558,73 @@ static bool sirTestNativeFailureInjection( void ) noexcept
 {
 	s_bConnectFailure = true;
 	SIRWindowDriverWayland noDisplay;
-	if ( noDisplay.initialize() != SIR_WINDOW_NOT_READY )
+	if ( noDisplay.initialize() != sirWindowResult::SIR_WINDOW_NOT_READY )
 		return false;
 	s_bConnectFailure = false;
 
 	s_bRegistryFailure = true;
 	SIRWindowDriverWayland noRegistry;
-	if ( noRegistry.initialize() != SIR_WINDOW_NATIVE_FAILURE )
+	if ( noRegistry.initialize() != sirWindowResult::SIR_WINDOW_NATIVE_FAILURE )
 		return false;
 	s_bRegistryFailure = false;
 
 	s_bXdgListenerFailure = true;
 	SIRWindowDriverWayland noShell;
-	if ( noShell.initialize() != SIR_WINDOW_NATIVE_FAILURE )
+	if ( noShell.initialize() != sirWindowResult::SIR_WINDOW_NATIVE_FAILURE )
 		return false;
 	s_bXdgListenerFailure = false;
 
 	s_nCreated = 0;
 	s_nWmPings = 0;
 	SIRWindowDriverWayland driver;
-	if ( driver.initialize() != SIR_WINDOW_OK || driver.initialize() != SIR_WINDOW_BUSY || s_pWmListener == nullptr )
+	if ( driver.initialize() != sirWindowResult::SIR_WINDOW_OK || driver.initialize() != sirWindowResult::SIR_WINDOW_BUSY || s_pWmListener == nullptr )
 		return false;
 	s_pWmListener->ping( s_pWmContext, &s_WmBase, 5 );
 	if ( s_nWmPings != 1 )
 		return false;
 	sirWindowNativeView_t view = {};
 	const sirWindowCreateDesc_t desc = { "negative", 640, 480 };
-	if ( driver.createWindow( desc, SIR_WINDOW_MAX_WINDOWS, &view ) != SIR_WINDOW_INVALID_ARGUMENT ||
-	     driver.createWindow( { nullptr, 0, 0 }, 0, &view ) != SIR_WINDOW_INVALID_ARGUMENT )
+	if ( driver.createWindow( desc, SIR_WINDOW_MAX_WINDOWS, &view ) != sirWindowResult::SIR_WINDOW_INVALID_ARGUMENT ||
+	     driver.createWindow( { nullptr, 0, 0 }, 0, &view ) != sirWindowResult::SIR_WINDOW_INVALID_ARGUMENT )
 		return false;
 	s_bSurfaceFailure = true;
-	if ( driver.createWindow( desc, 0, &view ) != SIR_WINDOW_NATIVE_FAILURE )
+	if ( driver.createWindow( desc, 0, &view ) != sirWindowResult::SIR_WINDOW_NATIVE_FAILURE )
 		return false;
 	s_bSurfaceFailure = false;
 	s_bXdgSurfaceFailure = true;
-	if ( driver.createWindow( desc, 0, &view ) != SIR_WINDOW_NATIVE_FAILURE )
+	if ( driver.createWindow( desc, 0, &view ) != sirWindowResult::SIR_WINDOW_NATIVE_FAILURE )
 		return false;
 	s_bXdgSurfaceFailure = false;
 	s_bToplevelFailure = true;
-	if ( driver.createWindow( desc, 0, &view ) != SIR_WINDOW_NATIVE_FAILURE )
+	if ( driver.createWindow( desc, 0, &view ) != sirWindowResult::SIR_WINDOW_NATIVE_FAILURE )
 		return false;
 	s_bToplevelFailure = false;
 	s_bSurfaceListenerFailure = true;
-	if ( driver.createWindow( desc, 0, &view ) != SIR_WINDOW_NATIVE_FAILURE )
+	if ( driver.createWindow( desc, 0, &view ) != sirWindowResult::SIR_WINDOW_NATIVE_FAILURE )
 		return false;
 	s_bSurfaceListenerFailure = false;
-	if ( driver.createWindow( desc, 0, &view ) != SIR_WINDOW_OK || driver.createWindow( desc, 0, &view ) != SIR_WINDOW_BUSY )
+	if ( driver.createWindow( desc, 0, &view ) != sirWindowResult::SIR_WINDOW_OK || driver.createWindow( desc, 0, &view ) != sirWindowResult::SIR_WINDOW_BUSY )
 		return false;
-	if ( driver.mutateWindow( 0, { SIR_WINDOW_MUTATION_TITLE, nullptr, 0, 0 } ) != SIR_WINDOW_INVALID_ARGUMENT ||
-	     driver.mutateWindow( 0, { SIR_WINDOW_MUTATION_TITLE, "new", 0, 0 } ) != SIR_WINDOW_OK ||
-	     driver.mutateWindow( 0, { SIR_WINDOW_MUTATION_MINIMIZE, nullptr, 0, 0 } ) != SIR_WINDOW_OK ||
-	     driver.mutateWindow( 0, { SIR_WINDOW_MUTATION_MAXIMIZE, nullptr, 0, 0 } ) != SIR_WINDOW_OK ||
-	     driver.mutateWindow( 0, { SIR_WINDOW_MUTATION_FULLSCREEN_ENTER, nullptr, 0, 0 } ) != SIR_WINDOW_OK ||
-	     driver.mutateWindow( 0, { SIR_WINDOW_MUTATION_FULLSCREEN_EXIT, nullptr, 0, 0 } ) != SIR_WINDOW_OK || s_nFullscreenEnters == 0 ||
-	     s_nFullscreenExits == 0 || driver.mutateWindow( 0, { SIR_WINDOW_MUTATION_RESIZE, nullptr, 120, 100 } ) != SIR_WINDOW_UNSUPPORTED ||
-	     driver.mutateWindow( 1, { SIR_WINDOW_MUTATION_TITLE, "missing", 0, 0 } ) != SIR_WINDOW_INVALID_HANDLE )
+	if ( driver.mutateWindow( 0, { sirWindowMutationKind::SIR_WINDOW_MUTATION_TITLE, nullptr, 0, 0 } ) != sirWindowResult::SIR_WINDOW_INVALID_ARGUMENT ||
+	     driver.mutateWindow( 0, { sirWindowMutationKind::SIR_WINDOW_MUTATION_TITLE, "new", 0, 0 } ) != sirWindowResult::SIR_WINDOW_OK ||
+	     driver.mutateWindow( 0, { sirWindowMutationKind::SIR_WINDOW_MUTATION_MINIMIZE, nullptr, 0, 0 } ) != sirWindowResult::SIR_WINDOW_OK ||
+	     driver.mutateWindow( 0, { sirWindowMutationKind::SIR_WINDOW_MUTATION_MAXIMIZE, nullptr, 0, 0 } ) != sirWindowResult::SIR_WINDOW_OK ||
+	     driver.mutateWindow( 0, { sirWindowMutationKind::SIR_WINDOW_MUTATION_FULLSCREEN_ENTER, nullptr, 0, 0 } ) != sirWindowResult::SIR_WINDOW_OK ||
+	     driver.mutateWindow( 0, { sirWindowMutationKind::SIR_WINDOW_MUTATION_FULLSCREEN_EXIT, nullptr, 0, 0 } ) != sirWindowResult::SIR_WINDOW_OK || s_nFullscreenEnters == 0 ||
+	     s_nFullscreenExits == 0 || driver.mutateWindow( 0, { sirWindowMutationKind::SIR_WINDOW_MUTATION_RESIZE, nullptr, 120, 100 } ) != sirWindowResult::SIR_WINDOW_UNSUPPORTED ||
+	     driver.mutateWindow( 1, { sirWindowMutationKind::SIR_WINDOW_MUTATION_TITLE, "missing", 0, 0 } ) != sirWindowResult::SIR_WINDOW_INVALID_HANDLE )
 		return false;
 	sirWaylandTestEvents_t events = {};
-	if ( driver.pumpEvents( 0, sirCollectWaylandEvent, &events ) != SIR_WINDOW_INVALID_ARGUMENT )
+	if ( driver.pumpEvents( 0, sirCollectWaylandEvent, &events ) != sirWindowResult::SIR_WINDOW_INVALID_ARGUMENT )
 		return false;
 	s_bFlushFailure = true;
-	if ( driver.pumpEvents( 1, sirCollectWaylandEvent, &events ) != SIR_WINDOW_NATIVE_FAILURE )
+	if ( driver.pumpEvents( 1, sirCollectWaylandEvent, &events ) != sirWindowResult::SIR_WINDOW_NATIVE_FAILURE )
 		return false;
 	s_bFlushFailure = false;
-	if ( driver.mutateWindow( 0, { SIR_WINDOW_MUTATION_TITLE, "stopped", 0, 0 } ) != SIR_WINDOW_STOPPED )
+	if ( driver.mutateWindow( 0, { sirWindowMutationKind::SIR_WINDOW_MUTATION_TITLE, "stopped", 0, 0 } ) != sirWindowResult::SIR_WINDOW_STOPPED )
 		return false;
 	driver.shutdown();
-	if ( driver.pumpEvents( 1, sirCollectWaylandEvent, &events ) != SIR_WINDOW_STOPPED )
+	if ( driver.pumpEvents( 1, sirCollectWaylandEvent, &events ) != sirWindowResult::SIR_WINDOW_STOPPED )
 		return false;
 	return true;
 }
@@ -635,21 +635,21 @@ static bool sirTestInitialConfigureAndRetirement( void ) noexcept
 	s_nDisplayFd = -1;
 	s_nAckCount = 0;
 	SIRWindowDriverWayland driver;
-	if ( driver.initialize() != SIR_WINDOW_OK )
+	if ( driver.initialize() != sirWindowResult::SIR_WINDOW_OK )
 		return false;
 	sirWindowNativeView_t view = {};
-	if ( driver.createWindow( { "configure", 640, 480 }, 0, &view ) != SIR_WINDOW_OK || s_pSurfaceListener[0] == nullptr ||
+	if ( driver.createWindow( { "configure", 640, 480 }, 0, &view ) != sirWindowResult::SIR_WINDOW_OK || s_pSurfaceListener[0] == nullptr ||
 	     s_pToplevelListener[0] == nullptr )
 		return false;
 	sirWaylandTestEvents_t events = {};
-	if ( driver.pumpEvents( 1, sirCollectWaylandEvent, &events ) != SIR_WINDOW_OK || events.nCount != 0 || s_nAckCount != 0 )
+	if ( driver.pumpEvents( 1, sirCollectWaylandEvent, &events ) != sirWindowResult::SIR_WINDOW_OK || events.nCount != 0 || s_nAckCount != 0 )
 		return false;
 	s_pToplevelListener[0]->configure( s_pToplevelContext[0], &s_Toplevels[0], 512, 320, nullptr );
 	s_pSurfaceListener[0]->configure( s_pSurfaceContext[0], &s_XdgSurfaces[0], 77 );
-	if ( s_nAckCount != 1 || driver.pumpEvents( 1, sirCollectWaylandEvent, &events ) != SIR_WINDOW_OK || events.nCount != 1 ||
-	     events.events[0].eKind != SIR_WINDOW_EVENT_READY || events.events[0].nWidth != 512 || events.events[0].nHeight != 320 )
+	if ( s_nAckCount != 1 || driver.pumpEvents( 1, sirCollectWaylandEvent, &events ) != sirWindowResult::SIR_WINDOW_OK || events.nCount != 1 ||
+	     events.events[0].eKind != sirWindowEventKind::SIR_WINDOW_EVENT_READY || events.events[0].nWidth != 512 || events.events[0].nHeight != 320 )
 		return false;
-	if ( driver.destroyWindow( 0 ) != SIR_WINDOW_OK )
+	if ( driver.destroyWindow( 0 ) != sirWindowResult::SIR_WINDOW_OK )
 		return false;
 	s_pSurfaceListener[0]->configure( s_pSurfaceContext[0], &s_XdgSurfaces[0], 78 );
 	if ( s_nAckCount != 1 )
@@ -664,29 +664,29 @@ static bool sirTestBoundedCloseAndLoss( void ) noexcept
 	s_nDisplayFd = -1;
 	s_nCancelledReads = 0;
 	SIRWindowDriverWayland driver;
-	if ( driver.initialize() != SIR_WINDOW_OK )
+	if ( driver.initialize() != sirWindowResult::SIR_WINDOW_OK )
 		return false;
 	const sirWindowCreateDesc_t desc = { "test", 640, 480 };
 	sirWindowNativeView_t v0 = {}, v1 = {};
-	if ( driver.createWindow( desc, 0, &v0 ) != SIR_WINDOW_OK || driver.createWindow( desc, 1, &v1 ) != SIR_WINDOW_OK )
+	if ( driver.createWindow( desc, 0, &v0 ) != sirWindowResult::SIR_WINDOW_OK || driver.createWindow( desc, 1, &v1 ) != sirWindowResult::SIR_WINDOW_OK )
 		return false;
 	if ( s_pToplevelListener[0] == nullptr || s_pToplevelListener[1] == nullptr )
 		return false;
 	s_pToplevelListener[0]->close( s_pToplevelContext[0], &s_Toplevels[0] );
 	s_pToplevelListener[1]->close( s_pToplevelContext[1], &s_Toplevels[1] );
 	sirWaylandTestEvents_t events = {};
-	if ( driver.pumpEvents( 1, sirCollectWaylandEvent, &events ) != SIR_WINDOW_OK || events.nCount != 1 ||
-	     events.events[0].eKind != SIR_WINDOW_EVENT_CLOSE_REQUESTED || events.events[0].nSlot != 0 )
+	if ( driver.pumpEvents( 1, sirCollectWaylandEvent, &events ) != sirWindowResult::SIR_WINDOW_OK || events.nCount != 1 ||
+	     events.events[0].eKind != sirWindowEventKind::SIR_WINDOW_EVENT_CLOSE_REQUESTED || events.events[0].nSlot != 0 )
 		return false;
-	if ( driver.pumpEvents( 1, sirCollectWaylandEvent, &events ) != SIR_WINDOW_OK || events.nCount != 2 ||
-	     events.events[1].eKind != SIR_WINDOW_EVENT_CLOSE_REQUESTED || events.events[1].nSlot != 1 )
+	if ( driver.pumpEvents( 1, sirCollectWaylandEvent, &events ) != sirWindowResult::SIR_WINDOW_OK || events.nCount != 2 ||
+	     events.events[1].eKind != sirWindowEventKind::SIR_WINDOW_EVENT_CLOSE_REQUESTED || events.events[1].nSlot != 1 )
 		return false;
 	s_pRegistryListener->global_remove( s_pRegistryContext, &s_Registry, 11 );
-	if ( driver.pumpEvents( 1, sirCollectWaylandEvent, &events ) != SIR_WINDOW_NATIVE_FAILURE || events.nCount != 3 ||
-	     events.events[2].eKind != SIR_WINDOW_EVENT_LOST || events.events[2].nSlot != 0 )
+	if ( driver.pumpEvents( 1, sirCollectWaylandEvent, &events ) != sirWindowResult::SIR_WINDOW_NATIVE_FAILURE || events.nCount != 3 ||
+	     events.events[2].eKind != sirWindowEventKind::SIR_WINDOW_EVENT_LOST || events.events[2].nSlot != 0 )
 		return false;
-	if ( driver.pumpEvents( 1, sirCollectWaylandEvent, &events ) != SIR_WINDOW_NATIVE_FAILURE || events.nCount != 4 ||
-	     events.events[3].eKind != SIR_WINDOW_EVENT_LOST || events.events[3].nSlot != 1 )
+	if ( driver.pumpEvents( 1, sirCollectWaylandEvent, &events ) != sirWindowResult::SIR_WINDOW_NATIVE_FAILURE || events.nCount != 4 ||
+	     events.events[3].eKind != sirWindowEventKind::SIR_WINDOW_EVENT_LOST || events.events[3].nSlot != 1 )
 		return false;
 	driver.shutdown();
 	return true;
@@ -697,12 +697,12 @@ static bool sirTestDisplayLossDiscardsQueuedReady( void ) noexcept
 	s_nCreated = 0;
 	s_nDisplayFd = -1;
 	SIRWindowDriverWayland driver;
-	if ( driver.initialize() != SIR_WINDOW_OK ) {
+	if ( driver.initialize() != sirWindowResult::SIR_WINDOW_OK ) {
 		return false;
 	}
 	sirWindowNativeView_t first = {}, second = {};
-	if ( driver.createWindow( { "ready-before-loss-0", 640, 480 }, 0, &first ) != SIR_WINDOW_OK ||
-	     driver.createWindow( { "ready-before-loss-1", 320, 240 }, 1, &second ) != SIR_WINDOW_OK ) {
+	if ( driver.createWindow( { "ready-before-loss-0", 640, 480 }, 0, &first ) != sirWindowResult::SIR_WINDOW_OK ||
+	     driver.createWindow( { "ready-before-loss-1", 320, 240 }, 1, &second ) != sirWindowResult::SIR_WINDOW_OK ) {
 		return false;
 	}
 	// Both configure callbacks queue READY, but the compositor then dies
@@ -711,12 +711,12 @@ static bool sirTestDisplayLossDiscardsQueuedReady( void ) noexcept
 	s_pSurfaceListener[1]->configure( s_pSurfaceContext[1], &s_XdgSurfaces[1], 1002 );
 	s_pRegistryListener->global_remove( s_pRegistryContext, &s_Registry, 11 );
 	sirWaylandTestEvents_t events = {};
-	const sirWindowResult_t a = driver.pumpEvents( 1, sirCollectWaylandEvent, &events );
-	const sirWindowResult_t b = driver.pumpEvents( 1, sirCollectWaylandEvent, &events );
-	const sirWindowResult_t c = driver.pumpEvents( 1, sirCollectWaylandEvent, &events );
-	const bool bValid = a == SIR_WINDOW_NATIVE_FAILURE && b == SIR_WINDOW_NATIVE_FAILURE && c == SIR_WINDOW_NATIVE_FAILURE &&
-	                    events.nCount == 2 && events.events[0].eKind == SIR_WINDOW_EVENT_LOST && events.events[0].nSlot == 0 &&
-	                    events.events[1].eKind == SIR_WINDOW_EVENT_LOST && events.events[1].nSlot == 1;
+	const sirWindowResult a = driver.pumpEvents( 1, sirCollectWaylandEvent, &events );
+	const sirWindowResult b = driver.pumpEvents( 1, sirCollectWaylandEvent, &events );
+	const sirWindowResult c = driver.pumpEvents( 1, sirCollectWaylandEvent, &events );
+	const bool bValid = a == sirWindowResult::SIR_WINDOW_NATIVE_FAILURE && b == sirWindowResult::SIR_WINDOW_NATIVE_FAILURE && c == sirWindowResult::SIR_WINDOW_NATIVE_FAILURE &&
+	                    events.nCount == 2 && events.events[0].eKind == sirWindowEventKind::SIR_WINDOW_EVENT_LOST && events.events[0].nSlot == 0 &&
+	                    events.events[1].eKind == sirWindowEventKind::SIR_WINDOW_EVENT_LOST && events.events[1].nSlot == 1;
 	assert( events.nCount == 2 ); // Buffered READY must never escape after compositor loss.
 	driver.shutdown();
 	return bValid;
@@ -731,26 +731,26 @@ static bool sirTestCompositorHangup( void ) noexcept
 		return false;
 	s_nDisplayFd = fds[0];
 	SIRWindowDriverWayland driver;
-	if ( driver.initialize() != SIR_WINDOW_OK ) {
+	if ( driver.initialize() != sirWindowResult::SIR_WINDOW_OK ) {
 		close( fds[0] );
 		close( fds[1] );
 		return false;
 	}
 	const sirWindowCreateDesc_t desc = { "hangup", 640, 480 };
 	sirWindowNativeView_t view = {};
-	if ( driver.createWindow( desc, 0, &view ) != SIR_WINDOW_OK ) {
+	if ( driver.createWindow( desc, 0, &view ) != sirWindowResult::SIR_WINDOW_OK ) {
 		close( fds[0] );
 		close( fds[1] );
 		return false;
 	}
 	close( fds[1] );
 	sirWaylandTestEvents_t events = {};
-	const sirWindowResult_t result = driver.pumpEvents( 1, sirCollectWaylandEvent, &events );
+	const sirWindowResult result = driver.pumpEvents( 1, sirCollectWaylandEvent, &events );
 	driver.shutdown();
 	close( fds[0] );
 	s_nDisplayFd = -1;
-	return result == SIR_WINDOW_NATIVE_FAILURE && s_nCancelledReads == 1 && events.nCount == 1 &&
-	       events.events[0].eKind == SIR_WINDOW_EVENT_LOST;
+	return result == sirWindowResult::SIR_WINDOW_NATIVE_FAILURE && s_nCancelledReads == 1 && events.nCount == 1 &&
+	       events.events[0].eKind == sirWindowEventKind::SIR_WINDOW_EVENT_LOST;
 }
 
 static bool sirFeedFakeXkbKeymap( bool bTerminated ) noexcept
@@ -779,11 +779,11 @@ static bool sirTestWaylandInputRouting( void ) noexcept
 	s_nCreated = 0;
 	s_nDisplayFd = -1;
 	SIRWindowDriverWayland driver;
-	if ( driver.initialize() != SIR_WINDOW_OK )
+	if ( driver.initialize() != sirWindowResult::SIR_WINDOW_OK )
 		return false;
 	const sirWindowCreateDesc_t desc = { "input", 640, 480 };
 	sirWindowNativeView_t view = {};
-	if ( driver.createWindow( desc, 0, &view ) != SIR_WINDOW_OK )
+	if ( driver.createWindow( desc, 0, &view ) != sirWindowResult::SIR_WINDOW_OK )
 		return false;
 	view.nWindowGeneration = 1;
 	SIRInputService input;
@@ -822,11 +822,11 @@ static bool sirTestWaylandInputRouting( void ) noexcept
 	uint32_t nKey = 0, nMouse = 0, nMove = 0;
 	for ( uint32_t i = 0; i < pFrame->nCount; ++i ) {
 		const sirInputEvent_t& event = pFrame->events[i];
-		if ( event.eClass == SIR_INPUT_KEYBOARD && event.eSignal == SIR_INPUT_BUTTON && event.nControl == 38 && event.nValue == 1 )
+		if ( event.eClass == SIRInputDeviceClass::SIR_INPUT_KEYBOARD && event.eSignal == SIRInputSignal::SIR_INPUT_BUTTON && event.nControl == 38 && event.nValue == 1 )
 			++nKey;
-		if ( event.eClass == SIR_INPUT_POINTER && event.eSignal == SIR_INPUT_BUTTON && event.nControl == 0 && event.nValue == 1 )
+		if ( event.eClass == SIRInputDeviceClass::SIR_INPUT_POINTER && event.eSignal == SIRInputSignal::SIR_INPUT_BUTTON && event.nControl == 0 && event.nValue == 1 )
 			++nMouse;
-		if ( event.eClass == SIR_INPUT_POINTER && event.eSignal == SIR_INPUT_MOTION && event.nValue == 2 && event.nValueY == 1 )
+		if ( event.eClass == SIRInputDeviceClass::SIR_INPUT_POINTER && event.eSignal == SIRInputSignal::SIR_INPUT_MOTION && event.nValue == 2 && event.nValueY == 1 )
 			++nMove;
 	}
 	if ( nKey != 1 || nMouse != 1 || nMove != 1 )
@@ -837,7 +837,7 @@ static bool sirTestWaylandInputRouting( void ) noexcept
 		return false;
 	// One physical keyboard/pointer pair must route across several leased surfaces.
 	sirWindowNativeView_t secondView = {};
-	if ( driver.createWindow( desc, 1, &secondView ) != SIR_WINDOW_OK )
+	if ( driver.createWindow( desc, 1, &secondView ) != sirWindowResult::SIR_WINDOW_OK )
 		return false;
 	secondView.nWindowGeneration = 2;
 	if ( !bridge.registerWindow( secondView ) || bridge.registerWindow( secondView ) )
@@ -854,7 +854,7 @@ static bool sirTestWaylandInputRouting( void ) noexcept
 	s_pKeyboardListener->key( s_pKeyboardContext, &s_Keyboard, 8, 100, UINT32_MAX, WL_KEYBOARD_KEY_STATE_PRESSED );
 	s_pKeyboardListener->key( s_pKeyboardContext, &s_Keyboard, 8, 100, 20, WL_KEYBOARD_KEY_STATE_PRESSED );
 	s_pPointerListener->enter( s_pPointerContext, &s_Pointer, 9, &s_Surfaces[1], 0, 0 );
-	if ( !bridge.setCursorMode( SIR_INPUT_CURSOR_CAPTURED ) || bridge.cursorMode() != SIR_INPUT_CURSOR_CAPTURED ||
+	if ( !bridge.setCursorMode( SIRInputCursorMode::SIR_INPUT_CURSOR_CAPTURED ) || bridge.cursorMode() != SIRInputCursorMode::SIR_INPUT_CURSOR_CAPTURED ||
 	     s_pLockListener == nullptr || s_pRelativeListener == nullptr ) {
 		return false;
 	}
@@ -862,7 +862,7 @@ static bool sirTestWaylandInputRouting( void ) noexcept
 	s_pLockListener->locked( s_pLockContext, &s_Lock );
 	s_pRelativeListener->relative_motion( s_pRelativeContext, &s_Relative, 0, 10, 512, 256, 512, 256 );
 	s_pPointerListener->motion( s_pPointerContext, &s_Pointer, 100, 1024, 768 );
-	if ( !bridge.setCursorMode( SIR_INPUT_CURSOR_FREE ) || s_nLocksDestroyed != nLocksBeforeRelease ||
+	if ( !bridge.setCursorMode( SIRInputCursorMode::SIR_INPUT_CURSOR_FREE ) || s_nLocksDestroyed != nLocksBeforeRelease ||
 	     s_nRelativeDestroyed != nLocksBeforeRelease ) {
 		return false;
 	}
@@ -878,19 +878,19 @@ static bool sirTestWaylandInputRouting( void ) noexcept
 	int32_t nFractionalWheel = 0;
 	for ( uint32_t i = 0; i < pFrame->nCount; ++i ) {
 		const sirInputEvent_t& e = pFrame->events[i];
-		if ( e.eClass == SIR_INPUT_KEYBOARD && e.eSignal == SIR_INPUT_BUTTON && e.nControl == 28 && e.nValue == 1 )
+		if ( e.eClass == SIRInputDeviceClass::SIR_INPUT_KEYBOARD && e.eSignal == SIRInputSignal::SIR_INPUT_BUTTON && e.nControl == 28 && e.nValue == 1 )
 			++nSecondKey;
-		if ( e.eClass == SIR_INPUT_POINTER && e.eSignal == SIR_INPUT_WHEEL && e.nValue == -12 )
+		if ( e.eClass == SIRInputDeviceClass::SIR_INPUT_POINTER && e.eSignal == SIRInputSignal::SIR_INPUT_WHEEL && e.nValue == -12 )
 			++nWheel;
-		if ( e.eClass == SIR_INPUT_POINTER && e.eSignal == SIR_INPUT_WHEEL && e.nValue != -12 )
+		if ( e.eClass == SIRInputDeviceClass::SIR_INPUT_POINTER && e.eSignal == SIRInputSignal::SIR_INPUT_WHEEL && e.nValue != -12 )
 			nFractionalWheel += e.nValue;
-		if ( e.eClass == SIR_INPUT_KEYBOARD && e.eSignal == SIR_INPUT_BUTTON && e.nControl == 7 )
+		if ( e.eClass == SIRInputDeviceClass::SIR_INPUT_KEYBOARD && e.eSignal == SIRInputSignal::SIR_INPUT_BUTTON && e.nControl == 7 )
 			++nUnexpected;
-		if ( e.eClass == SIR_INPUT_KEYBOARD && e.eSignal == SIR_INPUT_RESYNC )
+		if ( e.eClass == SIRInputDeviceClass::SIR_INPUT_KEYBOARD && e.eSignal == SIRInputSignal::SIR_INPUT_RESYNC )
 			++nKeyboardResync;
-		if ( e.eClass == SIR_INPUT_POINTER && e.eSignal == SIR_INPUT_RESYNC )
+		if ( e.eClass == SIRInputDeviceClass::SIR_INPUT_POINTER && e.eSignal == SIRInputSignal::SIR_INPUT_RESYNC )
 			++nPointerResync;
-		if ( e.eClass == SIR_INPUT_POINTER && e.eSignal == SIR_INPUT_MOTION && e.nValue == 2 && e.nValueY == 1 )
+		if ( e.eClass == SIRInputDeviceClass::SIR_INPUT_POINTER && e.eSignal == SIRInputSignal::SIR_INPUT_MOTION && e.nValue == 2 && e.nValueY == 1 )
 			++nRelativeMotion;
 	}
 	if ( nSecondKey != 1 || nWheel != 1 || nFractionalWheel != -7 || nUnexpected != 0 || nKeyboardResync != 1 || nPointerResync != 1 ||
@@ -934,11 +934,11 @@ static bool sirTestOutputScaleChanges( void ) noexcept
 	s_bOldProtocol = false;
 	s_bOfferFractional = false;
 	SIRWindowDriverWayland driver;
-	if ( driver.initialize() != SIR_WINDOW_OK ) {
+	if ( driver.initialize() != sirWindowResult::SIR_WINDOW_OK ) {
 		return false;
 	}
 	sirWindowNativeView_t view = {};
-	if ( driver.createWindow( { "native-scale", 640, 480 }, 0, &view ) != SIR_WINDOW_OK || s_pOutputListener == nullptr ||
+	if ( driver.createWindow( { "native-scale", 640, 480 }, 0, &view ) != sirWindowResult::SIR_WINDOW_OK || s_pOutputListener == nullptr ||
 	     s_pNativeSurfaceListeners[0] == nullptr || s_pSurfaceListener[0] == nullptr ) {
 		return false;
 	}
@@ -946,18 +946,18 @@ static bool sirTestOutputScaleChanges( void ) noexcept
 	s_pSurfaceListener[0]->configure( s_pSurfaceContext[0], &s_XdgSurfaces[0], 601 );
 	s_pNativeSurfaceListeners[0]->enter( s_pNativeSurfaceContexts[0], &s_Surfaces[0], &s_Output );
 	sirWaylandTestEvents_t events = {};
-	if ( driver.pumpEvents( 16, sirCollectWaylandEvent, &events ) != SIR_WINDOW_OK || events.nCount != 3 ||
-	     events.events[0].eKind != SIR_WINDOW_EVENT_READY || events.events[0].nWidth != 640 || events.events[0].nHeight != 480 ||
-	     events.events[1].eKind != SIR_WINDOW_EVENT_DPI_CHANGED || events.events[1].nWidth != 192 ||
-	     events.events[2].eKind != SIR_WINDOW_EVENT_RESIZED || events.events[2].nWidth != 1280 || events.events[2].nHeight != 960 ||
+	if ( driver.pumpEvents( 16, sirCollectWaylandEvent, &events ) != sirWindowResult::SIR_WINDOW_OK || events.nCount != 3 ||
+	     events.events[0].eKind != sirWindowEventKind::SIR_WINDOW_EVENT_READY || events.events[0].nWidth != 640 || events.events[0].nHeight != 480 ||
+	     events.events[1].eKind != sirWindowEventKind::SIR_WINDOW_EVENT_DPI_CHANGED || events.events[1].nWidth != 192 ||
+	     events.events[2].eKind != sirWindowEventKind::SIR_WINDOW_EVENT_RESIZED || events.events[2].nWidth != 1280 || events.events[2].nHeight != 960 ||
 	     s_nBufferScale[0] != 2 ) {
 		return false;
 	}
 	s_pNativeSurfaceListeners[0]->leave( s_pNativeSurfaceContexts[0], &s_Surfaces[0], &s_Output );
-	if ( driver.pumpEvents( 16, sirCollectWaylandEvent, &events ) != SIR_WINDOW_OK || events.nCount != 5 ||
-	     events.events[3].eKind != SIR_WINDOW_EVENT_DPI_CHANGED || events.events[3].nWidth != 96 ||
-	     events.events[4].eKind != SIR_WINDOW_EVENT_RESIZED || events.events[4].nWidth != 640 || events.events[4].nHeight != 480 ||
-	     s_nBufferScale[0] != 1 || driver.destroyWindow( 0 ) != SIR_WINDOW_OK ) {
+	if ( driver.pumpEvents( 16, sirCollectWaylandEvent, &events ) != sirWindowResult::SIR_WINDOW_OK || events.nCount != 5 ||
+	     events.events[3].eKind != sirWindowEventKind::SIR_WINDOW_EVENT_DPI_CHANGED || events.events[3].nWidth != 96 ||
+	     events.events[4].eKind != sirWindowEventKind::SIR_WINDOW_EVENT_RESIZED || events.events[4].nWidth != 640 || events.events[4].nHeight != 480 ||
+	     s_nBufferScale[0] != 1 || driver.destroyWindow( 0 ) != sirWindowResult::SIR_WINDOW_OK ) {
 		return false;
 	}
 	driver.shutdown();
@@ -973,11 +973,11 @@ static bool sirTestFractionalScaleChanges( void ) noexcept
 	const uint32_t nBeforeFractionalDestroy = s_nFractionalDestroyCount;
 	const uint32_t nBeforeViewportDestroy = s_nViewportDestroyCount;
 	SIRWindowDriverWayland driver;
-	if ( driver.initialize() != SIR_WINDOW_OK ) {
+	if ( driver.initialize() != sirWindowResult::SIR_WINDOW_OK ) {
 		return false;
 	}
 	sirWindowNativeView_t view = {};
-	if ( driver.createWindow( { "fractional-scale", 640, 480 }, 0, &view ) != SIR_WINDOW_OK || s_pFractionalListeners[0] == nullptr ||
+	if ( driver.createWindow( { "fractional-scale", 640, 480 }, 0, &view ) != sirWindowResult::SIR_WINDOW_OK || s_pFractionalListeners[0] == nullptr ||
 	     s_pSurfaceListener[0] == nullptr ) {
 		return false;
 	}
@@ -985,17 +985,17 @@ static bool sirTestFractionalScaleChanges( void ) noexcept
 	s_pFractionalListeners[0]->preferred_scale( s_pFractionalContexts[0], &s_FractionalScales[0], 180 );
 	s_pSurfaceListener[0]->configure( s_pSurfaceContext[0], &s_XdgSurfaces[0], 940 );
 	sirWaylandTestEvents_t events = {};
-	if ( driver.pumpEvents( 8, sirCollectWaylandEvent, &events ) != SIR_WINDOW_OK || events.nCount != 1 ||
-	     events.events[0].eKind != SIR_WINDOW_EVENT_READY || events.events[0].nWidth != 960 || events.events[0].nHeight != 720 ||
+	if ( driver.pumpEvents( 8, sirCollectWaylandEvent, &events ) != sirWindowResult::SIR_WINDOW_OK || events.nCount != 1 ||
+	     events.events[0].eKind != sirWindowEventKind::SIR_WINDOW_EVENT_READY || events.events[0].nWidth != 960 || events.events[0].nHeight != 720 ||
 	     s_nBufferScale[0] != 1 || s_nViewportWidth[0] != 640 || s_nViewportHeight[0] != 480 ) {
 		return false;
 	}
 	// Preferred scale can change without logical xdg size changing.
 	s_pFractionalListeners[0]->preferred_scale( s_pFractionalContexts[0], &s_FractionalScales[0], 150 );
-	if ( driver.pumpEvents( 8, sirCollectWaylandEvent, &events ) != SIR_WINDOW_OK || events.nCount != 3 ||
-	     events.events[1].eKind != SIR_WINDOW_EVENT_DPI_CHANGED || events.events[1].nWidth != 120 ||
-	     events.events[2].eKind != SIR_WINDOW_EVENT_RESIZED || events.events[2].nWidth != 800 || events.events[2].nHeight != 600 ||
-	     driver.destroyWindow( 0 ) != SIR_WINDOW_OK ) {
+	if ( driver.pumpEvents( 8, sirCollectWaylandEvent, &events ) != sirWindowResult::SIR_WINDOW_OK || events.nCount != 3 ||
+	     events.events[1].eKind != sirWindowEventKind::SIR_WINDOW_EVENT_DPI_CHANGED || events.events[1].nWidth != 120 ||
+	     events.events[2].eKind != sirWindowEventKind::SIR_WINDOW_EVENT_RESIZED || events.events[2].nWidth != 800 || events.events[2].nHeight != 600 ||
+	     driver.destroyWindow( 0 ) != sirWindowResult::SIR_WINDOW_OK ) {
 		return false;
 	}
 	driver.shutdown();

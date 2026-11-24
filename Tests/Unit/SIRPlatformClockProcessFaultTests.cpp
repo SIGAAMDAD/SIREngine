@@ -13,8 +13,11 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#include <Core/Platform/SIRPlatformProcess.h>
-#include <Core/Platform/SIRPlatformTime.h>
+#include <Core/Platform/Shared/Memory/SIRVirtualMemory.h>
+#include <Core/Platform/Shared/Diagnostics/SIRPlatformTime.h>
+#include <Core/Platform/Shared/Diagnostics/SIRCPUInfo.h>
+#include <Core/Platform/Shared/Threading/SIRThread.h>
+#include <Core/Platform/Shared/Diagnostics/SIRPlatformTime.h>
 
 #include <errno.h>
 #include <stdio.h>
@@ -81,16 +84,16 @@ int main( void )
 	SIR_PLATFORM_FAULT_CHECK( SIRPlatformTime::getMonotonicNanoseconds() != 0 );
 
 	s_bFailProcessorCount = true;
-	SIR_PLATFORM_FAULT_CHECK( SIRPlatformProcess::getLogicalProcessorCount() == 1 );
+	SIR_PLATFORM_FAULT_CHECK( SIRCPUInfo::getLogicalProcessorCount() == 1 );
 	SIR_PLATFORM_FAULT_CHECK( !s_bFailProcessorCount );
-	SIR_PLATFORM_FAULT_CHECK( SIRPlatformProcess::getLogicalProcessorCount() > 0 );
+	SIR_PLATFORM_FAULT_CHECK( SIRCPUInfo::getLogicalProcessorCount() > 0 );
 
 	s_bInterruptSleep = true;
 	s_nSleepCalls = 0;
-	SIRPlatformProcess::sleepThread( 0 );
+	SIRThread::sleepThread( 0 );
 	SIR_PLATFORM_FAULT_CHECK( !s_bInterruptSleep && s_nSleepCalls == 2 );
-	SIRPlatformProcess::cpuRelax();
-	SIRPlatformProcess::yieldThread();
+	SIRThread::cpuRelax();
+	SIRThread::yieldThread();
 	puts( "PASS: platform clock and process syscall faults" );
 	return 0;
 }

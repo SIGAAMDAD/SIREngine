@@ -24,8 +24,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-#include <Core/Platform/SIRScopedLock.h>
-#include <Core/Platform/SIRSync.h>
+#include <Core/Platform/Shared/Threading/SIRScopedLock.h>
+#include <Core/Platform/Shared/Threading/SIRSync.h>
 
 typedef struct sirDeferredRetirementEntry_s
 {

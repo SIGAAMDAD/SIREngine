@@ -15,7 +15,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/Input/SIRInputFrameState.h>
 #include <Core/Input/SIRInputDeviceRegistry.h>
-#include <Core/Platform/SIRPlatformTime.h>
+#include <Core/Platform/Shared/Diagnostics/SIRPlatformTime.h>
 #include <stdio.h>
 
 static bool sirFrameNegativeParameters( void ) noexcept

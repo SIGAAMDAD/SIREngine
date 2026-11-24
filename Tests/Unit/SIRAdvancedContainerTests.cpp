@@ -33,7 +33,7 @@ This Source Code Form is subject to the terms of the Mozilla Public License, v2.
 #include <algorithm>
 #include <random>
 #include <vector>
-#include <Core/Platform/SIRThread.h>
+#include <Core/Platform/Shared/Threading/SIRThread.h>
 #include <atomic>
 #include <stdexcept>
 

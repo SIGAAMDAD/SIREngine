@@ -80,7 +80,7 @@ static uint64_t sirShaderHashScalar( uint64_t nHash, uint64_t nValue ) noexcept
 
 static bool sirShaderStageMaskValid( uint32_t nStageMask ) noexcept
 {
-	constexpr uint32_t STAGE_MASK = ( SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_TASK << 1 ) - 1;
+	constexpr uint32_t STAGE_MASK = ( static_cast<uint32_t>(SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_TASK) << 1 ) - 1;
 	return nStageMask != 0 && ( nStageMask & ~STAGE_MASK ) == 0 && ( nStageMask & ( nStageMask - 1 ) ) == 0;
 }
 
@@ -113,12 +113,12 @@ static bool sirShaderStageRecordValid( const sirShaderStageRecord_t& stage ) noe
 	if ( stage.nBinaryHash == 0 || stage.nEntryPointHash == 0 || stage.nBindingSignature == 0 || stage.nPayloadBytes < 4 ) {
 		return false;
 	}
-	return ( stage.ePass == SIRShaderPass::SIR_SHADER_PASS_COMPUTE ) == ( stage.nStageMask == SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_COMPUTE );
+	return ( stage.ePass == SIRShaderPass::SIR_SHADER_PASS_COMPUTE ) == ( stage.nStageMask == static_cast<uint32_t>(SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_COMPUTE) );
 }
 
 static bool sirShaderBindingRecordValid( const sirShaderReflectionBinding_t& binding ) noexcept
 {
-	constexpr uint32_t VALID_BINDING_MASK = ( SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_TASK << 1 ) - 1;
+	constexpr uint32_t VALID_BINDING_MASK = ( static_cast<uint32_t>(SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_TASK) << 1 ) - 1;
 	return binding.eType <= SIRGraphicsBindingType::SIR_GRAPHICS_BINDING_SAMPLER && binding.eFrequency <= SIRShaderBindingFrequency::SIR_SHADER_BINDING_DRAW && binding.nArrayCount != 0 &&
 	       binding.nStageMask != 0 && ( binding.nStageMask & ~VALID_BINDING_MASK ) == 0 && binding.nNameHash != 0 && binding.nFlags == 0;
 }
@@ -326,15 +326,15 @@ SIRGraphicsResult sirShaderValidatePackage( const void *pBytes, uint64_t nLength
 		if ( stage.eFormat != eFormat || ( stage.nRequiredFeatures & nAvailableFeatures ) != stage.nRequiredFeatures ) {
 			return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 		}
-		uint64_t nNeeded = SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_GRAPHICS;
-		if ( stage.nStageMask == SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_COMPUTE ) {
-			nNeeded = SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_COMPUTE;
-		} else if ( stage.nStageMask == SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_MESH || stage.nStageMask == SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_TASK ) {
-			nNeeded |= SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_MESH_SHADER;
-		} else if ( stage.nStageMask == SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_GEOMETRY ) {
-			nNeeded |= SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_GEOMETRY_SHADER;
-		} else if ( stage.nStageMask == SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_TESS_CONTROL || stage.nStageMask == SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_TESS_EVALUATION ) {
-			nNeeded |= SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_TESSELLATION;
+		uint64_t nNeeded = static_cast<uint64_t>(SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_GRAPHICS);
+		if ( stage.nStageMask == static_cast<uint32_t>(SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_COMPUTE) ) {
+			nNeeded = static_cast<uint64_t>(SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_COMPUTE);
+		} else if ( stage.nStageMask == static_cast<uint32_t>(SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_MESH) || stage.nStageMask == static_cast<uint32_t>(SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_TASK) ) {
+			nNeeded |= static_cast<uint64_t>(SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_MESH_SHADER);
+		} else if ( stage.nStageMask == static_cast<uint32_t>(SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_GEOMETRY) ) {
+			nNeeded |= static_cast<uint64_t>(SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_GEOMETRY_SHADER);
+		} else if ( stage.nStageMask == static_cast<uint32_t>(SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_TESS_CONTROL) || stage.nStageMask == static_cast<uint32_t>(SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_TESS_EVALUATION) ) {
+			nNeeded |= static_cast<uint64_t>(SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_TESSELLATION);
 		}
 		if ( ( nNeeded & nAvailableFeatures ) != nNeeded ) {
 			return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
@@ -348,8 +348,8 @@ SIRGraphicsResult sirShaderValidatePackage( const void *pBytes, uint64_t nLength
 		if ( stage.eFormat == SIRGraphicsShaderFormat::SIR_GRAPHICS_SHADER_D3D_LEGACY_TOKENS ) {
 			const uint8_t *pTokens = pData + stage.nPayloadOffset;
 			const uint32_t nKind = static_cast<uint32_t>(pTokens[2]) | ( static_cast<uint32_t>(pTokens[3]) << 8 );
-			const uint32_t nExpected = stage.nStageMask == SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_VERTEX ? 0xfffe : 0xffff;
-			if ( ( stage.nStageMask != SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_VERTEX && stage.nStageMask != SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_FRAGMENT ) ||
+			const uint32_t nExpected = stage.nStageMask == static_cast<uint32_t>(SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_VERTEX) ? 0xfffe : 0xffff;
+			if ( ( stage.nStageMask != static_cast<uint32_t>(SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_VERTEX) && stage.nStageMask != static_cast<uint32_t>(SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_FRAGMENT) ) ||
 			     stage.nPayloadBytes < 8 || stage.nPayloadBytes % 4 != 0 || nKind != nExpected || pTokens[1] == 0 || pTokens[1] > 3 ||
 			     pTokens[stage.nPayloadBytes - 4] != 0xff || pTokens[stage.nPayloadBytes - 3] != 0xff ||
 			     pTokens[stage.nPayloadBytes - 2] != 0 || pTokens[stage.nPayloadBytes - 1] != 0 ) {
@@ -423,15 +423,15 @@ static bool sirShaderRecipeValid( const sirShaderPipelineRecipe_t& recipe ) noex
 	     ( recipe.pass.nSampleCount & ( recipe.pass.nSampleCount - 1 ) ) != 0 ) {
 		return false;
 	}
-	constexpr uint32_t VALID_STAGE_MASK = ( SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_TASK << 1 ) - 1;
+	constexpr uint32_t VALID_STAGE_MASK = ( static_cast<uint32_t>(SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_TASK) << 1 ) - 1;
 	if ( ( recipe.pass.nStageMask & ~VALID_STAGE_MASK ) != 0 ) {
 		return false;
 	}
 	const bool bCompute = recipe.pass.ePass == SIRShaderPass::SIR_SHADER_PASS_COMPUTE;
 	if ( bCompute ) {
-		return recipe.pass.nStageMask == SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_COMPUTE && recipe.pass.nSampleCount == 1;
+		return recipe.pass.nStageMask == static_cast<uint32_t>(SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_COMPUTE) && recipe.pass.nSampleCount == 1;
 	}
-	return ( recipe.pass.nStageMask & SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_COMPUTE ) == 0;
+	return ( recipe.pass.nStageMask & static_cast<uint32_t>(SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_COMPUTE) ) == 0;
 }
 
 SIRGraphicsResult sirShaderBuildPortableKey( const sirShaderPipelineRecipe_t& recipe, sirShaderPipelineKey_t *pKey ) noexcept
@@ -522,11 +522,11 @@ SIRGraphicsResult sirShaderValidateGeometryLease( const sirShaderGeometryLease_t
 	     lease.completion.nDeviceGeneration != nDeviceGeneration ) {
 		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	constexpr uint32_t VALID_QUEUES = ( 1U << SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT ) - 1;
+	constexpr uint32_t VALID_QUEUES = ( 1U << static_cast<uint32_t>(SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT) ) - 1;
 	if ( ( lease.completion.nQueueMask & ~VALID_QUEUES ) != 0 ) {
 		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	for ( uint32_t iQueue = 0; iQueue < SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT; ++iQueue ) {
+	for ( uint32_t iQueue = 0; iQueue < static_cast<uint32_t>(SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT); ++iQueue ) {
 		const bool bTagged = ( lease.completion.nQueueMask & ( 1U << iQueue ) ) != 0;
 		const bool bSignaled = lease.completion.szQueueValues[iQueue] != 0;
 		if ( bTagged != bSignaled ) {
@@ -544,7 +544,7 @@ bool sirShaderCanReuseGeometry( const sirShaderGeometryLease_t& existing, const 
 	     existing.nProviderGeneration != requested.nProviderGeneration ) {
 		return false;
 	}
-	for ( uint32_t iQueue = 0; iQueue < SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT; ++iQueue ) {
+	for ( uint32_t iQueue = 0; iQueue < static_cast<uint32_t>(SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT); ++iQueue ) {
 		if ( existing.completion.szQueueValues[iQueue] < requested.completion.szQueueValues[iQueue] ) {
 			return false;
 		}

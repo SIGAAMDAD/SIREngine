@@ -15,7 +15,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <atomic>
-#include <Core/Platform/SIRScopedLock.h>
+#include <Core/Platform/Shared/Threading/SIRScopedLock.h>
 #include <Core/Memory/SIRMemoryPressureCoordinator.h>
 #include <Core/Memory/SIRMemoryManager.h>
 #include <Core/Memory/SIRMemorySegment.h>

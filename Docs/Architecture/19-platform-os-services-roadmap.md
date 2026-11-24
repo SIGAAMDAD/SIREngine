@@ -1,6 +1,6 @@
 # 19 - Platform OS services: implementation and integration roadmap
 
-Source authority: `SIGAAMDAD/SIREngine`, consolidated integration PR #23. First-party C++17 declarations stay in the global namespace. Platform APIs live in `Source/Core/Platform/`; Windows and Linux use separate translation units. The runtime and editor are consumers, not owners of OS state.
+Source authority: `SIGAAMDAD/SIREngine`, consolidated integration PR #23. First-party C++23 declarations stay in the global namespace. Platform APIs live in `Source/Core/Platform/`; Windows and Linux use separate translation units. The runtime and editor are consumers, not owners of OS state.
 
 ## Implemented in this changeset
 

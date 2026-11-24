@@ -20,12 +20,12 @@ of merchantability, fitness for a particular purpose and noninfringement.
 	#pragma once
 #endif
 // clang-format on
-#include <Core/Platform/Window/SIRWindowSystem.h>
+#include <Core/Platform/Shared/Window/SIRWindowSystem.h>
 #include <Renderer/SIRGraphicsTypes.h>
 
 // Renderer retains the acquired native lease until GPU surface retirement.
 // The window owner must call this from its owner thread; render workers hand
 // the request to that thread, never dereference borrowed native pointers.
 SIRGraphicsResult sirGraphicsAcquireWindowSurface( SIRWindowSystem& windows, sirWindowHandle_t hWindow,
-                                                     sirGraphicsNativeSurface_t *pNative, sirWindowNativeLease_t *pLease ) noexcept;
+                                                     sirGraphicsNativeSurface_t *pNative, SIRNativeWindowLease *pLease ) noexcept;
 #endif // __SIR_WINDOWSURFACEADAPTER_H__

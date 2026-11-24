@@ -101,7 +101,7 @@ SIRLangTypeError SIRLangRegisterScalar( sirLangTypeTable_t *pTable, SIRLangValue
 	descriptor.nTypeId = SIRLangStableTypeId( 0, static_cast<uint64_t>(eScalar), SIR_LANG_ABI_REVISION );
 	descriptor.nBytes = nBytes;
 	descriptor.nAlignment = nBytes == 0 ? 1 : nBytes;
-	descriptor.nFlags = SIRLangTypeFlags::SIR_LANG_TYPE_FLAG_PLAIN_VALUE | SIRLangTypeFlags::SIR_LANG_TYPE_FLAG_SERIALIZABLE;
+	descriptor.nFlags = static_cast<uint32_t>( SIRLangTypeFlags::SIR_LANG_TYPE_FLAG_PLAIN_VALUE ) | static_cast<uint32_t>( SIRLangTypeFlags::SIR_LANG_TYPE_FLAG_SERIALIZABLE );
 	descriptor.eCategory = SIRLangTypeCategory::SIR_LANG_TYPE_SCALAR;
 	descriptor.eScalar = eScalar;
 	return sirLangAddType( pTable, descriptor, pIndex );
@@ -120,7 +120,7 @@ SIRLangTypeError SIRLangRegisterNominal( sirLangTypeTable_t *pTable, const sirLa
 	descriptor.nSchemaId = nSchemaId;
 	descriptor.nBytes = nBytes;
 	descriptor.nAlignment = nAlignment;
-	descriptor.nFlags = SIRLangTypeFlags::SIR_LANG_TYPE_FLAG_PLAIN_VALUE | SIRLangTypeFlags::SIR_LANG_TYPE_FLAG_SERIALIZABLE;
+	descriptor.nFlags = static_cast<uint32_t>( SIRLangTypeFlags::SIR_LANG_TYPE_FLAG_PLAIN_VALUE ) | static_cast<uint32_t>( SIRLangTypeFlags::SIR_LANG_TYPE_FLAG_SERIALIZABLE );
 	descriptor.eCategory = SIRLangTypeCategory::SIR_LANG_TYPE_NOMINAL;
 	descriptor.eScalar = SIRLangValueKind::SIR_LANG_VALUE_OTHER;
 	return sirLangAddType( pTable, descriptor, pIndex );
@@ -185,7 +185,7 @@ SIRLangTypeError SIRLangConstructType( sirLangTypeTable_t *pTable, SIRLangTypeCa
 			return SIRLangTypeError::SIR_LANG_TYPE_MISSING_ARGUMENT;
 		}
 		const sirLangTypeDescriptor_t& argument = pTable->pTypes[pArguments[iArgument]];
-		if ( argument.eScalar == SIRLangValueKind::SIR_LANG_VALUE_VOID || argument.nBytes == 0 || ( argument.nFlags & SIRLangTypeFlags::SIR_LANG_TYPE_FLAG_BORROWED ) ) {
+		if ( argument.eScalar == SIRLangValueKind::SIR_LANG_VALUE_VOID || argument.nBytes == 0 || ( argument.nFlags & static_cast<uint32_t>( SIRLangTypeFlags::SIR_LANG_TYPE_FLAG_BORROWED ) ) ) {
 			return SIRLangTypeError::SIR_LANG_TYPE_INVALID_ARGUMENT;
 		}
 		descriptor.szArgumentTypes[iArgument] = pArguments[iArgument];
@@ -203,24 +203,24 @@ SIRLangTypeError SIRLangConstructType( sirLangTypeTable_t *pTable, SIRLangTypeCa
 		if ( nCapacity == 0 || !sirLangMulFits( first.nBytes, nCapacity, &descriptor.nBytes ) ) {
 			return SIRLangTypeError::SIR_LANG_TYPE_OVERFLOW;
 		}
-		descriptor.nFlags = SIRLangTypeFlags::SIR_LANG_TYPE_FLAG_PLAIN_VALUE | SIRLangTypeFlags::SIR_LANG_TYPE_FLAG_SERIALIZABLE;
+		descriptor.nFlags = static_cast<uint32_t>( SIRLangTypeFlags::SIR_LANG_TYPE_FLAG_PLAIN_VALUE ) | static_cast<uint32_t>( SIRLangTypeFlags::SIR_LANG_TYPE_FLAG_SERIALIZABLE );
 		break;
 	case SIRLangTypeCategory::SIR_LANG_TYPE_STACK_LIST:
 		if ( nCapacity == 0 || !sirLangMulFits( first.nBytes, nCapacity, &descriptor.nBytes ) || descriptor.nBytes > UINT32_MAX - 4 ) {
 			return SIRLangTypeError::SIR_LANG_TYPE_OVERFLOW;
 		}
 		descriptor.nBytes += 4;
-		descriptor.nFlags = SIRLangTypeFlags::SIR_LANG_TYPE_FLAG_PLAIN_VALUE;
+		descriptor.nFlags = static_cast<uint32_t>( SIRLangTypeFlags::SIR_LANG_TYPE_FLAG_PLAIN_VALUE );
 		break;
 	case SIRLangTypeCategory::SIR_LANG_TYPE_SLICE:
 		descriptor.nBytes = 16;
 		descriptor.nAlignment = 8;
-		descriptor.nFlags = SIRLangTypeFlags::SIR_LANG_TYPE_FLAG_BORROWED;
+		descriptor.nFlags = static_cast<uint32_t>( SIRLangTypeFlags::SIR_LANG_TYPE_FLAG_BORROWED );
 		break;
 	case SIRLangTypeCategory::SIR_LANG_TYPE_HANDLE:
 		descriptor.nBytes = 16;
 		descriptor.nAlignment = 8;
-		descriptor.nFlags = SIRLangTypeFlags::SIR_LANG_TYPE_FLAG_PLAIN_VALUE | SIRLangTypeFlags::SIR_LANG_TYPE_FLAG_SERIALIZABLE;
+		descriptor.nFlags = static_cast<uint32_t>( SIRLangTypeFlags::SIR_LANG_TYPE_FLAG_PLAIN_VALUE ) | static_cast<uint32_t>( SIRLangTypeFlags::SIR_LANG_TYPE_FLAG_SERIALIZABLE );
 		break;
 	case SIRLangTypeCategory::SIR_LANG_TYPE_OPTION:
 	case SIRLangTypeCategory::SIR_LANG_TYPE_RESULT:
@@ -230,7 +230,7 @@ SIRLangTypeError SIRLangConstructType( sirLangTypeTable_t *pTable, SIRLangTypeCa
 			return SIRLangTypeError::SIR_LANG_TYPE_OVERFLOW;
 		}
 		descriptor.nBytes += descriptor.nAlignment;
-		descriptor.nFlags = SIRLangTypeFlags::SIR_LANG_TYPE_FLAG_PLAIN_VALUE | SIRLangTypeFlags::SIR_LANG_TYPE_FLAG_SERIALIZABLE;
+		descriptor.nFlags = static_cast<uint32_t>( SIRLangTypeFlags::SIR_LANG_TYPE_FLAG_PLAIN_VALUE ) | static_cast<uint32_t>( SIRLangTypeFlags::SIR_LANG_TYPE_FLAG_SERIALIZABLE );
 		break;
 	default:
 		return SIRLangTypeError::SIR_LANG_TYPE_INVALID_ARGUMENT;

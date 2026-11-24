@@ -308,7 +308,7 @@ SIRPackResult SIRPackCatalog::validateTables( uint8_t *pScratch, uint64_t nScrat
 		resourceAt( i, &resource );
 		const uint8_t *pResource = m_pBytes + m_nResourceOffset + static_cast<uint64_t>(i) * SIR_PACK_RESOURCE_RECORD_BYTES;
 		if ( resource.key.m_nAssetId == 0 || resource.nRevision == 0 || resource.nSchemaVersion == 0 ||
-		     resource.nKind > SIRResourceKind::SIR_RESOURCE_KIND_COMPOSITION || pResource[55] != 0 ||
+		     resource.nKind > static_cast<uint8_t>( SIRResourceKind::SIR_RESOURCE_KIND_COMPOSITION ) || pResource[55] != 0 ||
 		     ( i != 0 && sirPackCompareKey( previous.key, resource.key ) >= 0 ) || resource.nChunkCount == 0 ||
 		     resource.nFirstChunk != nNextChunk || resource.nFirstDependency != nNextDep || resource.nChunkCount > m_nChunks - nNextChunk ||
 		     resource.nDependencyCount > m_nDependencies - nNextDep ) {

@@ -61,7 +61,7 @@ typedef struct sirModernCompletionQuery_s
 	uint32_t nProviderId;
 	uint32_t nProviderGeneration;
 	uint32_t nLaneCount;
-	uint32_t szQueueToProviderLane[SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT];
+	uint32_t szQueueToProviderLane[static_cast<uint32_t>( SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT )];
 } sirModernCompletionQuery_t;
 
 class SIRModernCompletionObserver

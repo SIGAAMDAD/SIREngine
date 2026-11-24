@@ -13,11 +13,12 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 #define _GNU_SOURCE 1
 #endif
 
-#include <Core/Platform/SIRChildProcess.h>
-#include <Core/Platform/SIRPlatformFile.h>
-#include <Core/Platform/SIRPlatformFileMapping.h>
-#include <Core/Platform/SIRPlatformPipe.h>
-#include <Core/Platform/SIRSemaphore.h>
+#include <Core/Platform/Shared/File/SIRPlatformFileSystem.h>
+#include <Core/Platform/Shared/Process/SIRChildProcess.h>
+#include <Core/Platform/Shared/File/SIRPlatformFile.h>
+#include <Core/Platform/Shared/File/SIRPlatformFileMapping.h>
+#include <Core/Platform/Shared/Process/SIRPlatformPipe.h>
+#include <Core/Platform/Shared/Threading/SIRSemaphore.h>
 
 #include <atomic>
 #include <errno.h>
@@ -304,20 +305,20 @@ extern "C" int __wrap_posix_spawnp( pid_t *pPid, const char *pszName, const posi
 static void sirTestInjectedPositionalTransfers( void )
 {
 	const char *pszPath = "SIRPlatformIOFaultInjection.bin";
-	( void )SIRPlatformFile::remove( pszPath );
+	( void )SIRPlatformFileSystem::removeFile( pszPath );
 	SIRPlatformFile file;
 	s_nOpenFault.store( EACCES, std::memory_order_relaxed );
-	SIR_CHECK( file.open( pszPath, SIR_FILE_OPEN_READ ) == SIR_FILE_ACCESS_DENIED && !file.isOpen() );
+	SIR_CHECK( file.open( pszPath, static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_READ ) ) == sirFileResult::SIR_FILE_ACCESS_DENIED && !file.isOpen() );
 	s_nOpenFault.store( EOVERFLOW, std::memory_order_relaxed );
-	SIR_CHECK( file.open( pszPath, SIR_FILE_OPEN_READ ) == SIR_FILE_OUT_OF_RANGE && !file.isOpen() );
+	SIR_CHECK( file.open( pszPath, static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_READ ) ) == sirFileResult::SIR_FILE_OUT_OF_RANGE && !file.isOpen() );
 	s_bSizeFault.store( true, std::memory_order_relaxed );
-	SIR_CHECK( file.open( pszPath, SIR_FILE_OPEN_CREATE | SIR_FILE_OPEN_TRUNCATE | SIR_FILE_OPEN_READ | SIR_FILE_OPEN_WRITE ) ==
-	           SIR_FILE_IO_ERROR );
+	SIR_CHECK( file.open( pszPath, static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_CREATE ) | static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_TRUNCATE ) | static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_READ ) | static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_WRITE ) ) ==
+	           sirFileResult::SIR_FILE_IO_ERROR );
 	s_bNegativeFileSize.store( true, std::memory_order_relaxed );
-	SIR_CHECK( file.open( pszPath, SIR_FILE_OPEN_CREATE | SIR_FILE_OPEN_TRUNCATE | SIR_FILE_OPEN_READ | SIR_FILE_OPEN_WRITE ) ==
-	           SIR_FILE_IO_ERROR );
-	SIR_CHECK( file.open( pszPath, SIR_FILE_OPEN_CREATE | SIR_FILE_OPEN_TRUNCATE | SIR_FILE_OPEN_READ | SIR_FILE_OPEN_WRITE ) ==
-	           SIR_FILE_OK );
+	SIR_CHECK( file.open( pszPath, static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_CREATE ) | static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_TRUNCATE ) | static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_READ ) | static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_WRITE ) ) ==
+	           sirFileResult::SIR_FILE_IO_ERROR );
+	SIR_CHECK( file.open( pszPath, static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_CREATE ) | static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_TRUNCATE ) | static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_READ ) | static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_WRITE ) ) ==
+	           sirFileResult::SIR_FILE_OK );
 
 	uint8_t szExpected[4096];
 	uint8_t szActual[4096] = {};
@@ -326,126 +327,126 @@ static void sirTestInjectedPositionalTransfers( void )
 	}
 	uint64_t nTransferred = UINT64_MAX;
 	s_nWriteFault.store( 1, std::memory_order_relaxed );
-	SIR_CHECK( file.writeAt( 0, szExpected, sizeof( szExpected ), &nTransferred ) == SIR_FILE_OK );
+	SIR_CHECK( file.writeAt( 0, szExpected, sizeof( szExpected ), &nTransferred ) == sirFileResult::SIR_FILE_OK );
 	SIR_CHECK( nTransferred == sizeof( szExpected ) );
 	s_nReadFault.store( 1, std::memory_order_relaxed );
-	SIR_CHECK( file.readAt( 0, szActual, sizeof( szActual ), &nTransferred ) == SIR_FILE_OK );
+	SIR_CHECK( file.readAt( 0, szActual, sizeof( szActual ), &nTransferred ) == sirFileResult::SIR_FILE_OK );
 	SIR_CHECK( nTransferred == sizeof( szActual ) && memcmp( szActual, szExpected, sizeof( szActual ) ) == 0 );
 
 	s_nWriteFault.store( 2, std::memory_order_relaxed );
-	SIR_CHECK( file.writeAt( 17, szExpected, sizeof( szExpected ) - 17, &nTransferred ) == SIR_FILE_OK );
+	SIR_CHECK( file.writeAt( 17, szExpected, sizeof( szExpected ) - 17, &nTransferred ) == sirFileResult::SIR_FILE_OK );
 	SIR_CHECK( nTransferred == sizeof( szExpected ) - 17 );
 	s_nWriteFault.store( 0, std::memory_order_relaxed );
 	s_nReadFault.store( 2, std::memory_order_relaxed );
-	SIR_CHECK( file.readAt( 17, szActual, sizeof( szActual ) - 17, &nTransferred ) == SIR_FILE_OK );
+	SIR_CHECK( file.readAt( 17, szActual, sizeof( szActual ) - 17, &nTransferred ) == sirFileResult::SIR_FILE_OK );
 	SIR_CHECK( nTransferred == sizeof( szActual ) - 17 );
 	SIR_CHECK( memcmp( szActual, szExpected, sizeof( szActual ) - 17 ) == 0 );
 	s_nReadFault.store( 0, std::memory_order_relaxed );
 
 	s_nReadFault.store( 3, std::memory_order_relaxed );
 	nTransferred = UINT64_MAX;
-	SIR_CHECK( file.readAt( 0, szActual, 16, &nTransferred ) == SIR_FILE_IO_ERROR && nTransferred == 0 );
+	SIR_CHECK( file.readAt( 0, szActual, 16, &nTransferred ) == sirFileResult::SIR_FILE_IO_ERROR && nTransferred == 0 );
 	s_nReadFault.store( 4, std::memory_order_relaxed );
-	SIR_CHECK( file.readAt( 0, szActual, 16, &nTransferred ) == SIR_FILE_END_OF_FILE && nTransferred == 0 );
+	SIR_CHECK( file.readAt( 0, szActual, 16, &nTransferred ) == sirFileResult::SIR_FILE_END_OF_FILE && nTransferred == 0 );
 	s_nReadFault.store( 0, std::memory_order_relaxed );
 
 	s_nWriteFault.store( 3, std::memory_order_relaxed );
-	SIR_CHECK( file.writeAt( 0, szExpected, 16, &nTransferred ) == SIR_FILE_NO_SPACE && nTransferred == 0 );
+	SIR_CHECK( file.writeAt( 0, szExpected, 16, &nTransferred ) == sirFileResult::SIR_FILE_NO_SPACE && nTransferred == 0 );
 	s_nWriteFault.store( 4, std::memory_order_relaxed );
-	SIR_CHECK( file.writeAt( 0, szExpected, 16, &nTransferred ) == SIR_FILE_IO_ERROR && nTransferred == 0 );
+	SIR_CHECK( file.writeAt( 0, szExpected, 16, &nTransferred ) == sirFileResult::SIR_FILE_IO_ERROR && nTransferred == 0 );
 	s_nWriteFault.store( 5, std::memory_order_relaxed );
-	SIR_CHECK( file.writeAt( 0, szExpected, 16, &nTransferred ) == SIR_FILE_IO_ERROR && nTransferred == 0 );
+	SIR_CHECK( file.writeAt( 0, szExpected, 16, &nTransferred ) == sirFileResult::SIR_FILE_IO_ERROR && nTransferred == 0 );
 	s_nWriteFault.store( 0, std::memory_order_relaxed );
 
 	SIRPlatformFileMapping mapping;
 	s_bSizeFault.store( true, std::memory_order_relaxed );
-	SIR_CHECK( mapping.map( file, 1, 128, SIR_FILE_MAP_READ_WRITE ) == SIR_FILE_IO_ERROR && !mapping.isMapped() );
+	SIR_CHECK( mapping.map( file, 1, 128, sirFileMapMode::SIR_FILE_MAP_READ_WRITE ) == sirFileResult::SIR_FILE_IO_ERROR && !mapping.isMapped() );
 	s_bPageFault.store( true, std::memory_order_relaxed );
-	SIR_CHECK( mapping.map( file, 1, 128, SIR_FILE_MAP_READ_WRITE ) == SIR_FILE_IO_ERROR && !mapping.isMapped() );
+	SIR_CHECK( mapping.map( file, 1, 128, sirFileMapMode::SIR_FILE_MAP_READ_WRITE ) == sirFileResult::SIR_FILE_IO_ERROR && !mapping.isMapped() );
 	s_bMapAccessFault.store( true, std::memory_order_relaxed );
-	SIR_CHECK( mapping.map( file, 1, 128, SIR_FILE_MAP_READ_WRITE ) == SIR_FILE_ACCESS_DENIED && !mapping.isMapped() );
+	SIR_CHECK( mapping.map( file, 1, 128, sirFileMapMode::SIR_FILE_MAP_READ_WRITE ) == sirFileResult::SIR_FILE_ACCESS_DENIED && !mapping.isMapped() );
 	s_bMapPermissionFault.store( true, std::memory_order_relaxed );
-	SIR_CHECK( mapping.map( file, 1, 128, SIR_FILE_MAP_READ_WRITE ) == SIR_FILE_ACCESS_DENIED && !mapping.isMapped() );
+	SIR_CHECK( mapping.map( file, 1, 128, sirFileMapMode::SIR_FILE_MAP_READ_WRITE ) == sirFileResult::SIR_FILE_ACCESS_DENIED && !mapping.isMapped() );
 	s_bMapFault.store( true, std::memory_order_relaxed );
-	SIR_CHECK( mapping.map( file, 1, 128, SIR_FILE_MAP_READ_WRITE ) == SIR_FILE_IO_ERROR && !mapping.isMapped() );
-	SIR_CHECK( mapping.map( file, 1, 128, SIR_FILE_MAP_READ_WRITE ) == SIR_FILE_OK );
+	SIR_CHECK( mapping.map( file, 1, 128, sirFileMapMode::SIR_FILE_MAP_READ_WRITE ) == sirFileResult::SIR_FILE_IO_ERROR && !mapping.isMapped() );
+	SIR_CHECK( mapping.map( file, 1, 128, sirFileMapMode::SIR_FILE_MAP_READ_WRITE ) == sirFileResult::SIR_FILE_OK );
 	mapping.getWritableData()[0] = 0xA7;
 	s_bSyncFault.store( true, std::memory_order_relaxed );
-	SIR_CHECK( mapping.flush() == SIR_FILE_IO_ERROR && mapping.isMapped() );
-	SIR_CHECK( mapping.flush() == SIR_FILE_OK );
+	SIR_CHECK( mapping.flush() == sirFileResult::SIR_FILE_IO_ERROR && mapping.isMapped() );
+	SIR_CHECK( mapping.flush() == sirFileResult::SIR_FILE_OK );
 	s_bUnmapFault.store( true, std::memory_order_relaxed );
-	SIR_CHECK( mapping.unmap() == SIR_FILE_IO_ERROR && mapping.isMapped() );
-	SIR_CHECK( mapping.unmap() == SIR_FILE_OK );
-	SIR_CHECK( file.readAt( 1, szActual, 1, &nTransferred ) == SIR_FILE_OK && szActual[0] == 0xA7 );
+	SIR_CHECK( mapping.unmap() == sirFileResult::SIR_FILE_IO_ERROR && mapping.isMapped() );
+	SIR_CHECK( mapping.unmap() == sirFileResult::SIR_FILE_OK );
+	SIR_CHECK( file.readAt( 1, szActual, 1, &nTransferred ) == sirFileResult::SIR_FILE_OK && szActual[0] == 0xA7 );
 	s_bNegativeFileSize.store( true, std::memory_order_relaxed );
 	uint64_t nInvalidSize = 0;
-	SIR_CHECK( file.getSize( &nInvalidSize ) == SIR_FILE_OUT_OF_RANGE );
+	SIR_CHECK( file.getSize( &nInvalidSize ) == sirFileResult::SIR_FILE_OUT_OF_RANGE );
 	s_bNegativeFileInfo.store( true, std::memory_order_relaxed );
 	sirFileInfo_t invalidInfo = {};
-	SIR_CHECK( SIRPlatformFile::getInfo( pszPath, &invalidInfo ) == SIR_FILE_OK );
+	SIR_CHECK( SIRPlatformFileSystem::getFileInfo( pszPath, &invalidInfo ) == sirFileResult::SIR_FILE_OK );
 	SIR_CHECK( invalidInfo.nSizeBytes == 0 && invalidInfo.nModifiedUnixNanoseconds == 0 );
 	s_bHugeFileTime.store( true, std::memory_order_relaxed );
-	SIR_CHECK( SIRPlatformFile::getInfo( pszPath, &invalidInfo ) == SIR_FILE_OK && invalidInfo.nModifiedUnixNanoseconds == 0 );
-	SIR_CHECK( file.close() == SIR_FILE_OK );
-	SIR_CHECK( file.open( pszPath, SIR_FILE_OPEN_WRITE | SIR_FILE_OPEN_APPEND ) == SIR_FILE_OK );
+	SIR_CHECK( SIRPlatformFileSystem::getFileInfo( pszPath, &invalidInfo ) == sirFileResult::SIR_FILE_OK && invalidInfo.nModifiedUnixNanoseconds == 0 );
+	SIR_CHECK( file.close() == sirFileResult::SIR_FILE_OK );
+	SIR_CHECK( file.open( pszPath, static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_WRITE ) | static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_APPEND ) ) == sirFileResult::SIR_FILE_OK );
 	uint8_t szAppend[8] = { 1, 2, 3, 4, 5, 6, 7, 8 };
-	SIR_CHECK( file.write( szAppend, 8, nullptr ) == SIR_FILE_INVALID_ARGUMENT );
-	SIR_CHECK( file.write( nullptr, 8, &nTransferred ) == SIR_FILE_INVALID_ARGUMENT );
-	SIR_CHECK( file.write( nullptr, 0, &nTransferred ) == SIR_FILE_OK && nTransferred == 0 );
+	SIR_CHECK( file.write( szAppend, 8, nullptr ) == sirFileResult::SIR_FILE_INVALID_ARGUMENT );
+	SIR_CHECK( file.write( nullptr, 8, &nTransferred ) == sirFileResult::SIR_FILE_INVALID_ARGUMENT );
+	SIR_CHECK( file.write( nullptr, 0, &nTransferred ) == sirFileResult::SIR_FILE_OK && nTransferred == 0 );
 	s_bSizeFault.store( true, std::memory_order_relaxed );
-	SIR_CHECK( file.seek( 0, SIR_FILE_SEEK_END, nullptr ) == SIR_FILE_IO_ERROR );
-	SIR_CHECK( file.truncate( UINT64_C( 0x8000000000000000 ) ) == SIR_FILE_OUT_OF_RANGE );
+	SIR_CHECK( file.seek( 0, sirFileSeekOrigin::SIR_FILE_SEEK_END, nullptr ) == sirFileResult::SIR_FILE_IO_ERROR );
+	SIR_CHECK( file.truncate( UINT64_C( 0x8000000000000000 ) ) == sirFileResult::SIR_FILE_OUT_OF_RANGE );
 	s_nAppendWriteFault.store( 1, std::memory_order_relaxed );
-	SIR_CHECK( file.write( szAppend, 8, &nTransferred ) == SIR_FILE_OK && nTransferred == 8 );
+	SIR_CHECK( file.write( szAppend, 8, &nTransferred ) == sirFileResult::SIR_FILE_OK && nTransferred == 8 );
 	s_nAppendWriteFault.store( 2, std::memory_order_relaxed );
-	SIR_CHECK( file.write( szAppend, 8, &nTransferred ) == SIR_FILE_IO_ERROR && nTransferred == 0 );
+	SIR_CHECK( file.write( szAppend, 8, &nTransferred ) == sirFileResult::SIR_FILE_IO_ERROR && nTransferred == 0 );
 	s_nAppendWriteFault.store( 3, std::memory_order_relaxed );
-	SIR_CHECK( file.write( szAppend, 8, &nTransferred ) == SIR_FILE_IO_ERROR && nTransferred == 0 );
+	SIR_CHECK( file.write( szAppend, 8, &nTransferred ) == sirFileResult::SIR_FILE_IO_ERROR && nTransferred == 0 );
 	s_nAppendWriteFault.store( 4, std::memory_order_relaxed );
-	SIR_CHECK( file.write( szAppend, 8, &nTransferred ) == SIR_FILE_OK && nTransferred == 8 );
+	SIR_CHECK( file.write( szAppend, 8, &nTransferred ) == sirFileResult::SIR_FILE_OK && nTransferred == 8 );
 	s_nAppendWriteFault.store( 0, std::memory_order_relaxed );
 	s_bSizeFault.store( true, std::memory_order_relaxed );
-	SIR_CHECK( file.write( szAppend, 8, &nTransferred ) == SIR_FILE_OK && nTransferred == 8 );
+	SIR_CHECK( file.write( szAppend, 8, &nTransferred ) == sirFileResult::SIR_FILE_OK && nTransferred == 8 );
 	s_bSyncFileFault.store( true, std::memory_order_relaxed );
-	SIR_CHECK( file.flush() == SIR_FILE_IO_ERROR );
+	SIR_CHECK( file.flush() == sirFileResult::SIR_FILE_IO_ERROR );
 	s_bTruncateFault.store( true, std::memory_order_relaxed );
-	SIR_CHECK( file.truncate( 8 ) == SIR_FILE_INVALID_ARGUMENT );
+	SIR_CHECK( file.truncate( 8 ) == sirFileResult::SIR_FILE_INVALID_ARGUMENT );
 	s_bCloseFault.store( true, std::memory_order_relaxed );
-	SIR_CHECK( file.close() == SIR_FILE_IO_ERROR && !file.isOpen() );
-	SIR_CHECK( SIRPlatformFile::renameReplace( "SIRFileMissingRenameSource.bin", "SIRFileMissingRenameDest.bin" ) == SIR_FILE_NOT_FOUND );
+	SIR_CHECK( file.close() == sirFileResult::SIR_FILE_IO_ERROR && !file.isOpen() );
+	SIR_CHECK( SIRPlatformFileSystem::renameFileReplace( "SIRFileMissingRenameSource.bin", "SIRFileMissingRenameDest.bin" ) == sirFileResult::SIR_FILE_NOT_FOUND );
 
-	SIR_CHECK( SIRPlatformFile::remove( pszPath ) == SIR_FILE_OK );
+	SIR_CHECK( SIRPlatformFileSystem::removeFile( pszPath ) == sirFileResult::SIR_FILE_OK );
 }
 
 static void sirTestInjectedOSLifecycles( void )
 {
 	SIRPlatformPipe pipe;
 	s_bPipeFault.store( true, std::memory_order_relaxed );
-	SIR_CHECK( pipe.create() == SIRPipeResult::SIR_PIPE_IO_ERROR );
+	SIR_CHECK( pipe.create() == sirPipeResult::SIR_PIPE_IO_ERROR );
 	SIR_CHECK( !pipe.isReadOpen() && !pipe.isWriteOpen() );
-	SIR_CHECK( pipe.create() == SIRPipeResult::SIR_PIPE_OK );
-	SIR_CHECK( pipe.close() == SIRPipeResult::SIR_PIPE_OK );
+	SIR_CHECK( pipe.create() == sirPipeResult::SIR_PIPE_OK );
+	SIR_CHECK( pipe.close() == sirPipeResult::SIR_PIPE_OK );
 
 	SIRSemaphore semaphore;
-	SIR_CHECK( semaphore.create( 0 ) == SIR_SEMAPHORE_OK );
-	SIR_CHECK( semaphore.post() == SIR_SEMAPHORE_OK );
+	SIR_CHECK( semaphore.create( 0 ) == sirSemaphoreResult::SIR_SEMAPHORE_OK );
+	SIR_CHECK( semaphore.post() == sirSemaphoreResult::SIR_SEMAPHORE_OK );
 	s_bWaitFault.store( true, std::memory_order_relaxed );
-	SIR_CHECK( semaphore.wait() == SIR_SEMAPHORE_OK );
-	SIR_CHECK( semaphore.post() == SIR_SEMAPHORE_OK );
+	SIR_CHECK( semaphore.wait() == sirSemaphoreResult::SIR_SEMAPHORE_OK );
+	SIR_CHECK( semaphore.post() == sirSemaphoreResult::SIR_SEMAPHORE_OK );
 	s_bTimedWaitFault.store( true, std::memory_order_relaxed );
-	SIR_CHECK( semaphore.waitFor( 100 ) == SIR_SEMAPHORE_OK );
-	SIR_CHECK( semaphore.tryWait() == SIR_SEMAPHORE_WOULD_BLOCK );
-	SIR_CHECK( semaphore.close() == SIR_SEMAPHORE_OK );
+	SIR_CHECK( semaphore.waitFor( 100 ) == sirSemaphoreResult::SIR_SEMAPHORE_OK );
+	SIR_CHECK( semaphore.tryWait() == sirSemaphoreResult::SIR_SEMAPHORE_WOULD_BLOCK );
+	SIR_CHECK( semaphore.close() == sirSemaphoreResult::SIR_SEMAPHORE_OK );
 
 	SIRChildProcess child;
 	const sirChildProcessLaunch_t launch = { "/bin/true", nullptr, 0, nullptr };
 	s_bSpawnFault.store( true, std::memory_order_relaxed );
-	SIR_CHECK( child.start( launch ) == SIR_CHILD_PROCESS_SPAWN_FAILED );
+	SIR_CHECK( child.start( launch ) == sirChildProcessResult::SIR_CHILD_PROCESS_SPAWN_FAILED );
 	SIR_CHECK( !child.isOpen() && child.getProcessId() == 0 );
-	SIR_CHECK( child.start( launch ) == SIR_CHILD_PROCESS_OK );
+	SIR_CHECK( child.start( launch ) == sirChildProcessResult::SIR_CHILD_PROCESS_OK );
 	uint32_t nExitCode = UINT32_MAX;
-	SIR_CHECK( child.waitFor( 10000, &nExitCode ) == SIR_CHILD_PROCESS_OK && nExitCode == 0 );
-	SIR_CHECK( child.close() == SIR_CHILD_PROCESS_OK );
+	SIR_CHECK( child.waitFor( 10000, &nExitCode ) == sirChildProcessResult::SIR_CHILD_PROCESS_OK && nExitCode == 0 );
+	SIR_CHECK( child.close() == sirChildProcessResult::SIR_CHILD_PROCESS_OK );
 }
 
 int main( void )

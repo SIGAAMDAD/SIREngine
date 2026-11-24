@@ -15,7 +15,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Mesh/SIRMeshCache.h>
 #include <atomic>
-#include <Core/Platform/SIRThread.h>
+#include <Core/Platform/Shared/Threading/SIRThread.h>
 
 #include <stdint.h>
 #include <stdio.h>

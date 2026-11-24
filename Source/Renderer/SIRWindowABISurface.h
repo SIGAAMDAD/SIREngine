@@ -52,7 +52,7 @@ private:
 	SIRWindowSystem *m_pWindows = nullptr;
 	const sirGraphicsABIDevice_t *m_pDevice = nullptr;
 	sirWindowHandle_t m_hWindow {};
-	sirWindowNativeLease_t m_hLease {};
+	SIRNativeWindowLease m_hLease;
 	sirGraphicsNativeSurface_t m_Native {};
 	sirGraphicsHandle_t m_hSurface {};
 	uint64_t m_nMetricsRevision = 0;

@@ -23,12 +23,12 @@ SIRResourceResult sirShaderResolveMaterialStage( const sirShaderLibraryContext_t
 		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	sirShaderMaterialPassRecord_t pass {};
-	SIRResourceResult eResult = sirShaderProjectMaterialPass( material, request.ePass, &pass );
+	SIRResourceResult eResult = sirShaderProjectMaterialPass( material, static_cast<uint32_t>(request.ePass), &pass );
 	if ( eResult != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ) {
 		return eResult;
 	}
 	if ( pass.iShaderDependency == SIR_SHADER_MATERIAL_NO_SHADER ) {
-		if ( ( pass.nRequiredFeatures & SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_FIXED_FUNCTION ) == 0 ||
+		if ( ( pass.nRequiredFeatures & static_cast<uint64_t>(SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_FIXED_FUNCTION) ) == 0 ||
 		     ( request.validation.nAvailableFeatures & pass.nRequiredFeatures ) != pass.nRequiredFeatures ) {
 			return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_FORMAT;
 		}
@@ -67,7 +67,7 @@ SIRResourceResult sirShaderResolveMaterialStage( const sirShaderLibraryContext_t
 		if ( eResult != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ) {
 			return eResult;
 		}
-		if ( candidate.stage.ePass != pass.nPass || candidate.stage.nStageMask != request.nStageMask ) {
+		if ( static_cast<uint32_t>(candidate.stage.ePass) != pass.nPass || candidate.stage.nStageMask != request.nStageMask ) {
 			continue;
 		}
 		sirShaderResolvedStage_t resolved {};

@@ -13,6 +13,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
+#include <Core/Platform/Shared/File/SIRPlatformFileSystem.h>
 #include <Core/Config/SIRConfigAtomicFile.h>
 #include <string.h>
 
@@ -38,8 +39,8 @@ SIRConfigResult SIRConfigAtomicFile::open( const char *pszTargetPath, const char
 	     strcmp( pszTargetPath, pszTempPath ) == 0 ) {
 		return SIRConfigResult::SIR_CONFIG_INVALID_ARGUMENT;
 	}
-	const uint32_t nFlags = static_cast<uint32_t>( SIRFileOpenFlag::SIR_FILE_OPEN_WRITE ) | static_cast<uint32_t>( SIRFileOpenFlag::SIR_FILE_OPEN_CREATE ) | static_cast<uint32_t>( SIRFileOpenFlag::SIR_FILE_OPEN_EXCLUSIVE );
-	if ( m_File.open( pszTempPath, nFlags ) != SIRFileResult::SIR_FILE_OK ) {
+	const uint32_t nFlags = static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_WRITE ) | static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_CREATE ) | static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_EXCLUSIVE );
+	if ( m_File.open( pszTempPath, nFlags ) != sirFileResult::SIR_FILE_OK ) {
 		return SIRConfigResult::SIR_CONFIG_IO_ERROR;
 	}
 	m_pszTargetPath = pszTargetPath;
@@ -65,7 +66,7 @@ SIRConfigResult SIRConfigAtomicFile::sinkWrite( void *pContext, const uint8_t *p
 		return SIRConfigResult::SIR_CONFIG_OK;
 	}
 	uint64_t nTransferred = 0;
-	if ( pFile->m_File.write( pBytes, nBytes, &nTransferred ) != SIRFileResult::SIR_FILE_OK || nTransferred != nBytes ) {
+	if ( pFile->m_File.write( pBytes, nBytes, &nTransferred ) != sirFileResult::SIR_FILE_OK || nTransferred != nBytes ) {
 		pFile->m_bFailed = true;
 		return SIRConfigResult::SIR_CONFIG_IO_ERROR;
 	}
@@ -82,10 +83,10 @@ SIRConfigResult SIRConfigAtomicFile::commit( void ) noexcept
 		cancel();
 		return SIRConfigResult::SIR_CONFIG_IO_ERROR;
 	}
-	const SIRFileResult eFlush = m_File.flush();
-	const SIRFileResult eClose = m_File.close();
-	if ( eFlush != SIRFileResult::SIR_FILE_OK || eClose != SIRFileResult::SIR_FILE_OK ||
-	     SIRPlatformFile::renameReplace( m_pszTempPath, m_pszTargetPath ) != SIRFileResult::SIR_FILE_OK ) {
+	const sirFileResult eFlush = m_File.flush();
+	const sirFileResult eClose = m_File.close();
+	if ( eFlush != sirFileResult::SIR_FILE_OK || eClose != sirFileResult::SIR_FILE_OK ||
+	     SIRPlatformFileSystem::renameFileReplace( m_pszTempPath, m_pszTargetPath ) != sirFileResult::SIR_FILE_OK ) {
 		cancel();
 		return SIRConfigResult::SIR_CONFIG_IO_ERROR;
 	}
@@ -101,7 +102,7 @@ void SIRConfigAtomicFile::cancel( void ) noexcept
 		return;
 	}
 	m_File.close();
-	SIRPlatformFile::remove( m_pszTempPath );
+	SIRPlatformFileSystem::removeFile( m_pszTempPath );
 	m_bOpened = false;
 	m_pszTargetPath = nullptr;
 	m_pszTempPath = nullptr;
@@ -114,22 +115,22 @@ SIRConfigResult SIRConfigAtomicFile::read( const char *pszPath, uint8_t *pBytes,
 	}
 	*pRead = 0;
 	SIRPlatformFile file;
-	const SIRFileResult eOpen = file.open( pszPath, static_cast<uint32_t>( SIRFileOpenFlag::SIR_FILE_OPEN_READ ) );
-	if ( eOpen == SIRFileResult::SIR_FILE_NOT_FOUND ) {
+	const sirFileResult eOpen = file.open( pszPath, static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_READ ) );
+	if ( eOpen == sirFileResult::SIR_FILE_NOT_FOUND ) {
 		return SIRConfigResult::SIR_CONFIG_NOT_FOUND;
 	}
-	if ( eOpen != SIRFileResult::SIR_FILE_OK ) {
+	if ( eOpen != sirFileResult::SIR_FILE_OK ) {
 		return SIRConfigResult::SIR_CONFIG_IO_ERROR;
 	}
 	uint64_t nSize = 0;
-	if ( file.getSize( &nSize ) != SIRFileResult::SIR_FILE_OK || nSize > nCapacity ) {
+	if ( file.getSize( &nSize ) != sirFileResult::SIR_FILE_OK || nSize > nCapacity ) {
 		file.close();
 		return SIRConfigResult::SIR_CONFIG_LIMIT_EXCEEDED;
 	}
 	uint64_t nRead = 0;
-	const SIRFileResult eRead = file.read( pBytes, nSize, &nRead );
-	const SIRFileResult eClose = file.close();
-	if ( ( eRead != SIRFileResult::SIR_FILE_OK && eRead != SIRFileResult::SIR_FILE_END_OF_FILE ) || nRead != nSize || eClose != SIRFileResult::SIR_FILE_OK ) {
+	const sirFileResult eRead = file.read( pBytes, nSize, &nRead );
+	const sirFileResult eClose = file.close();
+	if ( ( eRead != sirFileResult::SIR_FILE_OK && eRead != sirFileResult::SIR_FILE_END_OF_FILE ) || nRead != nSize || eClose != sirFileResult::SIR_FILE_OK ) {
 		return SIRConfigResult::SIR_CONFIG_IO_ERROR;
 	}
 	*pRead = static_cast<uint32_t>(nRead);

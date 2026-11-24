@@ -13,7 +13,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#include <Core/Platform/SIRPlatformRootDirectory.h>
+#include <Core/Platform/Shared/File/SIRPlatformRootDirectory.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -83,17 +83,17 @@ int main( void )
 	SIRPlatformRootDirectory root;
 	SIRPlatformFile file;
 	sirRootRequire( !root.isOpen(), "initially closed" );
-	sirRootRequire( root.openRead( "nested/file.bin", &file ) == SIR_FILE_CLOSED, "read before root open" );
-	sirRootRequire( root.openRoot( szBase ) == SIR_FILE_OK, "root open" );
+	sirRootRequire( root.openRead( "nested/file.bin", &file ) == sirFileResult::SIR_FILE_CLOSED, "read before root open" );
+	sirRootRequire( root.openRoot( szBase ) == sirFileResult::SIR_FILE_OK, "root open" );
 	sirRootRequire( root.isOpen(), "open state" );
-	sirRootRequire( root.openRoot( szBase ) == SIR_FILE_INVALID_ARGUMENT, "double root open" );
-	sirRootRequire( root.openRead( "nested/file.bin", &file ) == SIR_FILE_OK, "nested rooted file" );
+	sirRootRequire( root.openRoot( szBase ) == sirFileResult::SIR_FILE_INVALID_ARGUMENT, "double root open" );
+	sirRootRequire( root.openRead( "nested/file.bin", &file ) == sirFileResult::SIR_FILE_OK, "nested rooted file" );
 	sirRootRequire( file.isOpen(), "file opened" );
-	sirRootRequire( root.openRead( "nested/file.bin", &file ) == SIR_FILE_INVALID_ARGUMENT, "target already open" );
+	sirRootRequire( root.openRead( "nested/file.bin", &file ) == sirFileResult::SIR_FILE_INVALID_ARGUMENT, "target already open" );
 	uint64_t nBytes = 0;
-	sirRootRequire( file.getSize( &nBytes ) == SIR_FILE_OK && nBytes == 6, "file size" );
+	sirRootRequire( file.getSize( &nBytes ) == sirFileResult::SIR_FILE_OK && nBytes == 6, "file size" );
 	char szData[7] = {};
-	sirRootRequire( file.readAt( 0, szData, 6, &nBytes ) == SIR_FILE_OK && nBytes == 6, "read retained handle" );
+	sirRootRequire( file.readAt( 0, szData, 6, &nBytes ) == sirFileResult::SIR_FILE_OK && nBytes == 6, "read retained handle" );
 	sirRootRequire( strcmp( szData, "ROOTED" ) == 0, "expected bytes" );
 
 	const char *szDenied[] = { "",
@@ -120,15 +120,15 @@ int main( void )
 	                           "C:/Windows" };
 	SIRPlatformFile rejected;
 	for ( uint32_t i = 0; i < sizeof( szDenied ) / sizeof( szDenied[0] ); ++i ) {
-		sirRootRequire( root.openRead( szDenied[i], &rejected ) == SIR_FILE_INVALID_ARGUMENT, "deny malformed relative path" );
+		sirRootRequire( root.openRead( szDenied[i], &rejected ) == sirFileResult::SIR_FILE_INVALID_ARGUMENT, "deny malformed relative path" );
 		sirRootRequire( !rejected.isOpen(), "denied leaves destination closed" );
 	}
 	char szTooLong[SIR_PLATFORM_ROOTED_MAX_RELATIVE_BYTES + 1] = {};
 	memset( szTooLong, 'a', SIR_PLATFORM_ROOTED_MAX_RELATIVE_BYTES );
-	sirRootRequire( root.openRead( szTooLong, &rejected ) == SIR_FILE_INVALID_ARGUMENT, "deny overlong relative path" );
-	sirRootRequire( root.openRead( "nested", &rejected ) == SIR_FILE_ACCESS_DENIED, "deny directory target" );
-	sirRootRequire( root.openRead( "missing/file.bin", &rejected ) == SIR_FILE_NOT_FOUND, "missing intermediate" );
-	sirRootRequire( root.openRead( "nested/missing.bin", &rejected ) == SIR_FILE_NOT_FOUND, "missing final" );
+	sirRootRequire( root.openRead( szTooLong, &rejected ) == sirFileResult::SIR_FILE_INVALID_ARGUMENT, "deny overlong relative path" );
+	sirRootRequire( root.openRead( "nested", &rejected ) == sirFileResult::SIR_FILE_ACCESS_DENIED, "deny directory target" );
+	sirRootRequire( root.openRead( "missing/file.bin", &rejected ) == sirFileResult::SIR_FILE_NOT_FOUND, "missing intermediate" );
+	sirRootRequire( root.openRead( "nested/missing.bin", &rejected ) == sirFileResult::SIR_FILE_NOT_FOUND, "missing final" );
 
 #if defined( _WIN32 )
 	const bool bFileLink = CreateSymbolicLinkA( szLink, szOutside, SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE ) != 0;
@@ -151,23 +151,23 @@ int main( void )
 	sirRootRequire( bFileLink && bDirLink && bRootLink, "symlink fixtures created" );
 #endif
 	if ( bFileLink ) {
-		sirRootRequire( root.openRead( "nested/link.bin", &rejected ) == SIR_FILE_ACCESS_DENIED, "deny final symlink" );
+		sirRootRequire( root.openRead( "nested/link.bin", &rejected ) == sirFileResult::SIR_FILE_ACCESS_DENIED, "deny final symlink" );
 	}
 	if ( bDirLink ) {
-		sirRootRequire( root.openRead( "junction/file.bin", &rejected ) == SIR_FILE_ACCESS_DENIED, "deny symlink directory" );
+		sirRootRequire( root.openRead( "junction/file.bin", &rejected ) == sirFileResult::SIR_FILE_ACCESS_DENIED, "deny symlink directory" );
 	}
 	if ( bRootLink ) {
 		SIRPlatformRootDirectory linkedRoot;
-		sirRootRequire( linkedRoot.openRoot( szBaseLink ) == SIR_FILE_ACCESS_DENIED, "deny linked root" );
+		sirRootRequire( linkedRoot.openRoot( szBaseLink ) == sirFileResult::SIR_FILE_ACCESS_DENIED, "deny linked root" );
 	}
 
-	sirRootRequire( root.close() == SIR_FILE_OK, "close root" );
-	sirRootRequire( root.close() == SIR_FILE_OK, "double close root" );
+	sirRootRequire( root.close() == sirFileResult::SIR_FILE_OK, "close root" );
+	sirRootRequire( root.close() == sirFileResult::SIR_FILE_OK, "double close root" );
 	sirRootRequire( file.isOpen(), "file survives root close" );
 	memset( szData, 0, sizeof( szData ) );
-	sirRootRequire( file.readAt( 0, szData, 6, &nBytes ) == SIR_FILE_OK && strcmp( szData, "ROOTED" ) == 0,
+	sirRootRequire( file.readAt( 0, szData, 6, &nBytes ) == sirFileResult::SIR_FILE_OK && strcmp( szData, "ROOTED" ) == 0,
 	                "open file retains independent native handle" );
-	sirRootRequire( file.close() == SIR_FILE_OK, "close file" );
+	sirRootRequire( file.close() == sirFileResult::SIR_FILE_OK, "close file" );
 
 #if defined( _WIN32 )
 	if ( bFileLink ) {

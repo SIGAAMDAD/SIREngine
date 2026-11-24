@@ -25,7 +25,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-#include <Core/Platform/SIRDynamicLibrary.h>
+#include <Core/Platform/Shared/Library/SIRDynamicLibrary.h>
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
 
@@ -357,7 +357,7 @@ VkImageLayout sirVulkanUploadFinalLayout( const sirVulkanImage_t *pImage, const 
 class SIRVulkanDevice
 {
 private:
-	sirDynamicLibrary_t m_Library;
+	SIRDynamicLibrary m_Library;
 	PFN_vkGetInstanceProcAddr m_pfnGetInstanceProcAddr;
 	PFN_vkGetDeviceProcAddr m_pfnGetDeviceProcAddr;
 	PFN_vkDestroyInstance m_pfnDestroyInstance;

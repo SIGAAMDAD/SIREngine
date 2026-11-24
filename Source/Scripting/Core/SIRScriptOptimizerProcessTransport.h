@@ -27,9 +27,9 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Scripting/Core/SIRScriptOptimizationCoordinator.h>
 #include <atomic>
 #include <chrono>
-#include <Core/Platform/SIRSync.h>
+#include <Core/Platform/Shared/Threading/SIRSync.h>
 
-#include <Core/Platform/SIRThread.h>
+#include <Core/Platform/Shared/Threading/SIRThread.h>
 
 // Paths and arguments are copied at configuration time. The host owns
 // executable and cache-input staging; no shell is involved in launching.

@@ -26,7 +26,6 @@ static_assert( sizeof( sirGraphicsABINativeSurface_t ) == 32, "Graphics ABI nati
 static_assert( offsetof( sirGraphicsABINativeSurface_t, nWindowGeneration ) == 24, "Graphics ABI generation layout changed" );
 static_assert( sizeof( sirGraphicsABIPresentDesc_t ) == 32, "Graphics ABI present layout changed" );
 static_assert( sizeof( sirWindowHandle_t ) == 16, "Window handle identity layout changed" );
-static_assert( sizeof( sirWindowNativeLease_t ) == 24, "Window lease identity layout changed" );
 
 static bool s_bFailCreate = false;
 static bool s_bFailResize = false;
@@ -119,32 +118,32 @@ public:
 
 	sirWindowResult_t initialize( void ) noexcept override
 	{
-		return SIR_WINDOW_OK;
+		return sirWindowResult::SIR_WINDOW_OK;
 	}
 	sirWindowResult_t createWindow( const sirWindowCreateDesc_t& desc, uint32_t nSlot, sirWindowNativeView_t *pNative ) noexcept override
 	{
 		( void )desc;
-		*pNative = { SIR_WINDOW_PLATFORM_X11, nSlot + 1, 0x12, 0 };
-		return SIR_WINDOW_OK;
+		*pNative = { sirWindowPlatform::SIR_WINDOW_PLATFORM_X11, nSlot + 1, 0x12, 0 };
+		return sirWindowResult::SIR_WINDOW_OK;
 	}
 	sirWindowResult_t destroyWindow( uint32_t nSlot ) noexcept override
 	{
 		( void )nSlot;
-		return SIR_WINDOW_OK;
+		return sirWindowResult::SIR_WINDOW_OK;
 	}
 	sirWindowResult_t mutateWindow( uint32_t nSlot, const sirWindowMutation_t& mutation ) noexcept override
 	{
 		( void )nSlot;
 		( void )mutation;
-		return SIR_WINDOW_OK;
+		return sirWindowResult::SIR_WINDOW_OK;
 	}
 	sirWindowResult_t pumpEvents( uint32_t nBudget, sirWindowDriverEventFn_t pCallback, void *pContext ) noexcept override
 	{
 		if ( m_bResize && nBudget != 0 && pCallback != nullptr ) {
 			m_bResize = false;
-			pCallback( pContext, { 0, 1, SIR_WINDOW_EVENT_RESIZED, m_nWidth, m_nHeight } );
+			pCallback( pContext, { 0, 1, sirWindowEventKind::SIR_WINDOW_EVENT_RESIZED, m_nWidth, m_nHeight } );
 		}
-		return SIR_WINDOW_OK;
+		return sirWindowResult::SIR_WINDOW_OK;
 	}
 	void shutdown( void ) noexcept override
 	{
@@ -172,7 +171,7 @@ static bool sirTestGPUWindowLeaseLifetime( void ) noexcept
 		return false;
 	}
 	sirWindowHandle_t hWindow = {};
-	if ( windows.createWindow( { "GPU", 640, 480 }, &hWindow ) != SIR_WINDOW_OK ) {
+	if ( windows.createWindow( { "GPU", 640, 480 }, &hWindow ) != sirWindowResult::SIR_WINDOW_OK ) {
 		return false;
 	}
 	SIRWindowABISurface surface;
@@ -183,12 +182,12 @@ static bool sirTestGPUWindowLeaseLifetime( void ) noexcept
 	present.nHeight = 100;
 	s_bFailCreate = true;
 	if ( surface.create( windows, hWindow, &device, &present ) != SIR_GRAPHICS_DRIVER_ERROR || surface.isActive() ||
-	     windows.destroyWindow( hWindow ) != SIR_WINDOW_OK || windows.createWindow( { "GPU2", 640, 480 }, &hWindow ) != SIR_WINDOW_OK ) {
+	     windows.destroyWindow( hWindow ) != sirWindowResult::SIR_WINDOW_OK || windows.createWindow( { "GPU2", 640, 480 }, &hWindow ) != sirWindowResult::SIR_WINDOW_OK ) {
 		return false;
 	}
 	s_bFailCreate = false;
 	if ( surface.create( windows, hWindow, &device, &present ) != SIR_GRAPHICS_SUCCESS || !surface.isActive() || s_nLastWidth != 640 ||
-	     s_nLastHeight != 480 || windows.destroyWindow( hWindow ) != SIR_WINDOW_BUSY ) {
+	     s_nLastHeight != 480 || windows.destroyWindow( hWindow ) != sirWindowResult::SIR_WINDOW_BUSY ) {
 		return false;
 	}
 	sirGraphicsSurfaceImage_t acquired = {};
@@ -221,7 +220,7 @@ static bool sirTestGPUWindowLeaseLifetime( void ) noexcept
 	present = changed;
 	const uint64_t nOldMetrics = surface.getMetricsRevision();
 	driver.queueResize( 1280, 720 );
-	if ( windows.pumpEvents( 1 ) != SIR_WINDOW_OK || surface.getMetricsRevision() != nOldMetrics ) {
+	if ( windows.pumpEvents( 1 ) != sirWindowResult::SIR_WINDOW_OK || surface.getMetricsRevision() != nOldMetrics ) {
 		return false;
 	}
 	s_bFailResize = true;
@@ -240,12 +239,12 @@ static bool sirTestGPUWindowLeaseLifetime( void ) noexcept
 	}
 	sirGraphicsCompletionSet_t completed = {};
 	s_bBusyRetire = true;
-	if ( surface.retire( &completed ) != SIR_GRAPHICS_BUSY || !surface.isActive() || windows.destroyWindow( hWindow ) != SIR_WINDOW_BUSY ) {
+	if ( surface.retire( &completed ) != SIR_GRAPHICS_BUSY || !surface.isActive() || windows.destroyWindow( hWindow ) != sirWindowResult::SIR_WINDOW_BUSY ) {
 		return false;
 	}
 	s_bBusyRetire = false;
 	if ( surface.retire( &completed ) != SIR_GRAPHICS_SUCCESS || surface.isActive() ||
-	     surface.retire( &completed ) != SIR_GRAPHICS_INVALID_HANDLE || windows.destroyWindow( hWindow ) != SIR_WINDOW_OK ||
+	     surface.retire( &completed ) != SIR_GRAPHICS_INVALID_HANDLE || windows.destroyWindow( hWindow ) != sirWindowResult::SIR_WINDOW_OK ||
 	     windows.shutdown() != SIR_SYSTEM_OK || s_nCreates != 1 || s_nRetires != 1 ) {
 		return false;
 	}

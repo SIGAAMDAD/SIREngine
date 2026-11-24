@@ -74,17 +74,17 @@ static bool sirMaterialHeaderValid( const sirShaderMaterialHeader_t& header ) no
 
 static bool sirMaterialPassValid( const sirShaderMaterialPassRecord_t& pass, uint32_t nDependencies ) noexcept
 {
-	if ( pass.nPass < SIRShaderPass::SIR_SHADER_PASS_COLOR || pass.nPass > SIRShaderPass::SIR_SHADER_PASS_COMPUTE ) {
+	if ( pass.nPass < static_cast<uint32_t>(SIRShaderPass::SIR_SHADER_PASS_COLOR) || pass.nPass > static_cast<uint32_t>(SIRShaderPass::SIR_SHADER_PASS_COMPUTE) ) {
 		return false;
 	}
-	constexpr uint64_t VALID_FEATURES = ( SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_PRESENT << 1 ) - 1ULL;
+	constexpr uint64_t VALID_FEATURES = ( static_cast<uint64_t>(SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_PRESENT) << 1 ) - 1ULL;
 	if ( ( pass.nRequiredFeatures & ~VALID_FEATURES ) != 0 ) {
 		return false;
 	}
 	if ( pass.iShaderDependency == SIR_SHADER_MATERIAL_NO_SHADER ) {
-		return pass.nPass != SIRShaderPass::SIR_SHADER_PASS_COMPUTE && ( pass.nRequiredFeatures & SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_FIXED_FUNCTION ) != 0;
+		return pass.nPass != static_cast<uint32_t>(SIRShaderPass::SIR_SHADER_PASS_COMPUTE) && ( pass.nRequiredFeatures & static_cast<uint64_t>(SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_FIXED_FUNCTION) ) != 0;
 	}
-	return pass.iShaderDependency < nDependencies && ( pass.nRequiredFeatures & SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_FIXED_FUNCTION ) == 0;
+	return pass.iShaderDependency < nDependencies && ( pass.nRequiredFeatures & static_cast<uint64_t>(SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_FIXED_FUNCTION) ) == 0;
 }
 
 SIRGraphicsResult sirShaderEncodeMaterialHeader( const sirShaderMaterialHeader_t& header, void *pBytes, uint64_t nCapacity ) noexcept

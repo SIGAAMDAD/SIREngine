@@ -13,6 +13,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
+#include <Core/Platform/Shared/File/SIRPlatformFileSystem.h>
 #include <Core/CVars/SIRCVarConfigAdapter.h>
 #include <Core/CVars/SIRCVarValueCodec.h>
 #include <Core/Console/SIRConsoleConfigAdapter.h>
@@ -247,8 +248,8 @@ int main( void )
 	assert( strcmp( archive.szData, "[CVars]\nr.alpha = \"21\"\nr.title = \"hello\\nworld\"\n" ) == 0 );
 	const char *pszArchivePath = "sir-p5-cvar-user.ini";
 	const char *pszArchiveTemp = "sir-p5-cvar-user.tmp";
-	SIRPlatformFile::remove( pszArchiveTemp );
-	SIRPlatformFile::remove( pszArchivePath );
+	SIRPlatformFileSystem::removeFile( pszArchiveTemp );
+	SIRPlatformFileSystem::removeFile( pszArchivePath );
 	SIRConfigAtomicFile archiveFile;
 	assert( archiveFile.open( pszArchivePath, pszArchiveTemp, 4096 ) == SIR_CONFIG_OK );
 	assert( adapter.writeArchive( archiveFile.getSink(), SIR_CONSOLE_CAP_READ, 4096, &nWritten ) == SIR_CONFIG_OK );
@@ -263,7 +264,7 @@ int main( void )
 	memset( szLoadedArchive, 0, sizeof( szLoadedArchive ) );
 	assert( SIRConfigAtomicFile::read( pszArchivePath, szLoadedArchive, sizeof( szLoadedArchive ), &nReadArchive ) == SIR_CONFIG_OK );
 	assert( nReadArchive == archive.nBytes && memcmp( szLoadedArchive, archive.szData, nReadArchive ) == 0 );
-	assert( SIRPlatformFile::remove( pszArchivePath ) == SIR_FILE_OK );
+	assert( SIRPlatformFileSystem::removeFile( pszArchivePath ) == SIR_FILE_OK );
 	const uint64_t nPreRoundTrip = cvars.getRevision();
 	assert( adapter.applyIni( { ( const uint8_t * )archive.szData, archive.nBytes, {} }, user, &diagnostic ) == SIR_CONFIG_OK );
 	assert( cvars.getRevision() == nPreRoundTrip + 1 );

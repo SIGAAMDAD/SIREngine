@@ -1,7 +1,7 @@
 #include <Editor/Host/SIREditorSceneWorkspace.h>
 
 #include <Core/Memory/SIRMemorySegment.h>
-#include <Core/Platform/SIRPlatformFileSystem.h>
+#include <Core/Platform/Shared/File/SIRPlatformFileSystem.h>
 
 #include <limits.h>
 #include <string.h>
@@ -328,7 +328,7 @@ SIREditorWorkspaceResult SIREditorSceneWorkspace::openTextFile( const char *pszP
 	}
 
 	size_t nFileBytes = 0;
-	if ( SIRPlatformFileSystem::readFile( pszPath, nullptr, 0, &nFileBytes ) != SIRFileSystemResult::SIR_FILESYSTEM_OK || nFileBytes == 0 ||
+	if ( SIRPlatformFileSystem::readFile( pszPath, nullptr, 0, &nFileBytes ) != sirFileSystemResult::SIR_FILESYSTEM_OK || nFileBytes == 0 ||
 	     nFileBytes > SIR_EDITOR_MAX_SOURCE_BYTES ) {
 		return SIREditorWorkspaceResult::SIR_EDITOR_WORKSPACE_FILE_IO;
 	}
@@ -338,8 +338,8 @@ SIREditorWorkspaceResult SIREditorSceneWorkspace::openTextFile( const char *pszP
 	}
 
 	size_t nReadBytes = 0;
-	const SIRFileSystemResult eRead = SIRPlatformFileSystem::readFile( pszPath, pszDestination, nFileBytes, &nReadBytes );
-	if ( eRead != SIRFileSystemResult::SIR_FILESYSTEM_OK || nReadBytes != nFileBytes ) {
+	const sirFileSystemResult eRead = SIRPlatformFileSystem::readFile( pszPath, pszDestination, nFileBytes, &nReadBytes );
+	if ( eRead != sirFileSystemResult::SIR_FILESYSTEM_OK || nReadBytes != nFileBytes ) {
 		rollbackOpen();
 		return SIREditorWorkspaceResult::SIR_EDITOR_WORKSPACE_FILE_IO;
 	}

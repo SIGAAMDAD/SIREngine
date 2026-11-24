@@ -123,13 +123,13 @@ SIRScriptResult SIRScriptScheduler::enqueue( SIRScriptPhase ePhase, const sirScr
 	slot.nSequence = ++m_nSequence;
 	slot.nGeneration = nextGeneration( slot.nGeneration );
 	slot.nNext = 0;
-	if ( m_szTails[ePhase] != 0 ) {
-		m_szSlots[m_szTails[ePhase]].nNext = nSlot;
+	if ( m_szTails[static_cast<uint32_t>( ePhase )] != 0 ) {
+		m_szSlots[m_szTails[static_cast<uint32_t>( ePhase )]].nNext = nSlot;
 	} else {
-		m_szHeads[ePhase] = nSlot;
+		m_szHeads[static_cast<uint32_t>( ePhase )] = nSlot;
 	}
-	m_szTails[ePhase] = nSlot;
-	++m_szCounts[ePhase];
+	m_szTails[static_cast<uint32_t>( ePhase )] = nSlot;
+	++m_szCounts[static_cast<uint32_t>( ePhase )];
 	*pHandle = { nSlot, slot.nGeneration };
 	return SIRScriptResult::SIR_SCRIPT_OK;
 }
@@ -170,7 +170,7 @@ SIRScriptResult SIRScriptScheduler::cancel( sirScriptTaskHandle_t handle ) noexc
 		return SIRScriptResult::SIR_SCRIPT_INVALID_HANDLE;
 	}
 
-	for ( uint32_t iPhase = 0; iPhase < SIRScriptPhase::SIR_SCRIPT_PHASE_COUNT; ++iPhase ) {
+	for ( uint32_t iPhase = 0; iPhase < static_cast<uint32_t>( SIRScriptPhase::SIR_SCRIPT_PHASE_COUNT ); ++iPhase ) {
 		uint32_t nPrevious = 0;
 		uint32_t nCurrent = m_szHeads[iPhase];
 		while ( nCurrent != 0 ) {
@@ -201,7 +201,7 @@ bool SIRScriptScheduler::dequeue( SIRScriptPhase ePhase, uint64_t nLastSequence,
 	if ( pCall == nullptr || ePhase >= SIRScriptPhase::SIR_SCRIPT_PHASE_COUNT ) {
 		return false;
 	}
-	const uint32_t nSlot = m_szHeads[ePhase];
+	const uint32_t nSlot = m_szHeads[static_cast<uint32_t>( ePhase )];
 	if ( nSlot == 0 || m_szSlots[nSlot].nSequence > nLastSequence ) {
 		return false;
 	}
@@ -209,18 +209,18 @@ bool SIRScriptScheduler::dequeue( SIRScriptPhase ePhase, uint64_t nLastSequence,
 	sirScriptScheduledSlot_t& slot = m_szSlots[nSlot];
 	*pCall = slot.call;
 	slot.call.allocation = {};
-	m_szHeads[ePhase] = slot.nNext;
-	if ( m_szHeads[ePhase] == 0 ) {
-		m_szTails[ePhase] = 0;
+	m_szHeads[static_cast<uint32_t>( ePhase )] = slot.nNext;
+	if ( m_szHeads[static_cast<uint32_t>( ePhase )] == 0 ) {
+		m_szTails[static_cast<uint32_t>( ePhase )] = 0;
 	}
-	--m_szCounts[ePhase];
+	--m_szCounts[static_cast<uint32_t>( ePhase )];
 	release( nSlot );
 	return true;
 }
 
 void SIRScriptScheduler::clear( void ) noexcept
 {
-	for ( uint32_t iPhase = 0; iPhase < SIRScriptPhase::SIR_SCRIPT_PHASE_COUNT; ++iPhase ) {
+	for ( uint32_t iPhase = 0; iPhase < static_cast<uint32_t>( SIRScriptPhase::SIR_SCRIPT_PHASE_COUNT ); ++iPhase ) {
 		while ( m_szHeads[iPhase] != 0 ) {
 			const uint32_t nSlot = m_szHeads[iPhase];
 			m_szHeads[iPhase] = m_szSlots[nSlot].nNext;
@@ -234,7 +234,7 @@ void SIRScriptScheduler::clear( void ) noexcept
 
 uint32_t SIRScriptScheduler::pendingCount( SIRScriptPhase ePhase ) const noexcept
 {
-	return ePhase < SIRScriptPhase::SIR_SCRIPT_PHASE_COUNT ? m_szCounts[ePhase] : 0;
+	return ePhase < SIRScriptPhase::SIR_SCRIPT_PHASE_COUNT ? m_szCounts[static_cast<uint32_t>( ePhase )] : 0;
 }
 
 uint64_t SIRScriptScheduler::lastSequence( void ) const noexcept

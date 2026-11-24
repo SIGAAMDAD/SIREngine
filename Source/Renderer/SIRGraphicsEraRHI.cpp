@@ -26,7 +26,7 @@ static SIRGraphicsResult sirEraCheckHandle( sirGraphicsHandle_t handle, SIRGraph
 SIRGraphicsResult SIRGraphicsEraRHI::admitPipeline( const sirGraphicsABIPipeline_t& pipeline,
                                                       const sirGraphicsABIPipelineModelCaps_t& caps ) noexcept
 {
-	if ( pipeline.nModel == SIRGraphicsPipelineModel::SIR_GRAPHICS_PIPELINE_MODEL_MODERN ) {
+	if ( pipeline.nModel == static_cast<uint32_t>( SIRGraphicsPipelineModel::SIR_GRAPHICS_PIPELINE_MODEL_MODERN ) ) {
 		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
 	return sirGraphicsValidateABIPipeline( &pipeline, &caps );
@@ -42,8 +42,8 @@ SIRGraphicsResult SIRGraphicsEraRHI::admitBatch( const sirGraphicsEraBatch_t& ba
 	if ( batch.eModel != SIRGraphicsPipelineModel::SIR_GRAPHICS_PIPELINE_MODEL_PROGRAMMABLE && batch.eModel != SIRGraphicsPipelineModel::SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION ) {
 		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
-	if ( caps.nModel != batch.eModel || caps.nExecutionModel != SIRGraphicsExecutionModel::SIR_GRAPHICS_EXECUTION_STATEFUL_SERIAL ||
-	     ( caps.nQueueMask & ( 1U << SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_DIRECT ) ) == 0 ) {
+	if ( caps.nModel != static_cast<uint32_t>( batch.eModel ) || caps.nExecutionModel != static_cast<uint32_t>( SIRGraphicsExecutionModel::SIR_GRAPHICS_EXECUTION_STATEFUL_SERIAL ) ||
+	     ( caps.nQueueMask & ( 1U << static_cast<uint32_t>( SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_DIRECT ) ) ) == 0 ) {
 		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
 	if ( batch.nDeviceGeneration == 0 || batch.nDeviceGeneration != caps.nDeviceGeneration ) {
@@ -232,7 +232,7 @@ SIRGraphicsResult SIRGraphicsEraRHI::execute( const sirGraphicsEraBatch_t& batch
 SIRGraphicsResult SIRGraphicsProgrammableRHI::admitPipeline( const sirGraphicsABIPipeline_t& pipeline,
                                                                const sirGraphicsABIPipelineModelCaps_t& caps ) noexcept
 {
-	if ( pipeline.nModel != SIRGraphicsPipelineModel::SIR_GRAPHICS_PIPELINE_MODEL_PROGRAMMABLE || caps.nModel != SIRGraphicsPipelineModel::SIR_GRAPHICS_PIPELINE_MODEL_PROGRAMMABLE ) {
+	if ( pipeline.nModel != static_cast<uint32_t>( SIRGraphicsPipelineModel::SIR_GRAPHICS_PIPELINE_MODEL_PROGRAMMABLE ) || caps.nModel != static_cast<uint32_t>( SIRGraphicsPipelineModel::SIR_GRAPHICS_PIPELINE_MODEL_PROGRAMMABLE ) ) {
 		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
 	return SIRGraphicsEraRHI::admitPipeline( pipeline, caps );
@@ -253,7 +253,7 @@ SIRGraphicsResult SIRGraphicsProgrammableRHI::execute( const sirGraphicsEraBatch
 SIRGraphicsResult SIRGraphicsFixedFunctionRHI::admitPipeline( const sirGraphicsABIPipeline_t& pipeline,
                                                                 const sirGraphicsABIPipelineModelCaps_t& caps ) noexcept
 {
-	if ( pipeline.nModel != SIRGraphicsPipelineModel::SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION || caps.nModel != SIRGraphicsPipelineModel::SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION ) {
+	if ( pipeline.nModel != static_cast<uint32_t>( SIRGraphicsPipelineModel::SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION ) || caps.nModel != static_cast<uint32_t>( SIRGraphicsPipelineModel::SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION ) ) {
 		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
 	return SIRGraphicsEraRHI::admitPipeline( pipeline, caps );

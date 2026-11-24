@@ -361,5 +361,5 @@ sirPlatformDeviceIdentity_t SIRFMODContext::getOutputDeviceIdentity( void ) cons
 		return {};
 	}
 	const uint64_t nNative = m_iOutputDriver < 0 ? 0 : static_cast<uint64_t>(m_iOutputDriver) + 1;
-	return { nNative, m_nOutputPhysicalId, m_nOutputGeneration, SIRPlatformDeviceBackend::SIR_PLATFORM_DEVICE_FMOD, 0 };
+	return { nNative, m_nOutputPhysicalId, m_nOutputGeneration, sirPlatformDeviceBackend::SIR_PLATFORM_DEVICE_FMOD, 0 };
 }

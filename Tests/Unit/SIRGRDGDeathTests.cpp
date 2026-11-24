@@ -13,12 +13,13 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
+#include <Core/Platform/Shared/File/SIRPlatformFileSystem.h>
 #include <Core/Jobs/SIRTaskGraph.h>
 #include <Core/Jobs/SIRTaskFenceTracker.h>
 #include <Core/Jobs/SIRTaskScheduler.h>
 #include <Core/Memory/SIRMemoryManager.h>
-#include <Core/Platform/SIRPlatformFile.h>
-#include <Core/Platform/SIRVirtualMemory.h>
+#include <Core/Platform/Shared/File/SIRPlatformFile.h>
+#include <Core/Platform/Shared/Memory/SIRVirtualMemory.h>
 #include <Resources/SIRResourceFileLoad.h>
 #include <Resources/SIRResourceGraph.h>
 
@@ -317,13 +318,13 @@ static void testExpectedAbort( void ( *pfnScenario )( void ) )
 
 int main( void )
 {
-	SIRPlatformFile::remove( "sir_grdg_death_test.bin" );
+	SIRPlatformFileSystem::removeFile( "sir_grdg_death_test.bin" );
 	SIRPlatformFile file;
-	SIR_DEATH_CHECK( file.open( "sir_grdg_death_test.bin", SIR_FILE_OPEN_CREATE | SIR_FILE_OPEN_WRITE ) == SIR_FILE_OK );
+	SIR_DEATH_CHECK( file.open( "sir_grdg_death_test.bin", static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_CREATE ) | static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_WRITE ) ) == sirFileResult::SIR_FILE_OK );
 	const char szData[8] = { 'd', 'e', 'a', 't', 'h', '0', '0', '1' };
 	uint64_t nTransferred = 0;
-	SIR_DEATH_CHECK( file.writeAt( 0, szData, sizeof( szData ), &nTransferred ) == SIR_FILE_OK && nTransferred == sizeof( szData ) );
-	SIR_DEATH_CHECK( file.close() == SIR_FILE_OK );
+	SIR_DEATH_CHECK( file.writeAt( 0, szData, sizeof( szData ), &nTransferred ) == sirFileResult::SIR_FILE_OK && nTransferred == sizeof( szData ) );
+	SIR_DEATH_CHECK( file.close() == sirFileResult::SIR_FILE_OK );
 	testExpectedAbort( deathActiveFileLoad );
 	testExpectedAbort( deathLiveDerivedRegistry );
 	testExpectedAbort( deathPendingProvider );
@@ -333,7 +334,7 @@ int main( void )
 	testExpectedAbort( deathGraphWithProviderPin );
 	testExpectedAbort( deathSubmittedTaskGraph );
 	testExpectedAbort( deathExternallyReleasedTaskGraph );
-	SIR_DEATH_CHECK( SIRPlatformFile::remove( "sir_grdg_death_test.bin" ) == SIR_FILE_OK );
+	SIR_DEATH_CHECK( SIRPlatformFileSystem::removeFile( "sir_grdg_death_test.bin" ) == sirFileResult::SIR_FILE_OK );
 	puts( "PASS: GRDG lifecycle destructor invariants reject active ownership" );
 	return 0;
 }

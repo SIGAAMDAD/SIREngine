@@ -12,14 +12,27 @@ express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
-#include <Core/Platform/Window/Linux/SIRWindowDriverX11.h>
-#include <Core/Platform/Window/SIRWindowSystem.h>
+#include <Core/Platform/Shared/Window/SIRNativeWindowLease.h>
+#include <Core/Platform/Linux/Window/SIRWindowDriverX11.h>
+#include <Core/Platform/Shared/Window/SIRWindowSystem.h>
 #include <X11/Xatom.h>
 #include <X11/Xlib.h>
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
+
+
+static sirWindowResult sirAcquireTestLease( SIRWindowSystem& system, sirWindowHandle_t handle, SIRNativeWindowLease& lease, sirWindowNativeView_t& view ) noexcept
+{
+    if ( lease.isValid() ) {
+        SIRNativeWindowLease probe;
+        return system.acquireNativeLease( handle, probe );
+    }
+    const sirWindowResult result = system.acquireNativeLease( handle, lease );
+    if ( result == sirWindowResult::SIR_WINDOW_OK ) { view = lease.getView(); }
+    return result;
+}
 
 typedef struct sirX11SinkCount_s
 {
@@ -44,12 +57,12 @@ static bool sirTestX11ServerSocketLoss( void ) noexcept
 		return false;
 	}
 	sirWindowHandle_t hWindow = {};
-	if ( windows.createWindow( { "server-transport-loss", 320, 200 }, &hWindow ) != SIR_WINDOW_OK ) {
+	if ( windows.createWindow( { "server-transport-loss", 320, 200 }, &hWindow ) != sirWindowResult::SIR_WINDOW_OK ) {
 		return false;
 	}
-	sirWindowNativeLease_t lease = {};
+	SIRNativeWindowLease lease;
 	sirWindowNativeView_t native = {};
-	if ( windows.acquireNativeLease( hWindow, &lease, &native ) != SIR_WINDOW_OK ) {
+	if ( sirAcquireTestLease( windows, hWindow, lease, native ) != sirWindowResult::SIR_WINDOW_OK ) {
 		return false;
 	}
 	// Close only this client's socket. Xvfb continues to service other
@@ -60,8 +73,8 @@ static bool sirTestX11ServerSocketLoss( void ) noexcept
 	}
 	const sirWindowResult_t ePump = windows.pumpEvents( 32 );
 	sirWindowSnapshot_t snapshot = {};
-	if ( ePump != SIR_WINDOW_NATIVE_FAILURE || windows.querySnapshot( hWindow, &snapshot ) != SIR_WINDOW_OK || !snapshot.bCloseRequested ||
-	     snapshot.bReady || windows.releaseNativeLease( lease ) != SIR_WINDOW_OK || windows.destroyWindow( hWindow ) != SIR_WINDOW_OK ||
+	if ( ePump != sirWindowResult::SIR_WINDOW_NATIVE_FAILURE || windows.querySnapshot( hWindow, &snapshot ) != sirWindowResult::SIR_WINDOW_OK || !snapshot.bCloseRequested ||
+	     snapshot.bReady || lease.reset() != sirWindowResult::SIR_WINDOW_OK || windows.destroyWindow( hWindow ) != sirWindowResult::SIR_WINDOW_OK ||
 	     windows.shutdown() != SIR_SYSTEM_OK ) {
 		return false;
 	}
@@ -71,8 +84,8 @@ static bool sirTestX11ServerSocketLoss( void ) noexcept
 		return false;
 	}
 	sirWindowHandle_t fresh = {};
-	if ( newWindows.createWindow( { "new-client", 320, 200 }, &fresh ) != SIR_WINDOW_OK ||
-	     newWindows.destroyWindow( fresh ) != SIR_WINDOW_OK || newWindows.shutdown() != SIR_SYSTEM_OK ) {
+	if ( newWindows.createWindow( { "new-client", 320, 200 }, &fresh ) != sirWindowResult::SIR_WINDOW_OK ||
+	     newWindows.destroyWindow( fresh ) != sirWindowResult::SIR_WINDOW_OK || newWindows.shutdown() != SIR_SYSTEM_OK ) {
 		return false;
 	}
 	return true;
@@ -92,23 +105,23 @@ int main( void )
 	}
 	const sirWindowCreateDesc_t desc = { "SIR multiwindow test", 640, 480 };
 	sirWindowHandle_t first = {}, second = {};
-	if ( windows.createWindow( desc, &first ) != SIR_WINDOW_OK || windows.createWindow( desc, &second ) != SIR_WINDOW_OK ) {
+	if ( windows.createWindow( desc, &first ) != sirWindowResult::SIR_WINDOW_OK || windows.createWindow( desc, &second ) != sirWindowResult::SIR_WINDOW_OK ) {
 		return 2;
 	}
-	sirWindowNativeLease_t lease = {};
+	SIRNativeWindowLease lease;
 	sirWindowNativeView_t view = {};
-	if ( windows.acquireNativeLease( second, &lease, &view ) != SIR_WINDOW_OK || view.ePlatform != SIR_WINDOW_PLATFORM_X11 ||
+	if ( sirAcquireTestLease( windows, second, lease, view ) != sirWindowResult::SIR_WINDOW_OK || view.ePlatform != sirWindowPlatform::SIR_WINDOW_PLATFORM_X11 ||
 	     view.nDisplayOrInstance == 0 || view.nNativeWindow == 0 ) {
 		return 3;
 	}
-	const sirWindowMutation_t title = { SIR_WINDOW_MUTATION_TITLE, "Renamed window", 0, 0 };
-	const sirWindowMutation_t resize = { SIR_WINDOW_MUTATION_RESIZE, nullptr, 320, 240 };
-	const sirWindowMutation_t minimize = { SIR_WINDOW_MUTATION_MINIMIZE, nullptr, 0, 0 };
-	const sirWindowMutation_t maximize = { SIR_WINDOW_MUTATION_MAXIMIZE, nullptr, 0, 0 };
+	const sirWindowMutation_t title = { sirWindowMutationKind::SIR_WINDOW_MUTATION_TITLE, "Renamed window", 0, 0 };
+	const sirWindowMutation_t resize = { sirWindowMutationKind::SIR_WINDOW_MUTATION_RESIZE, nullptr, 320, 240 };
+	const sirWindowMutation_t minimize = { sirWindowMutationKind::SIR_WINDOW_MUTATION_MINIMIZE, nullptr, 0, 0 };
+	const sirWindowMutation_t maximize = { sirWindowMutationKind::SIR_WINDOW_MUTATION_MAXIMIZE, nullptr, 0, 0 };
 	const sirWindowResult_t eMinimize = windows.mutateWindow( second, minimize );
-	if ( windows.mutateWindow( second, title ) != SIR_WINDOW_OK || windows.mutateWindow( second, resize ) != SIR_WINDOW_OK ||
-	     windows.mutateWindow( second, maximize ) != SIR_WINDOW_OK ||
-	     ( eMinimize != SIR_WINDOW_OK && eMinimize != SIR_WINDOW_UNSUPPORTED ) ) {
+	if ( windows.mutateWindow( second, title ) != sirWindowResult::SIR_WINDOW_OK || windows.mutateWindow( second, resize ) != sirWindowResult::SIR_WINDOW_OK ||
+	     windows.mutateWindow( second, maximize ) != sirWindowResult::SIR_WINDOW_OK ||
+	     ( eMinimize != sirWindowResult::SIR_WINDOW_OK && eMinimize != sirWindowResult::SIR_WINDOW_UNSUPPORTED ) ) {
 		return 9;
 	}
 	Display *pDisplay = ( Display * )view.nDisplayOrInstance;
@@ -134,28 +147,28 @@ int main( void )
 	XUnmapWindow( pDisplay, ( Window )view.nNativeWindow );
 	XSync( pDisplay, False );
 	for ( uint32_t i = 0; i < 8; ++i ) {
-		if ( windows.pumpEvents( 128 ) != SIR_WINDOW_OK ) {
+		if ( windows.pumpEvents( 128 ) != sirWindowResult::SIR_WINDOW_OK ) {
 			return 10;
 		}
 	}
 	sirWindowSnapshot_t hidden = {};
-	if ( windows.querySnapshot( second, &hidden ) != SIR_WINDOW_OK || hidden.bVisible || hidden.bReady ) {
+	if ( windows.querySnapshot( second, &hidden ) != sirWindowResult::SIR_WINDOW_OK || hidden.bVisible || hidden.bReady ) {
 		return 11;
 	}
 	XMapWindow( pDisplay, ( Window )view.nNativeWindow );
 	XSync( pDisplay, False );
 	for ( uint32_t i = 0; i < 8; ++i ) {
-		if ( windows.pumpEvents( 128 ) != SIR_WINDOW_OK ) {
+		if ( windows.pumpEvents( 128 ) != sirWindowResult::SIR_WINDOW_OK ) {
 			return 12;
 		}
 	}
-	if ( windows.querySnapshot( second, &hidden ) != SIR_WINDOW_OK || !hidden.bVisible || !hidden.bReady ) {
+	if ( windows.querySnapshot( second, &hidden ) != sirWindowResult::SIR_WINDOW_OK || !hidden.bVisible || !hidden.bReady ) {
 		return 13;
 	}
 	// Root display geometry changes invalidate presentation state for all
 	// existing windows without mutating their native client sizes.
 	sirWindowSnapshot_t beforeTopology = {}, afterTopology = {};
-	if ( windows.querySnapshot( second, &beforeTopology ) != SIR_WINDOW_OK ) {
+	if ( windows.querySnapshot( second, &beforeTopology ) != sirWindowResult::SIR_WINDOW_OK ) {
 		return 19;
 	}
 	XWindowAttributes root = {};
@@ -173,11 +186,11 @@ int main( void )
 	}
 	XSync( pDisplay, False );
 	for ( uint32_t i = 0; i < 4; ++i ) {
-		if ( windows.pumpEvents( 32 ) != SIR_WINDOW_OK ) {
+		if ( windows.pumpEvents( 32 ) != sirWindowResult::SIR_WINDOW_OK ) {
 			return 22;
 		}
 	}
-	if ( windows.querySnapshot( second, &afterTopology ) != SIR_WINDOW_OK ||
+	if ( windows.querySnapshot( second, &afterTopology ) != sirWindowResult::SIR_WINDOW_OK ||
 	     afterTopology.nMetricsRevision <= beforeTopology.nMetricsRevision ) {
 		return 23;
 	}
@@ -191,23 +204,23 @@ int main( void )
 	XSendEvent( pDisplay, ( Window )view.nNativeWindow, False, FocusChangeMask, &focused );
 	XSync( pDisplay, False );
 	for ( uint32_t i = 0; i < 4; ++i ) {
-		if ( windows.pumpEvents( 128 ) != SIR_WINDOW_OK ) {
+		if ( windows.pumpEvents( 128 ) != sirWindowResult::SIR_WINDOW_OK ) {
 			return 15;
 		}
 	}
 	sirWindowSnapshot_t focusSnapshot = {};
-	if ( windows.querySnapshot( second, &focusSnapshot ) != SIR_WINDOW_OK || !focusSnapshot.bFocused ) {
+	if ( windows.querySnapshot( second, &focusSnapshot ) != sirWindowResult::SIR_WINDOW_OK || !focusSnapshot.bFocused ) {
 		return 16;
 	}
 	focused.xfocus.type = FocusOut;
 	XSendEvent( pDisplay, ( Window )view.nNativeWindow, False, FocusChangeMask, &focused );
 	XSync( pDisplay, False );
 	for ( uint32_t i = 0; i < 4; ++i ) {
-		if ( windows.pumpEvents( 128 ) != SIR_WINDOW_OK ) {
+		if ( windows.pumpEvents( 128 ) != sirWindowResult::SIR_WINDOW_OK ) {
 			return 17;
 		}
 	}
-	if ( windows.querySnapshot( second, &focusSnapshot ) != SIR_WINDOW_OK || focusSnapshot.bFocused ) {
+	if ( windows.querySnapshot( second, &focusSnapshot ) != sirWindowResult::SIR_WINDOW_OK || focusSnapshot.bFocused ) {
 		return 18;
 	}
 	XResizeWindow( pDisplay, ( Window )view.nNativeWindow, 320, 240 );
@@ -229,7 +242,7 @@ int main( void )
 	XSendEvent( pDisplay, ( Window )view.nNativeWindow, False, NoEventMask, &event );
 	XSync( pDisplay, False );
 	for ( uint32_t i = 0; i < 16; ++i ) {
-		if ( windows.pumpEvents( 128 ) != SIR_WINDOW_OK ) {
+		if ( windows.pumpEvents( 128 ) != sirWindowResult::SIR_WINDOW_OK ) {
 			return 4;
 		}
 	}
@@ -237,12 +250,12 @@ int main( void )
 	if ( counts.nEvents == 0 || counts.nKeyPress != 1 ) {
 		return 8;
 	}
-	if ( windows.querySnapshot( second, &snapshot ) != SIR_WINDOW_OK || snapshot.nWidth != 320 || snapshot.nHeight != 240 ||
-	     !snapshot.bCloseRequested || windows.destroyWindow( second ) != SIR_WINDOW_BUSY ) {
+	if ( windows.querySnapshot( second, &snapshot ) != sirWindowResult::SIR_WINDOW_OK || snapshot.nWidth != 320 || snapshot.nHeight != 240 ||
+	     !snapshot.bCloseRequested || windows.destroyWindow( second ) != sirWindowResult::SIR_WINDOW_BUSY ) {
 		return 5;
 	}
-	if ( windows.releaseNativeLease( lease ) != SIR_WINDOW_OK || windows.destroyWindow( second ) != SIR_WINDOW_OK ||
-	     windows.destroyWindow( first ) != SIR_WINDOW_OK || windows.shutdown() != SIR_SYSTEM_OK ) {
+	if ( lease.reset() != sirWindowResult::SIR_WINDOW_OK || windows.destroyWindow( second ) != sirWindowResult::SIR_WINDOW_OK ||
+	     windows.destroyWindow( first ) != sirWindowResult::SIR_WINDOW_OK || windows.shutdown() != SIR_SYSTEM_OK ) {
 		return 6;
 	}
 	if ( !sirTestX11ServerSocketLoss() ) {

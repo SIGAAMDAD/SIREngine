@@ -31,8 +31,8 @@ sirGraphicsABIResult_t sirGraphicsNegotiateDriverABI( sirGraphicsABIFactory_t pF
 	sirGraphicsABIDriver_t driver {};
 	driver.nSize = sizeof( driver );
 	const uint32_t nStatus = pFactory( SIR_GRAPHICS_DRIVER_ABI_MAJOR, SIR_GRAPHICS_DRIVER_ABI_MINOR, pHost, &driver );
-	if ( nStatus != SIR_GRAPHICS_ABI_SUCCESS ) {
-		return nStatus <= SIRGraphicsResult::SIR_GRAPHICS_VERSION_MISMATCH ? static_cast<sirGraphicsABIResult_t>(nStatus) : SIR_GRAPHICS_ABI_DRIVER_ERROR;
+	if ( nStatus != static_cast<uint32_t>(SIR_GRAPHICS_ABI_SUCCESS) ) {
+		return nStatus <= static_cast<uint32_t>(SIRGraphicsResult::SIR_GRAPHICS_VERSION_MISMATCH) ? static_cast<sirGraphicsABIResult_t>(nStatus) : SIR_GRAPHICS_ABI_DRIVER_ERROR;
 	}
 	const sirGraphicsABIResult_t eDriverStatus = sirGraphicsValidateABIDriver( &driver );
 	if ( eDriverStatus != SIR_GRAPHICS_ABI_SUCCESS ) {
@@ -67,7 +67,7 @@ sirGraphicsABIResult_t sirGraphicsValidateABIDriver( const sirGraphicsABIDriver_
 	if ( pDriver->nMajor != SIR_GRAPHICS_DRIVER_ABI_MAJOR || pDriver->nMinor < SIR_GRAPHICS_DRIVER_ABI_MINOR ) {
 		return SIR_GRAPHICS_ABI_VERSION_MISMATCH;
 	}
-	if ( pDriver->nBackend < SIRGraphicsBackend::SIR_GRAPHICS_BACKEND_VULKAN || pDriver->nBackend > SIRGraphicsBackend::SIR_GRAPHICS_BACKEND_OPENGL ||
+	if ( pDriver->nBackend < static_cast<uint32_t>(SIRGraphicsBackend::SIR_GRAPHICS_BACKEND_VULKAN) || pDriver->nBackend > static_cast<uint32_t>(SIRGraphicsBackend::SIR_GRAPHICS_BACKEND_OPENGL) ||
 	     pDriver->pDriver == nullptr || pDriver->pAdapterCount == nullptr || pDriver->pQueryAdapter == nullptr ||
 	     pDriver->pCreateDevice == nullptr || pDriver->pDestroyDevice == nullptr || pDriver->pReleaseDriver == nullptr ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
@@ -77,11 +77,11 @@ sirGraphicsABIResult_t sirGraphicsValidateABIDriver( const sirGraphicsABIDriver_
 
 sirGraphicsABIResult_t sirGraphicsValidateABIAdapter( const sirGraphicsABIAdapter_t *pAdapter ) noexcept
 {
-	if ( pAdapter == nullptr || pAdapter->nSize < sizeof( sirGraphicsABIAdapter_t ) || pAdapter->nBackend < SIRGraphicsBackend::SIR_GRAPHICS_BACKEND_VULKAN ||
-	     pAdapter->nBackend > SIRGraphicsBackend::SIR_GRAPHICS_BACKEND_OPENGL || pAdapter->nKind < SIRGraphicsABIAdapterKind::SIR_GRAPHICS_ABI_ADAPTER_DISCRETE ||
-	     pAdapter->nKind > SIRGraphicsABIAdapterKind::SIR_GRAPHICS_ABI_ADAPTER_OTHER || pAdapter->nApiMajor == 0 ||
-	     ( pAdapter->nFeatureMask & ~( ( SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_PRESENT << 1 ) - 1ULL ) ) != 0 || pAdapter->nQueueMask == 0 ||
-	     ( pAdapter->nQueueMask & ~( ( 1U << SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT ) - 1U ) ) != 0 || pAdapter->nReserved != 0 ||
+	if ( pAdapter == nullptr || pAdapter->nSize < sizeof( sirGraphicsABIAdapter_t ) || pAdapter->nBackend < static_cast<uint32_t>(SIRGraphicsBackend::SIR_GRAPHICS_BACKEND_VULKAN) ||
+	     pAdapter->nBackend > static_cast<uint32_t>(SIRGraphicsBackend::SIR_GRAPHICS_BACKEND_OPENGL) || pAdapter->nKind < static_cast<uint32_t>(SIRGraphicsABIAdapterKind::SIR_GRAPHICS_ABI_ADAPTER_DISCRETE) ||
+	     pAdapter->nKind > static_cast<uint32_t>(SIRGraphicsABIAdapterKind::SIR_GRAPHICS_ABI_ADAPTER_OTHER) || pAdapter->nApiMajor == 0 ||
+	     ( pAdapter->nFeatureMask & ~( ( static_cast<uint64_t>(SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_PRESENT) << 1 ) - 1ULL ) ) != 0 || pAdapter->nQueueMask == 0 ||
+	     ( pAdapter->nQueueMask & ~( ( 1U << static_cast<uint32_t>(SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT) ) - 1U ) ) != 0 || pAdapter->nReserved != 0 ||
 	     pAdapter->szName[127] != '\0' ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
@@ -91,40 +91,40 @@ sirGraphicsABIResult_t sirGraphicsValidateABIAdapter( const sirGraphicsABIAdapte
 sirGraphicsABIResult_t sirGraphicsValidateABICapabilities( const sirGraphicsABICapabilities_t *pInfo ) noexcept
 {
 	if ( pInfo == nullptr || pInfo->nSize < sizeof( sirGraphicsABICapabilities_t ) || pInfo->nDeviceGeneration == 0 ||
-	     pInfo->nBackend < SIRGraphicsBackend::SIR_GRAPHICS_BACKEND_VULKAN || pInfo->nBackend > SIRGraphicsBackend::SIR_GRAPHICS_BACKEND_OPENGL ||
-	     pInfo->nAdapterKind < SIRGraphicsABIAdapterKind::SIR_GRAPHICS_ABI_ADAPTER_DISCRETE || pInfo->nAdapterKind > SIRGraphicsABIAdapterKind::SIR_GRAPHICS_ABI_ADAPTER_OTHER ||
-	     pInfo->nEnabledQueues == 0 || ( pInfo->nEnabledQueues & ~( ( 1U << SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT ) - 1U ) ) != 0 ||
+	     pInfo->nBackend < static_cast<uint32_t>(SIRGraphicsBackend::SIR_GRAPHICS_BACKEND_VULKAN) || pInfo->nBackend > static_cast<uint32_t>(SIRGraphicsBackend::SIR_GRAPHICS_BACKEND_OPENGL) ||
+	     pInfo->nAdapterKind < static_cast<uint32_t>(SIRGraphicsABIAdapterKind::SIR_GRAPHICS_ABI_ADAPTER_DISCRETE) || pInfo->nAdapterKind > static_cast<uint32_t>(SIRGraphicsABIAdapterKind::SIR_GRAPHICS_ABI_ADAPTER_OTHER) ||
+	     pInfo->nEnabledQueues == 0 || ( pInfo->nEnabledQueues & ~( ( 1U << static_cast<uint32_t>(SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT) ) - 1U ) ) != 0 ||
 	     pInfo->nMaximumFramesInFlight == 0 || pInfo->nMaximumSamples == 0 || pInfo->nUnifiedMemory > 1 || pInfo->nReserved != 0 ||
-	     ( pInfo->nEnabledFeatures & ~( ( SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_PRESENT << 1 ) - 1ULL ) ) != 0 ) {
+	     ( pInfo->nEnabledFeatures & ~( ( static_cast<uint64_t>(SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_PRESENT) << 1 ) - 1ULL ) ) != 0 ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
-	const uint32_t nValidModels = ( 1U << SIRGraphicsPipelineModel::SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION ) - 1U;
+	const uint32_t nValidModels = ( 1U << static_cast<uint32_t>(SIRGraphicsPipelineModel::SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION) ) - 1U;
 	if ( pInfo->nPipelineModelMask == 0 || ( pInfo->nPipelineModelMask & ~nValidModels ) != 0 ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
-	const bool bFixedModel = ( pInfo->nPipelineModelMask & ( 1U << ( SIRGraphicsPipelineModel::SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION - 1 ) ) ) != 0;
-	const bool bFixedFeature = ( pInfo->nEnabledFeatures & SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_FIXED_FUNCTION ) != 0;
+	const bool bFixedModel = ( pInfo->nPipelineModelMask & ( 1U << ( static_cast<uint32_t>(SIRGraphicsPipelineModel::SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION) - 1 ) ) ) != 0;
+	const bool bFixedFeature = ( pInfo->nEnabledFeatures & static_cast<uint64_t>(SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_FIXED_FUNCTION) ) != 0;
 	if ( bFixedModel != bFixedFeature ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
-	if ( ( pInfo->nEnabledFeatures & SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_GRAPHICS ) != 0 &&
-	     ( pInfo->nEnabledQueues & ( 1U << SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_DIRECT ) ) == 0 ) {
+	if ( ( pInfo->nEnabledFeatures & static_cast<uint64_t>(SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_GRAPHICS) ) != 0 &&
+	     ( pInfo->nEnabledQueues & ( 1U << static_cast<uint32_t>(SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_DIRECT) ) ) == 0 ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
-	if ( ( pInfo->nEnabledFeatures & SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_PRESENT ) != 0 &&
-	     ( pInfo->nEnabledFeatures & SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_GRAPHICS ) == 0 ) {
+	if ( ( pInfo->nEnabledFeatures & static_cast<uint64_t>(SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_PRESENT) ) != 0 &&
+	     ( pInfo->nEnabledFeatures & static_cast<uint64_t>(SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_GRAPHICS) ) == 0 ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
-	if ( ( pInfo->nEnabledFeatures & SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_ASYNC_COMPUTE ) != 0 &&
-	     ( pInfo->nEnabledQueues & ( 1U << SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COMPUTE ) ) == 0 ) {
+	if ( ( pInfo->nEnabledFeatures & static_cast<uint64_t>(SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_ASYNC_COMPUTE) ) != 0 &&
+	     ( pInfo->nEnabledQueues & ( 1U << static_cast<uint32_t>(SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COMPUTE) ) ) == 0 ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
-	if ( ( pInfo->nEnabledFeatures & SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_COPY_QUEUE ) != 0 &&
-	     ( pInfo->nEnabledQueues & ( 1U << SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COPY ) ) == 0 ) {
+	if ( ( pInfo->nEnabledFeatures & static_cast<uint64_t>(SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_COPY_QUEUE) ) != 0 &&
+	     ( pInfo->nEnabledQueues & ( 1U << static_cast<uint32_t>(SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COPY) ) ) == 0 ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
-	if ( ( pInfo->nEnabledFeatures & SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_COMPUTE ) != 0 &&
-	     ( pInfo->nEnabledQueues & ( ( 1U << SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_DIRECT ) | ( 1U << SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COMPUTE ) ) ) == 0 ) {
+	if ( ( pInfo->nEnabledFeatures & static_cast<uint64_t>(SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_COMPUTE) ) != 0 &&
+	     ( pInfo->nEnabledQueues & ( ( 1U << static_cast<uint32_t>(SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_DIRECT) ) | ( 1U << static_cast<uint32_t>(SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COMPUTE) ) ) ) == 0 ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
 	return SIR_GRAPHICS_ABI_SUCCESS;
@@ -132,8 +132,8 @@ sirGraphicsABIResult_t sirGraphicsValidateABICapabilities( const sirGraphicsABIC
 
 sirGraphicsABIResult_t sirGraphicsValidateABIFormat( const sirGraphicsABIFormat_t *pFormat ) noexcept
 {
-	if ( pFormat == nullptr || pFormat->nSize < sizeof( sirGraphicsABIFormat_t ) || pFormat->nFormat <= SIRGraphicsFormat::SIR_GRAPHICS_FORMAT_UNKNOWN ||
-	     pFormat->nFormat > SIRGraphicsFormat::SIR_GRAPHICS_FORMAT_BC7_UNORM || pFormat->nReserved != 0 ||
+	if ( pFormat == nullptr || pFormat->nSize < sizeof( sirGraphicsABIFormat_t ) || pFormat->nFormat <= static_cast<uint32_t>( SIRGraphicsFormat::SIR_GRAPHICS_FORMAT_UNKNOWN ) ||
+	     pFormat->nFormat > static_cast<uint32_t>( SIRGraphicsFormat::SIR_GRAPHICS_FORMAT_BC7_UNORM ) || pFormat->nReserved != 0 ||
 	     ( ( pFormat->nOptimalFeatures | pFormat->nLinearFeatures ) & ~0x7FU ) != 0 || ( pFormat->nSampleCountMask & ~0x7FU ) != 0 ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
@@ -163,7 +163,7 @@ sirGraphicsABIResult_t sirGraphicsValidateABIDevice( const sirGraphicsABIDevice_
 sirGraphicsABIResult_t sirGraphicsValidateABICommandList( const sirGraphicsABICommandList_t *pCommands ) noexcept
 {
 	if ( pCommands == nullptr || pCommands->nSize < sizeof( sirGraphicsABICommandList_t ) || pCommands->nDeviceGeneration == 0 ||
-	     pCommands->nQueue >= SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT || pCommands->nReserved != 0 || pCommands->pCommands == nullptr ||
+	     pCommands->nQueue >= static_cast<uint32_t>(SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT) || pCommands->nReserved != 0 || pCommands->pCommands == nullptr ||
 	     pCommands->pReset == nullptr || pCommands->pBarrier == nullptr || pCommands->pCopyBuffer == nullptr ||
 	     pCommands->pCopyBufferTexture == nullptr || pCommands->pBeginRenderPass == nullptr || pCommands->pEndRenderPass == nullptr ||
 	     pCommands->pBindPipeline == nullptr || pCommands->pBindBindingSet == nullptr || pCommands->pBindVertexBuffer == nullptr ||
@@ -186,12 +186,12 @@ sirGraphicsABIResult_t sirGraphicsSelectABIProfile( const sirGraphicsABICapabili
 	if ( eStatus != SIR_GRAPHICS_ABI_SUCCESS ) {
 		return eStatus;
 	}
-	if ( ( pInfo->nEnabledFeatures & SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_GRAPHICS ) == 0 ) {
-		return ( pInfo->nEnabledFeatures & SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_COMPUTE ) != 0 ? SIR_GRAPHICS_ABI_SUCCESS : SIR_GRAPHICS_ABI_UNSUPPORTED;
+	if ( ( pInfo->nEnabledFeatures & static_cast<uint64_t>(SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_GRAPHICS) ) == 0 ) {
+		return ( pInfo->nEnabledFeatures & static_cast<uint64_t>(SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_COMPUTE) ) != 0 ? SIR_GRAPHICS_ABI_SUCCESS : SIR_GRAPHICS_ABI_UNSUPPORTED;
 	}
 	*pProfile = 1;
 	const uint64_t nModern =
-	    SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_COMPUTE | SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_SHADER_STORAGE | SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_MRT | SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_PRESENT;
+	    static_cast<uint64_t>(SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_COMPUTE) | static_cast<uint64_t>(SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_SHADER_STORAGE) | static_cast<uint64_t>(SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_MRT) | static_cast<uint64_t>(SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_PRESENT);
 	if ( ( pInfo->nEnabledFeatures & nModern ) == nModern && pInfo->nMaximumColorAttachments >= 4 && pInfo->nMaximumBindings >= 16 ) {
 		*pProfile = 2;
 	}

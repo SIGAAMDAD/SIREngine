@@ -14,8 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#include <Core/Platform/SIRScopedLock.h>
-#include <Core/Platform/SIRSync.h>
+#include <Core/Platform/Shared/Threading/SIRScopedLock.h>
+#include <Core/Platform/Shared/Threading/SIRSync.h>
 #include <Core/Memory/SIRGeneralHeap.h>
 #include <Core/Memory/Allocators/SIRCompactBucketAllocator.h>
 #include <Core/Memory/Allocators/SIRFreeListAllocator.h>

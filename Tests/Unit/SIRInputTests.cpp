@@ -15,15 +15,15 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/Input/SIRInputService.h>
 #include <Core/Input/SIRInputControllerProfiles.h>
-#include <Core/Platform/SIRPlatformTime.h>
+#include <Core/Platform/Shared/Diagnostics/SIRPlatformTime.h>
 #if defined( __linux__ )
-#include <Core/Platform/Linux/SIRLinuxEvdevBackend.h>
+#include <Core/Platform/Linux/Input/SIRLinuxEvdevBackend.h>
 #include <linux/input.h>
 #include <stdlib.h>
 #include <unistd.h>
 #endif
 #if defined( SIR_INPUT_X11_AVAILABLE )
-#include <Core/Platform/Linux/SIRLinuxX11Backend.h>
+#include <Core/Platform/Linux/Input/SIRLinuxX11Backend.h>
 #endif
 #include <stdio.h>
 
@@ -75,8 +75,8 @@ static bool testOwnershipAndGeneration( void )
 		return false;
 	}
 	sirPlatformDeviceIdentity_t native = {};
-	if ( input.platformContext().nAbiVersion != SIR_PLATFORM_CONTEXT_ABI_VERSION || !input.describePlatformDevice( first, &native ) ||
-	     native.nNativeId != 15 || native.nPhysicalId != 777 || native.nBackendId != ( SIR_PLATFORM_DEVICE_INPUT_BASE | SIR_INPUT_TEST ) ||
+	if ( input.platformContext().nProcessId == 0 || !input.describePlatformDevice( first, &native ) ||
+	     native.nNativeId != 15 || native.nPhysicalId != 777 || native.nBackendId != ( sirPlatformDeviceBackend::SIR_PLATFORM_DEVICE_INPUT_BASE | SIR_INPUT_TEST ) ||
 	     native.nGeneration != first.nGeneration || input.describePlatformDevice( first, nullptr ) ) {
 		return false;
 	}

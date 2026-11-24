@@ -47,7 +47,7 @@ private:
 	static void *allocate( void *pContext, uint64_t nBytes, uint32_t nAlignment, uint32_t nDomain ) noexcept;
 	static void release( void *pContext, void *pData, uint64_t nBytes, uint32_t nAlignment, uint32_t nDomain ) noexcept;
 
-	SIRGeneralHeap *m_pHeaps[SIRMemoryDomain::SIR_MEMORY_DOMAIN_COUNT];
+	SIRGeneralHeap *m_pHeaps[static_cast<uint32_t>( SIRMemoryDomain::SIR_MEMORY_DOMAIN_COUNT )];
 };
 
 #endif // __SIR_RESOURCEMEMORYADAPTER_H__

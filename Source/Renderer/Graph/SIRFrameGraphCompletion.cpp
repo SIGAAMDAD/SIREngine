@@ -29,14 +29,14 @@ SIRGraphicsResult sirFrameGraphProviderRequiredCompletion( const sirFrameGraphNa
 	const sirGraphicsCompletionSet_t& graphics = output.completion;
 	if ( mapping.nProviderId == 0 || mapping.nProviderGeneration == 0 || mapping.nDeviceGeneration == 0 || mapping.nLaneCount == 0 ||
 		 mapping.nLaneCount > SIR_PROVIDER_MAX_LANES || graphics.nDeviceGeneration != mapping.nDeviceGeneration ||
-		 graphics.nQueueMask == 0 || ( graphics.nQueueMask & ~( ( 1U << SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT ) - 1U ) ) != 0 ) {
+		 graphics.nQueueMask == 0 || ( graphics.nQueueMask & ~( ( 1U << static_cast<uint32_t>(SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT) ) - 1U ) ) != 0 ) {
 		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	sirProviderCompletionSet_t staged {};
 	staged.nProviderId = mapping.nProviderId;
 	staged.nProviderGeneration = mapping.nProviderGeneration;
 	staged.nLaneCount = mapping.nLaneCount;
-	for ( uint32_t iQueue = 0; iQueue < SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT; ++iQueue ) {
+	for ( uint32_t iQueue = 0; iQueue < static_cast<uint32_t>(SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT); ++iQueue ) {
 		const uint32_t nMask = 1U << iQueue;
 		if ( ( graphics.nQueueMask & nMask ) == 0 ) {
 			if ( graphics.szQueueValues[iQueue] != 0 ) {
@@ -75,7 +75,7 @@ SIRGraphicsResult sirFrameGraphProviderObservedCompletion( SIRRenderingDevice *p
 		return eRequired;
 	}
 	const sirGraphicsCompletionSet_t& graphics = output.completion;
-	for ( uint32_t iQueue = 0; iQueue < SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT; ++iQueue ) {
+	for ( uint32_t iQueue = 0; iQueue < static_cast<uint32_t>(SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT); ++iQueue ) {
 		if ( ( graphics.nQueueMask & ( 1U << iQueue ) ) == 0 ) {
 			continue;
 		}

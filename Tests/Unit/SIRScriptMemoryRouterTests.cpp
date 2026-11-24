@@ -20,7 +20,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Memory/Allocators/SIRSizeClassAllocator.h>
 #include <Core/Memory/Allocators/SIRFreeListAllocator.h>
 #include <Core/Memory/Allocators/SIRBuddyAllocator.h>
-#include <Core/Platform/SIRVirtualMemory.h>
+#include <Core/Platform/Shared/Memory/SIRVirtualMemory.h>
 
 #include <stdio.h>
 #include <string.h>

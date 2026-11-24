@@ -13,12 +13,13 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
+#include <Core/Platform/Shared/Window/SIRNativeWindowLease.h>
 #include <Core/Input/SIRInputService.h>
-#include <Core/Platform/Window/SIRWindowSystem.h>
-#include <Core/Platform/Window/Linux/SIRWindowDriverX11.h>
-#include <Core/Platform/Linux/SIRX11InputBridge.h>
-#include <Core/Platform/Linux/SIRLinuxX11Backend.h>
-#include <Core/Platform/Linux/SIRLinuxEvdevBackend.h>
+#include <Core/Platform/Shared/Window/SIRWindowSystem.h>
+#include <Core/Platform/Linux/Window/SIRWindowDriverX11.h>
+#include <Core/Platform/Linux/Input/SIRX11InputBridge.h>
+#include <Core/Platform/Linux/Input/SIRLinuxX11Backend.h>
+#include <Core/Platform/Linux/Input/SIRLinuxEvdevBackend.h>
 
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
@@ -39,6 +40,18 @@ typedef enum sirX11Fault_e : uint8_t
 	SIR_X11_FAULT_FILTER_EVENT,
 	SIR_X11_FAULT_GENERIC_EVENT
 } sirX11Fault_t;
+
+
+static sirWindowResult sirAcquireTestLease( SIRWindowSystem& system, sirWindowHandle_t handle, SIRNativeWindowLease& lease, sirWindowNativeView_t& view ) noexcept
+{
+    if ( lease.isValid() ) {
+        SIRNativeWindowLease probe;
+        return system.acquireNativeLease( handle, probe );
+    }
+    const sirWindowResult result = system.acquireNativeLease( handle, lease );
+    if ( result == sirWindowResult::SIR_WINDOW_OK ) { view = lease.getView(); }
+    return result;
+}
 
 static sirX11Fault_t s_eX11Fault = SIR_X11_FAULT_NONE;
 
@@ -263,15 +276,15 @@ static bool sirTestPortedNativeWindowAndInput( void ) noexcept
 	const sirWindowCreateDesc_t desc = { "SIREngine native input", 800, 450 };
 	sirWindowHandle_t hWindow = {};
 	s_eX11Fault = SIR_X11_FAULT_CREATE_WINDOW;
-	if ( windows.createWindow( desc, &hWindow ) != SIR_WINDOW_NATIVE_FAILURE || s_eX11Fault != SIR_X11_FAULT_NONE ) {
+	if ( windows.createWindow( desc, &hWindow ) != sirWindowResult::SIR_WINDOW_NATIVE_FAILURE || s_eX11Fault != SIR_X11_FAULT_NONE ) {
 		return false;
 	}
-	if ( windows.createWindow( desc, &hWindow ) != SIR_WINDOW_OK ) {
+	if ( windows.createWindow( desc, &hWindow ) != sirWindowResult::SIR_WINDOW_OK ) {
 		return false;
 	}
-	sirWindowNativeLease_t lease = {};
+	SIRNativeWindowLease lease;
 	sirWindowNativeView_t view = {};
-	if ( windows.acquireNativeLease( hWindow, &lease, &view ) != SIR_WINDOW_OK || !bridge.bind( input, backend, view ) ||
+	if ( sirAcquireTestLease( windows, hWindow, lease, view ) != sirWindowResult::SIR_WINDOW_OK || !bridge.bind( input, backend, view ) ||
 	     bridge.bind( input, backend, view ) || !driver.setEventSink( sirPortedX11InputEvent, &bridge ) ) {
 		return false;
 	}
@@ -290,7 +303,7 @@ static bool sirTestPortedNativeWindowAndInput( void ) noexcept
 	}
 	XSync( pDisplay, False );
 	for ( uint32_t i = 0; i < 8; ++i ) {
-		if ( windows.pumpEvents( 128 ) != SIR_WINDOW_OK ) {
+		if ( windows.pumpEvents( 128 ) != sirWindowResult::SIR_WINDOW_OK ) {
 			return false;
 		}
 	}
@@ -308,13 +321,13 @@ static bool sirTestPortedNativeWindowAndInput( void ) noexcept
 	s_eX11Fault = SIR_X11_FAULT_FILTER_EVENT;
 	( void )XSendEvent( pDisplay, ( Window )view.nNativeWindow, False, KeyPressMask, &key );
 	XSync( pDisplay, False );
-	if ( windows.pumpEvents( 128 ) != SIR_WINDOW_OK || s_eX11Fault != SIR_X11_FAULT_NONE ) {
+	if ( windows.pumpEvents( 128 ) != sirWindowResult::SIR_WINDOW_OK || s_eX11Fault != SIR_X11_FAULT_NONE ) {
 		return false;
 	}
 	s_eX11Fault = SIR_X11_FAULT_GENERIC_EVENT;
 	( void )XSendEvent( pDisplay, ( Window )view.nNativeWindow, False, KeyPressMask, &key );
 	XSync( pDisplay, False );
-	if ( windows.pumpEvents( 128 ) != SIR_WINDOW_OK || s_eX11Fault != SIR_X11_FAULT_NONE ) {
+	if ( windows.pumpEvents( 128 ) != sirWindowResult::SIR_WINDOW_OK || s_eX11Fault != SIR_X11_FAULT_NONE ) {
 		return false;
 	}
 	s_eX11Fault = SIR_X11_FAULT_CREATE_BITMAP;
@@ -346,25 +359,25 @@ static bool sirTestPortedNativeWindowAndInput( void ) noexcept
 	ignored.xclient.data.l[0] = ( long )hDelete + 1;
 	( void )XSendEvent( pDisplay, ( Window )view.nNativeWindow, False, NoEventMask, &ignored );
 	XSync( pDisplay, False );
-	if ( windows.pumpEvents( 128 ) != SIR_WINDOW_OK ) {
+	if ( windows.pumpEvents( 128 ) != sirWindowResult::SIR_WINDOW_OK ) {
 		return false;
 	}
 	sirWindowSnapshot_t snapshot = {};
-	if ( windows.querySnapshot( hWindow, &snapshot ) != SIR_WINDOW_OK || snapshot.bCloseRequested ) {
+	if ( windows.querySnapshot( hWindow, &snapshot ) != sirWindowResult::SIR_WINDOW_OK || snapshot.bCloseRequested ) {
 		return false;
 	}
 	ignored.xclient.data.l[0] = ( long )hDelete;
 	( void )XSendEvent( pDisplay, ( Window )view.nNativeWindow, False, NoEventMask, &ignored );
 	XSync( pDisplay, False );
-	if ( windows.pumpEvents( 128 ) != SIR_WINDOW_OK || windows.querySnapshot( hWindow, &snapshot ) != SIR_WINDOW_OK ||
-	     !snapshot.bCloseRequested || windows.destroyWindow( hWindow ) != SIR_WINDOW_BUSY ) {
+	if ( windows.pumpEvents( 128 ) != sirWindowResult::SIR_WINDOW_OK || windows.querySnapshot( hWindow, &snapshot ) != sirWindowResult::SIR_WINDOW_OK ||
+	     !snapshot.bCloseRequested || windows.destroyWindow( hWindow ) != sirWindowResult::SIR_WINDOW_BUSY ) {
 		return false;
 	}
 	( void )driver.setEventSink( nullptr, nullptr );
 	bridge.unbind();
 	bridge.unbind();
-	if ( bridge.isBound() || bridge.setCursorMode( SIR_INPUT_CURSOR_FREE ) || windows.releaseNativeLease( lease ) != SIR_WINDOW_OK ||
-	     windows.destroyWindow( hWindow ) != SIR_WINDOW_OK || windows.shutdown() != SIR_SYSTEM_OK ) {
+	if ( bridge.isBound() || bridge.setCursorMode( SIR_INPUT_CURSOR_FREE ) || lease.reset() != sirWindowResult::SIR_WINDOW_OK ||
+	     windows.destroyWindow( hWindow ) != sirWindowResult::SIR_WINDOW_OK || windows.shutdown() != SIR_SYSTEM_OK ) {
 		return false;
 	}
 	input.shutdown();
