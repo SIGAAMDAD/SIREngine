@@ -20,32 +20,32 @@ of merchantability, fitness for a particular purpose and noninfringement.
 static int32_t fmodMixerResolveBus( void *, void *pStudio, const char *szPath, void **ppBus ) noexcept
 {
 	FMOD::Studio::Bus *pBus = nullptr;
-	const FMOD_RESULT eResult = ( ( FMOD::Studio::System * )pStudio )->getBus( szPath, &pBus );
+	const FMOD_RESULT eResult = static_cast<FMOD::Studio::System *>(pStudio)->getBus( szPath, &pBus );
 	*ppBus = pBus;
-	return ( int32_t )eResult;
+	return static_cast<int32_t>(eResult);
 }
 
 static int32_t fmodMixerResolveVCA( void *, void *pStudio, const char *szPath, void **ppVCA ) noexcept
 {
 	FMOD::Studio::VCA *pVCA = nullptr;
-	const FMOD_RESULT eResult = ( ( FMOD::Studio::System * )pStudio )->getVCA( szPath, &pVCA );
+	const FMOD_RESULT eResult = static_cast<FMOD::Studio::System *>(pStudio)->getVCA( szPath, &pVCA );
 	*ppVCA = pVCA;
-	return ( int32_t )eResult;
+	return static_cast<int32_t>(eResult);
 }
 
 static int32_t fmodMixerSetBusVolume( void *, void *pBus, float fVolume ) noexcept
 {
-	return ( int32_t )( ( FMOD::Studio::Bus * )pBus )->setVolume( fVolume );
+	return ( int32_t )static_cast<FMOD::Studio::Bus *>(pBus)->setVolume( fVolume );
 }
 
 static int32_t fmodMixerSetBusMute( void *, void *pBus, uint8_t bMute ) noexcept
 {
-	return ( int32_t )( ( FMOD::Studio::Bus * )pBus )->setMute( bMute != 0 );
+	return ( int32_t )static_cast<FMOD::Studio::Bus *>(pBus)->setMute( bMute != 0 );
 }
 
 static int32_t fmodMixerSetVCAVolume( void *, void *pVCA, float fVolume ) noexcept
 {
-	return ( int32_t )( ( FMOD::Studio::VCA * )pVCA )->setVolume( fVolume );
+	return ( int32_t )static_cast<FMOD::Studio::VCA *>(pVCA)->setVolume( fVolume );
 }
 
 sirFMODMixerNativeOps_t sirGetFMODMixerNativeOps( void ) noexcept

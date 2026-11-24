@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRINPUTTYPES_H__
-#define __SIRENGINE_SIRINPUTTYPES_H__
+#ifndef __SIR_INPUTTYPES_H__
+#define __SIR_INPUTTYPES_H__
 
 #include <Core/SIRPCH.h>
 
@@ -34,15 +34,13 @@ constexpr uint32_t SIR_INPUT_AXIS_CAPACITY = 16;
 constexpr uint32_t SIR_INPUT_USER_CAPACITY = 8;
 constexpr uint32_t SIR_INPUT_NO_USER = UINT32_MAX;
 
-typedef enum sirInputDeviceClass_e : uint8_t
-{
+enum class SIRInputDeviceClass : uint8_t {
 	SIR_INPUT_KEYBOARD = 0,
 	SIR_INPUT_POINTER = 1,
 	SIR_INPUT_CONTROLLER = 2
-} sirInputDeviceClass_t;
+};
 
-typedef enum sirInputSignal_e : uint8_t
-{
+enum class SIRInputSignal : uint8_t {
 	SIR_INPUT_CONNECTED = 0,
 	SIR_INPUT_DISCONNECTED = 1,
 	SIR_INPUT_BUTTON = 2,
@@ -50,10 +48,9 @@ typedef enum sirInputSignal_e : uint8_t
 	SIR_INPUT_MOTION = 4,
 	SIR_INPUT_WHEEL = 5,
 	SIR_INPUT_RESYNC = 6
-} sirInputSignal_t;
+};
 
-typedef enum sirInputBackendId_e : uint8_t
-{
+enum class SIRInputBackendId : uint8_t {
 	SIR_INPUT_WIN_RAW = 1,
 	SIR_INPUT_WIN_XINPUT = 2,
 	SIR_INPUT_WIN_GAMEINPUT = 3,
@@ -64,10 +61,9 @@ typedef enum sirInputBackendId_e : uint8_t
 	SIR_INPUT_LINUX_HIDRAW = 8,
 	SIR_INPUT_SDL3 = 9,
 	SIR_INPUT_TEST = 250
-} sirInputBackendId_t;
+};
 
-typedef enum sirInputControllerControl_e : uint16_t
-{
+enum class SIRInputControllerControl : uint16_t {
 	SIR_INPUT_PAD_SOUTH = 0,
 	SIR_INPUT_PAD_EAST = 1,
 	SIR_INPUT_PAD_WEST = 2,
@@ -86,10 +82,9 @@ typedef enum sirInputControllerControl_e : uint16_t
 	SIR_INPUT_PAD_LT_BUTTON = 15,
 	SIR_INPUT_PAD_RT_BUTTON = 16,
 	SIR_INPUT_PAD_BUTTON_COUNT = 17
-} sirInputControllerControl_t;
+};
 
-typedef enum sirInputAxisCode_e : uint16_t
-{
+enum class SIRInputAxisCode : uint16_t {
 	SIR_INPUT_AXIS_LX = 0,
 	SIR_INPUT_AXIS_LY = 1,
 	SIR_INPUT_AXIS_RX = 2,
@@ -97,7 +92,7 @@ typedef enum sirInputAxisCode_e : uint16_t
 	SIR_INPUT_AXIS_LT = 4,
 	SIR_INPUT_AXIS_RT = 5,
 	SIR_INPUT_AXIS_COUNT = 6
-} sirInputAxisCode_t;
+};
 
 typedef struct sirInputDeviceId_s
 {
@@ -109,16 +104,15 @@ typedef struct sirInputHardwareKey_s
 {
 	uint64_t nPhysicalId; // 0: identity unknown; owner+native ID still unique.
 	uint64_t nNativeId;
-	sirInputBackendId_t eBackend;
-	sirInputDeviceClass_t eClass;
+	SIRInputBackendId eBackend;
+	SIRInputDeviceClass eClass;
 } sirInputHardwareKey_t;
 
-typedef enum sirInputClockSource_e : uint8_t
-{
+enum class SIRInputClockSource : uint8_t {
 	SIR_INPUT_CLOCK_ENGINE_MONOTONIC = 0,
 	SIR_INPUT_CLOCK_EVDEV_MONOTONIC = 1,
 	SIR_INPUT_CLOCK_GAMEINPUT = 2
-} sirInputClockSource_t;
+};
 
 constexpr uint8_t SIR_INPUT_TIMESTAMP_NATIVE = 1;
 
@@ -126,7 +120,7 @@ typedef struct sirInputTimestamp_s
 {
 	uint64_t nSourceNs;
 	uint64_t nReceivedNs;
-	sirInputClockSource_t eClock;
+	SIRInputClockSource eClock;
 	uint8_t bNative;
 } sirInputTimestamp_t;
 
@@ -139,9 +133,9 @@ typedef struct sirInputEvent_s
 	int32_t nValue;
 	int32_t nValueY;
 	uint16_t nControl;
-	sirInputSignal_t eSignal;
-	sirInputDeviceClass_t eClass;
-	sirInputClockSource_t eClock;
+	SIRInputSignal eSignal;
+	SIRInputDeviceClass eClass;
+	SIRInputClockSource eClock;
 	uint8_t nTimestampFlags;
 } sirInputEvent_t;
 
@@ -149,7 +143,7 @@ static_assert( sizeof( sirInputEvent_t ) == 48, "Input event must remain 48 byte
 
 typedef struct sirInputControlChange_s
 {
-	sirInputSignal_t eSignal;
+	SIRInputSignal eSignal;
 	uint16_t nControl;
 	int32_t nValue;
 } sirInputControlChange_t;
@@ -179,4 +173,4 @@ typedef struct sirInputFrame_s
 	uint32_t nUsers[SIR_INPUT_DEVICE_CAPACITY];
 } sirInputFrame_t;
 
-#endif // __SIRENGINE_SIRINPUTTYPES_H__
+#endif // __SIR_INPUTTYPES_H__

@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRTASKGRAPH_H__
-#define __SIRENGINE_SIRTASKGRAPH_H__
+#ifndef __SIR_TASKGRAPH_H__
+#define __SIR_TASKGRAPH_H__
 
 #include <Core/SIRPCH.h>
 
@@ -32,11 +32,10 @@ typedef struct sirTaskGraphAccessRecord_s sirTaskGraphAccessRecord_t;
 typedef struct sirTaskGraphResourceBucket_s sirTaskGraphResourceBucket_t;
 typedef struct sirTaskGraphPassRecord_s sirTaskGraphPassRecord_t;
 
-typedef enum sirTaskGraphAccessMode_e : uint8_t
-{
+enum class SIRTaskGraphAccessMode : uint8_t {
 	SIR_TASK_GRAPH_READ = 0,
 	SIR_TASK_GRAPH_WRITE = 1
-} sirTaskGraphAccessMode_t;
+};
 
 // Caller supplies a canonical 128-bit generation-checked resource identity.
 // All accesses to the same logical resource must use the same identity.
@@ -52,15 +51,15 @@ typedef struct sirTaskGraphAccess_s
 	sirTaskGraphResourceKey_t keyResource;
 	uint64_t nOffset;
 	uint64_t nBytes;
-	sirTaskGraphAccessMode_t eMode;
+	SIRTaskGraphAccessMode eMode;
 } sirTaskGraphAccess_t;
 
 typedef struct sirTaskGraphPass_s
 {
 	sirTaskFunction_t pFunction;
 	void *pContext;
-	sirTaskPriority_t ePriority;
-	sirTaskExecutor_t eExecutor;
+	SIRTaskPriority ePriority;
+	SIRTaskExecutor eExecutor;
 } sirTaskGraphPass_t;
 
 typedef struct sirTaskGraphEdge_s
@@ -76,25 +75,23 @@ typedef struct sirTaskGraphConfig_s
 	uint32_t nEdgeCapacity;
 } sirTaskGraphConfig_t;
 
-typedef enum sirTaskGraphStatus_e : uint8_t
-{
+enum class SIRTaskGraphStatus : uint8_t {
 	SIR_TASK_GRAPH_OK = 0,
 	SIR_TASK_GRAPH_INVALID = 1,
 	SIR_TASK_GRAPH_CAPACITY = 2,
 	SIR_TASK_GRAPH_CYCLE = 3
-} sirTaskGraphStatus_t;
+};
 
 // A resource publication owner may publish only after SUCCEEDED; PENDING also
 // covers deferred provider work. Summaries scan live handles and are not an
 // atomic snapshot across multiple concurrently completing tasks.
-typedef enum sirTaskGraphExecutionState_e : uint8_t
-{
+enum class SIRTaskGraphExecutionState : uint8_t {
 	SIR_TASK_GRAPH_EXEC_INVALID = 0,
 	SIR_TASK_GRAPH_EXEC_PENDING = 1,
 	SIR_TASK_GRAPH_EXEC_SUCCEEDED = 2,
 	SIR_TASK_GRAPH_EXEC_FAILED = 3,
 	SIR_TASK_GRAPH_EXEC_CANCELLED = 4
-} sirTaskGraphExecutionState_t;
+};
 
 typedef struct sirTaskGraphExecutionSummary_s
 {
@@ -103,7 +100,7 @@ typedef struct sirTaskGraphExecutionSummary_s
 	uint32_t nSucceeded;
 	uint32_t nFailed;
 	uint32_t nCancelled;
-	sirTaskGraphExecutionState_t eState;
+	SIRTaskGraphExecutionState eState;
 } sirTaskGraphExecutionSummary_t;
 
 // Single-threaded graph builder; generated edge and task arrays are bounded.
@@ -123,7 +120,7 @@ public:
 	bool addPass( const sirTaskGraphPass_t& pass, const sirTaskGraphAccess_t *pAccesses, uint32_t nAccesses,
 	              uint32_t *pnPassIndex ) noexcept;
 	bool addDependency( uint32_t nBefore, uint32_t nAfter ) noexcept;
-	sirTaskGraphStatus_t compile( void ) noexcept;
+	SIRTaskGraphStatus compile( void ) noexcept;
 	uint32_t getPassCount( void ) const noexcept;
 	uint32_t getEdgeCount( void ) const noexcept;
 	bool getEdge( uint32_t nIndex, sirTaskGraphEdge_t *pEdge ) const noexcept;
@@ -176,4 +173,4 @@ private:
 	bool m_bSubmitted;
 };
 
-#endif // __SIRENGINE_SIRTASKGRAPH_H__
+#endif // __SIR_TASKGRAPH_H__

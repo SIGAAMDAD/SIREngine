@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRLANGTOKEN_H__
-#define __SIRENGINE_SIRLANGTOKEN_H__
+#ifndef __SIR_LANGTOKEN_H__
+#define __SIR_LANGTOKEN_H__
 
 #include <Core/SIRPCH.h>
 
@@ -32,8 +32,7 @@ typedef struct sirLangSourceView_s
 	uint32_t nBytes;
 } sirLangSourceView_t;
 
-typedef enum sirLangTokenKind_e : uint8_t
-{
+enum class SIRLangTokenKind : uint8_t {
 	SIR_LANG_TOKEN_END = 0,
 	SIR_LANG_TOKEN_ERROR = 1,
 	SIR_LANG_TOKEN_NEWLINE = 2,
@@ -44,10 +43,9 @@ typedef enum sirLangTokenKind_e : uint8_t
 	SIR_LANG_TOKEN_NUMBER = 7,
 	SIR_LANG_TOKEN_STRING = 8,
 	SIR_LANG_TOKEN_PUNCTUATION = 9
-} sirLangTokenKind_t;
+};
 
-typedef enum sirLangLexError_e : uint8_t
-{
+enum class SIRLangLexError : uint8_t {
 	SIR_LANG_LEX_OK = 0,
 	SIR_LANG_LEX_INVALID_SOURCE = 1,
 	SIR_LANG_LEX_INVALID_UTF8 = 2,
@@ -56,12 +54,12 @@ typedef enum sirLangLexError_e : uint8_t
 	SIR_LANG_LEX_TAB_INDENT = 5,
 	SIR_LANG_LEX_INCONSISTENT_INDENT = 6,
 	SIR_LANG_LEX_INDENT_OVERFLOW = 7
-} sirLangLexError_t;
+};
 
 typedef struct sirLangToken_s
 {
-	sirLangTokenKind_t eKind;
-	sirLangLexError_t eError;
+	SIRLangTokenKind eKind;
+	SIRLangLexError eError;
 	uint32_t nOffset;
 	uint32_t nLength;
 	uint32_t nLine;
@@ -83,4 +81,4 @@ typedef struct sirLangLexer_s
 	bool bInvalidSource;
 } sirLangLexer_t;
 
-#endif // __SIRENGINE_SIRLANGTOKEN_H__
+#endif // __SIR_LANGTOKEN_H__

@@ -15,16 +15,16 @@ static uint32_t t3d_vt_page_builder_wrap_coordinate( int64_t nCoordinate, uint32
 		if ( nCoordinate < 0 ) {
 			return 0u;
 		}
-		if ( nCoordinate >= ( int64_t )nExtent ) {
+		if ( nCoordinate >= static_cast<int64_t>(nExtent) ) {
 			return nExtent - 1u;
 		}
-		return ( uint32_t )nCoordinate;
+		return static_cast<uint32_t>(nCoordinate);
 	}
-	int64_t nWrapped = nCoordinate % ( int64_t )nExtent;
+	int64_t nWrapped = nCoordinate % static_cast<int64_t>(nExtent);
 	if ( nWrapped < 0 ) {
 		nWrapped += nExtent;
 	}
-	return ( uint32_t )nWrapped;
+	return static_cast<uint32_t>(nWrapped);
 }
 
 static uint8_t t3d_vt_page_builder_neutral_component( uint32_t nChannel, uint32_t nComponent )
@@ -100,7 +100,7 @@ bool t3d_vt_page_builder_layout_mips( const uint32_t nWidth, const uint32_t nHei
 	uint64_t nOffset = 0u;
 	const uint32_t nMipCount = t3d_vt_page_builder_mip_count( nWidth, nHeight );
 	for ( uint32_t iMip = 0u; iMip < nMipCount; ++iMip ) {
-		const uint64_t nPixels = ( uint64_t )nMipWidth * ( uint64_t )nMipHeight;
+		const uint64_t nPixels = static_cast<uint64_t>(nMipWidth) * static_cast<uint64_t>(nMipHeight);
 		if ( nPixels > UINT64_MAX / nComponents ) {
 			return false;
 		}
@@ -126,11 +126,11 @@ bool t3d_vt_page_builder_fill_neutral( const uint32_t nChannel, const uint32_t n
                                        const uint64_t nDestinationBytes )
 {
 	const uint32_t nComponents = t3d_vt_page_builder_channel_components( nChannel );
-	const uint64_t nRequired = ( uint64_t )nWidth * ( uint64_t )nHeight * nComponents;
+	const uint64_t nRequired = static_cast<uint64_t>(nWidth) * static_cast<uint64_t>( static_cast<nHeight>( * nComponents ) );
 	if ( nComponents == 0u || nWidth == 0u || nHeight == 0u || pDestination == NULL || nDestinationBytes < nRequired ) {
 		return false;
 	}
-	for ( uint64_t iPixel = 0u; iPixel < ( uint64_t )nWidth * nHeight; ++iPixel ) {
+	for ( uint64_t iPixel = 0u; iPixel < static_cast<uint64_t>(nWidth) * nHeight; ++iPixel ) {
 		for ( uint32_t iComponent = 0u; iComponent < nComponents; ++iComponent ) {
 			pDestination[iPixel * nComponents + iComponent] = t3d_vt_page_builder_neutral_component( nChannel, iComponent );
 		}
@@ -148,7 +148,7 @@ bool t3d_vt_page_builder_normalize_channel_u8( const uint32_t nChannel, const ui
 	     nTargetComponents == 0u ) {
 		return false;
 	}
-	const uint64_t nRequired = ( uint64_t )rSource.m_nWidth * rSource.m_nHeight * nTargetComponents;
+	const uint64_t nRequired = static_cast<uint64_t>(rSource.m_nWidth) * rSource.m_nHeight * nTargetComponents;
 	if ( nDestinationBytes < nRequired ) {
 		return false;
 	}
@@ -174,8 +174,8 @@ bool t3d_vt_page_builder_normalize_channel_u8( const uint32_t nChannel, const ui
 	}
 
 	for ( uint32_t y = 0u; y < rSource.m_nHeight; ++y ) {
-		const uint8_t *pSourceRow = rSource.m_pPixels + ( uint64_t )y * rSource.m_nRowBytes;
-		uint8_t *pDestinationRow = pDestination + ( uint64_t )y * rSource.m_nWidth * nTargetComponents;
+		const uint8_t *pSourceRow = rSource.m_pPixels + static_cast<uint64_t>(y) * rSource.m_nRowBytes;
+		uint8_t *pDestinationRow = pDestination + static_cast<uint64_t>(y) * rSource.m_nWidth * nTargetComponents;
 		for ( uint32_t x = 0u; x < rSource.m_nWidth; ++x ) {
 			const uint8_t *pSource = pSourceRow + x * rSource.m_nComponents;
 			uint8_t *pOut = pDestinationRow + x * nTargetComponents;
@@ -223,49 +223,49 @@ bool t3d_vt_page_builder_resample_u8( const t3dVTCookImageView_t& rSource, const
 	     nTargetHeight == 0u || pDestination == NULL ) {
 		return false;
 	}
-	const uint64_t nRequired = ( uint64_t )nTargetWidth * ( uint64_t )nTargetHeight * rSource.m_nComponents;
+	const uint64_t nRequired = static_cast<uint64_t>(nTargetWidth) * static_cast<uint64_t>( static_cast<nTargetHeight>( * rSource.m_nComponents ) );
 	if ( nDestinationBytes < nRequired ) {
 		return false;
 	}
 
 	for ( uint32_t y = 0u; y < nTargetHeight; ++y ) {
-		const int64_t nSourceYFixed = ( int64_t )( ( ( ( uint64_t )y * 2u + 1u ) * rSource.m_nHeight * 32768u ) / nTargetHeight ) - 32768;
+		const int64_t nSourceYFixed = ( int64_t )( ( ( static_cast<uint64_t>(y) * 2u + 1u ) * rSource.m_nHeight * 32768u ) / nTargetHeight ) - 32768;
 		int64_t nSourceY = nSourceYFixed >= 0 ? nSourceYFixed / 65536 : -1;
-		uint32_t nWeightY = nSourceYFixed >= 0 ? ( uint32_t )( nSourceYFixed & 0xffff ) : ( uint32_t )( nSourceYFixed + 65536 );
+		uint32_t nWeightY = nSourceYFixed >= 0 ? static_cast<uint32_t>( nSourceYFixed & 0xffff ) : static_cast<uint32_t>( nSourceYFixed + 65536 );
 		if ( nSourceY < 0 ) {
 			nSourceY = 0;
 			nWeightY = 0u;
-		} else if ( nSourceY >= ( int64_t )rSource.m_nHeight - 1 ) {
+		} else if ( nSourceY >= static_cast<int64_t>(rSource.m_nHeight) - 1 ) {
 			nSourceY = rSource.m_nHeight - 1u;
 			nWeightY = 0u;
 		}
-		const uint32_t y0 = ( uint32_t )nSourceY;
+		const uint32_t y0 = static_cast<uint32_t>(nSourceY);
 		const uint32_t y1 = y0 + 1u < rSource.m_nHeight ? y0 + 1u : y0;
 		for ( uint32_t x = 0u; x < nTargetWidth; ++x ) {
-			const int64_t nSourceXFixed = ( int64_t )( ( ( ( uint64_t )x * 2u + 1u ) * rSource.m_nWidth * 32768u ) / nTargetWidth ) - 32768;
+			const int64_t nSourceXFixed = ( int64_t )( ( ( static_cast<uint64_t>(x) * 2u + 1u ) * rSource.m_nWidth * 32768u ) / nTargetWidth ) - 32768;
 			int64_t nSourceX = nSourceXFixed >= 0 ? nSourceXFixed / 65536 : -1;
-			uint32_t nWeightX = nSourceXFixed >= 0 ? ( uint32_t )( nSourceXFixed & 0xffff ) : ( uint32_t )( nSourceXFixed + 65536 );
+			uint32_t nWeightX = nSourceXFixed >= 0 ? static_cast<uint32_t>( nSourceXFixed & 0xffff ) : static_cast<uint32_t>( nSourceXFixed + 65536 );
 			if ( nSourceX < 0 ) {
 				nSourceX = 0;
 				nWeightX = 0u;
-			} else if ( nSourceX >= ( int64_t )rSource.m_nWidth - 1 ) {
+			} else if ( nSourceX >= static_cast<int64_t>(rSource.m_nWidth) - 1 ) {
 				nSourceX = rSource.m_nWidth - 1u;
 				nWeightX = 0u;
 			}
-			const uint32_t x0 = ( uint32_t )nSourceX;
+			const uint32_t x0 = static_cast<uint32_t>(nSourceX);
 			const uint32_t x1 = x0 + 1u < rSource.m_nWidth ? x0 + 1u : x0;
-			const uint8_t *pRow0 = rSource.m_pPixels + ( uint64_t )y0 * rSource.m_nRowBytes;
-			const uint8_t *pRow1 = rSource.m_pPixels + ( uint64_t )y1 * rSource.m_nRowBytes;
-			uint8_t *pOut = pDestination + ( ( uint64_t )y * nTargetWidth + x ) * rSource.m_nComponents;
+			const uint8_t *pRow0 = rSource.m_pPixels + static_cast<uint64_t>(y0) * rSource.m_nRowBytes;
+			const uint8_t *pRow1 = rSource.m_pPixels + static_cast<uint64_t>(y1) * rSource.m_nRowBytes;
+			uint8_t *pOut = pDestination + ( static_cast<uint64_t>(y) * nTargetWidth + x ) * rSource.m_nComponents;
 			for ( uint32_t iComponent = 0u; iComponent < rSource.m_nComponents; ++iComponent ) {
 				const uint32_t nP00 = pRow0[x0 * rSource.m_nComponents + iComponent];
 				const uint32_t nP10 = pRow0[x1 * rSource.m_nComponents + iComponent];
 				const uint32_t nP01 = pRow1[x0 * rSource.m_nComponents + iComponent];
 				const uint32_t nP11 = pRow1[x1 * rSource.m_nComponents + iComponent];
-				const uint64_t nTop = ( uint64_t )nP00 * ( 65536u - nWeightX ) + ( uint64_t )nP10 * nWeightX;
-				const uint64_t nBottom = ( uint64_t )nP01 * ( 65536u - nWeightX ) + ( uint64_t )nP11 * nWeightX;
+				const uint64_t nTop = static_cast<uint64_t>(nP00) * ( 65536u - nWeightX ) + static_cast<uint64_t>(nP10) * nWeightX;
+				const uint64_t nBottom = static_cast<uint64_t>(nP01) * ( 65536u - nWeightX ) + static_cast<uint64_t>(nP11) * nWeightX;
 				const uint64_t nValue = nTop * ( 65536u - nWeightY ) + nBottom * nWeightY;
-				pOut[iComponent] = ( uint8_t )( ( nValue + ( 1ull << 31u ) ) >> 32u );
+				pOut[iComponent] = static_cast<uint8_t>(  ( nValue + ( 1ull << 31u ) ) >> 32u  );
 			}
 		}
 	}
@@ -289,13 +289,13 @@ bool t3d_vt_page_builder_build_mips_u8( uint8_t *pImageBytes, const uint64_t nIm
 				const uint32_t x0 = x * 2u;
 				const uint32_t x1 = x0 + 1u < rSource.m_nWidth ? x0 + 1u : x0;
 				for ( uint32_t iComponent = 0u; iComponent < rLayout.m_nComponents; ++iComponent ) {
-					const uint64_t nI00 = ( ( uint64_t )y0 * rSource.m_nWidth + x0 ) * rLayout.m_nComponents + iComponent;
-					const uint64_t nI10 = ( ( uint64_t )y0 * rSource.m_nWidth + x1 ) * rLayout.m_nComponents + iComponent;
-					const uint64_t nI01 = ( ( uint64_t )y1 * rSource.m_nWidth + x0 ) * rLayout.m_nComponents + iComponent;
-					const uint64_t nI11 = ( ( uint64_t )y1 * rSource.m_nWidth + x1 ) * rLayout.m_nComponents + iComponent;
-					const uint32_t nSum = ( uint32_t )pSource[nI00] + pSource[nI10] + pSource[nI01] + pSource[nI11];
-					pDestination[( ( uint64_t )y * rDestination.m_nWidth + x ) * rLayout.m_nComponents + iComponent] =
-					    ( uint8_t )( ( nSum + 2u ) >> 2u );
+					const uint64_t nI00 = ( static_cast<uint64_t>(y0) * rSource.m_nWidth + x0 ) * rLayout.m_nComponents + iComponent;
+					const uint64_t nI10 = ( static_cast<uint64_t>(y0) * rSource.m_nWidth + x1 ) * rLayout.m_nComponents + iComponent;
+					const uint64_t nI01 = ( static_cast<uint64_t>(y1) * rSource.m_nWidth + x0 ) * rLayout.m_nComponents + iComponent;
+					const uint64_t nI11 = ( static_cast<uint64_t>(y1) * rSource.m_nWidth + x1 ) * rLayout.m_nComponents + iComponent;
+					const uint32_t nSum = static_cast<uint32_t>(pSource[nI00]) + pSource[nI10] + pSource[nI01] + pSource[nI11];
+					pDestination[( static_cast<uint64_t>(y) * rDestination.m_nWidth + x ) * rLayout.m_nComponents + iComponent] =
+					    static_cast<uint8_t>(  ( nSum + 2u ) >> 2u  );
 				}
 			}
 		}
@@ -307,7 +307,7 @@ static uint8_t t3d_vt_page_builder_encode_normal_component( const float fValue )
 {
 	const float fClamped = fValue < -1.0f ? -1.0f : ( fValue > 1.0f ? 1.0f : fValue );
 	const float fEncoded = ( fClamped * 0.5f + 0.5f ) * 255.0f;
-	return ( uint8_t )( fEncoded + 0.5f );
+	return static_cast<uint8_t>( fEncoded + 0.5f );
 }
 
 bool t3d_vt_page_builder_build_channel_mips_u8( const uint32_t nChannel, const uint32_t nQuality, uint8_t *pImageBytes,
@@ -337,9 +337,9 @@ bool t3d_vt_page_builder_build_channel_mips_u8( const uint32_t nChannel, const u
 				for ( uint32_t iSample = 0u; iSample < 4u; ++iSample ) {
 					const uint32_t nSampleX = nCoordinates[iSample * 2u];
 					const uint32_t nSampleY = nCoordinates[iSample * 2u + 1u];
-					const uint64_t nIndex = ( ( uint64_t )nSampleY * rSource.m_nWidth + nSampleX ) * 2u;
-					const float fX = ( ( float )pSource[nIndex] / 255.0f ) * 2.0f - 1.0f;
-					const float fY = ( ( float )pSource[nIndex + 1u] / 255.0f ) * 2.0f - 1.0f;
+					const uint64_t nIndex = ( static_cast<uint64_t>(nSampleY) * rSource.m_nWidth + nSampleX ) * 2u;
+					const float fX = ( static_cast<float>(pSource[nIndex]) / 255.0f ) * 2.0f - 1.0f;
+					const float fY = ( static_cast<float>(pSource[nIndex + 1u]) / 255.0f ) * 2.0f - 1.0f;
 					const float fZSquared = 1.0f - fX * fX - fY * fY;
 					fNormalX += fX;
 					fNormalY += fY;
@@ -354,7 +354,7 @@ bool t3d_vt_page_builder_build_channel_mips_u8( const uint32_t nChannel, const u
 					fNormalX = 0.0f;
 					fNormalY = 0.0f;
 				}
-				const uint64_t nDestinationIndex = ( ( uint64_t )y * rDestination.m_nWidth + x ) * 2u;
+				const uint64_t nDestinationIndex = ( static_cast<uint64_t>(y) * rDestination.m_nWidth + x ) * 2u;
 				pDestination[nDestinationIndex] = t3d_vt_page_builder_encode_normal_component( fNormalX );
 				pDestination[nDestinationIndex + 1u] = t3d_vt_page_builder_encode_normal_component( fNormalY );
 			}
@@ -366,9 +366,9 @@ bool t3d_vt_page_builder_build_channel_mips_u8( const uint32_t nChannel, const u
 static bool t3d_vt_page_builder_validate_logical_source( const t3dVTLogicalChannel_t Channel, const uint32_t nOrmSourceLayout,
                                                          const t3dVTCookImageView_t& rSource )
 {
-	if ( ( uint32_t )Channel >= T3D_VT_LOGICAL_CHANNEL_COUNT || rSource.m_pPixels == NULL || rSource.m_nWidth == 0u ||
+	if ( static_cast<uint32_t>(Channel) >= T3D_VT_LOGICAL_CHANNEL_COUNT || rSource.m_pPixels == NULL || rSource.m_nWidth == 0u ||
 	     rSource.m_nHeight == 0u || rSource.m_nComponents == 0u || rSource.m_nComponents > 4u ||
-	     ( uint64_t )rSource.m_nWidth * rSource.m_nComponents > rSource.m_nRowBytes ) {
+	     static_cast<uint64_t>(rSource.m_nWidth) * rSource.m_nComponents > rSource.m_nRowBytes ) {
 		return false;
 	}
 	switch ( Channel ) {
@@ -413,7 +413,7 @@ bool t3d_vt_page_builder_fill_logical_neutral( const t3dVTLogicalChannel_t Chann
                                                uint8_t *pDestination, const uint64_t nDestinationBytes )
 {
 	const uint32_t nComponents = t3d_vt_page_builder_logical_channel_components( Channel );
-	const uint64_t nPixelCount = ( uint64_t )nWidth * nHeight;
+	const uint64_t nPixelCount = static_cast<uint64_t>(nWidth) * nHeight;
 	const uint64_t nRequired = nPixelCount * nComponents;
 	if ( nComponents == 0u || nWidth == 0u || nHeight == 0u || pDestination == NULL || nDestinationBytes < nRequired ) {
 		return false;
@@ -472,7 +472,7 @@ static void t3d_vt_page_builder_bleed_albedo_rgb( uint8_t *pPixels, const uint32
 {
 	for ( uint32_t y = 0u; y < nHeight; ++y ) {
 		for ( uint32_t x = 0u; x < nWidth; ++x ) {
-			uint8_t *out = pPixels + ( ( uint64_t )y * nWidth + x ) * 4u;
+			uint8_t *out = pPixels + ( static_cast<uint64_t>(y) * nWidth + x ) * 4u;
 			if ( out[3] != 0u ) {
 				continue;
 			}
@@ -480,12 +480,12 @@ static void t3d_vt_page_builder_bleed_albedo_rgb( uint8_t *pPixels, const uint32
 			int32_t best_distance = 9;
 			for ( int32_t dy = -2; dy <= 2; ++dy ) {
 				for ( int32_t dx = -2; dx <= 2; ++dx ) {
-					const int32_t sx = ( int32_t )x + dx, sy = ( int32_t )y + dy;
+					const int32_t sx = static_cast<int32_t>(x) + dx, sy = static_cast<int32_t>(y) + dy;
 					const int32_t distance = dx * dx + dy * dy;
-					if ( sx < 0 || sy < 0 || sx >= ( int32_t )nWidth || sy >= ( int32_t )nHeight || distance >= best_distance ) {
+					if ( sx < 0 || sy < 0 || sx >= static_cast<int32_t>(nWidth) || sy >= static_cast<int32_t>(nHeight) || distance >= best_distance ) {
 						continue;
 					}
-					const uint8_t *pixel = pPixels + ( ( uint64_t )sy * nWidth + sx ) * 4u;
+					const uint8_t *pixel = pPixels + ( static_cast<uint64_t>(sy) * nWidth + sx ) * 4u;
 					if ( pixel[3] != 0u ) {
 						nearest = pixel;
 						best_distance = distance;
@@ -504,14 +504,14 @@ bool t3d_vt_page_builder_normalize_logical_channel_u8( const t3dVTLogicalChannel
                                                        const uint64_t nDestinationBytes )
 {
 	const uint32_t nTargetComponents = t3d_vt_page_builder_logical_channel_components( Channel );
-	const uint64_t nRequired = ( uint64_t )rSource.m_nWidth * rSource.m_nHeight * nTargetComponents;
+	const uint64_t nRequired = static_cast<uint64_t>(rSource.m_nWidth) * rSource.m_nHeight * nTargetComponents;
 	if ( nTargetComponents == 0u || pDestination == NULL || nDestinationBytes < nRequired ||
 	     !t3d_vt_page_builder_validate_logical_source( Channel, nOrmSourceLayout, rSource ) ) {
 		return false;
 	}
 	for ( uint32_t y = 0u; y < rSource.m_nHeight; ++y ) {
-		const uint8_t *pSourceRow = rSource.m_pPixels + ( uint64_t )y * rSource.m_nRowBytes;
-		uint8_t *pDestinationRow = pDestination + ( uint64_t )y * rSource.m_nWidth * nTargetComponents;
+		const uint8_t *pSourceRow = rSource.m_pPixels + static_cast<uint64_t>(y) * rSource.m_nRowBytes;
+		uint8_t *pDestinationRow = pDestination + static_cast<uint64_t>(y) * rSource.m_nWidth * nTargetComponents;
 		for ( uint32_t x = 0u; x < rSource.m_nWidth; ++x ) {
 			const uint8_t *pSource = pSourceRow + x * rSource.m_nComponents;
 			uint8_t *pOut = pDestinationRow + x * nTargetComponents;
@@ -548,7 +548,7 @@ bool t3d_vt_page_builder_normalize_logical_channel_u8( const t3dVTLogicalChannel
 
 static float t3d_vt_page_builder_srgb_to_linear( const uint8_t nValue )
 {
-	const float fSrgb = ( float )nValue / 255.0f;
+	const float fSrgb = static_cast<float>(nValue) / 255.0f;
 	return fSrgb <= 0.04045f ? fSrgb / 12.92f : powf( ( fSrgb + 0.055f ) / 1.055f, 2.4f );
 }
 
@@ -557,24 +557,24 @@ static uint8_t t3d_vt_page_builder_linear_to_srgb( float fValue )
 	fValue = fValue < 0.0f ? 0.0f : ( fValue > 1.0f ? 1.0f : fValue );
 	const float fSrgb = fValue <= 0.0031308f ? fValue * 12.92f : 1.055f * powf( fValue, 1.0f / 2.4f ) - 0.055f;
 	const float fEncoded = fSrgb * 255.0f;
-	return ( uint8_t )( fEncoded + 0.5f );
+	return static_cast<uint8_t>( fEncoded + 0.5f );
 }
 
 static void t3d_vt_page_builder_resample_axis( const uint32_t nDestinationCoordinate, const uint32_t nDestinationExtent,
                                                const uint32_t nSourceExtent, uint32_t& rSource0, uint32_t& rSource1, uint32_t& rWeight )
 {
 	const int64_t nSourceFixed =
-	    ( int64_t )( ( ( ( uint64_t )nDestinationCoordinate * 2u + 1u ) * nSourceExtent * 32768u ) / nDestinationExtent ) - 32768;
+	    ( int64_t )( ( ( static_cast<uint64_t>(nDestinationCoordinate) * 2u + 1u ) * nSourceExtent * 32768u ) / nDestinationExtent ) - 32768;
 	int64_t nSource = nSourceFixed >= 0 ? nSourceFixed / 65536 : -1;
-	uint32_t nWeight = nSourceFixed >= 0 ? ( uint32_t )( nSourceFixed & 0xffff ) : ( uint32_t )( nSourceFixed + 65536 );
+	uint32_t nWeight = nSourceFixed >= 0 ? static_cast<uint32_t>( nSourceFixed & 0xffff ) : static_cast<uint32_t>( nSourceFixed + 65536 );
 	if ( nSource < 0 ) {
 		nSource = 0;
 		nWeight = 0u;
-	} else if ( nSource >= ( int64_t )nSourceExtent - 1 ) {
+	} else if ( nSource >= static_cast<int64_t>(nSourceExtent) - 1 ) {
 		nSource = nSourceExtent - 1u;
 		nWeight = 0u;
 	}
-	rSource0 = ( uint32_t )nSource;
+	rSource0 = static_cast<uint32_t>(nSource);
 	rSource1 = rSource0 + 1u < nSourceExtent ? rSource0 + 1u : rSource0;
 	rWeight = nWeight;
 }
@@ -582,17 +582,17 @@ static void t3d_vt_page_builder_resample_axis( const uint32_t nDestinationCoordi
 static uint8_t t3d_vt_page_builder_bilerp_u8( const uint8_t nP00, const uint8_t nP10, const uint8_t nP01, const uint8_t nP11,
                                               const uint32_t nWeightX, const uint32_t nWeightY )
 {
-	const uint64_t nTop = ( uint64_t )nP00 * ( 65536u - nWeightX ) + ( uint64_t )nP10 * nWeightX;
-	const uint64_t nBottom = ( uint64_t )nP01 * ( 65536u - nWeightX ) + ( uint64_t )nP11 * nWeightX;
+	const uint64_t nTop = static_cast<uint64_t>(nP00) * ( 65536u - nWeightX ) + static_cast<uint64_t>(nP10) * nWeightX;
+	const uint64_t nBottom = static_cast<uint64_t>(nP01) * ( 65536u - nWeightX ) + static_cast<uint64_t>(nP11) * nWeightX;
 	const uint64_t nValue = nTop * ( 65536u - nWeightY ) + nBottom * nWeightY;
-	return ( uint8_t )( ( nValue + ( 1ull << 31u ) ) >> 32u );
+	return static_cast<uint8_t>(  ( nValue + ( 1ull << 31u ) ) >> 32u  );
 }
 
 static float t3d_vt_page_builder_bilerp_float( const float fP00, const float fP10, const float fP01, const float fP11,
                                                const uint32_t nWeightX, const uint32_t nWeightY )
 {
-	const float fWeightX = ( float )nWeightX / 65536.0f;
-	const float fWeightY = ( float )nWeightY / 65536.0f;
+	const float fWeightX = static_cast<float>(nWeightX) / 65536.0f;
+	const float fWeightY = static_cast<float>(nWeightY) / 65536.0f;
 	const float fTop = fP00 + ( fP10 - fP00 ) * fWeightX;
 	const float fBottom = fP01 + ( fP11 - fP01 ) * fWeightX;
 	return fTop + ( fBottom - fTop ) * fWeightY;
@@ -600,8 +600,8 @@ static float t3d_vt_page_builder_bilerp_float( const float fP00, const float fP1
 
 static void t3d_vt_page_builder_decode_normal_xy( const uint8_t *pSource, float& rX, float& rY, float& rZ )
 {
-	rX = ( ( float )pSource[0] / 255.0f ) * 2.0f - 1.0f;
-	rY = ( ( float )pSource[1] / 255.0f ) * 2.0f - 1.0f;
+	rX = ( static_cast<float>(pSource[0]) / 255.0f ) * 2.0f - 1.0f;
+	rY = ( static_cast<float>(pSource[1]) / 255.0f ) * 2.0f - 1.0f;
 	const float fZSquared = 1.0f - rX * rX - rY * rY;
 	rZ = fZSquared > 0.0f ? sqrtf( fZSquared ) : 0.0f;
 }
@@ -633,11 +633,11 @@ static void t3d_vt_page_builder_bilerp_normal( const uint8_t *p00, const uint8_t
 static uint64_t t3d_vt_page_builder_alpha_coverage_source( const t3dVTCookImageView_t& rSource, const uint8_t nThreshold )
 {
 	if ( rSource.m_nComponents < 4u ) {
-		return ( uint64_t )rSource.m_nWidth * rSource.m_nHeight;
+		return static_cast<uint64_t>(rSource.m_nWidth) * rSource.m_nHeight;
 	}
 	uint64_t nCovered = 0u;
 	for ( uint32_t y = 0u; y < rSource.m_nHeight; ++y ) {
-		const uint8_t *pRow = rSource.m_pPixels + ( uint64_t )y * rSource.m_nRowBytes;
+		const uint8_t *pRow = rSource.m_pPixels + static_cast<uint64_t>(y) * rSource.m_nRowBytes;
 		for ( uint32_t x = 0u; x < rSource.m_nWidth; ++x ) {
 			nCovered += pRow[x * rSource.m_nComponents + 3u] >= nThreshold ? 1u : 0u;
 		}
@@ -650,9 +650,9 @@ static uint64_t t3d_vt_page_builder_alpha_coverage_scaled( const uint8_t *pPixel
 {
 	uint64_t nCovered = 0u;
 	for ( uint64_t iPixel = 0u; iPixel < nPixelCount; ++iPixel ) {
-		float fAlpha = ( float )pPixels[iPixel * 4u + 3u] * fScale;
+		float fAlpha = static_cast<float>(pPixels[iPixel * 4u + 3u]) * fScale;
 		fAlpha = fAlpha > 255.0f ? 255.0f : fAlpha;
-		nCovered += ( uint8_t )( fAlpha + 0.5f ) >= nThreshold ? 1u : 0u;
+		nCovered += static_cast<uint8_t>( fAlpha + 0.5f ) >= nThreshold ? 1u : 0u;
 	}
 	return nCovered;
 }
@@ -664,8 +664,8 @@ static void t3d_vt_page_builder_preserve_alpha_coverage( const t3dVTCookImageVie
 	     nTargetHeight == 0u ) {
 		return;
 	}
-	const uint64_t nSourcePixels = ( uint64_t )rSource.m_nWidth * rSource.m_nHeight;
-	const uint64_t nTargetPixels = ( uint64_t )nTargetWidth * nTargetHeight;
+	const uint64_t nSourcePixels = static_cast<uint64_t>(rSource.m_nWidth) * rSource.m_nHeight;
+	const uint64_t nTargetPixels = static_cast<uint64_t>(nTargetWidth) * nTargetHeight;
 	const uint64_t nSourceCovered = t3d_vt_page_builder_alpha_coverage_source( rSource, nThreshold );
 	const uint64_t nDesiredCovered = ( nSourceCovered * nTargetPixels + nSourcePixels / 2u ) / nSourcePixels;
 	if ( nDesiredCovered == 0u ) {
@@ -686,9 +686,9 @@ static void t3d_vt_page_builder_preserve_alpha_coverage( const t3dVTCookImageVie
 		}
 	}
 	for ( uint64_t iPixel = 0u; iPixel < nTargetPixels; ++iPixel ) {
-		float fAlpha = ( float )pDestination[iPixel * 4u + 3u] * fHigh;
+		float fAlpha = static_cast<float>(pDestination[iPixel * 4u + 3u]) * fHigh;
 		fAlpha = fAlpha > 255.0f ? 255.0f : fAlpha;
-		pDestination[iPixel * 4u + 3u] = ( uint8_t )( fAlpha + 0.5f );
+		pDestination[iPixel * 4u + 3u] = static_cast<uint8_t>( fAlpha + 0.5f );
 	}
 }
 
@@ -714,7 +714,7 @@ bool t3d_vt_page_builder_resample_logical_channel_u8( const t3dVTLogicalChannel_
                                                       const uint64_t nDestinationBytes )
 {
 	const uint32_t nTargetComponents = t3d_vt_page_builder_logical_channel_components( Channel );
-	const uint64_t nRequired = ( uint64_t )nTargetWidth * nTargetHeight * nTargetComponents;
+	const uint64_t nRequired = static_cast<uint64_t>(nTargetWidth) * nTargetHeight * nTargetComponents;
 	if ( nTargetComponents == 0u || nTargetWidth == 0u || nTargetHeight == 0u || pDestination == NULL || nDestinationBytes < nRequired ||
 	     !t3d_vt_page_builder_validate_logical_source( Channel, nOrmSourceLayout, rSource ) ) {
 		return false;
@@ -738,8 +738,8 @@ bool t3d_vt_page_builder_resample_logical_channel_u8( const t3dVTLogicalChannel_
 	for ( uint32_t y = 0u; y < nTargetHeight; ++y ) {
 		uint32_t y0, y1, nWeightY;
 		t3d_vt_page_builder_resample_axis( y, nTargetHeight, rSource.m_nHeight, y0, y1, nWeightY );
-		const uint8_t *pRow0 = rSource.m_pPixels + ( uint64_t )y0 * rSource.m_nRowBytes;
-		const uint8_t *pRow1 = rSource.m_pPixels + ( uint64_t )y1 * rSource.m_nRowBytes;
+		const uint8_t *pRow0 = rSource.m_pPixels + static_cast<uint64_t>(y0) * rSource.m_nRowBytes;
+		const uint8_t *pRow1 = rSource.m_pPixels + static_cast<uint64_t>(y1) * rSource.m_nRowBytes;
 		for ( uint32_t x = 0u; x < nTargetWidth; ++x ) {
 			uint32_t x0, x1, nWeightX;
 			t3d_vt_page_builder_resample_axis( x, nTargetWidth, rSource.m_nWidth, x0, x1, nWeightX );
@@ -747,7 +747,7 @@ bool t3d_vt_page_builder_resample_logical_channel_u8( const t3dVTLogicalChannel_
 			const uint8_t *p10 = pRow0 + x1 * rSource.m_nComponents;
 			const uint8_t *p01 = pRow1 + x0 * rSource.m_nComponents;
 			const uint8_t *p11 = pRow1 + x1 * rSource.m_nComponents;
-			uint8_t *pOut = pDestination + ( ( uint64_t )y * nTargetWidth + x ) * nTargetComponents;
+			uint8_t *pOut = pDestination + ( static_cast<uint64_t>(y) * nTargetWidth + x ) * nTargetComponents;
 			switch ( Channel ) {
 			case T3D_VT_LOGICAL_CHANNEL_ALBEDO: {
 				const float a00 = rSource.m_nComponents >= 4u ? p00[3] / 255.0f : 1.0f;
@@ -813,18 +813,18 @@ static void t3d_vt_page_builder_filter_albedo_high_quality( const t3dVTCookImage
 {
 	const float weights[4] = { 1.0f, nMipQuality == 2u ? 1.0f : 3.0f, nMipQuality == 2u ? 1.0f : 3.0f, 1.0f };
 	for ( uint32_t y = 0u; y < nTargetHeight; ++y ) {
-		const int32_t cy = ( int32_t )( ( ( uint64_t )y * 2u + 1u ) * rSource.m_nHeight / ( nTargetHeight * 2u ) ) - 1;
+		const int32_t cy = ( int32_t )( ( static_cast<uint64_t>(y) * 2u + 1u ) * rSource.m_nHeight / ( nTargetHeight * 2u ) ) - 1;
 		for ( uint32_t x = 0u; x < nTargetWidth; ++x ) {
-			const int32_t cx = ( int32_t )( ( ( uint64_t )x * 2u + 1u ) * rSource.m_nWidth / ( nTargetWidth * 2u ) ) - 1;
+			const int32_t cx = ( int32_t )( ( static_cast<uint64_t>(x) * 2u + 1u ) * rSource.m_nWidth / ( nTargetWidth * 2u ) ) - 1;
 			float sum[3] = { 0.0f, 0.0f, 0.0f };
 			float alpha = 0.0f, total = 0.0f;
 			for ( uint32_t iy = 0u; iy < 4u; ++iy ) {
-				const uint32_t sy = ( uint32_t )CLAMP( cy + ( int32_t )iy - 1, 0, ( int32_t )rSource.m_nHeight - 1 );
+				const uint32_t sy = static_cast<uint32_t>(CLAMP( cy + static_cast<int32_t>(iy) - 1, 0, static_cast<int32_t>(rSource.m_nHeight) - 1 ));
 				for ( uint32_t ix = 0u; ix < 4u; ++ix ) {
-					const uint32_t sx = ( uint32_t )CLAMP( cx + ( int32_t )ix - 1, 0, ( int32_t )rSource.m_nWidth - 1 );
-					const uint8_t *p = rSource.m_pPixels + ( uint64_t )sy * rSource.m_nRowBytes + sx * 4u;
+					const uint32_t sx = static_cast<uint32_t>(CLAMP( cx + static_cast<int32_t>(ix) - 1, 0, static_cast<int32_t>(rSource.m_nWidth) - 1 ));
+					const uint8_t *p = rSource.m_pPixels + static_cast<uint64_t>(sy) * rSource.m_nRowBytes + sx * 4u;
 					const float weight = weights[iy] * weights[ix];
-					const float a = ( float )p[3] / 255.0f;
+					const float a = static_cast<float>(p[3]) / 255.0f;
 					for ( uint32_t c = 0u; c < 3u; ++c ) {
 						sum[c] += weight * a * t3d_vt_page_builder_srgb_to_linear( p[c] );
 					}
@@ -832,11 +832,11 @@ static void t3d_vt_page_builder_filter_albedo_high_quality( const t3dVTCookImage
 					total += weight;
 				}
 			}
-			uint8_t *out = pDestination + ( ( uint64_t )y * nTargetWidth + x ) * 4u;
+			uint8_t *out = pDestination + ( static_cast<uint64_t>(y) * nTargetWidth + x ) * 4u;
 			for ( uint32_t c = 0u; c < 3u; ++c ) {
 				out[c] = t3d_vt_page_builder_linear_to_srgb( alpha > 0.00001f ? sum[c] / alpha : 0.0f );
 			}
-			out[3] = ( uint8_t )CLAMP( ( int32_t )( 255.0f * alpha / total + 0.5f ), 0, 255 );
+			out[3] = static_cast<uint8_t>(CLAMP( static_cast<int32_t>( 255.0f * alpha / total + 0.5f ), 0, 255 ));
 		}
 	}
 }
@@ -870,13 +870,13 @@ bool t3d_vt_page_builder_build_logical_channel_mips_u8( const t3dVTLogicalChanne
 			const uint8_t *pSrc = Source.m_pPixels;
 			uint8_t *pDst = pImageBytes + rDestinationLayout.m_nOffset;
 			for ( uint32_t y = 0u; y < rDestinationLayout.m_nHeight; ++y ) {
-				const uint32_t sy = MIN( Source.m_nHeight - 1u, ( uint32_t )( ( ( uint64_t )y * 2u + 1u ) * Source.m_nHeight /
+				const uint32_t sy = MIN( Source.m_nHeight - 1u, ( uint32_t )( ( static_cast<uint64_t>(y) * 2u + 1u ) * Source.m_nHeight /
 				                                                              ( rDestinationLayout.m_nHeight * 2u ) ) );
 				for ( uint32_t x = 0u; x < rDestinationLayout.m_nWidth; ++x ) {
-					const uint32_t sx = MIN( Source.m_nWidth - 1u, ( uint32_t )( ( ( uint64_t )x * 2u + 1u ) * Source.m_nWidth /
+					const uint32_t sx = MIN( Source.m_nWidth - 1u, ( uint32_t )( ( static_cast<uint64_t>(x) * 2u + 1u ) * Source.m_nWidth /
 					                                                             ( rDestinationLayout.m_nWidth * 2u ) ) );
-					memcpy( pDst + ( ( uint64_t )y * rDestinationLayout.m_nWidth + x ) * nComponents,
-					        pSrc + ( ( uint64_t )sy * Source.m_nWidth + sx ) * nComponents, nComponents );
+					memcpy( pDst + ( static_cast<uint64_t>(y) * rDestinationLayout.m_nWidth + x ) * nComponents,
+					        pSrc + ( static_cast<uint64_t>(sy) * Source.m_nWidth + sx ) * nComponents, nComponents );
 				}
 			}
 			continue;
@@ -905,19 +905,19 @@ bool t3d_vt_page_builder_build_tile_u8( const uint8_t *pMipPixels, const uint32_
                                         const uint32_t nComponents, const uint32_t nPageX, const uint32_t nPageY,
                                         const t3dVTCookWrapMode_t eWrapMode, uint8_t *pDestination, const uint64_t nDestinationBytes )
 {
-	const uint64_t nRequired = ( uint64_t )T3D_VT_PHYSICAL_TILE * T3D_VT_PHYSICAL_TILE * nComponents;
+	const uint64_t nRequired = static_cast<uint64_t>(T3D_VT_PHYSICAL_TILE) * T3D_VT_PHYSICAL_TILE * nComponents;
 	if ( pMipPixels == NULL || nMipWidth == 0u || nMipHeight == 0u || nComponents == 0u || nComponents > 4u || pDestination == NULL ||
 	     nDestinationBytes < nRequired ) {
 		return false;
 	}
 	for ( uint32_t y = 0u; y < T3D_VT_PHYSICAL_TILE; ++y ) {
-		const int64_t nGlobalY = ( int64_t )nPageY * T3D_VT_PAGE_INTERIOR + ( int64_t )y - T3D_VT_PAGE_GUTTER;
+		const int64_t nGlobalY = static_cast<int64_t>(nPageY) * T3D_VT_PAGE_INTERIOR + static_cast<int64_t>( static_cast<y>( - T3D_VT_PAGE_GUTTER ) );
 		const uint32_t nSourceY = t3d_vt_page_builder_wrap_coordinate( nGlobalY, nMipHeight, eWrapMode );
 		for ( uint32_t x = 0u; x < T3D_VT_PHYSICAL_TILE; ++x ) {
-			const int64_t nGlobalX = ( int64_t )nPageX * T3D_VT_PAGE_INTERIOR + ( int64_t )x - T3D_VT_PAGE_GUTTER;
+			const int64_t nGlobalX = static_cast<int64_t>(nPageX) * T3D_VT_PAGE_INTERIOR + static_cast<int64_t>( static_cast<x>( - T3D_VT_PAGE_GUTTER ) );
 			const uint32_t nSourceX = t3d_vt_page_builder_wrap_coordinate( nGlobalX, nMipWidth, eWrapMode );
-			const uint8_t *pSource = pMipPixels + ( ( uint64_t )nSourceY * nMipWidth + nSourceX ) * nComponents;
-			uint8_t *pOut = pDestination + ( ( uint64_t )y * T3D_VT_PHYSICAL_TILE + x ) * nComponents;
+			const uint8_t *pSource = pMipPixels + ( static_cast<uint64_t>(nSourceY) * nMipWidth + nSourceX ) * nComponents;
+			uint8_t *pOut = pDestination + ( static_cast<uint64_t>(y) * T3D_VT_PHYSICAL_TILE + x ) * nComponents;
 			memcpy( pOut, pSource, nComponents );
 		}
 	}

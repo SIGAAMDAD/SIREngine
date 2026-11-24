@@ -24,24 +24,24 @@ of merchantability, fitness for a particular purpose and noninfringement.
 SIRWindowsRawBackend::SIRWindowsRawBackend( void ) noexcept : m_pWindow( nullptr )
 {
 }
-sirInputBackendId_t SIRWindowsRawBackend::id( void ) const noexcept
+SIRInputBackendId SIRWindowsRawBackend::id( void ) const noexcept
 {
-	return SIR_INPUT_WIN_RAW;
+	return SIRInputBackendId::SIR_INPUT_WIN_RAW;
 }
 void SIRWindowsRawBackend::sample( SIRInputService& service ) noexcept
 {
-	( void )service;
+	static_cast<void>(service);
 }
 void SIRWindowsRawBackend::resynchronize( SIRInputService& service ) noexcept
 {
-	( void )service;
+	static_cast<void>(service);
 }
 bool SIRWindowsRawBackend::vibrate( sirInputDeviceId_t id, uint16_t nL, uint16_t nR ) noexcept
 {
 
-	( void )id;
-	( void )nL;
-	( void )nR;
+	static_cast<void>(id);
+	static_cast<void>(nL);
+	static_cast<void>(nR);
 	return false;
 }
 
@@ -50,8 +50,8 @@ bool SIRWindowsRawBackend::attachWindow( void *pWindow ) noexcept
 	if ( m_pWindow != nullptr || pWindow == nullptr ) {
 		return false;
 	}
-	RAWINPUTDEVICE devices[2] = { { HID_USAGE_PAGE_GENERIC, HID_USAGE_GENERIC_KEYBOARD, RIDEV_DEVNOTIFY, ( HWND )pWindow },
-	                              { HID_USAGE_PAGE_GENERIC, HID_USAGE_GENERIC_MOUSE, RIDEV_DEVNOTIFY, ( HWND )pWindow } };
+	RAWINPUTDEVICE devices[2] = { { HID_USAGE_PAGE_GENERIC, HID_USAGE_GENERIC_KEYBOARD, RIDEV_DEVNOTIFY, static_cast<HWND>(pWindow) },
+	                              { HID_USAGE_PAGE_GENERIC, HID_USAGE_GENERIC_MOUSE, RIDEV_DEVNOTIFY, static_cast<HWND>(pWindow) } };
 	if ( !RegisterRawInputDevices( devices, 2, sizeof( devices[0] ) ) ) {
 		return false;
 	}
@@ -62,13 +62,13 @@ bool SIRWindowsRawBackend::attachWindow( void *pWindow ) noexcept
 bool SIRWindowsRawBackend::processRaw( SIRInputService& service, void *pHRawInput ) noexcept
 {
 	UINT nBytes = 0;
-	if ( GetRawInputData( ( HRAWINPUT )pHRawInput, RID_INPUT, nullptr, &nBytes, sizeof( RAWINPUTHEADER ) ) != 0 ||
+	if ( GetRawInputData( static_cast<HRAWINPUT>(pHRawInput), RID_INPUT, nullptr, &nBytes, sizeof( RAWINPUTHEADER ) ) != 0 ||
 	     nBytes > sizeof( RAWINPUT ) || nBytes < sizeof( RAWINPUTHEADER ) ) {
 		return false;
 	}
 
-	RAWINPUT input = {};
-	const UINT nRead = GetRawInputData( ( HRAWINPUT )pHRawInput, RID_INPUT, &input, &nBytes, sizeof( RAWINPUTHEADER ) );
+	RAWINPUT input {};
+	const UINT nRead = GetRawInputData( static_cast<HRAWINPUT>(pHRawInput), RID_INPUT, &input, &nBytes, sizeof( RAWINPUTHEADER ) );
 	if ( nRead == ( UINT )-1 || nRead != nBytes ) {
 		return false;
 	}
@@ -89,7 +89,7 @@ bool SIRWindowsRawBackend::drainBuffered( SIRInputService& service ) noexcept
 
 	for ( uint32_t iBatch = 0; iBatch < MAX_BATCHES; ++iBatch ) {
 		UINT nCapacityBytes = BUFFER_BYTES;
-		const UINT nCount = GetRawInputBuffer( ( RAWINPUT * )szBuffer, &nCapacityBytes, sizeof( RAWINPUTHEADER ) );
+		const UINT nCount = GetRawInputBuffer( static_cast<RAWINPUT *>(szBuffer), &nCapacityBytes, sizeof( RAWINPUTHEADER ) );
 		if ( nCount == 0 ) {
 			return true;
 		}
@@ -98,7 +98,7 @@ bool SIRWindowsRawBackend::drainBuffered( SIRInputService& service ) noexcept
 			// dispatch path; do not allocate on the input hot path.
 			return GetLastError() == ERROR_INSUFFICIENT_BUFFER;
 		}
-		if ( !sirInputDecodeWindowsRawBatch( service, ( RAWINPUT * )szBuffer, nCount, BUFFER_BYTES ) ) {
+		if ( !sirInputDecodeWindowsRawBatch( service, static_cast<RAWINPUT *>(szBuffer), nCount, BUFFER_BYTES ) ) {
 			return false;
 		}
 	}
@@ -111,34 +111,34 @@ bool SIRWindowsRawBackend::processMessage( SIRInputService& service, uint32_t nM
 		return false;
 	}
 	if ( nMessage == WM_INPUT ) {
-		const bool bCurrent = processRaw( service, ( void * )nLParam );
+		const bool bCurrent = processRaw( service, static_cast<void *>(nLParam) );
 		const bool bBuffered = drainBuffered( service );
 		if ( !bCurrent || !bBuffered ) {
 			// Recover held input when a capacity failure invalidates a batch.
-			( void )service.recover();
+			static_cast<void>(service.recover());
 			return false;
 		}
 		return true;
 	}
 	if ( nMessage == WM_INPUT_DEVICE_CHANGE && nWParam == GIDC_ARRIVAL ) {
-		RID_DEVICE_INFO info = {};
+		RID_DEVICE_INFO info {};
 		info.cbSize = sizeof( info );
 		UINT nSize = sizeof( info );
-		const HANDLE hNative = ( HANDLE )nLParam;
+		const HANDLE hNative = static_cast<HANDLE>(nLParam);
 		if ( GetRawInputDeviceInfoW( hNative, RIDI_DEVICEINFO, &info, &nSize ) == ( UINT )-1 ) {
 			return false;
 		}
-		const sirInputDeviceClass_t eClass = info.dwType == RIM_TYPEKEYBOARD ? SIR_INPUT_KEYBOARD : SIR_INPUT_POINTER;
+		const SIRInputDeviceClass eClass = info.dwType == RIM_TYPEKEYBOARD ? SIRInputDeviceClass::SIR_INPUT_KEYBOARD : SIRInputDeviceClass::SIR_INPUT_POINTER;
 		if ( info.dwType != RIM_TYPEKEYBOARD && info.dwType != RIM_TYPEMOUSE ) {
 			return false;
 		}
-		sirInputDeviceId_t hDevice = {};
-		const uint64_t nNative = ( uint64_t )( uintptr_t )hNative;
+		sirInputDeviceId_t hDevice {};
+		const uint64_t nNative = static_cast<uint64_t>static_cast<uintptr_t>( hNative );
 		return service.findDevice( id(), nNative, &hDevice ) || service.connect( { 0, nNative, id(), eClass }, &hDevice );
 	}
 	if ( nMessage == WM_INPUT_DEVICE_CHANGE && nWParam == GIDC_REMOVAL ) {
-		sirInputDeviceId_t h = {};
-		const uint64_t nNative = ( uint64_t )nLParam;
+		sirInputDeviceId_t h {};
+		const uint64_t nNative = static_cast<uint64_t>(nLParam);
 		bool bRemoved = false;
 		if ( service.findDevice( id(), nNative, &h ) ) {
 			bRemoved = service.disconnect( id(), h );
@@ -157,5 +157,5 @@ void SIRWindowsRawBackend::stop( SIRInputService& service ) noexcept
 	                              { HID_USAGE_PAGE_GENERIC, HID_USAGE_GENERIC_MOUSE, RIDEV_REMOVE, nullptr } };
 	RegisterRawInputDevices( devices, 2, sizeof( devices[0] ) );
 	m_pWindow = nullptr;
-	( void )service;
+	static_cast<void>(service);
 }

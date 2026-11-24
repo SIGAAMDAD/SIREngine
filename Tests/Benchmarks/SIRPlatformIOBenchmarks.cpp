@@ -346,7 +346,7 @@ static void SIRBenchmarkPlatformPipeLifecycleTransfer( benchmark::State& state )
 	for ( auto _ : state ) {
 		( void )_;
 		SIRPlatformPipe pipe;
-		if ( pipe.create() != SIR_PIPE_OK ) {
+		if ( pipe.create() != SIRPipeResult::SIR_PIPE_OK ) {
 			state.SkipWithError( "pipe create failed" );
 			bFailed = true;
 			break;
@@ -354,14 +354,14 @@ static void SIRBenchmarkPlatformPipeLifecycleTransfer( benchmark::State& state )
 		bool bProducerOK = false;
 		std::thread producer( [&]() {
 			uint64_t nTransferred = 0;
-			bProducerOK = pipe.write( szInput.data(), nBytes, &nTransferred ) == SIR_PIPE_OK && nTransferred == nBytes;
+			bProducerOK = pipe.write( szInput.data(), nBytes, &nTransferred ) == SIRPipeResult::SIR_PIPE_OK && nTransferred == nBytes;
 			( void )pipe.closeWrite();
 		} );
 		uint64_t nConsumed = 0;
 		while ( nConsumed < nBytes ) {
 			uint64_t nTransferred = 0;
-			const sirPipeResult_t eResult = pipe.read( szOutput.data() + nConsumed, nBytes - nConsumed, &nTransferred );
-			if ( eResult != SIR_PIPE_OK || nTransferred == 0 ) {
+			const SIRPipeResult eResult = pipe.read( szOutput.data() + nConsumed, nBytes - nConsumed, &nTransferred );
+			if ( eResult != SIRPipeResult::SIR_PIPE_OK || nTransferred == 0 ) {
 				bFailed = true;
 				break;
 			}

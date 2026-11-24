@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRRENDERINGDEVICE_H__
-#define __SIRENGINE_SIRRENDERINGDEVICE_H__
+#ifndef __SIR_RENDERINGDEVICE_H__
+#define __SIR_RENDERINGDEVICE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -34,26 +34,26 @@ protected:
 	virtual ~SIRGraphicsCommandList( void ) noexcept = default;
 
 public:
-	virtual sirGraphicsQueue_t getQueue( void ) const noexcept = 0;
-	virtual sirGraphicsResult_t reset( void ) noexcept = 0;
-	virtual sirGraphicsResult_t barrier( const sirGraphicsBarrier_t *pBarriers, uint32_t nCount ) noexcept = 0;
-	virtual sirGraphicsResult_t copyBuffer( sirGraphicsHandle_t hDestination, uint64_t nDstOffset, sirGraphicsHandle_t hSource,
+	virtual SIRGraphicsQueue getQueue( void ) const noexcept = 0;
+	virtual SIRGraphicsResult reset( void ) noexcept = 0;
+	virtual SIRGraphicsResult barrier( const sirGraphicsBarrier_t *pBarriers, uint32_t nCount ) noexcept = 0;
+	virtual SIRGraphicsResult copyBuffer( sirGraphicsHandle_t hDestination, uint64_t nDstOffset, sirGraphicsHandle_t hSource,
 	                                        uint64_t nSrcOffset, uint64_t nBytes ) noexcept = 0;
-	virtual sirGraphicsResult_t copyBufferTexture( const sirGraphicsBufferTextureCopy_t& copy ) noexcept = 0;
-	virtual sirGraphicsResult_t beginRenderPass( const sirGraphicsRenderPass_t& pass ) noexcept = 0;
-	virtual sirGraphicsResult_t endRenderPass( void ) noexcept = 0;
-	virtual sirGraphicsResult_t bindPipeline( sirGraphicsHandle_t hPipeline ) noexcept = 0;
-	virtual sirGraphicsResult_t bindBindingSet( uint32_t nSetIndex, sirGraphicsHandle_t hBindingSet ) noexcept = 0;
-	virtual sirGraphicsResult_t bindVertexBuffer( uint32_t nSlot, sirGraphicsHandle_t hBuffer, uint64_t nOffsetBytes,
+	virtual SIRGraphicsResult copyBufferTexture( const sirGraphicsBufferTextureCopy_t& copy ) noexcept = 0;
+	virtual SIRGraphicsResult beginRenderPass( const sirGraphicsRenderPass_t& pass ) noexcept = 0;
+	virtual SIRGraphicsResult endRenderPass( void ) noexcept = 0;
+	virtual SIRGraphicsResult bindPipeline( sirGraphicsHandle_t hPipeline ) noexcept = 0;
+	virtual SIRGraphicsResult bindBindingSet( uint32_t nSetIndex, sirGraphicsHandle_t hBindingSet ) noexcept = 0;
+	virtual SIRGraphicsResult bindVertexBuffer( uint32_t nSlot, sirGraphicsHandle_t hBuffer, uint64_t nOffsetBytes,
 	                                              uint32_t nStrideBytes ) noexcept = 0;
-	virtual sirGraphicsResult_t bindIndexBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffsetBytes, bool bIndex32 ) noexcept = 0;
-	virtual sirGraphicsResult_t setViewport( const sirGraphicsViewport_t& viewport, const sirGraphicsRect_t& scissor ) noexcept = 0;
-	virtual sirGraphicsResult_t draw( uint32_t nVertices, uint32_t nInstances, uint32_t nFirstVertex,
+	virtual SIRGraphicsResult bindIndexBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffsetBytes, bool bIndex32 ) noexcept = 0;
+	virtual SIRGraphicsResult setViewport( const sirGraphicsViewport_t& viewport, const sirGraphicsRect_t& scissor ) noexcept = 0;
+	virtual SIRGraphicsResult draw( uint32_t nVertices, uint32_t nInstances, uint32_t nFirstVertex,
 	                                  uint32_t nFirstInstance ) noexcept = 0;
-	virtual sirGraphicsResult_t drawIndexed( uint32_t nIndices, uint32_t nInstances, uint32_t nFirstIndex, int32_t nVertexOffset,
+	virtual SIRGraphicsResult drawIndexed( uint32_t nIndices, uint32_t nInstances, uint32_t nFirstIndex, int32_t nVertexOffset,
 	                                         uint32_t nFirstInstance ) noexcept = 0;
-	virtual sirGraphicsResult_t dispatch( uint32_t nX, uint32_t nY, uint32_t nZ ) noexcept = 0;
-	virtual sirGraphicsResult_t close( void ) noexcept = 0;
+	virtual SIRGraphicsResult dispatch( uint32_t nX, uint32_t nY, uint32_t nZ ) noexcept = 0;
+	virtual SIRGraphicsResult close( void ) noexcept = 0;
 };
 
 typedef struct sirGraphicsSubmission_s
@@ -75,48 +75,48 @@ protected:
 	virtual ~SIRRenderingDevice( void ) noexcept = default;
 
 public:
-	virtual sirGraphicsBackend_t getBackend( void ) const noexcept = 0;
+	virtual SIRGraphicsBackend getBackend( void ) const noexcept = 0;
 	virtual uint32_t getDeviceGeneration( void ) const noexcept = 0;
-	virtual sirGraphicsResult_t queryCapabilities( sirGraphicsCapabilities_t *pCapabilities ) const noexcept = 0;
+	virtual SIRGraphicsResult queryCapabilities( sirGraphicsCapabilities_t *pCapabilities ) const noexcept = 0;
 	// Device-advertised pipeline-era support; no inference from backend or API version.
-	virtual sirGraphicsResult_t queryPipelineModelCaps( sirGraphicsPipelineModel_t eModel,
+	virtual SIRGraphicsResult queryPipelineModelCaps( SIRGraphicsPipelineModel eModel,
 	                                                    sirGraphicsABIPipelineModelCaps_t *pCaps ) const noexcept = 0;
-	virtual sirGraphicsResult_t queryMemoryBudget( sirGraphicsMemoryBudget_t *pBudget ) const noexcept = 0;
+	virtual SIRGraphicsResult queryMemoryBudget( sirGraphicsMemoryBudget_t *pBudget ) const noexcept = 0;
 
-	virtual sirGraphicsResult_t createBuffer( const sirGraphicsBufferDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept = 0;
-	virtual sirGraphicsResult_t createTexture( const sirGraphicsTextureDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept = 0;
-	virtual sirGraphicsResult_t createView( const sirGraphicsViewDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept = 0;
-	virtual sirGraphicsResult_t createSampler( const sirGraphicsSamplerDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept = 0;
-	virtual sirGraphicsResult_t createPipeline( const sirGraphicsPipelineDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept = 0;
-	virtual sirGraphicsResult_t createBindingSet( sirGraphicsHandle_t hPipeline, uint32_t nSetIndex,
+	virtual SIRGraphicsResult createBuffer( const sirGraphicsBufferDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept = 0;
+	virtual SIRGraphicsResult createTexture( const sirGraphicsTextureDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept = 0;
+	virtual SIRGraphicsResult createView( const sirGraphicsViewDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept = 0;
+	virtual SIRGraphicsResult createSampler( const sirGraphicsSamplerDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept = 0;
+	virtual SIRGraphicsResult createPipeline( const sirGraphicsPipelineDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept = 0;
+	virtual SIRGraphicsResult createBindingSet( sirGraphicsHandle_t hPipeline, uint32_t nSetIndex,
 	                                              sirGraphicsHandle_t *pHandle ) noexcept = 0;
-	virtual sirGraphicsResult_t updateBindings( sirGraphicsHandle_t hSet, const sirGraphicsDescriptorWrite_t *pWrites,
+	virtual SIRGraphicsResult updateBindings( sirGraphicsHandle_t hSet, const sirGraphicsDescriptorWrite_t *pWrites,
 	                                            uint32_t nWriteCount ) noexcept = 0;
-	virtual sirGraphicsResult_t mapBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffsetBytes, uint64_t nBytes,
+	virtual SIRGraphicsResult mapBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffsetBytes, uint64_t nBytes,
 	                                       sirGraphicsMappedBuffer_t *pMapped ) noexcept = 0;
-	virtual sirGraphicsResult_t unmapBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffsetBytes, uint64_t nBytes ) noexcept = 0;
-	virtual sirGraphicsResult_t flushBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffsetBytes, uint64_t nBytes ) noexcept = 0;
-	virtual sirGraphicsResult_t invalidateBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffsetBytes, uint64_t nBytes ) noexcept = 0;
+	virtual SIRGraphicsResult unmapBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffsetBytes, uint64_t nBytes ) noexcept = 0;
+	virtual SIRGraphicsResult flushBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffsetBytes, uint64_t nBytes ) noexcept = 0;
+	virtual SIRGraphicsResult invalidateBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffsetBytes, uint64_t nBytes ) noexcept = 0;
 
-	virtual sirGraphicsResult_t acquireCommands( sirGraphicsQueue_t eQueue, SIRGraphicsCommandList **ppCommands ) noexcept = 0;
-	virtual sirGraphicsResult_t submit( sirGraphicsQueue_t eQueue, const sirGraphicsSubmission_t& submission,
+	virtual SIRGraphicsResult acquireCommands( SIRGraphicsQueue eQueue, SIRGraphicsCommandList **ppCommands ) noexcept = 0;
+	virtual SIRGraphicsResult submit( SIRGraphicsQueue eQueue, const sirGraphicsSubmission_t& submission,
 	                                    sirGraphicsCompletion_t *pCompletion ) noexcept = 0;
-	virtual sirGraphicsResult_t poll( const sirGraphicsCompletion_t& completion, bool *pCompleted ) noexcept = 0;
-	virtual sirGraphicsResult_t wait( const sirGraphicsCompletion_t& completion, uint64_t nTimeoutNanoseconds ) noexcept = 0;
+	virtual SIRGraphicsResult poll( const sirGraphicsCompletion_t& completion, bool *pCompleted ) noexcept = 0;
+	virtual SIRGraphicsResult wait( const sirGraphicsCompletion_t& completion, uint64_t nTimeoutNanoseconds ) noexcept = 0;
 	// Invalidates the public handle immediately. Defers native destruction
 	// until every queue fence named in the completion set has retired.
-	virtual sirGraphicsResult_t retireResource( sirGraphicsHandle_t hResource, const sirGraphicsCompletionSet_t& completion ) noexcept = 0;
+	virtual SIRGraphicsResult retireResource( sirGraphicsHandle_t hResource, const sirGraphicsCompletionSet_t& completion ) noexcept = 0;
 
 	// Window creation and events remain owned by the platform layer.
-	virtual sirGraphicsResult_t createSurface( const sirGraphicsNativeSurface_t& native, const sirGraphicsPresentDesc_t& present,
+	virtual SIRGraphicsResult createSurface( const sirGraphicsNativeSurface_t& native, const sirGraphicsPresentDesc_t& present,
 	                                           sirGraphicsHandle_t *pSurface ) noexcept = 0;
-	virtual sirGraphicsResult_t resizeSurface( sirGraphicsHandle_t hSurface, const sirGraphicsNativeSurface_t& native,
+	virtual SIRGraphicsResult resizeSurface( sirGraphicsHandle_t hSurface, const sirGraphicsNativeSurface_t& native,
 	                                           const sirGraphicsPresentDesc_t& present ) noexcept = 0;
-	virtual sirGraphicsResult_t acquireSurfaceImage( sirGraphicsHandle_t hSurface, sirGraphicsSurfaceImage_t *pImage ) noexcept = 0;
-	virtual sirGraphicsResult_t present( const sirGraphicsSurfaceImage_t& image,
+	virtual SIRGraphicsResult acquireSurfaceImage( sirGraphicsHandle_t hSurface, sirGraphicsSurfaceImage_t *pImage ) noexcept = 0;
+	virtual SIRGraphicsResult present( const sirGraphicsSurfaceImage_t& image,
 	                                     const sirGraphicsCompletion_t& renderComplete ) noexcept = 0;
 	// Must return BUSY rather than waiting behind the caller's back.
-	virtual sirGraphicsResult_t shutdown( void ) noexcept = 0;
+	virtual SIRGraphicsResult shutdown( void ) noexcept = 0;
 };
 
 // One implementation per explicit graphics API. Backend factories own and
@@ -127,11 +127,11 @@ protected:
 	virtual ~SIRGraphicsDriver( void ) noexcept = default;
 
 public:
-	virtual sirGraphicsBackend_t getBackend( void ) const noexcept = 0;
-	virtual sirGraphicsResult_t getAdapterCount( uint32_t *pCount ) const noexcept = 0;
-	virtual sirGraphicsResult_t queryAdapter( uint32_t nAdapterIndex, sirGraphicsAdapterInfo_t *pInfo ) const noexcept = 0;
-	virtual sirGraphicsResult_t createDevice( const sirGraphicsDeviceCreateDesc_t& desc, SIRRenderingDevice **ppDevice ) noexcept = 0;
-	virtual sirGraphicsResult_t destroyDevice( SIRRenderingDevice *pDevice ) noexcept = 0;
+	virtual SIRGraphicsBackend getBackend( void ) const noexcept = 0;
+	virtual SIRGraphicsResult getAdapterCount( uint32_t *pCount ) const noexcept = 0;
+	virtual SIRGraphicsResult queryAdapter( uint32_t nAdapterIndex, sirGraphicsAdapterInfo_t *pInfo ) const noexcept = 0;
+	virtual SIRGraphicsResult createDevice( const sirGraphicsDeviceCreateDesc_t& desc, SIRRenderingDevice **ppDevice ) noexcept = 0;
+	virtual SIRGraphicsResult destroyDevice( SIRRenderingDevice *pDevice ) noexcept = 0;
 };
 
-#endif // __SIRENGINE_SIRRENDERINGDEVICE_H__
+#endif // __SIR_RENDERINGDEVICE_H__

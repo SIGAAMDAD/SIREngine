@@ -18,12 +18,12 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 static uint32_t sirCatalogU32( const uint8_t *pBytes ) noexcept
 {
-	return ( uint32_t )pBytes[0] | ( ( uint32_t )pBytes[1] << 8 ) | ( ( uint32_t )pBytes[2] << 16 ) | ( ( uint32_t )pBytes[3] << 24 );
+	return static_cast<uint32_t>(pBytes[0]) | ( static_cast<uint32_t>(pBytes[1]) << 8 ) | ( static_cast<uint32_t>(pBytes[2]) << 16 ) | ( static_cast<uint32_t>(pBytes[3]) << 24 );
 }
 
 static uint64_t sirCatalogU64( const uint8_t *pBytes ) noexcept
 {
-	return ( uint64_t )sirCatalogU32( pBytes ) | ( ( uint64_t )sirCatalogU32( pBytes + 4 ) << 32 );
+	return static_cast<uint64_t>(sirCatalogU32( pBytes )) | ( static_cast<uint64_t>(sirCatalogU32( pBytes + 4 )) << 32 );
 }
 
 static void sirCatalogSort32( uint32_t *pValues, uint32_t nCount ) noexcept
@@ -62,16 +62,17 @@ static bool sirCatalogAllowedModuleName( SIRStringPool& pool, SIRStringAtom atom
 	if ( nLength < 3 || nLength > SIR_REGISTRATION_MAX_NAME_BYTES ) {
 		return false;
 	}
-	char szName[SIR_REGISTRATION_MAX_NAME_BYTES + 1] = {};
+	char szName[SIR_REGISTRATION_MAX_NAME_BYTES + 1];
+	memset( szName, 0, sizeof( szName ) );
 	uint32_t nWritten = 0;
-	if ( pool.decodeInto( atom, szName, sizeof( szName ), nWritten ) != SIR_STRING_OK ) {
+	if ( pool.decodeInto( atom, szName, sizeof( szName ), nWritten ) != SIRStringStatus::SIR_STRING_OK ) {
 		return false;
 	}
-	const char *pszDot = ( const char * )memchr( szName, '.', nWritten );
+	const char *pszDot = static_cast<const char *>(memchr( szName, '.', nWritten ));
 	if ( pszDot == nullptr ) {
 		return false;
 	}
-	const size_t nPrefix = ( size_t )( pszDot - szName );
+	const size_t nPrefix = static_cast<size_t>( pszDot - szName );
 	return !( nPrefix == 3 && memcmp( szName, "sir", 3 ) == 0 ) && !( nPrefix == 7 && memcmp( szName, "console", 7 ) == 0 );
 }
 
@@ -124,7 +125,7 @@ static bool sirCatalogDefaultValid( const sirRegistrationCatalogInit_t& init, ui
 	if ( nOffset < nDefaultsStart || ( nOffset & 7u ) != 0 || nOffset > init.nBytes ) {
 		return false;
 	}
-	if ( nType == SIR_CVAR_UTF8_STRING ) {
+	if ( nType == static_cast<uint32_t>( SIRCVarType::SIR_CVAR_UTF8_STRING ) ) {
 		if ( init.nBytes - nOffset < 4 ) {
 			return false;
 		}
@@ -135,10 +136,10 @@ static bool sirCatalogDefaultValid( const sirRegistrationCatalogInit_t& init, ui
 		return false;
 	}
 	const uint64_t nBits = sirCatalogU64( init.pBytes + nOffset );
-	if ( nType == SIR_CVAR_BOOL ) {
+	if ( nType == static_cast<uint32_t>( SIRCVarType::SIR_CVAR_BOOL ) ) {
 		return nBits <= 1;
 	}
-	if ( nType == SIR_CVAR_I32 || nType == SIR_CVAR_U32 || nType == SIR_CVAR_F32 || nType == SIR_CVAR_ENUM_U32 ) {
+	if ( nType == static_cast<uint32_t>( SIRCVarType::SIR_CVAR_I32 ) || nType == static_cast<uint32_t>( SIRCVarType::SIR_CVAR_U32 ) || nType == static_cast<uint32_t>( SIRCVarType::SIR_CVAR_F32 ) || nType == static_cast<uint32_t>( SIRCVarType::SIR_CVAR_ENUM_U32 ) ) {
 		return ( nBits >> 32 ) == 0;
 	}
 	return true;
@@ -175,65 +176,65 @@ uint32_t SIRRegistrationCatalog::getCookedCount( void ) const noexcept
 	return m_nCookedCount;
 }
 
-sirRegistrationResult_t SIRRegistrationCatalog::getEntry( sirRegistrationHandle_t handle,
+SIRRegistrationResult SIRRegistrationCatalog::getEntry( sirRegistrationHandle_t handle,
                                                           const sirRegistrationEntry_t **ppEntry ) const noexcept
 {
 	if ( ppEntry == nullptr ) {
-		return SIR_REGISTRATION_INVALID_ARGUMENT;
+		return SIRRegistrationResult::SIR_REGISTRATION_INVALID_ARGUMENT;
 	}
 	*ppEntry = nullptr;
 	if ( !m_bInitialized ) {
-		return SIR_REGISTRATION_NOT_INITIALIZED;
+		return SIRRegistrationResult::SIR_REGISTRATION_NOT_INITIALIZED;
 	}
 	if ( handle.nSlot == 0 || handle.nSlot > m_nCapacity ) {
-		return SIR_REGISTRATION_STALE_HANDLE;
+		return SIRRegistrationResult::SIR_REGISTRATION_STALE_HANDLE;
 	}
 	const sirRegistrationEntry_t& entry = m_pEntries[handle.nSlot - 1];
 	if ( !entry.bActive || entry.nGeneration != handle.nGeneration ) {
-		return SIR_REGISTRATION_STALE_HANDLE;
+		return SIRRegistrationResult::SIR_REGISTRATION_STALE_HANDLE;
 	}
 	*ppEntry = &entry;
-	return SIR_REGISTRATION_OK;
+	return SIRRegistrationResult::SIR_REGISTRATION_OK;
 }
 
-sirRegistrationResult_t SIRRegistrationCatalog::getAtIndex( uint32_t iEntry, const sirRegistrationEntry_t **ppEntry,
+SIRRegistrationResult SIRRegistrationCatalog::getAtIndex( uint32_t iEntry, const sirRegistrationEntry_t **ppEntry,
                                                             sirRegistrationHandle_t *pHandle ) const noexcept
 {
 	if ( ppEntry == nullptr || pHandle == nullptr ) {
-		return SIR_REGISTRATION_INVALID_ARGUMENT;
+		return SIRRegistrationResult::SIR_REGISTRATION_INVALID_ARGUMENT;
 	}
 	*ppEntry = nullptr;
 	*pHandle = {};
 	if ( !m_bInitialized ) {
-		return SIR_REGISTRATION_NOT_INITIALIZED;
+		return SIRRegistrationResult::SIR_REGISTRATION_NOT_INITIALIZED;
 	}
 	if ( iEntry >= m_nCapacity ) {
-		return SIR_REGISTRATION_BAD_BOUNDS;
+		return SIRRegistrationResult::SIR_REGISTRATION_BAD_BOUNDS;
 	}
 	const sirRegistrationEntry_t& entry = m_pEntries[iEntry];
 	if ( !entry.bActive ) {
-		return SIR_REGISTRATION_NOT_FOUND;
+		return SIRRegistrationResult::SIR_REGISTRATION_NOT_FOUND;
 	}
 	*ppEntry = &entry;
 	*pHandle = { iEntry + 1, entry.nGeneration };
-	return SIR_REGISTRATION_OK;
+	return SIRRegistrationResult::SIR_REGISTRATION_OK;
 }
 
-sirRegistrationResult_t SIRRegistrationCatalog::loadNames( const sirRegistrationCatalogInit_t& init, SIRStringPool& pool,
+SIRRegistrationResult SIRRegistrationCatalog::loadNames( const sirRegistrationCatalogInit_t& init, SIRStringPool& pool,
                                                            uint32_t nNames ) noexcept
 {
 	const uint64_t nOffset = sirCatalogU64( init.pBytes + 24 );
 	uint32_t nPreviousOrdinal = 0;
 	for ( uint32_t iName = 0; iName < nNames; ++iName ) {
-		const uint8_t *pRecord = init.pBytes + nOffset + ( size_t )iName * SIR_REGISTRATION_NAME_STRIDE;
+		const uint8_t *pRecord = init.pBytes + nOffset + static_cast<size_t>(iName) * SIR_REGISTRATION_NAME_STRIDE;
 		const uint32_t nOrdinal = sirCatalogU32( pRecord );
 		const uint32_t nStableId = sirCatalogU32( pRecord + 4 );
 		if ( nStableId == 0 || ( iName != 0 && nOrdinal <= nPreviousOrdinal ) ) {
-			return SIR_REGISTRATION_BAD_SCHEMA;
+			return SIRRegistrationResult::SIR_REGISTRATION_BAD_SCHEMA;
 		}
 		nPreviousOrdinal = nOrdinal;
-		sirRegistrationResult_t eResult = sirRegistrationCookedName( pool, nOrdinal, init.nStringCatalogHash, &init.pNames[iName] );
-		if ( eResult != SIR_REGISTRATION_OK ) {
+		SIRRegistrationResult eResult = sirRegistrationCookedName( pool, nOrdinal, init.nStringCatalogHash, &init.pNames[iName] );
+		if ( eResult != SIRRegistrationResult::SIR_REGISTRATION_OK ) {
 			return eResult;
 		}
 		init.pNameIds[iName] = nStableId;
@@ -241,13 +242,13 @@ sirRegistrationResult_t SIRRegistrationCatalog::loadNames( const sirRegistration
 	sirCatalogSort32( init.pNameIds, nNames );
 	for ( uint32_t iName = 1; iName < nNames; ++iName ) {
 		if ( init.pNameIds[iName] == init.pNameIds[iName - 1] ) {
-			return SIR_REGISTRATION_DUPLICATE_NAME;
+			return SIRRegistrationResult::SIR_REGISTRATION_DUPLICATE_NAME;
 		}
 	}
-	return SIR_REGISTRATION_OK;
+	return SIRRegistrationResult::SIR_REGISTRATION_OK;
 }
 
-sirRegistrationResult_t SIRRegistrationCatalog::loadDescriptors( const sirRegistrationCatalogInit_t& init, uint32_t nNames ) noexcept
+SIRRegistrationResult SIRRegistrationCatalog::loadDescriptors( const sirRegistrationCatalogInit_t& init, uint32_t nNames ) noexcept
 {
 	const uint32_t nCommands = sirCatalogU32( init.pBytes + 48 );
 	const uint32_t nCVars = sirCatalogU32( init.pBytes + 64 );
@@ -255,9 +256,9 @@ sirRegistrationResult_t SIRRegistrationCatalog::loadDescriptors( const sirRegist
 	const uint64_t nCVarsOffset = sirCatalogU64( init.pBytes + 56 );
 	const uint64_t nScalabilityOffset = sirCatalogU64( init.pBytes + 72 );
 	const uint32_t nScalabilityCount = sirCatalogU32( init.pBytes + 80 );
-	const uint64_t nEndCommands = nCommandsOffset + ( uint64_t )nCommands * SIR_REGISTRATION_COMMAND_STRIDE;
-	const uint64_t nEndCVars = nCVarsOffset + ( uint64_t )nCVars * SIR_REGISTRATION_CVAR_STRIDE;
-	const uint64_t nEndScalability = nScalabilityOffset + ( uint64_t )nScalabilityCount * SIR_REGISTRATION_SCALABILITY_STRIDE;
+	const uint64_t nEndCommands = nCommandsOffset + static_cast<uint64_t>(nCommands) * SIR_REGISTRATION_COMMAND_STRIDE;
+	const uint64_t nEndCVars = nCVarsOffset + static_cast<uint64_t>(nCVars) * SIR_REGISTRATION_CVAR_STRIDE;
+	const uint64_t nEndScalability = nScalabilityOffset + static_cast<uint64_t>(nScalabilityCount) * SIR_REGISTRATION_SCALABILITY_STRIDE;
 	uint64_t nDefaultsStart = nEndCommands > nEndCVars ? nEndCommands : nEndCVars;
 	if ( nDefaultsStart < nEndScalability ) {
 		nDefaultsStart = nEndScalability;
@@ -269,7 +270,7 @@ sirRegistrationResult_t SIRRegistrationCatalog::loadDescriptors( const sirRegist
 
 	uint32_t nPreviousName = 0;
 	for ( uint32_t iCommand = 0; iCommand < nCommands; ++iCommand ) {
-		const uint8_t *pRecord = init.pBytes + nCommandsOffset + ( size_t )iCommand * SIR_REGISTRATION_COMMAND_STRIDE;
+		const uint8_t *pRecord = init.pBytes + nCommandsOffset + static_cast<size_t>(iCommand) * SIR_REGISTRATION_COMMAND_STRIDE;
 		const uint32_t nNameIndex = sirCatalogU32( pRecord );
 		const uint32_t nHelpIndex = sirCatalogU32( pRecord + 4 );
 		const uint64_t nBindingId = sirCatalogU64( pRecord + 8 );
@@ -277,16 +278,16 @@ sirRegistrationResult_t SIRRegistrationCatalog::loadDescriptors( const sirRegist
 		const uint32_t nCapabilities = sirCatalogU32( pRecord + 20 );
 		const uint32_t nOwnerId = sirCatalogU32( pRecord + 24 );
 		if ( nNameIndex >= nNames || ( iCommand != 0 && nNameIndex <= nPreviousName ) ) {
-			return SIR_REGISTRATION_DUPLICATE_NAME;
+			return SIRRegistrationResult::SIR_REGISTRATION_DUPLICATE_NAME;
 		}
 		if ( nHelpIndex != UINT32_MAX && nHelpIndex >= nNames ) {
-			return SIR_REGISTRATION_BAD_SCHEMA;
+			return SIRRegistrationResult::SIR_REGISTRATION_BAD_SCHEMA;
 		}
 		if ( nBindingId == 0 || nFlags != 0 || ( nCapabilities & ~511u ) != 0 ) {
-			return SIR_REGISTRATION_BAD_SCHEMA;
+			return SIRRegistrationResult::SIR_REGISTRATION_BAD_SCHEMA;
 		}
 		if ( nOwnerId != 0 && !sirCatalogAllowedModuleName( *m_pPool, init.pNames[nNameIndex] ) ) {
-			return SIR_REGISTRATION_DENIED;
+			return SIRRegistrationResult::SIR_REGISTRATION_DENIED;
 		}
 		nPreviousName = nNameIndex;
 		const sirRegistrationBinding_t *pBinding = nullptr;
@@ -304,9 +305,9 @@ sirRegistrationResult_t SIRRegistrationCatalog::loadDescriptors( const sirRegist
 			pBinding = init.pBindings + nLower;
 		}
 		if ( pBinding == nullptr || pBinding->pfnCallback == nullptr || pBinding->nOwnerId != nOwnerId ) {
-			return SIR_REGISTRATION_UNBOUND_CALLBACK;
+			return SIRRegistrationResult::SIR_REGISTRATION_UNBOUND_CALLBACK;
 		}
-		sirRegistrationEntry_t entry = {};
+		sirRegistrationEntry_t entry {};
 		entry.atom = init.pNames[nNameIndex];
 		entry.nBindingId = nBindingId;
 		entry.nSchemaId = sirCatalogU32( pRecord + 28 );
@@ -315,7 +316,7 @@ sirRegistrationResult_t SIRRegistrationCatalog::loadDescriptors( const sirRegist
 		entry.nGeneration = m_nGenerationSeed;
 		entry.pfnCallback = pBinding->pfnCallback;
 		entry.pContext = pBinding->pContext;
-		entry.eKind = SIR_REGISTRATION_COMMAND;
+		entry.eKind = SIRRegistrationKind::SIR_REGISTRATION_COMMAND;
 		entry.bActive = true;
 		entry.bCooked = true;
 		init.pEntries[iCommand] = entry;
@@ -324,13 +325,13 @@ sirRegistrationResult_t SIRRegistrationCatalog::loadDescriptors( const sirRegist
 	sirCatalogSort64( init.pBindingIds, nCommands );
 	for ( uint32_t iCommand = 1; iCommand < nCommands; ++iCommand ) {
 		if ( init.pBindingIds[iCommand] == init.pBindingIds[iCommand - 1] ) {
-			return SIR_REGISTRATION_BAD_SCHEMA;
+			return SIRRegistrationResult::SIR_REGISTRATION_BAD_SCHEMA;
 		}
 	}
 
 	nPreviousName = 0;
 	for ( uint32_t iCVar = 0; iCVar < nCVars; ++iCVar ) {
-		const uint8_t *pRecord = init.pBytes + nCVarsOffset + ( size_t )iCVar * SIR_REGISTRATION_CVAR_STRIDE;
+		const uint8_t *pRecord = init.pBytes + nCVarsOffset + static_cast<size_t>(iCVar) * SIR_REGISTRATION_CVAR_STRIDE;
 		const uint32_t nNameIndex = sirCatalogU32( pRecord );
 		const uint32_t nHelpIndex = sirCatalogU32( pRecord + 4 );
 		const uint32_t nSchemaId = sirCatalogU32( pRecord + 8 );
@@ -339,22 +340,22 @@ sirRegistrationResult_t SIRRegistrationCatalog::loadDescriptors( const sirRegist
 		const uint32_t nDefaultOffset = sirCatalogU32( pRecord + 20 );
 		const uint32_t nOwnerId = sirCatalogU32( pRecord + 24 );
 		if ( nNameIndex >= nNames || ( iCVar != 0 && nNameIndex <= nPreviousName ) ) {
-			return SIR_REGISTRATION_DUPLICATE_NAME;
+			return SIRRegistrationResult::SIR_REGISTRATION_DUPLICATE_NAME;
 		}
 		if ( nSchemaId == 0 || ( nHelpIndex != UINT32_MAX && nHelpIndex >= nNames ) ) {
-			return SIR_REGISTRATION_BAD_SCHEMA;
+			return SIRRegistrationResult::SIR_REGISTRATION_BAD_SCHEMA;
 		}
-		if ( nType >= SIR_CVAR_TYPE_COUNT || !sirValidateCVarFlags( nFlags ) ) {
-			return SIR_REGISTRATION_BAD_SCHEMA;
+		if ( nType >= static_cast<uint32_t>( SIRCVarType::SIR_CVAR_TYPE_COUNT ) || !sirValidateCVarFlags( nFlags ) ) {
+			return SIRRegistrationResult::SIR_REGISTRATION_BAD_SCHEMA;
 		}
 		if ( !sirCatalogDefaultValid( init, nDefaultOffset, nType, nDefaultsStart ) ) {
-			return SIR_REGISTRATION_BAD_SCHEMA;
+			return SIRRegistrationResult::SIR_REGISTRATION_BAD_SCHEMA;
 		}
 		if ( nOwnerId != 0 && !sirCatalogAllowedModuleName( *m_pPool, init.pNames[nNameIndex] ) ) {
-			return SIR_REGISTRATION_DENIED;
+			return SIRRegistrationResult::SIR_REGISTRATION_DENIED;
 		}
 		nPreviousName = nNameIndex;
-		sirRegistrationEntry_t entry = {};
+		sirRegistrationEntry_t entry {};
 		entry.atom = init.pNames[nNameIndex];
 		entry.nSchemaId = nSchemaId;
 		entry.nType = nType;
@@ -362,7 +363,7 @@ sirRegistrationResult_t SIRRegistrationCatalog::loadDescriptors( const sirRegist
 		entry.nOwnerId = nOwnerId;
 		entry.nDefaultOffset = nDefaultOffset;
 		entry.nGeneration = m_nGenerationSeed;
-		entry.eKind = SIR_REGISTRATION_CVAR;
+		entry.eKind = SIRRegistrationKind::SIR_REGISTRATION_CVAR;
 		entry.bActive = true;
 		entry.bCooked = true;
 		init.pEntries[nCommands + iCVar] = entry;
@@ -371,16 +372,16 @@ sirRegistrationResult_t SIRRegistrationCatalog::loadDescriptors( const sirRegist
 	sirCatalogSort32( init.pNameIds, nCVars );
 	for ( uint32_t iCVar = 1; iCVar < nCVars; ++iCVar ) {
 		if ( init.pNameIds[iCVar] == init.pNameIds[iCVar - 1] ) {
-			return SIR_REGISTRATION_BAD_SCHEMA;
+			return SIRRegistrationResult::SIR_REGISTRATION_BAD_SCHEMA;
 		}
 	}
 	uint32_t iCommand = 0;
 	uint32_t iCVar = 0;
 	while ( iCommand < nCommands && iCVar < nCVars ) {
-		const uint32_t nCommandName = sirCatalogU32( init.pBytes + nCommandsOffset + ( size_t )iCommand * 32 );
-		const uint32_t nCVarName = sirCatalogU32( init.pBytes + nCVarsOffset + ( size_t )iCVar * 32 );
+		const uint32_t nCommandName = sirCatalogU32( init.pBytes + nCommandsOffset + static_cast<size_t>(iCommand) * 32 );
+		const uint32_t nCVarName = sirCatalogU32( init.pBytes + nCVarsOffset + static_cast<size_t>(iCVar) * 32 );
 		if ( nCommandName == nCVarName ) {
-			return SIR_REGISTRATION_DUPLICATE_NAME;
+			return SIRRegistrationResult::SIR_REGISTRATION_DUPLICATE_NAME;
 		}
 		if ( nCommandName < nCVarName ) {
 			++iCommand;
@@ -388,48 +389,48 @@ sirRegistrationResult_t SIRRegistrationCatalog::loadDescriptors( const sirRegist
 			++iCVar;
 		}
 	}
-	return nScalabilityCount == 0 ? SIR_REGISTRATION_OK : SIR_REGISTRATION_BAD_SCHEMA;
+	return nScalabilityCount == 0 ? SIRRegistrationResult::SIR_REGISTRATION_OK : SIRRegistrationResult::SIR_REGISTRATION_BAD_SCHEMA;
 }
 
-sirRegistrationResult_t SIRRegistrationCatalog::initialize( SIRStringPool& pool, const sirRegistrationCatalogInit_t& init ) noexcept
+SIRRegistrationResult SIRRegistrationCatalog::initialize( SIRStringPool& pool, const sirRegistrationCatalogInit_t& init ) noexcept
 {
 	if ( m_bInitialized ) {
-		return SIR_REGISTRATION_BAD_SCHEMA;
+		return SIRRegistrationResult::SIR_REGISTRATION_BAD_SCHEMA;
 	}
 	if ( !pool.isInitialized() ) {
-		return SIR_REGISTRATION_NOT_INITIALIZED;
+		return SIRRegistrationResult::SIR_REGISTRATION_NOT_INITIALIZED;
 	}
 	if ( init.pBytes == nullptr || init.pEntries == nullptr || init.pNames == nullptr || init.pNameIds == nullptr ||
 	     init.nStringCatalogHash == 0 ) {
-		return SIR_REGISTRATION_INVALID_ARGUMENT;
+		return SIRRegistrationResult::SIR_REGISTRATION_INVALID_ARGUMENT;
 	}
-	const sirRegistrationResult_t eHeader = sirValidateRegistrationCatalog( init.pBytes, init.nBytes, init.nStringCatalogHash );
-	if ( eHeader != SIR_REGISTRATION_OK ) {
+	const SIRRegistrationResult eHeader = sirValidateRegistrationCatalog( init.pBytes, init.nBytes, init.nStringCatalogHash );
+	if ( eHeader != SIRRegistrationResult::SIR_REGISTRATION_OK ) {
 		return eHeader;
 	}
 	const uint32_t nNames = sirCatalogU32( init.pBytes + 32 );
 	const uint32_t nCommands = sirCatalogU32( init.pBytes + 48 );
 	const uint32_t nCVars = sirCatalogU32( init.pBytes + 64 );
 	if ( nNames > init.nNameCapacity || nCommands + nCVars > init.nEntryCapacity || nCommands > init.nBindingCapacity ) {
-		return SIR_REGISTRATION_CAPACITY_EXCEEDED;
+		return SIRRegistrationResult::SIR_REGISTRATION_CAPACITY_EXCEEDED;
 	}
 	if ( nCommands != 0 && ( init.pBindingIds == nullptr || init.pBindings == nullptr ) ) {
-		return SIR_REGISTRATION_INVALID_ARGUMENT;
+		return SIRRegistrationResult::SIR_REGISTRATION_INVALID_ARGUMENT;
 	}
 	for ( uint32_t iBinding = 0; iBinding < init.nBindingCount; ++iBinding ) {
 		if ( init.pBindings == nullptr || init.pBindings[iBinding].nBindingId == 0 ) {
-			return SIR_REGISTRATION_BAD_SCHEMA;
+			return SIRRegistrationResult::SIR_REGISTRATION_BAD_SCHEMA;
 		}
 		if ( iBinding != 0 && init.pBindings[iBinding].nBindingId <= init.pBindings[iBinding - 1].nBindingId ) {
-			return SIR_REGISTRATION_BAD_SCHEMA;
+			return SIRRegistrationResult::SIR_REGISTRATION_BAD_SCHEMA;
 		}
 	}
 	m_pPool = &pool;
-	sirRegistrationResult_t eResult = loadNames( init, pool, nNames );
-	if ( eResult == SIR_REGISTRATION_OK ) {
+	SIRRegistrationResult eResult = loadNames( init, pool, nNames );
+	if ( eResult == SIRRegistrationResult::SIR_REGISTRATION_OK ) {
 		eResult = loadDescriptors( init, nNames );
 	}
-	if ( eResult != SIR_REGISTRATION_OK ) {
+	if ( eResult != SIRRegistrationResult::SIR_REGISTRATION_OK ) {
 		m_pPool = nullptr;
 		return eResult;
 	}
@@ -443,7 +444,7 @@ sirRegistrationResult_t SIRRegistrationCatalog::initialize( SIRStringPool& pool,
 		m_pEntries[iEntry].nGeneration = m_nGenerationSeed;
 	}
 	m_bInitialized = true;
-	return SIR_REGISTRATION_OK;
+	return SIRRegistrationResult::SIR_REGISTRATION_OK;
 }
 
 bool SIRRegistrationCatalog::isNameOccupied( SIRStringAtom atom ) const noexcept
@@ -456,19 +457,19 @@ bool SIRRegistrationCatalog::isNameOccupied( SIRStringAtom atom ) const noexcept
 	return false;
 }
 
-sirRegistrationResult_t SIRRegistrationCatalog::find( const char *pszName, size_t nNameBytes,
+SIRRegistrationResult SIRRegistrationCatalog::find( const char *pszName, size_t nNameBytes,
                                                       sirRegistrationHandle_t *pHandle ) const noexcept
 {
 	if ( pHandle == nullptr ) {
-		return SIR_REGISTRATION_INVALID_ARGUMENT;
+		return SIRRegistrationResult::SIR_REGISTRATION_INVALID_ARGUMENT;
 	}
 	*pHandle = {};
 	if ( !m_bInitialized ) {
-		return SIR_REGISTRATION_NOT_INITIALIZED;
+		return SIRRegistrationResult::SIR_REGISTRATION_NOT_INITIALIZED;
 	}
 	SIRStringAtom atom;
-	sirRegistrationResult_t eResult = sirRegistrationFindName( *m_pPool, pszName, nNameBytes, &atom );
-	if ( eResult != SIR_REGISTRATION_OK ) {
+	SIRRegistrationResult eResult = sirRegistrationFindName( *m_pPool, pszName, nNameBytes, &atom );
+	if ( eResult != SIRRegistrationResult::SIR_REGISTRATION_OK ) {
 		return eResult;
 	}
 	for ( uint32_t iEntry = 0; iEntry < m_nCapacity; ++iEntry ) {
@@ -476,36 +477,36 @@ sirRegistrationResult_t SIRRegistrationCatalog::find( const char *pszName, size_
 		if ( entry.bActive && entry.atom == atom ) {
 			pHandle->nSlot = iEntry + 1;
 			pHandle->nGeneration = entry.nGeneration;
-			return SIR_REGISTRATION_OK;
+			return SIRRegistrationResult::SIR_REGISTRATION_OK;
 		}
 	}
-	return SIR_REGISTRATION_NOT_FOUND;
+	return SIRRegistrationResult::SIR_REGISTRATION_NOT_FOUND;
 }
 
-sirRegistrationResult_t SIRRegistrationCatalog::registerDynamic( const sirRegistrationDynamicDesc_t& desc,
+SIRRegistrationResult SIRRegistrationCatalog::registerDynamic( const sirRegistrationDynamicDesc_t& desc,
                                                                  sirRegistrationHandle_t *pHandle ) noexcept
 {
 	if ( pHandle == nullptr ) {
-		return SIR_REGISTRATION_INVALID_ARGUMENT;
+		return SIRRegistrationResult::SIR_REGISTRATION_INVALID_ARGUMENT;
 	}
 	*pHandle = {};
 	if ( !m_bInitialized ) {
-		return SIR_REGISTRATION_NOT_INITIALIZED;
+		return SIRRegistrationResult::SIR_REGISTRATION_NOT_INITIALIZED;
 	}
-	if ( desc.eKind != SIR_REGISTRATION_COMMAND && desc.eKind != SIR_REGISTRATION_CVAR ) {
-		return SIR_REGISTRATION_BAD_SCHEMA;
+	if ( desc.eKind != SIRRegistrationKind::SIR_REGISTRATION_COMMAND && desc.eKind != SIRRegistrationKind::SIR_REGISTRATION_CVAR ) {
+		return SIRRegistrationResult::SIR_REGISTRATION_BAD_SCHEMA;
 	}
-	if ( desc.eKind == SIR_REGISTRATION_COMMAND && ( desc.nBindingId == 0 || desc.pfnCallback == nullptr ) ) {
-		return SIR_REGISTRATION_UNBOUND_CALLBACK;
+	if ( desc.eKind == SIRRegistrationKind::SIR_REGISTRATION_COMMAND && ( desc.nBindingId == 0 || desc.pfnCallback == nullptr ) ) {
+		return SIRRegistrationResult::SIR_REGISTRATION_UNBOUND_CALLBACK;
 	}
-	if ( desc.eKind == SIR_REGISTRATION_CVAR && ( desc.eType >= SIR_CVAR_TYPE_COUNT || !sirValidateCVarFlags( desc.nFlags ) ) ) {
-		return SIR_REGISTRATION_BAD_SCHEMA;
+	if ( desc.eKind == SIRRegistrationKind::SIR_REGISTRATION_CVAR && ( static_cast<uint8_t>( desc.eType ) >= static_cast<uint8_t>( SIRCVarType::SIR_CVAR_TYPE_COUNT ) || !sirValidateCVarFlags( desc.nFlags ) ) ) {
+		return SIRRegistrationResult::SIR_REGISTRATION_BAD_SCHEMA;
 	}
-	if ( desc.eKind == SIR_REGISTRATION_CVAR && desc.nSchemaId == 0 ) {
-		return SIR_REGISTRATION_BAD_SCHEMA;
+	if ( desc.eKind == SIRRegistrationKind::SIR_REGISTRATION_CVAR && desc.nSchemaId == 0 ) {
+		return SIRRegistrationResult::SIR_REGISTRATION_BAD_SCHEMA;
 	}
-	if ( desc.eKind == SIR_REGISTRATION_COMMAND && ( desc.nFlags != 0 || ( desc.nCapabilities & ~511u ) != 0 ) ) {
-		return SIR_REGISTRATION_BAD_SCHEMA;
+	if ( desc.eKind == SIRRegistrationKind::SIR_REGISTRATION_COMMAND && ( desc.nFlags != 0 || ( desc.nCapabilities & ~511u ) != 0 ) ) {
+		return SIRRegistrationResult::SIR_REGISTRATION_BAD_SCHEMA;
 	}
 	uint32_t iFree = m_nCapacity;
 	for ( uint32_t iEntry = m_nCookedCount; iEntry < m_nCapacity; ++iEntry ) {
@@ -515,43 +516,43 @@ sirRegistrationResult_t SIRRegistrationCatalog::registerDynamic( const sirRegist
 		}
 	}
 	if ( iFree == m_nCapacity ) {
-		return SIR_REGISTRATION_CAPACITY_EXCEEDED;
+		return SIRRegistrationResult::SIR_REGISTRATION_CAPACITY_EXCEEDED;
 	}
 	SIRStringAtom existing;
-	const sirRegistrationResult_t eFind = sirRegistrationFindName( *m_pPool, desc.name.pszName, desc.name.nNameBytes, &existing );
-	if ( eFind != SIR_REGISTRATION_OK && eFind != SIR_REGISTRATION_NOT_FOUND ) {
+	const SIRRegistrationResult eFind = sirRegistrationFindName( *m_pPool, desc.name.pszName, desc.name.nNameBytes, &existing );
+	if ( eFind != SIRRegistrationResult::SIR_REGISTRATION_OK && eFind != SIRRegistrationResult::SIR_REGISTRATION_NOT_FOUND ) {
 		return eFind;
 	}
 	if ( existing && isNameOccupied( existing ) ) {
-		return SIR_REGISTRATION_DUPLICATE_NAME;
+		return SIRRegistrationResult::SIR_REGISTRATION_DUPLICATE_NAME;
 	}
 	for ( uint32_t iEntry = 0; iEntry < m_nCapacity; ++iEntry ) {
 		const sirRegistrationEntry_t& entry = m_pEntries[iEntry];
 		if ( !entry.bActive ) {
 			continue;
 		}
-		if ( desc.eKind == SIR_REGISTRATION_COMMAND && entry.eKind == SIR_REGISTRATION_COMMAND && entry.nBindingId == desc.nBindingId ) {
-			return SIR_REGISTRATION_BAD_SCHEMA;
+		if ( desc.eKind == SIRRegistrationKind::SIR_REGISTRATION_COMMAND && entry.eKind == SIRRegistrationKind::SIR_REGISTRATION_COMMAND && entry.nBindingId == desc.nBindingId ) {
+			return SIRRegistrationResult::SIR_REGISTRATION_BAD_SCHEMA;
 		}
-		if ( desc.eKind == SIR_REGISTRATION_CVAR && entry.eKind == SIR_REGISTRATION_CVAR && entry.nSchemaId == desc.nSchemaId ) {
-			return SIR_REGISTRATION_BAD_SCHEMA;
+		if ( desc.eKind == SIRRegistrationKind::SIR_REGISTRATION_CVAR && entry.eKind == SIRRegistrationKind::SIR_REGISTRATION_CVAR && entry.nSchemaId == desc.nSchemaId ) {
+			return SIRRegistrationResult::SIR_REGISTRATION_BAD_SCHEMA;
 		}
 	}
 	SIRStringAtom atom;
-	const sirRegistrationResult_t eIntern = sirRegistrationInternName( *m_pPool, desc.name, &atom );
-	if ( eIntern != SIR_REGISTRATION_OK ) {
+	const SIRRegistrationResult eIntern = sirRegistrationInternName( *m_pPool, desc.name, &atom );
+	if ( eIntern != SIRRegistrationResult::SIR_REGISTRATION_OK ) {
 		return eIntern;
 	}
 	sirRegistrationEntry_t& entry = m_pEntries[iFree];
 	const uint32_t nGeneration = entry.nGeneration == 0 ? 1 : entry.nGeneration;
 	entry = {};
 	entry.atom = atom;
-	entry.nBindingId = desc.eKind == SIR_REGISTRATION_COMMAND ? desc.nBindingId : 0;
+	entry.nBindingId = desc.eKind == SIRRegistrationKind::SIR_REGISTRATION_COMMAND ? desc.nBindingId : 0;
 	entry.nSchemaId = desc.nSchemaId;
 	entry.nOwnerId = desc.name.nOwnerId;
 	entry.nFlags = desc.nFlags;
 	entry.nCapabilities = desc.nCapabilities;
-	entry.nType = desc.eKind == SIR_REGISTRATION_CVAR ? ( uint32_t )desc.eType : 0;
+	entry.nType = desc.eKind == SIRRegistrationKind::SIR_REGISTRATION_CVAR ? static_cast<uint32_t>(desc.eType) : 0;
 	entry.nGeneration = nGeneration;
 	entry.pfnCallback = desc.pfnCallback;
 	entry.pContext = desc.pContext;
@@ -560,18 +561,18 @@ sirRegistrationResult_t SIRRegistrationCatalog::registerDynamic( const sirRegist
 	entry.bCooked = false;
 	++m_nLiveCount;
 	*pHandle = { iFree + 1, nGeneration };
-	return SIR_REGISTRATION_OK;
+	return SIRRegistrationResult::SIR_REGISTRATION_OK;
 }
 
-sirRegistrationResult_t SIRRegistrationCatalog::unregisterDynamic( sirRegistrationHandle_t handle ) noexcept
+SIRRegistrationResult SIRRegistrationCatalog::unregisterDynamic( sirRegistrationHandle_t handle ) noexcept
 {
 	const sirRegistrationEntry_t *pEntry = nullptr;
-	sirRegistrationResult_t eResult = getEntry( handle, &pEntry );
-	if ( eResult != SIR_REGISTRATION_OK ) {
+	SIRRegistrationResult eResult = getEntry( handle, &pEntry );
+	if ( eResult != SIRRegistrationResult::SIR_REGISTRATION_OK ) {
 		return eResult;
 	}
 	if ( pEntry->bCooked ) {
-		return SIR_REGISTRATION_DENIED;
+		return SIRRegistrationResult::SIR_REGISTRATION_DENIED;
 	}
 	sirRegistrationEntry_t& entry = m_pEntries[handle.nSlot - 1];
 	entry.bActive = false;
@@ -582,7 +583,7 @@ sirRegistrationResult_t SIRRegistrationCatalog::unregisterDynamic( sirRegistrati
 		entry.nGeneration = 1;
 	}
 	--m_nLiveCount;
-	return SIR_REGISTRATION_OK;
+	return SIRRegistrationResult::SIR_REGISTRATION_OK;
 }
 
 uint32_t SIRRegistrationCatalog::unregisterModule( uint32_t nOwnerId ) noexcept

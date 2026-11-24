@@ -12,8 +12,8 @@ express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIRANIMATIONSAMPLER_H__
-#define __SIRENGINE_SIRANIMATIONSAMPLER_H__
+#ifndef __SIR_ANIMATIONSAMPLER_H__
+#define __SIR_ANIMATIONSAMPLER_H__
 
 #include <Core/SIRPCH.h>
 // clang-format off
@@ -24,26 +24,24 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Animation/Cooked/SIRAnimationCooked.h>
 
-typedef enum sirAnimationPlaybackMode_e : uint8_t
-{
+enum class SIRAnimationPlaybackMode : uint8_t {
 	SIR_ANIMATION_PLAY_CLAMP = 0,
 	SIR_ANIMATION_PLAY_LOOP = 1,
 	SIR_ANIMATION_PLAY_PINGPONG = 2
-} sirAnimationPlaybackMode_t;
+};
 
-typedef enum sirAnimationInterpolation_e : uint8_t
-{
+enum class SIRAnimationInterpolation : uint8_t {
 	SIR_ANIMATION_INTERPOLATION_STEP = 0,
 	SIR_ANIMATION_INTERPOLATION_LINEAR = 1
-} sirAnimationInterpolation_t;
+};
 
 typedef struct sirAnimationSampleOptions_s
 {
 	int64_t iTick;
 	int64_t iStartTick;
 	uint32_t nBoneCount;
-	sirAnimationPlaybackMode_t ePlayback;
-	sirAnimationInterpolation_t eInterpolation;
+	SIRAnimationPlaybackMode ePlayback;
+	SIRAnimationInterpolation eInterpolation;
 	bool bReverse;
 	bool bPreferFine;
 	const sirAnimationTransform_t *pDefaultTransforms;
@@ -81,16 +79,16 @@ class SIRAnimationSampler
 public:
 	SIRAnimationSampler( void ) noexcept = delete;
 
-	static sirAnimationCookResult_t sample( sirAnimationCookSpan_t clip, const sirAnimationSampleOptions_t& options,
+	static SIRAnimationCookResult sample( sirAnimationCookSpan_t clip, const sirAnimationSampleOptions_t& options,
 	                                        sirAnimationSampleScratch_t *pScratch, sirAnimationMutablePose_t *pPose ) noexcept;
-	static sirAnimationCookResult_t sampleBone( sirAnimationCookSpan_t clip, uint32_t nBoneIndex, uint32_t nTime,
+	static SIRAnimationCookResult sampleBone( sirAnimationCookSpan_t clip, uint32_t nBoneIndex, uint32_t nTime,
 	                                            sirAnimationSampleScratch_t *pScratch, sirAnimationTransform_t *pTransform ) noexcept;
-	static sirAnimationCookResult_t blend( sirAnimationMutablePose_t *pDestination, const sirAnimationBlendOptions_t& options ) noexcept;
-	static sirAnimationCookResult_t evaluateHierarchy( const sirAnimationHierarchyOptions_t& options ) noexcept;
-	static uint32_t normalizeTick( int64_t iTick, int64_t iStartTick, uint32_t nDuration, sirAnimationPlaybackMode_t ePlayback ) noexcept;
+	static SIRAnimationCookResult blend( sirAnimationMutablePose_t *pDestination, const sirAnimationBlendOptions_t& options ) noexcept;
+	static SIRAnimationCookResult evaluateHierarchy( const sirAnimationHierarchyOptions_t& options ) noexcept;
+	static uint32_t normalizeTick( int64_t iTick, int64_t iStartTick, uint32_t nDuration, SIRAnimationPlaybackMode ePlayback ) noexcept;
 
 protected:
 private:
 };
 
-#endif // __SIRENGINE_SIRANIMATIONSAMPLER_H__
+#endif // __SIR_ANIMATIONSAMPLER_H__

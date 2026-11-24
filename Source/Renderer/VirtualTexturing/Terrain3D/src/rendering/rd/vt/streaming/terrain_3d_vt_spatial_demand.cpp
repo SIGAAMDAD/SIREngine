@@ -41,8 +41,8 @@ bool Terrain3DVTSpatialDemand::loadCold( const uint8_t *const pBytes, const uint
 		return false;
 	}
 	const bool v2 = header.nVersion == T3D_VT_DEMAND_STABLE_MATERIAL_FORMAT_VERSION;
-	const uint32_t headerBytes = v2 ? ( uint32_t )sizeof( t3dVTDemandStableMaterialHeader_t ) : ( uint32_t )sizeof( header );
-	const uint32_t stride = v2 ? ( uint32_t )sizeof( t3dVTDemandStableMaterialRecord_t ) : ( uint32_t )sizeof( t3dVTDemandRecord_t );
+	const uint32_t headerBytes = v2 ? static_cast<uint32_t>(sizeof( t3dVTDemandStableMaterialHeader_t )) : static_cast<uint32_t>(sizeof( header ));
+	const uint32_t stride = v2 ? static_cast<uint32_t>(sizeof( t3dVTDemandStableMaterialRecord_t )) : static_cast<uint32_t>(sizeof( t3dVTDemandRecord_t ));
 	if ( v2 ) {
 		if ( nBytes < headerBytes ) {
 			return false;
@@ -53,8 +53,8 @@ bool Terrain3DVTSpatialDemand::loadCold( const uint8_t *const pBytes, const uint
 			return false;
 		}
 	}
-	const uint64_t cellBytes = ( uint64_t )header.nCellCount * sizeof( t3dVTDemandCell_t );
-	const uint64_t recordBytes = ( uint64_t )header.nRecordCount * stride;
+	const uint64_t cellBytes = static_cast<uint64_t>(header.nCellCount) * sizeof( t3dVTDemandCell_t );
+	const uint64_t recordBytes = static_cast<uint64_t>(header.nRecordCount) * stride;
 	if ( nBytes != headerBytes + cellBytes + recordBytes ||
 	     t3d_vt_demand_hash( pBytes + headerBytes, cellBytes + recordBytes ) != header.nPayloadHash ) {
 		return false;
@@ -66,7 +66,7 @@ bool Terrain3DVTSpatialDemand::loadCold( const uint8_t *const pBytes, const uint
 	uint32_t expectedFirst = 0u;
 	for ( uint32_t i = 0u; i < header.nCellCount; ++i ) {
 		t3dVTDemandCell_t cell{};
-		memcpy( &cell, cells + ( size_t )i * sizeof( cell ), sizeof( cell ) );
+		memcpy( &cell, cells + static_cast<size_t>(i * sizeof(  cell  )), sizeof( cell ) );
 		if ( cell.nReserved != 0u || cell.nCount == 0u || cell.nCount > T3D_VT_DEMAND_MAX_RECORDS_PER_CELL ||
 		     cell.nFirstRecord != expectedFirst || cell.nCount > header.nRecordCount - expectedFirst ||
 		     ( i > 0u && ( cell.nX < lastX || ( cell.nX == lastX && cell.nZ <= lastZ ) ) ) ) {
@@ -85,19 +85,19 @@ bool Terrain3DVTSpatialDemand::loadCold( const uint8_t *const pBytes, const uint
 		uint32_t flags = 0u;
 		if ( v2 ) {
 			t3dVTDemandStableMaterialRecord_t source{};
-			memcpy( &source, records + ( size_t )i * stride, sizeof( source ) );
+			memcpy( &source, records + static_cast<size_t>(i) * stride, sizeof( source ) );
 			record = source.Footprint;
 			stableKey = source.nStableMaterialKey;
 			flags = source.nFlags;
 		} else {
-			memcpy( &record, records + ( size_t )i * stride, sizeof( record ) );
+			memcpy( &record, records + static_cast<size_t>(i) * stride, sizeof( record ) );
 		}
 		if ( stableKey == 0u || ( flags & ~1u ) != 0u || record.nReserved0 != 0u || record.nReserved1 != 0u || record.nCoverage == 0u ||
 		     record.nViewMask == 0u || record.nUvMaxX < record.nUvMinX || record.nUvMaxY < record.nUvMinY ) {
 			return false;
 		}
 	}
-	m_bytes.assign( pBytes, pBytes + ( size_t )nBytes );
+	m_bytes.assign( pBytes, pBytes + static_cast<size_t>(nBytes) );
 	m_header = header;
 	m_nHeaderBytes = headerBytes;
 	m_nRecordStride = stride;
@@ -137,7 +137,7 @@ const t3dVTDemandRecord_t *Terrain3DVTSpatialDemand::findCellHot( const int32_t 
 	while ( low < high ) {
 		const uint32_t mid = low + ( high - low ) / 2u;
 		t3dVTDemandCell_t cell{};
-		memcpy( &cell, cells + ( size_t )mid * sizeof( cell ), sizeof( cell ) );
+		memcpy( &cell, cells + static_cast<size_t>(mid * sizeof(  cell  )), sizeof( cell ) );
 		if ( cell.nX < nX || ( cell.nX == nX && cell.nZ < nZ ) ) {
 			low = mid + 1u;
 		} else {
@@ -148,7 +148,7 @@ const t3dVTDemandRecord_t *Terrain3DVTSpatialDemand::findCellHot( const int32_t 
 		return nullptr;
 	}
 	t3dVTDemandCell_t found{};
-	memcpy( &found, cells + ( size_t )low * sizeof( found ), sizeof( found ) );
+	memcpy( &found, cells + static_cast<size_t>(low * sizeof(  found  )), sizeof( found ) );
 	if ( found.nX != nX || found.nZ != nZ ) {
 		return nullptr;
 	}
@@ -159,18 +159,18 @@ const t3dVTDemandRecord_t *Terrain3DVTSpatialDemand::findCellHot( const int32_t 
 		}
 	}
 	CachedCell& entry = m_cache[victim];
-	const uint64_t cellBytes = ( uint64_t )m_header.nCellCount * sizeof( t3dVTDemandCell_t );
-	const uint8_t *const records = cells + cellBytes + ( size_t )found.nFirstRecord * m_nRecordStride;
+	const uint64_t cellBytes = static_cast<uint64_t>(m_header.nCellCount) * sizeof( t3dVTDemandCell_t );
+	const uint8_t *const records = cells + cellBytes + static_cast<size_t>(found.nFirstRecord) * m_nRecordStride;
 	if ( m_header.nVersion == T3D_VT_DEMAND_STABLE_MATERIAL_FORMAT_VERSION ) {
 		for ( uint32_t i = 0; i < found.nCount; ++i ) {
 			t3dVTDemandStableMaterialRecord_t record{};
-			memcpy( &record, records + ( size_t )i * m_nRecordStride, sizeof( record ) );
+			memcpy( &record, records + static_cast<size_t>(i) * m_nRecordStride, sizeof( record ) );
 			entry.Records[i] = record.Footprint;
-			entry.Records[i].nReserved1 = ( uint16_t )record.nFlags;
+			entry.Records[i].nReserved1 = static_cast<uint16_t>(record.nFlags);
 			entry.Records[i].nAllocation = m_boundAllocations.empty() ? UINT32_MAX : m_boundAllocations[found.nFirstRecord + i];
 		}
 	} else {
-		memcpy( entry.Records, records, ( size_t )found.nCount * sizeof( t3dVTDemandRecord_t ) );
+		memcpy( entry.Records, records, static_cast<size_t>(found.nCount) * sizeof( t3dVTDemandRecord_t ) );
 	}
 	entry.nX = nX;
 	entry.nZ = nZ;
@@ -214,11 +214,11 @@ bool Terrain3DVTSpatialDemand::bindStableKeysCold( const uint64_t *const pKeys, 
 	if ( m_header.nVersion != T3D_VT_DEMAND_STABLE_MATERIAL_FORMAT_VERSION || pKeys == nullptr || pRuntimeAllocations == nullptr ) {
 		return false;
 	}
-	const uint64_t offset = m_nHeaderBytes + ( uint64_t )m_header.nCellCount * sizeof( t3dVTDemandCell_t );
+	const uint64_t offset = m_nHeaderBytes + static_cast<uint64_t>(m_header.nCellCount) * sizeof( t3dVTDemandCell_t );
 	m_boundAllocations.resize( m_header.nRecordCount, UINT32_MAX );
 	for ( uint32_t i = 0u; i < m_header.nRecordCount; ++i ) {
 		t3dVTDemandStableMaterialRecord_t record{};
-		memcpy( &record, m_bytes.data() + offset + ( size_t )i * m_nRecordStride, sizeof( record ) );
+		memcpy( &record, m_bytes.data() + offset + static_cast<size_t>(i) * m_nRecordStride, sizeof( record ) );
 		uint32_t low = 0u, high = nCount;
 		while ( low < high ) {
 			const uint32_t mid = low + ( high - low ) / 2u;
@@ -271,8 +271,8 @@ bool t3d_vt_demand_write_stable_material( const t3dVTDemandCell_t *const pCells,
 	h.nRecordStride = sizeof( t3dVTDemandStableMaterialRecord_t );
 	h.nOriginCellX = pCells[0].nX;
 	h.nOriginCellZ = pCells[0].nZ;
-	const size_t cb = ( size_t )nCells * sizeof( t3dVTDemandCell_t );
-	const size_t rb = ( size_t )nRecords * sizeof( t3dVTDemandStableMaterialRecord_t );
+	const size_t cb = static_cast<size_t>(nCells * sizeof(  t3dVTDemandCell_t  ));
+	const size_t rb = static_cast<size_t>(nRecords * sizeof(  t3dVTDemandStableMaterialRecord_t  ));
 	rBytes.resize( sizeof( h ) + cb + rb );
 	memcpy( rBytes.data() + sizeof( h ), pCells, cb );
 	memcpy( rBytes.data() + sizeof( h ) + cb, pRecords, rb );
@@ -294,22 +294,22 @@ bool t3d_vt_demand_write_stable_material( const t3dVTDemandCell_t *const pCells,
 static void t3dVTDemandWriteLittleU32( uint8_t *p, uint32_t value )
 {
 	for ( uint32_t k = 0u; k < 4u; ++k )
-		p[k] = ( uint8_t )( value >> ( 8u * k ) );
+		p[k] = static_cast<uint8_t>(  value >> ( 8u * k )  );
 }
 static void t3dPut64( uint8_t *p, uint64_t value )
 {
 	for ( uint32_t k = 0u; k < 8u; ++k )
-		p[k] = ( uint8_t )( value >> ( 8u * k ) );
+		p[k] = static_cast<uint8_t>(  value >> ( 8u * k )  );
 }
 static uint32_t t3dVTDemandReadLittleU32( const uint8_t *p )
 {
-	return ( uint32_t )p[0] | ( ( uint32_t )p[1] << 8u ) | ( ( uint32_t )p[2] << 16u ) | ( ( uint32_t )p[3] << 24u );
+	return static_cast<uint32_t>(p[0]) | ( static_cast<uint32_t>(p[1]) << 8u ) | ( static_cast<uint32_t>(p[2]) << 16u ) | ( static_cast<uint32_t>(p[3]) << 24u );
 }
 static uint64_t t3dGet64( const uint8_t *p )
 {
 	uint64_t value = 0u;
 	for ( uint32_t k = 0u; k < 8u; ++k )
-		value |= ( uint64_t )p[k] << ( 8u * k );
+		value |= static_cast<uint64_t>(p[k]) << ( 8u * k );
 	return value;
 }
 static int32_t t3dGetSigned( const uint8_t *p )
@@ -327,7 +327,7 @@ static uint32_t t3dSignedBits( int32_t value )
 }
 static int32_t t3dVTDemandEncodedBundleGroup( int32_t value )
 {
-	return value >= 0 ? value / 4 : ( int32_t )( -( ( -( int64_t )value + 3 ) / 4 ) );
+	return value >= 0 ? value / 4 : ( int32_t )( -( ( -static_cast<int64_t>(value) + 3 ) / 4 ) );
 }
 static bool t3dVTDemandValidConfig( const t3dVTDemandVisibilityCookConfig_t& c )
 {
@@ -339,13 +339,13 @@ static bool t3dVTDemandValidConfig( const t3dVTDemandVisibilityCookConfig_t& c )
 static bool t3dVTDemandValidRecord( const t3dVTDemandBakedVisibilityRecord_t& r )
 {
 	if ( r.m_nStableMaterialKey == 0u || r.m_nViewBin >= T3D_VT_DEMAND_BAKED_VISIBILITY_VIEW_BINS ||
-	     ( r.m_nFlags & ~( T3D_VT_VISIBILITY_PARTIAL | T3D_VT_VISIBILITY_NO_VISIBLE ) ) != 0u || r.m_nNominalMipBase >= 16u ||
+	     ( r.m_nFlags & ~( SIRVTVisibilityRecordFlag::T3D_VT_VISIBILITY_PARTIAL | SIRVTVisibilityRecordFlag::T3D_VT_VISIBILITY_NO_VISIBLE ) ) != 0u || r.m_nNominalMipBase >= 16u ||
 	     r.m_nSourceRevision == 0u || r.m_nProbeCount == 0u || r.m_nCoverageSampleCount > r.m_nSampleCount )
 		return false;
 	uint64_t sum = 0u;
 	for ( uint32_t i = 0u; i < 16u; ++i )
 		sum += r.m_szMipWeight[i];
-	if ( ( r.m_nFlags & T3D_VT_VISIBILITY_NO_VISIBLE ) != 0u ) {
+	if ( ( r.m_nFlags & SIRVTVisibilityRecordFlag::T3D_VT_VISIBILITY_NO_VISIBLE ) != 0u ) {
 		return sum == 0u && r.m_nSampleCount == 0u && r.m_nCoverageSampleCount == 0u;
 	}
 	return sum > 0u && r.m_nSampleCount > 0u && r.m_nCoverageConfidence != 0u;
@@ -368,15 +368,15 @@ static void t3dVTDemandEncodeRecord( uint8_t *p, const t3dVTDemandBakedVisibilit
 	t3dPut64( p, r.m_nStableMaterialKey );
 	p[8] = r.m_nViewBin;
 	p[9] = r.m_nFlags;
-	p[10] = ( uint8_t )r.m_nCoverageConfidence;
-	p[11] = ( uint8_t )( r.m_nCoverageConfidence >> 8u );
+	p[10] = static_cast<uint8_t>(r.m_nCoverageConfidence);
+	p[11] = static_cast<uint8_t>( r.m_nCoverageConfidence >> 8u );
 	t3dVTDemandWriteLittleU32( p + 12, r.m_nSampleCount );
 	for ( uint32_t i = 0u; i < 16u; ++i ) {
-		p[16u + i * 2u] = ( uint8_t )r.m_szMipWeight[i];
-		p[17u + i * 2u] = ( uint8_t )( r.m_szMipWeight[i] >> 8u );
+		p[16u + i * 2u] = static_cast<uint8_t>(r.m_szMipWeight[i]);
+		p[17u + i * 2u] = static_cast<uint8_t>( r.m_szMipWeight[i] >> 8u );
 	}
-	p[48] = ( uint8_t )r.m_nNominalMipBase;
-	p[49] = ( uint8_t )( r.m_nNominalMipBase >> 8u );
+	p[48] = static_cast<uint8_t>(r.m_nNominalMipBase);
+	p[49] = static_cast<uint8_t>( r.m_nNominalMipBase >> 8u );
 	t3dVTDemandWriteLittleU32( p + 52, r.m_nSourceRevision );
 	t3dVTDemandWriteLittleU32( p + 56, r.m_nProbeCount );
 	t3dVTDemandWriteLittleU32( p + 60, r.m_nCoverageSampleCount );
@@ -388,11 +388,11 @@ static bool t3dVTDemandDecodeRecord( const uint8_t *p, t3dVTDemandBakedVisibilit
 	r.m_nStableMaterialKey = t3dGet64( p );
 	r.m_nViewBin = p[8];
 	r.m_nFlags = p[9];
-	r.m_nCoverageConfidence = ( uint16_t )( p[10] | ( ( uint16_t )p[11] << 8u ) );
+	r.m_nCoverageConfidence = ( uint16_t )( p[10] | ( static_cast<uint16_t>(p[11]) << 8u ) );
 	r.m_nSampleCount = t3dVTDemandReadLittleU32( p + 12 );
 	for ( uint32_t i = 0u; i < 16u; ++i )
-		r.m_szMipWeight[i] = ( uint16_t )( p[16u + i * 2u] | ( ( uint16_t )p[17u + i * 2u] << 8u ) );
-	r.m_nNominalMipBase = ( uint16_t )( p[48] | ( ( uint16_t )p[49] << 8u ) );
+		r.m_szMipWeight[i] = ( uint16_t )( p[16u + i * 2u] | ( static_cast<uint16_t>(p[17u + i * 2u]) << 8u ) );
+	r.m_nNominalMipBase = ( uint16_t )( p[48] | ( static_cast<uint16_t>(p[49]) << 8u ) );
 	r.m_nSourceRevision = t3dVTDemandReadLittleU32( p + 52 );
 	r.m_nProbeCount = t3dVTDemandReadLittleU32( p + 56 );
 	r.m_nCoverageSampleCount = t3dVTDemandReadLittleU32( p + 60 );
@@ -423,7 +423,7 @@ static void t3dPackBitsEncode( const std::vector<uint8_t>& input, std::vector<ui
 		while ( run < 128u && i + run < input.size() && input[i + run] == input[i] )
 			++run;
 		if ( run >= 3u ) {
-			output.push_back( ( uint8_t )( 257u - run ) );
+			output.push_back( static_cast<uint8_t>( 257u - run ) );
 			output.push_back( input[i] );
 			i += run;
 		} else {
@@ -437,7 +437,7 @@ static void t3dPackBitsEncode( const std::vector<uint8_t>& input, std::vector<ui
 					break;
 				i += std::min( next, 128u - ( i - begin ) );
 			}
-			output.push_back( ( uint8_t )( i - begin - 1u ) );
+			output.push_back( static_cast<uint8_t>( i - begin - 1u ) );
 			output.insert( output.end(), input.begin() + begin, input.begin() + i );
 		}
 	}
@@ -448,7 +448,7 @@ static bool t3dPackBitsDecode( const uint8_t *src, const uint32_t encodedBytes, 
 	while ( in < encodedBytes ) {
 		const uint8_t code = src[in++];
 		if ( code < 128u ) {
-			const uint32_t count = ( uint32_t )code + 1u;
+			const uint32_t count = static_cast<uint32_t>(code) + 1u;
 			if ( count > encodedBytes - in || count > decodedBytes - out )
 				return false;
 			memcpy( dst + out, src + in, count );
@@ -500,7 +500,7 @@ bool t3d_vt_demand_write_baked_visibility( const t3dVTDemandVisibilityCell_t *co
 		t3dVTDemandEncodedBundleGroup_t& g = groups.back();
 		++g.cellCount;
 		g.recordCount += c.m_nRecordCount;
-		if ( ( uint64_t )g.recordCount * T3D_VT_DEMAND_BAKED_VISIBILITY_RECORD_BYTES > T3D_VT_DEMAND_BAKED_VISIBILITY_MAX_BUNDLE_BYTES )
+		if ( static_cast<uint64_t>(g.recordCount) * T3D_VT_DEMAND_BAKED_VISIBILITY_RECORD_BYTES > T3D_VT_DEMAND_BAKED_VISIBILITY_MAX_BUNDLE_BYTES )
 			return false;
 		for ( uint32_t k = 0u; k < c.m_nRecordCount; ++k ) {
 			const t3dVTDemandBakedVisibilityRecord_t& r = records[next + k];
@@ -522,9 +522,9 @@ bool t3d_vt_demand_write_baked_visibility( const t3dVTDemandVisibilityCell_t *co
 	uint64_t encodedTotal = 0u;
 	for ( size_t i = 0u; i < groups.size(); ++i ) {
 		const auto& g = groups[i];
-		std::vector<uint8_t> raw( ( size_t )g.recordCount * T3D_VT_DEMAND_BAKED_VISIBILITY_RECORD_BYTES );
+		std::vector<uint8_t> raw( static_cast<size_t>(g.recordCount) * T3D_VT_DEMAND_BAKED_VISIBILITY_RECORD_BYTES );
 		for ( uint32_t k = 0u; k < g.recordCount; ++k )
-			t3dVTDemandEncodeRecord( raw.data() + ( size_t )k * T3D_VT_DEMAND_BAKED_VISIBILITY_RECORD_BYTES, records[g.firstRecord + k] );
+			t3dVTDemandEncodeRecord( raw.data() + static_cast<size_t>(k) * T3D_VT_DEMAND_BAKED_VISIBILITY_RECORD_BYTES, records[g.firstRecord + k] );
 		std::vector<uint8_t> compressed;
 		t3dPackBitsEncode( raw, compressed );
 		if ( compressed.size() + 8u < raw.size() ) {
@@ -535,12 +535,12 @@ bool t3d_vt_demand_write_baked_visibility( const t3dVTDemandVisibilityCell_t *co
 		encodedTotal += encodedGroups[i].size();
 	}
 	const uint64_t bundleDirOffset =
-	    T3D_VT_DEMAND_BAKED_VISIBILITY_HEADER_BYTES + ( uint64_t )cellCount * T3D_VT_DEMAND_BAKED_VISIBILITY_CELL_BYTES;
-	const uint64_t payloadOffset = bundleDirOffset + ( uint64_t )groups.size() * T3D_VT_DEMAND_BAKED_VISIBILITY_BUNDLE_BYTES;
+	    T3D_VT_DEMAND_BAKED_VISIBILITY_HEADER_BYTES + static_cast<uint64_t>(cellCount) * T3D_VT_DEMAND_BAKED_VISIBILITY_CELL_BYTES;
+	const uint64_t payloadOffset = bundleDirOffset + static_cast<uint64_t>(groups.size()) * T3D_VT_DEMAND_BAKED_VISIBILITY_BUNDLE_BYTES;
 	const uint64_t totalBytes = payloadOffset + encodedTotal;
 	if ( totalBytes > T3D_VT_DEMAND_BAKED_VISIBILITY_MAX_FILE_BYTES )
 		return false;
-	bytes.resize( ( size_t )totalBytes, 0u );
+	bytes.resize( static_cast<size_t>(totalBytes), 0u );
 	uint8_t *const head = bytes.data();
 	t3dVTDemandWriteLittleU32( head, T3D_VT_DEMAND_MAGIC );
 	t3dVTDemandWriteLittleU32( head + 4, T3D_VT_DEMAND_BAKED_VISIBILITY_FORMAT_VERSION );
@@ -558,7 +558,7 @@ bool t3d_vt_demand_write_baked_visibility( const t3dVTDemandVisibilityCell_t *co
 	t3dPut64( head + 64, config.m_nSourceSignature );
 	t3dPut64( head + 72, config.m_nBakeConfigSignature );
 	t3dVTDemandWriteLittleU32( head + 80, cellCount );
-	t3dVTDemandWriteLittleU32( head + 84, ( uint32_t )groups.size() );
+	t3dVTDemandWriteLittleU32( head + 84, static_cast<uint32_t>(groups.size() ));
 	t3dPut64( head + 88, T3D_VT_DEMAND_BAKED_VISIBILITY_HEADER_BYTES );
 	t3dPut64( head + 96, bundleDirOffset );
 	t3dPut64( head + 104, payloadOffset );
@@ -568,7 +568,7 @@ bool t3d_vt_demand_write_baked_visibility( const t3dVTDemandVisibilityCell_t *co
 		while ( gIndex + 1u < groups.size() && i >= groups[gIndex].firstCell + groups[gIndex].cellCount )
 			++gIndex;
 		const t3dVTDemandVisibilityCell_t& c = cells[i];
-		uint8_t *const dst = head + T3D_VT_DEMAND_BAKED_VISIBILITY_HEADER_BYTES + ( size_t )i * T3D_VT_DEMAND_BAKED_VISIBILITY_CELL_BYTES;
+		uint8_t *const dst = head + T3D_VT_DEMAND_BAKED_VISIBILITY_HEADER_BYTES + static_cast<size_t>(i) * T3D_VT_DEMAND_BAKED_VISIBILITY_CELL_BYTES;
 		t3dVTDemandWriteLittleU32( dst, t3dSignedBits( c.m_nX ) );
 		t3dVTDemandWriteLittleU32( dst + 4, t3dSignedBits( c.m_nZ ) );
 		t3dVTDemandWriteLittleU32( dst + 8, gIndex );
@@ -582,9 +582,9 @@ bool t3d_vt_demand_write_baked_visibility( const t3dVTDemandVisibilityCell_t *co
 	for ( uint32_t g = 0u; g < groups.size(); ++g ) {
 		const t3dVTDemandEncodedBundleGroup_t& group = groups[g];
 		const auto& buffer = encodedGroups[g];
-		const uint32_t encoded = ( uint32_t )buffer.size();
+		const uint32_t encoded = static_cast<uint32_t>(buffer.size());
 		const uint32_t decoded = group.recordCount * T3D_VT_DEMAND_BAKED_VISIBILITY_RECORD_BYTES;
-		uint8_t *const dir = head + bundleDirOffset + ( size_t )g * T3D_VT_DEMAND_BAKED_VISIBILITY_BUNDLE_BYTES;
+		uint8_t *const dir = head + bundleDirOffset + static_cast<size_t>(g) * T3D_VT_DEMAND_BAKED_VISIBILITY_BUNDLE_BYTES;
 		t3dVTDemandWriteLittleU32( dir, t3dSignedBits( group.x ) );
 		t3dVTDemandWriteLittleU32( dir + 4, t3dSignedBits( group.z ) );
 		t3dPut64( dir + 8, cursor );
@@ -641,8 +641,8 @@ bool t3d_vt_demand_read( const uint8_t *const bytes, const uint64_t size, const 
 	if ( cellCount == 0u || cellCount > T3D_VT_DEMAND_BAKED_VISIBILITY_MAX_CELLS || groupCount == 0u || groupCount > cellCount )
 		return false;
 	const uint64_t groupDir =
-	    T3D_VT_DEMAND_BAKED_VISIBILITY_HEADER_BYTES + ( uint64_t )cellCount * T3D_VT_DEMAND_BAKED_VISIBILITY_CELL_BYTES;
-	const uint64_t payloadOffset = groupDir + ( uint64_t )groupCount * T3D_VT_DEMAND_BAKED_VISIBILITY_BUNDLE_BYTES;
+	    T3D_VT_DEMAND_BAKED_VISIBILITY_HEADER_BYTES + static_cast<uint64_t>(cellCount) * T3D_VT_DEMAND_BAKED_VISIBILITY_CELL_BYTES;
+	const uint64_t payloadOffset = groupDir + static_cast<uint64_t>(groupCount) * T3D_VT_DEMAND_BAKED_VISIBILITY_BUNDLE_BYTES;
 	if ( t3dGet64( bytes + 88 ) != T3D_VT_DEMAND_BAKED_VISIBILITY_HEADER_BYTES || t3dGet64( bytes + 96 ) != groupDir ||
 	     t3dGet64( bytes + 104 ) != payloadOffset || payloadOffset > size ||
 	     t3dVTDemandDirectoryHash( bytes, payloadOffset ) != t3dGet64( bytes + 120 ) ||
@@ -660,9 +660,9 @@ bool t3d_vt_demand_read( const uint8_t *const bytes, const uint64_t size, const 
 	uint64_t totalRecords = 0u;
 	std::vector<uint8_t> decodedPayload;
 	decodedPayload.reserve(
-	    std::min( ( uint64_t )T3D_VT_DEMAND_BAKED_VISIBILITY_MAX_RECORDS * T3D_VT_DEMAND_BAKED_VISIBILITY_RECORD_BYTES, size * 2u ) );
+	    std::min( static_cast<uint64_t>(T3D_VT_DEMAND_BAKED_VISIBILITY_MAX_RECORDS) * T3D_VT_DEMAND_BAKED_VISIBILITY_RECORD_BYTES, size * 2u ) );
 	for ( uint32_t i = 0u; i < groupCount; ++i ) {
-		const uint8_t *const dir = bytes + groupDir + ( size_t )i * T3D_VT_DEMAND_BAKED_VISIBILITY_BUNDLE_BYTES;
+		const uint8_t *const dir = bytes + groupDir + static_cast<size_t>(i) * T3D_VT_DEMAND_BAKED_VISIBILITY_BUNDLE_BYTES;
 		LoadedGroup g;
 		g.x = t3dGetSigned( dir );
 		g.z = t3dGetSigned( dir + 4 );
@@ -693,11 +693,11 @@ bool t3d_vt_demand_read( const uint8_t *const bytes, const uint64_t size, const 
 	std::vector<t3dVTDemandVisibilityCell_t> candidateCells;
 	std::vector<t3dVTDemandBakedVisibilityRecord_t> candidateRecords;
 	candidateCells.reserve( cellCount );
-	candidateRecords.reserve( ( size_t )totalRecords );
+	candidateRecords.reserve( static_cast<size_t>(totalRecords) );
 	uint32_t activeGroup = 0u, nextGroupByte = 0u;
 	for ( uint32_t i = 0u; i < cellCount; ++i ) {
 		const uint8_t *const entry =
-		    bytes + T3D_VT_DEMAND_BAKED_VISIBILITY_HEADER_BYTES + ( size_t )i * T3D_VT_DEMAND_BAKED_VISIBILITY_CELL_BYTES;
+		    bytes + T3D_VT_DEMAND_BAKED_VISIBILITY_HEADER_BYTES + static_cast<size_t>(i) * T3D_VT_DEMAND_BAKED_VISIBILITY_CELL_BYTES;
 		t3dVTDemandVisibilityCell_t c;
 		c.m_nX = t3dGetSigned( entry );
 		c.m_nZ = t3dGetSigned( entry + 4 );
@@ -719,11 +719,11 @@ bool t3d_vt_demand_read( const uint8_t *const bytes, const uint64_t size, const 
 		}
 		if ( byteOffset != nextGroupByte || byteCount > groups[group].count * T3D_VT_DEMAND_BAKED_VISIBILITY_RECORD_BYTES - nextGroupByte )
 			return false;
-		c.m_nFirstRecord = ( uint32_t )candidateRecords.size();
+		c.m_nFirstRecord = static_cast<uint32_t>(candidateRecords.size());
 		for ( uint32_t k = 0u; k < c.m_nRecordCount; ++k ) {
 			t3dVTDemandBakedVisibilityRecord_t record;
 			if ( !t3dVTDemandDecodeRecord( decodedPayload.data() + groups[group].decodedOffset + byteOffset +
-			                                   ( size_t )k * T3D_VT_DEMAND_BAKED_VISIBILITY_RECORD_BYTES,
+			                                   static_cast<size_t>(k) * T3D_VT_DEMAND_BAKED_VISIBILITY_RECORD_BYTES,
 			                               record ) )
 				return false;
 			if ( k > 0u ) {
@@ -789,8 +789,8 @@ bool Terrain3DVTDemandDirectory::loadCold( const uint8_t *const p, const uint64_
 	if ( !cellCount || cellCount > T3D_VT_DEMAND_BAKED_VISIBILITY_MAX_CELLS || !groupCount || groupCount > cellCount )
 		return false;
 	const uint64_t groupDir =
-	    T3D_VT_DEMAND_BAKED_VISIBILITY_HEADER_BYTES + ( uint64_t )cellCount * T3D_VT_DEMAND_BAKED_VISIBILITY_CELL_BYTES;
-	const uint64_t payloadOffset = groupDir + ( uint64_t )groupCount * T3D_VT_DEMAND_BAKED_VISIBILITY_BUNDLE_BYTES;
+	    T3D_VT_DEMAND_BAKED_VISIBILITY_HEADER_BYTES + static_cast<uint64_t>(cellCount) * T3D_VT_DEMAND_BAKED_VISIBILITY_CELL_BYTES;
+	const uint64_t payloadOffset = groupDir + static_cast<uint64_t>(groupCount) * T3D_VT_DEMAND_BAKED_VISIBILITY_BUNDLE_BYTES;
 	if ( payloadOffset != directoryBytes || payloadOffset > fileBytes ||
 	     t3dGet64( p + 88 ) != T3D_VT_DEMAND_BAKED_VISIBILITY_HEADER_BYTES || t3dGet64( p + 96 ) != groupDir ||
 	     t3dGet64( p + 104 ) != payloadOffset || t3dGet64( p + 120 ) != t3dVTDemandDirectoryHash( p, payloadOffset ) )
@@ -799,7 +799,7 @@ bool Terrain3DVTDemandDirectory::loadCold( const uint8_t *const p, const uint64_
 	bundles.reserve( groupCount );
 	uint64_t cursor = payloadOffset, count = 0u;
 	for ( uint32_t i = 0u; i < groupCount; ++i ) {
-		const uint8_t *const g = p + groupDir + ( uint64_t )i * T3D_VT_DEMAND_BAKED_VISIBILITY_BUNDLE_BYTES;
+		const uint8_t *const g = p + groupDir + static_cast<uint64_t>(i) * T3D_VT_DEMAND_BAKED_VISIBILITY_BUNDLE_BYTES;
 		t3dVTDemandDirectoryBundle_t b{};
 		b.nX = t3dGetSigned( g );
 		b.nZ = t3dGetSigned( g + 4 );
@@ -827,7 +827,7 @@ bool Terrain3DVTDemandDirectory::loadCold( const uint8_t *const p, const uint64_
 	uint32_t activeGroup = 0u, expectedByte = 0u;
 	for ( uint32_t i = 0u; i < cellCount; ++i ) {
 		const uint8_t *const c =
-		    p + T3D_VT_DEMAND_BAKED_VISIBILITY_HEADER_BYTES + ( uint64_t )i * T3D_VT_DEMAND_BAKED_VISIBILITY_CELL_BYTES;
+		    p + T3D_VT_DEMAND_BAKED_VISIBILITY_HEADER_BYTES + static_cast<uint64_t>(i) * T3D_VT_DEMAND_BAKED_VISIBILITY_CELL_BYTES;
 		t3dVTDemandDirectoryCell_t cell{};
 		cell.nX = t3dGetSigned( c );
 		cell.nZ = t3dGetSigned( c + 4 );
@@ -874,7 +874,7 @@ bool Terrain3DVTDemandDirectory::validFor( const uint64_t signature ) const
 bool Terrain3DVTDemandDirectory::findCellHot( const int32_t x, const int32_t z, uint32_t& index ) const
 {
 	const int32_t gx = t3dVTDemandEncodedBundleGroup( x ), gz = t3dVTDemandEncodedBundleGroup( z );
-	uint32_t lo = 0u, hi = ( uint32_t )m_cells.size();
+	uint32_t lo = 0u, hi = static_cast<uint32_t>(m_cells.size());
 	while ( lo < hi ) {
 		const uint32_t mid = lo + ( hi - lo ) / 2u;
 		const auto& c = m_cells[mid];
@@ -903,7 +903,7 @@ bool t3d_vt_demand_decode_bundle( const uint8_t *const encoded, const uint32_t e
 	} else if ( bundle.nCodec != 1u || !t3dPackBitsDecode( encoded, encodedBytes, scratch, bundle.nDecodedBytes ) )
 		return false;
 	for ( uint32_t i = 0u; i < bundle.nCount; ++i )
-		if ( !t3dVTDemandDecodeRecord( scratch + ( size_t )i * T3D_VT_DEMAND_BAKED_VISIBILITY_RECORD_BYTES, records[i] ) )
+		if ( !t3dVTDemandDecodeRecord( scratch + static_cast<size_t>(i) * T3D_VT_DEMAND_BAKED_VISIBILITY_RECORD_BYTES, records[i] ) )
 			return false;
 	return true;
 }
@@ -931,15 +931,15 @@ uint16_t t3d_vt_demand_select_mip( const t3dVTDemandBakedVisibilityRecord_t& rec
 			break;
 		}
 	}
-	const double refTan = tan( ( double )config.m_nFovMilliDegrees * 3.141592653589793 / 360000.0 );
-	const double nowTan = tan( ( double )fov * 3.141592653589793 / 360.0 );
-	const double ratio = ( ( double )textureSize / config.m_nNominalTextureSize ) * ( ( double )config.m_nNominalRenderSize / viewHeight ) *
+	const double refTan = tan( static_cast<double>(config.m_nFovMilliDegrees) * 3.141592653589793 / 360000.0 );
+	const double nowTan = tan( static_cast<double>(fov) * 3.141592653589793 / 360.0 );
+	const double ratio = ( static_cast<double>(textureSize) / config.m_nNominalTextureSize ) * ( static_cast<double>(config.m_nNominalRenderSize) / viewHeight ) *
 	                     ( nowTan / refTan );
 	if ( !( ratio > 0.0 ) || !isfinite( ratio ) )
 		return UINT16_MAX;
 	// Histogram bins are already absolute nominal mip levels.
 	// m_nNominalMipBase records the first occupied bin, not an added offset.
-	const double adjusted = ( double )mip + log2( ratio );
-	const double clamped = adjusted < 0.0 ? 0.0 : adjusted > mipCount - 1u ? ( double )( mipCount - 1u ) : adjusted;
-	return ( uint16_t )floor( clamped + 0.5 );
+	const double adjusted = static_cast<double>(mip) + log2( ratio );
+	const double clamped = adjusted < 0.0 ? 0.0 : adjusted > mipCount - 1u ? static_cast<double>( mipCount - 1u ) : adjusted;
+	return static_cast<uint16_t>(floor( clamped + 0.5 ));
 }

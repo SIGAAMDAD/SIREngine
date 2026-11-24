@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRLANGGRAPHVMBACKEND_H__
-#define __SIRENGINE_SIRLANGGRAPHVMBACKEND_H__
+#ifndef __SIR_LANGGRAPHVMBACKEND_H__
+#define __SIR_LANGGRAPHVMBACKEND_H__
 
 #include <Core/SIRPCH.h>
 
@@ -70,4 +70,4 @@ typedef struct sirLangGraphVMBackend_s
 // frame is one canonical record, or zero bytes for a void function.
 sirScriptBackendAPI_t SIRLangGraphVMBackendAPI( sirLangGraphVMBackend_t *pBackend ) noexcept;
 
-#endif // __SIRENGINE_SIRLANGGRAPHVMBACKEND_H__
+#endif // __SIR_LANGGRAPHVMBACKEND_H__

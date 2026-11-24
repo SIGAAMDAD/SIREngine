@@ -14,10 +14,11 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRASYNCEVENTCHANNEL_H__
-#define __SIRENGINE_SIRASYNCEVENTCHANNEL_H__
+#ifndef __SIR_ASYNCEVENTCHANNEL_H__
+#define __SIR_ASYNCEVENTCHANNEL_H__
 
 #include <Core/SIRPCH.h>
+#include <atomic>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -49,7 +50,7 @@ public:
 		const sirSubscriptionHandle_t handle = m_Event.subscribe( pContext, pCallback );
 		if constexpr ( FilterUnobserved ) {
 			if ( handle.isValid() ) {
-				m_bObserved.store( true, SIR_MEMORY_ORDER_RELEASE );
+				m_bObserved.store( true, std::memory_order_release );
 			}
 		}
 		return handle;
@@ -59,16 +60,16 @@ public:
 		const bool bRemoved = m_Event.unsubscribe( handle );
 		if constexpr ( FilterUnobserved ) {
 			if ( bRemoved ) {
-				m_bObserved.store( m_Event.subscriberCount() != 0, SIR_MEMORY_ORDER_RELEASE );
+				m_bObserved.store( m_Event.subscriberCount() != 0, std::memory_order_release );
 			}
 		}
 		return bRemoved;
 	}
-	sirEventEnqueueStatus_t tryPublish( const TPayload& payload ) noexcept
+	SIREventEnqueueStatus tryPublish( const TPayload& payload ) noexcept
 	{
 		if constexpr ( FilterUnobserved ) {
-			if ( !m_bObserved.load( SIR_MEMORY_ORDER_ACQUIRE ) ) {
-				return SIR_EVENT_ENQUEUE_NO_LISTENERS;
+			if ( !m_bObserved.load( std::memory_order_acquire ) ) {
+				return SIREventEnqueueStatus::SIR_EVENT_ENQUEUE_NO_LISTENERS;
 			}
 		}
 		return m_Ring.tryEnqueue( payload );
@@ -76,7 +77,7 @@ public:
 	uint32_t publishBatch( const TPayload *pPayloads, uint32_t nCount ) noexcept
 	{
 		if constexpr ( FilterUnobserved ) {
-			if ( !m_bObserved.load( SIR_MEMORY_ORDER_ACQUIRE ) ) {
+			if ( !m_bObserved.load( std::memory_order_acquire ) ) {
 				return 0;
 			}
 		}
@@ -102,7 +103,7 @@ public:
 private:
 	SIREvent<TPayload, ListenerCapacity> m_Event;
 	SIRSPSCEventRing<TPayload, QueueCapacity> m_Ring;
-	SIRAtomic<bool> m_bObserved{ false };
+	std::atomic<bool> m_bObserved{ false };
 };
 
-#endif // __SIRENGINE_SIRASYNCEVENTCHANNEL_H__
+#endif // __SIR_ASYNCEVENTCHANNEL_H__

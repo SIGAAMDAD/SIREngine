@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRANIMATIONTYPES_H__
-#define __SIRENGINE_SIRANIMATIONTYPES_H__
+#ifndef __SIR_ANIMATIONTYPES_H__
+#define __SIR_ANIMATIONTYPES_H__
 
 #include <Core/SIRPCH.h>
 
@@ -57,8 +57,7 @@ typedef struct sirAnimationCapacityContract_s
 	uint32_t nMaximumConcurrentReaders;
 } sirAnimationCapacityContract_t;
 
-typedef enum sirAnimationResult_e : uint8_t
-{
+enum class SIRAnimationResult : uint8_t {
 	SIR_ANIMATION_SUCCESS = 0,
 	SIR_ANIMATION_ACCEPTED,
 	SIR_ANIMATION_PENDING,
@@ -75,37 +74,33 @@ typedef enum sirAnimationResult_e : uint8_t
 	SIR_ANIMATION_BUSY,
 	SIR_ANIMATION_CANCELLED,
 	SIR_ANIMATION_FAILED
-} sirAnimationResult_t;
+};
 
-typedef enum sirAnimationAssetKind_e : uint8_t
-{
+enum class SIRAnimationAssetKind : uint8_t {
 	SIR_ANIMATION_ASSET_SKELETON = 0,
 	SIR_ANIMATION_ASSET_CLIP,
 	SIR_ANIMATION_ASSET_GRAPH,
 	SIR_ANIMATION_ASSET_MORPH,
 	SIR_ANIMATION_ASSET_RETARGET
-} sirAnimationAssetKind_t;
+};
 
-typedef enum sirAnimationAuthority_e : uint8_t
-{
+enum class SIRAnimationAuthority : uint8_t {
 	SIR_ANIMATION_AUTHORITY_ANIMATION = 0,
 	SIR_ANIMATION_AUTHORITY_PHYSICS
-} sirAnimationAuthority_t;
+};
 
-typedef enum sirAnimationDeformationMode_e : uint8_t
-{
+enum class SIRAnimationDeformationMode : uint8_t {
 	SIR_ANIMATION_DEFORM_CPU = 0,
 	SIR_ANIMATION_DEFORM_VERTEX,
 	SIR_ANIMATION_DEFORM_COMPUTE
-} sirAnimationDeformationMode_t;
+};
 
-typedef enum sirAnimationResidency_e : uint8_t
-{
+enum class SIRAnimationResidency : uint8_t {
 	SIR_ANIMATION_RESIDENCY_FULL = 0,
 	SIR_ANIMATION_RESIDENCY_REDUCED,
 	SIR_ANIMATION_RESIDENCY_COARSE,
 	SIR_ANIMATION_RESIDENCY_DORMANT
-} sirAnimationResidency_t;
+};
 
 typedef struct sirAnimationAssetRef_s
 {
@@ -113,7 +108,7 @@ typedef struct sirAnimationAssetRef_s
 	uint64_t nRevision;
 	uint32_t nCookedFormatId;
 	uint16_t nSchemaVersion;
-	sirAnimationAssetKind_t eKind;
+	SIRAnimationAssetKind eKind;
 	uint8_t nReserved;
 } sirAnimationAssetRef_t;
 
@@ -334,7 +329,7 @@ typedef struct sirAnimationBudgetGrant_s
 
 typedef struct sirAnimationQualityDecision_s
 {
-	sirAnimationDeformationMode_t eDeformation;
+	SIRAnimationDeformationMode eDeformation;
 	uint32_t nVisualLod;
 	uint32_t nVisualUpdateIntervalTicks;
 	uint32_t nPoseSharingClass;
@@ -349,7 +344,7 @@ typedef struct sirAnimationSkinRequest_s
 	SIRResourceKey keyBindMesh;
 	uint64_t nBindMeshRevision;
 	sirAnimationTick_t tick;
-	sirAnimationDeformationMode_t eMode;
+	SIRAnimationDeformationMode eMode;
 	uint32_t nMeshLod;
 	uint32_t nDeviceGeneration;
 } sirAnimationSkinRequest_t;
@@ -367,7 +362,7 @@ typedef struct sirAnimationAuthorityRequest_s
 	sirAnimationInstance_t instance;
 	sirAnimationTick_t effectiveTick;
 	sirAnimationBoneSelection_t bones;
-	sirAnimationAuthority_t eNewOwner;
+	SIRAnimationAuthority eNewOwner;
 	uint64_t nExpectedAuthorityGeneration;
 } sirAnimationAuthorityRequest_t;
 
@@ -384,7 +379,7 @@ typedef struct sirAnimationAuthorityTicket_s
 typedef struct sirAnimationAuthorityAck_s
 {
 	sirAnimationTick_t effectiveTick;
-	sirAnimationAuthority_t eOwner;
+	SIRAnimationAuthority eOwner;
 	uint64_t nAuthorityGeneration;
 } sirAnimationAuthorityAck_t;
 
@@ -405,7 +400,7 @@ typedef struct sirAnimationPhysicsPoseView_s
 typedef struct sirAnimationResidencyChange_s
 {
 	sirAnimationInstance_t instance;
-	sirAnimationResidency_t eWorldResidency;
+	SIRAnimationResidency eWorldResidency;
 	sirAnimationTick_t tick;
 	uint32_t nWorldGeneration;
 } sirAnimationResidencyChange_t;
@@ -425,4 +420,4 @@ static_assert( sizeof( SIRResourceKey ) == 16, "Animation asset keys use canonic
 static_assert( sizeof( sirAnimationAssetRef_t ) == 32, "Animation assets carry a canonical 16-byte GRDG key and revision" );
 static_assert( sizeof( sirAnimationPoseHandle_t ) == 8, "Pose handles are generation tagged" );
 
-#endif // __SIRENGINE_SIRANIMATIONTYPES_H__
+#endif // __SIR_ANIMATIONTYPES_H__

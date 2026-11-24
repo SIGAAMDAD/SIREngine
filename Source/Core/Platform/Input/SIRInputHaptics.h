@@ -13,10 +13,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRINPUTHAPTICS_H__
-#define __SIRENGINE_SIRINPUTHAPTICS_H__
+#ifndef __SIR_INPUTHAPTICS_H__
+#define __SIR_INPUTHAPTICS_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -29,15 +29,14 @@ of merchantability, fitness for a particular purpose and noninfringement.
 constexpr uint32_t SIR_INPUT_HAPTIC_EFFECT_CAPACITY = 64;
 constexpr uint32_t SIR_INPUT_HAPTIC_MAX_DURATION_MS = 60000;
 
-typedef enum sirInputHapticCapability_e : uint32_t
-{
+enum class SIRInputHapticCapability : uint32_t {
 	SIR_INPUT_HAPTIC_CAP_NONE = 0,
 	SIR_INPUT_HAPTIC_CAP_RUMBLE = 1,
 	SIR_INPUT_HAPTIC_CAP_TRIGGER_RUMBLE = 2,
 	SIR_INPUT_HAPTIC_CAP_LED = 4,
 	SIR_INPUT_HAPTIC_CAP_ADAPTIVE_TRIGGER = 8,
 	SIR_INPUT_HAPTIC_CAP_HD_HAPTICS = 16
-} sirInputHapticCapability_t;
+};
 
 typedef struct sirInputHapticHandle_s
 {
@@ -97,4 +96,4 @@ private:
 	uint32_t m_nOutput;
 };
 
-#endif // __SIRENGINE_SIRINPUTHAPTICS_H__
+#endif // __SIR_INPUTHAPTICS_H__

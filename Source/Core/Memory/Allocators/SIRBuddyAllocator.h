@@ -14,8 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRBUDDYALLOCATOR_H__
-#define __SIRENGINE_SIRBUDDYALLOCATOR_H__
+#ifndef __SIR_BUDDYALLOCATOR_H__
+#define __SIR_BUDDYALLOCATOR_H__
 
 #include <Core/SIRPCH.h>
 
@@ -82,4 +82,4 @@ private:
 	uint8_t m_nRootOrder;
 };
 
-#endif // __SIRENGINE_SIRBUDDYALLOCATOR_H__
+#endif // __SIR_BUDDYALLOCATOR_H__

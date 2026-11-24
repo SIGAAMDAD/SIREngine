@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRPLATFORMPROCESS_H__
-#define __SIRENGINE_SIRPLATFORMPROCESS_H__
+#ifndef __SIR_PLATFORMPROCESS_H__
+#define __SIR_PLATFORMPROCESS_H__
 
 #include <Core/SIRPCH.h>
 
@@ -38,4 +38,4 @@ public:
 	static void sleepThread( uint32_t nMilliseconds ) noexcept;
 };
 
-#endif // __SIRENGINE_SIRPLATFORMPROCESS_H__
+#endif // __SIR_PLATFORMPROCESS_H__

@@ -62,13 +62,13 @@ typedef struct sirLangCookBuffers_s
 	sirLangHIRNode_t szHIR[SIR_LANG_COOK_MAX_NODES];
 	sirLangCIRFunction_t szCIRFunctions[SIR_LANG_COOK_MAX_FUNCTIONS];
 	sirLangCIRInstruction_t szInstructions[SIR_LANG_COOK_MAX_INSTRUCTIONS];
-	sirLangValueKind_t szParameterTypes[SIR_LANG_COOK_MAX_PARAMETERS];
+	SIRLangValueKind szParameterTypes[SIR_LANG_COOK_MAX_PARAMETERS];
 	uint32_t szCallArguments[SIR_LANG_COOK_MAX_CALLS];
 	sirLangEffectFunction_t szEffects[SIR_LANG_COOK_MAX_FUNCTIONS];
 	sirLangCompileWorkspace_t workspace;
 } sirLangCookBuffers_t;
 
-static sirLangCookBuffers_t s_Buffers = {};
+static sirLangCookBuffers_t s_Buffers {};
 
 static bool sirLangParseId( const char *pszText, uint64_t *pValue ) noexcept
 {
@@ -81,7 +81,7 @@ static bool sirLangParseId( const char *pszText, uint64_t *pValue ) noexcept
 	if ( errno != 0 || pszEnd == pszText || *pszEnd != '\0' || nParsed == 0 ) {
 		return false;
 	}
-	*pValue = ( uint64_t )nParsed;
+	*pValue = static_cast<uint64_t>(nParsed);
 	return true;
 }
 
@@ -96,7 +96,7 @@ static bool sirLangParseOptionalFlags( const char *pszText, uint64_t *pValue ) n
 	if ( errno != 0 || pszEnd == pszText || *pszEnd != '\0' ) {
 		return false;
 	}
-	*pValue = ( uint64_t )nParsed;
+	*pValue = static_cast<uint64_t>(nParsed);
 	return true;
 }
 
@@ -154,27 +154,27 @@ static bool sirLangReadSource( const char *pszPath, sirLangSourceView_t *pSource
 	const size_t nRead = fread( s_Buffers.szSource, 1, sizeof( s_Buffers.szSource ), pFile );
 	const int nExtra = fgetc( pFile );
 	const bool bSuccess = !ferror( pFile ) && nExtra == EOF && nRead != 0;
-	( void )fclose( pFile );
+	static_cast<void>(fclose( pFile ));
 	if ( !bSuccess ) {
 		return false;
 	}
 
 	pSource->pBytes = s_Buffers.szSource;
-	pSource->nBytes = ( uint32_t )nRead;
+	pSource->nBytes = static_cast<uint32_t>(nRead);
 	return true;
 }
 
 static FILE *sirLangOpenTemporary( const char *pszTarget, char *pszTemporary, size_t nCapacity ) noexcept
 {
 #if defined( _WIN32 )
-	const unsigned long nProcessId = ( unsigned long )_getpid();
+	const unsigned long nProcessId = static_cast<unsigned long>(_getpid());
 #else
-	const unsigned long nProcessId = ( unsigned long )getpid();
+	const unsigned long nProcessId = static_cast<unsigned long>(getpid());
 #endif
 
 	for ( uint32_t iAttempt = 0; iAttempt < 32; ++iAttempt ) {
 		const int nLength = snprintf( pszTemporary, nCapacity, "%s.tmp-%lu-%u", pszTarget, nProcessId, iAttempt );
-		if ( nLength < 0 || ( size_t )nLength >= nCapacity ) {
+		if ( nLength < 0 || static_cast<size_t>(nLength) >= nCapacity ) {
 			return nullptr;
 		}
 
@@ -197,11 +197,11 @@ static FILE *sirLangOpenTemporary( const char *pszTarget, char *pszTemporary, si
 #endif
 		if ( pFile == nullptr ) {
 #if defined( _WIN32 )
-			( void )_close( nDescriptor );
+			static_cast<void>(_close( nDescriptor ));
 #else
-			( void )close( nDescriptor );
+			static_cast<void>(close( nDescriptor ));
 #endif
-			( void )remove( pszTemporary );
+			static_cast<void>(remove( pszTemporary ));
 		}
 		return pFile;
 	}
@@ -228,11 +228,12 @@ static bool sirLangPublishTemporary( const char *pszTemporary, const char *pszTa
 #else
 	// Publish on the same filesystem without replacing a competing winner.
 	const char *pszSeparator = strrchr( pszTarget, '/' );
-	char szDirectory[4096] = {};
+	char szDirectory[4096];
+	memset( szDirectory, 0, sizeof( szDirectory ) );
 	if ( pszSeparator == nullptr ) {
 		szDirectory[0] = '.';
 	} else {
-		size_t nDirectoryLength = ( size_t )( pszSeparator - pszTarget );
+		size_t nDirectoryLength = static_cast<size_t>( pszSeparator - pszTarget );
 		if ( nDirectoryLength == 0 ) {
 			nDirectoryLength = 1;
 		}
@@ -259,7 +260,8 @@ static bool sirLangWriteArtifact( const char *pszPath, uint32_t nBytes ) noexcep
 		return false;
 	}
 
-	char szTemporary[4096] = {};
+	char szTemporary[4096];
+	memset( szTemporary, 0, sizeof( szTemporary ) );
 	FILE *pFile = sirLangOpenTemporary( pszPath, szTemporary, sizeof( szTemporary ) );
 	if ( pFile == nullptr ) {
 		return false;
@@ -269,12 +271,12 @@ static bool sirLangWriteArtifact( const char *pszPath, uint32_t nBytes ) noexcep
 	const bool bFlushed = bWritten && sirLangFlushTemporary( pFile );
 	const bool bClosed = fclose( pFile ) == 0;
 	if ( !bFlushed || !bClosed ) {
-		( void )remove( szTemporary );
+		static_cast<void>(remove( szTemporary ));
 		return false;
 	}
 
 	const bool bPublished = sirLangPublishTemporary( szTemporary, pszPath );
-	( void )remove( szTemporary );
+	static_cast<void>(remove( szTemporary ));
 	return bPublished;
 }
 
@@ -306,20 +308,21 @@ int main( int nArgc, char **ppszArgv )
 		return 2;
 	}
 
-	sirLangSourceView_t source = {};
+	sirLangSourceView_t source {};
 	if ( !sirLangReadSource( ppszArgv[1], &source ) ) {
 		fprintf( stderr, "SIRLangCooker: unable to read source within %u-byte limit\n", SIR_LANG_COOK_MAX_SOURCE );
 		return 3;
 	}
 
 	if ( !SIRLangCompileSource( source, &workspace ) ) {
-		fprintf( stderr, "SIRLangCooker: compilation failed at phase %u, error %u, node %u\n", ( unsigned )workspace.report.ePhase,
-		         ( unsigned )workspace.report.nStageResult, ( unsigned )workspace.report.iErrorNode );
-		sirLangEditorDiagnostic_t szErrors[16] = {};
+		fprintf( stderr, "SIRLangCooker: compilation failed at phase %u, error %u, node %u\n", static_cast<unsigned>(workspace.report.ePhase),
+		         static_cast<unsigned>(workspace.report.nStageResult), static_cast<unsigned>(workspace.report.iErrorNode) );
+		sirLangEditorDiagnostic_t szErrors[16];
+		memset( szErrors, 0, sizeof( szErrors ) );
 		const uint32_t nErrors = SIRLangCollectCompileDiagnostics( &workspace, szErrors, 16 );
 		for ( uint32_t iError = 0; iError < nErrors; ++iError ) {
 			const sirLangEditorDiagnostic_t& error = szErrors[iError];
-			fprintf( stderr, "SIRLangCooker: %u:%u phase %u code %u\n", error.nLine, error.nColumn, ( unsigned )error.ePhase, error.nCode );
+			fprintf( stderr, "SIRLangCooker: %u:%u phase %u code %u\n", error.nLine, error.nColumn, static_cast<unsigned>(error.ePhase), error.nCode );
 		}
 		return 4;
 	}
@@ -328,12 +331,12 @@ int main( int nArgc, char **ppszArgv )
 	// imported module is recorded in the canonical recipe. Reject instead of
 	// silently creating an incomplete content-addressed artifact.
 	for ( uint32_t iNode = 0; iNode < workspace.syntax.nNodeCount; ++iNode ) {
-		if ( workspace.syntax.pNodes[iNode].eKind == SIR_LANG_SYNTAX_IMPORT ) {
+		if ( workspace.syntax.pNodes[iNode].eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_IMPORT ) {
 			fprintf( stderr, "SIRLangCooker: import closure not resolved\n" );
 			return 4;
 		}
 	}
-	sirLangCookIdentity_t identity = {};
+	sirLangCookIdentity_t identity {};
 	identity.nModuleId = workspace.cir.nModuleId;
 	identity.nSchemaId = workspace.cir.nSchemaId;
 	identity.nLayoutDigest = workspace.cir.nLayoutDigest;
@@ -342,17 +345,17 @@ int main( int nArgc, char **ppszArgv )
 	identity.nToolchainId = nToolchainId;
 	identity.nOptimizationFlags = nOptimizationFlags;
 	SIRScriptSHA256::digest( source.pBytes, source.nBytes, identity.szSourceDigest );
-	sirScriptCacheKey_t key = {};
-	if ( SIRLangMakeCookKey( identity, nullptr, 0, &key ) != SIR_SCRIPT_OK ) {
+	sirScriptCacheKey_t key {};
+	if ( SIRLangMakeCookKey( identity, nullptr, 0, &key ) != SIRScriptResult::SIR_SCRIPT_OK ) {
 		fprintf( stderr, "SIRLangCooker: invalid canonical recipe\n" );
 		return 4;
 	}
 
 	uint32_t nBytes = 0;
-	const sirLangVMError_t eEncoded =
+	const SIRLangVMError eEncoded =
 	    SIRLangEncodeGraphVM( &workspace.cir.program, s_Buffers.szBytecode, sizeof( s_Buffers.szBytecode ), &nBytes );
-	if ( eEncoded != SIR_LANG_VM_OK ) {
-		fprintf( stderr, "SIRLangCooker: encode failure %u\n", ( unsigned )eEncoded );
+	if ( eEncoded != SIRLangVMError::SIR_LANG_VM_OK ) {
+		fprintf( stderr, "SIRLangCooker: encode failure %u\n", static_cast<unsigned>(eEncoded) );
 		return 5;
 	}
 	if ( !sirLangWriteArtifact( ppszArgv[2], nBytes ) ) {
@@ -363,7 +366,7 @@ int main( int nArgc, char **ppszArgv )
 	printf( "SIRLangCooker: produced %u bytes\n", nBytes );
 	printf( "cache_key=" );
 	for ( uint32_t iByte = 0; iByte < sizeof( key.szDigest ); ++iByte ) {
-		printf( "%02x", ( unsigned )key.szDigest[iByte] );
+		printf( "%02x", static_cast<unsigned>(key.szDigest[iByte]) );
 	}
 	printf( "\n" );
 	return 0;

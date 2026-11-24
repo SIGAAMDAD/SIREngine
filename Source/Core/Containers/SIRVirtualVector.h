@@ -9,8 +9,8 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRVIRTUALVECTOR_H__
-#define __SIRENGINE_SIRVIRTUALVECTOR_H__
+#ifndef __SIR_VIRTUALVECTOR_H__
+#define __SIR_VIRTUALVECTOR_H__
 
 #include <Core/SIRPCH.h>
 
@@ -55,99 +55,99 @@ public:
 	SIRVirtualVector( const SIRVirtualVector& ) = delete;
 	SIRVirtualVector& operator=( const SIRVirtualVector& ) = delete;
 
-	sirContainerResult_t tryInitialize( uint32_t nMaximum ) noexcept
+	SIRContainerResult tryInitialize( uint32_t nMaximum ) noexcept
 	{
 		if ( m_pData != nullptr || nMaximum == 0 ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		const size_t nPage = SIRVirtualMemory::getPageSize();
 		if ( nPage == 0 || alignof( T ) > nPage ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		size_t nBytes = 0;
 		size_t nRounded = 0;
 		if ( !SIRRawStorage::checkedMultiply( nMaximum, sizeof( T ), &nBytes ) || !roundUp( nBytes, nPage, &nRounded ) ) {
-			return SIR_CONTAINER_SIZE_OVERFLOW;
+			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
 		void *pMemory = SIRVirtualMemory::reserve( nRounded );
 		if ( pMemory == nullptr ) {
-			return SIR_CONTAINER_OUT_OF_MEMORY;
+			return SIRContainerResult::SIR_CONTAINER_OUT_OF_MEMORY;
 		}
-		m_pData = ( T * )pMemory;
+		m_pData = static_cast<T *>(pMemory);
 		m_nMaximum = nMaximum;
 		m_nPageBytes = nPage;
 		m_nReservationBytes = nRounded;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
 	// The segment is exclusively owned for this vector's lifetime. GRDG and
 	// other allocators must not commit into the same range.
-	sirContainerResult_t tryInitialize( SIRMemorySegment& rSegment, uint32_t nMaximum ) noexcept
+	SIRContainerResult tryInitialize( SIRMemorySegment& rSegment, uint32_t nMaximum ) noexcept
 	{
 		if ( m_pData != nullptr || nMaximum == 0 || rSegment.getBase() == nullptr || rSegment.getCommittedBytes() != 0 ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
-		const size_t nPage = ( size_t )rSegment.getPageSize();
+		const size_t nPage = static_cast<size_t>(rSegment.getPageSize());
 		if ( nPage == 0 || alignof( T ) > nPage ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		size_t nBytes = 0;
 		size_t nRounded = 0;
 		if ( !SIRRawStorage::checkedMultiply( nMaximum, sizeof( T ), &nBytes ) || !roundUp( nBytes, nPage, &nRounded ) ) {
-			return SIR_CONTAINER_SIZE_OVERFLOW;
+			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
 		if ( nRounded > rSegment.getReservedBytes() || nRounded > rSegment.getCommitLimitBytes() ) {
-			return SIR_CONTAINER_CAPACITY_EXCEEDED;
+			return SIRContainerResult::SIR_CONTAINER_CAPACITY_EXCEEDED;
 		}
-		m_pData = ( T * )rSegment.getBase();
+		m_pData = static_cast<T *>(rSegment.getBase());
 		m_pSegment = &rSegment;
 		m_nMaximum = nMaximum;
 		m_nPageBytes = nPage;
 		m_nReservationBytes = nRounded;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
-	sirContainerResult_t tryReserve( uint32_t nCapacity ) noexcept
+	SIRContainerResult tryReserve( uint32_t nCapacity ) noexcept
 	{
 		if ( m_pData == nullptr || nCapacity > m_nMaximum ) {
-			return SIR_CONTAINER_CAPACITY_EXCEEDED;
+			return SIRContainerResult::SIR_CONTAINER_CAPACITY_EXCEEDED;
 		}
 		size_t nBytes = 0;
 		size_t nRounded = 0;
 		if ( !SIRRawStorage::checkedMultiply( nCapacity, sizeof( T ), &nBytes ) || !roundUp( nBytes, m_nPageBytes, &nRounded ) ) {
-			return SIR_CONTAINER_SIZE_OVERFLOW;
+			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
 		if ( nRounded <= m_nCommittedBytes ) {
-			return SIR_CONTAINER_OK;
+			return SIRContainerResult::SIR_CONTAINER_OK;
 		}
 		if ( m_pSegment != nullptr ? !m_pSegment->commit( m_nCommittedBytes, nRounded - m_nCommittedBytes )
-		                           : !SIRVirtualMemory::commit( ( uint8_t * )m_pData + m_nCommittedBytes, nRounded - m_nCommittedBytes ) ) {
-			return SIR_CONTAINER_OUT_OF_MEMORY;
+		                           : !SIRVirtualMemory::commit( reinterpret_cast<uint8_t *>(m_pData) + m_nCommittedBytes, nRounded - m_nCommittedBytes ) ) {
+			return SIRContainerResult::SIR_CONTAINER_OUT_OF_MEMORY;
 		}
 		m_nCommittedBytes = nRounded;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 	template <typename... Args>
-	sirContainerResult_t tryEmplaceBack( Args&&...args )
+	SIRContainerResult tryEmplaceBack( Args&&...args )
 	{
 		if ( m_nSize == m_nMaximum ) {
-			return SIR_CONTAINER_FULL;
+			return SIRContainerResult::SIR_CONTAINER_FULL;
 		}
-		const sirContainerResult_t eResult = tryReserve( m_nSize + 1 );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		const SIRContainerResult eResult = tryReserve( m_nSize + 1 );
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		new ( m_pData + m_nSize ) T( std::forward<Args>( args )... );
 		++m_nSize;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
-	sirContainerResult_t tryPopBack( void ) noexcept
+	SIRContainerResult tryPopBack( void ) noexcept
 	{
 		if ( m_nSize == 0 ) {
-			return SIR_CONTAINER_EMPTY;
+			return SIRContainerResult::SIR_CONTAINER_EMPTY;
 		}
 		m_pData[--m_nSize].~T();
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 	bool tryDecommitTail( void ) noexcept
 	{
@@ -155,14 +155,14 @@ public:
 			return false;
 		}
 		size_t nKeep = 0;
-		if ( !roundUp( ( size_t )m_nSize * sizeof( T ), m_nPageBytes, &nKeep ) ) {
+		if ( !roundUp( static_cast<size_t>(m_nSize * sizeof(  T  )), m_nPageBytes, &nKeep ) ) {
 			return false;
 		}
 		if ( nKeep >= m_nCommittedBytes ) {
 			return true;
 		}
 		if ( m_pSegment != nullptr ? !m_pSegment->decommit( nKeep, m_nCommittedBytes - nKeep )
-		                           : !SIRVirtualMemory::decommit( ( uint8_t * )m_pData + nKeep, m_nCommittedBytes - nKeep ) ) {
+		                           : !SIRVirtualMemory::decommit( reinterpret_cast<uint8_t *>(m_pData) + nKeep, m_nCommittedBytes - nKeep ) ) {
 			return false;
 		}
 		m_nCommittedBytes = nKeep;
@@ -202,7 +202,7 @@ public:
 	}
 	uint32_t getCapacity( void ) const noexcept
 	{
-		return ( uint32_t )( m_nCommittedBytes / sizeof( T ) );
+		return static_cast<uint32_t>(  m_nCommittedBytes / sizeof( T )  );
 	}
 	size_t getReservedBytes( void ) const noexcept
 	{
@@ -226,4 +226,4 @@ public:
 	}
 };
 
-#endif // __SIRENGINE_SIRVIRTUALVECTOR_H__
+#endif // __SIR_VIRTUALVECTOR_H__

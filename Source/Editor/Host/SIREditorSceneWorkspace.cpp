@@ -14,7 +14,7 @@ static bool sirEditorHostHasTag( const char *pLine, const char *pEnd, const char
 		++pLine;
 	}
 	const size_t nTagBytes = strlen( pszTag );
-	return ( size_t )( pEnd - pLine ) > nTagBytes && memcmp( pLine, pszTag, nTagBytes ) == 0 &&
+	return static_cast<size_t>( pEnd - pLine ) > nTagBytes && memcmp( pLine, pszTag, nTagBytes ) == 0 &&
 	       ( pLine[nTagBytes] == ' ' || pLine[nTagBytes] == ']' || pLine[nTagBytes] == '\t' );
 }
 
@@ -27,7 +27,7 @@ static bool sirEditorHostCountTags( const char *pSource, size_t nBytes, uint32_t
 	const char *pCursor = pSource;
 	const char *pEnd = pSource + nBytes;
 	while ( pCursor < pEnd ) {
-		const char *pLineEnd = ( const char * )memchr( pCursor, '\n', ( size_t )( pEnd - pCursor ) );
+		const char *pLineEnd = static_cast<const char *>(memchr( pCursor, '\n', static_cast<size_t>( pEnd - pCursor ) ));
 		if ( pLineEnd == nullptr ) {
 			pLineEnd = pEnd;
 		}
@@ -74,7 +74,7 @@ static T *sirEditorHostAllocate( SIRLinearAllocator& arena, uint32_t nCount ) no
 	if ( nCount == 0 ) {
 		return nullptr;
 	}
-	return ( T * )arena.alloc( ( uint64_t )nCount * sizeof( T ), alignof( T ) );
+	return static_cast<T *>(arena.alloc( static_cast<uint64_t>(nCount * sizeof(  T  )), alignof( T ) ));
 }
 
 SIREditorSceneWorkspace::SIREditorSceneWorkspace( void ) noexcept
@@ -90,7 +90,7 @@ SIREditorSceneWorkspace::~SIREditorSceneWorkspace()
 
 bool SIREditorSceneWorkspace::initialize( SIRMemorySegment *pEditorSegment ) noexcept
 {
-	if ( m_bInitialized || pEditorSegment == nullptr || pEditorSegment->getDomain() != SIR_MEMORY_DOMAIN_EDITOR ) {
+	if ( m_bInitialized || pEditorSegment == nullptr || pEditorSegment->getDomain() != SIRMemoryDomain::SIR_MEMORY_DOMAIN_EDITOR ) {
 		return false;
 	}
 	m_bInitialized = m_Arena.init( pEditorSegment );
@@ -102,7 +102,7 @@ char *SIREditorSceneWorkspace::allocateSource( size_t nSourceBytes ) noexcept
 	if ( !m_bInitialized || m_bOpen || m_pszSource != nullptr || nSourceBytes == 0 || nSourceBytes > SIR_EDITOR_MAX_SOURCE_BYTES ) {
 		return nullptr;
 	}
-	char *pText = ( char * )m_Arena.alloc( ( uint64_t )nSourceBytes + 1, alignof( char ) );
+	char *pText = static_cast<char *>(m_Arena.alloc( static_cast<uint64_t>(nSourceBytes) + 1, alignof( char ) ));
 	if ( pText != nullptr ) {
 		m_pszSource = pText;
 		m_nSourceBytes = nSourceBytes;
@@ -128,94 +128,94 @@ void SIREditorSceneWorkspace::rollbackOpen( void ) noexcept
 	m_bOpen = false;
 }
 
-sirEditorWorkspaceResult_t SIREditorSceneWorkspace::finishOpen( size_t nSourceBytes ) noexcept
+SIREditorWorkspaceResult SIREditorSceneWorkspace::finishOpen( size_t nSourceBytes ) noexcept
 {
 	uint32_t nNodes = 0;
 	uint32_t nResources = 0;
 	if ( !sirEditorHostCountTags( m_pszSource, nSourceBytes, &nNodes, &nResources ) ) {
 		rollbackOpen();
-		return SIR_EDITOR_WORKSPACE_INVALID_SCENE;
+		return SIREditorWorkspaceResult::SIR_EDITOR_WORKSPACE_INVALID_SCENE;
 	}
 	if ( nNodes == 0 || nNodes > UINT32_MAX / 2 ) {
 		rollbackOpen();
-		return SIR_EDITOR_WORKSPACE_INVALID_SCENE;
+		return SIREditorWorkspaceResult::SIR_EDITOR_WORKSPACE_INVALID_SCENE;
 	}
 	const uint32_t nResourceCapacity = nResources == 0 ? 1 : nResources;
-	const uint64_t nPathBytes = ( uint64_t )nSourceBytes * 3 + ( uint64_t )nNodes * 16 + 1;
+	const uint64_t nPathBytes = static_cast<uint64_t>(nSourceBytes) * 3 + static_cast<uint64_t>(nNodes) * 16 + 1;
 	if ( nPathBytes > UINT32_MAX ) {
 		rollbackOpen();
-		return SIR_EDITOR_WORKSPACE_OUT_OF_MEMORY;
+		return SIREditorWorkspaceResult::SIR_EDITOR_WORKSPACE_OUT_OF_MEMORY;
 	}
 
 	m_Scene.storage.pNodes = sirEditorHostAllocate<sirEditorTextSceneNode_t>( m_Arena, nNodes );
-	m_Scene.storage.pszPaths = ( char * )m_Arena.alloc( nPathBytes, alignof( char ) );
+	m_Scene.storage.pszPaths = static_cast<char *>(m_Arena.alloc( nPathBytes, alignof( char ) ));
 	m_Scene.storage.nNodeCapacity = nNodes;
-	m_Scene.storage.nPathCapacity = ( uint32_t )nPathBytes;
+	m_Scene.storage.nPathCapacity = static_cast<uint32_t>(nPathBytes);
 	m_Resources.pResources = sirEditorHostAllocate<sirEditorTextResource_t>( m_Arena, nResourceCapacity );
 	m_Resources.nCapacity = nResourceCapacity;
 	if ( m_Scene.storage.pNodes == nullptr || m_Scene.storage.pszPaths == nullptr || m_Resources.pResources == nullptr ) {
 		rollbackOpen();
-		return SIR_EDITOR_WORKSPACE_OUT_OF_MEMORY;
+		return SIREditorWorkspaceResult::SIR_EDITOR_WORKSPACE_OUT_OF_MEMORY;
 	}
 
-	const sirEditorTextSceneResult_t eScan = sirEditorScanTextScene( m_pszSource, nSourceBytes, &m_Scene );
-	if ( eScan != SIR_EDITOR_TEXT_OK ) {
+	const SIREditorTextSceneResult eScan = sirEditorScanTextScene( m_pszSource, nSourceBytes, &m_Scene );
+	if ( eScan != SIREditorTextSceneResult::SIR_EDITOR_TEXT_OK ) {
 		m_nErrorLine = m_Scene.nErrorLine;
 		rollbackOpen();
-		return SIR_EDITOR_WORKSPACE_INVALID_SCENE;
+		return SIREditorWorkspaceResult::SIR_EDITOR_WORKSPACE_INVALID_SCENE;
 	}
-	const sirEditorTextResourceResult_t eResources = sirEditorScanTextResources( m_pszSource, nSourceBytes, &m_Resources );
-	if ( eResources != SIR_EDITOR_RESOURCE_OK ) {
+	const SIREditorTextResourceResult eResources = sirEditorScanTextResources( m_pszSource, nSourceBytes, &m_Resources );
+	if ( eResources != SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_OK ) {
 		m_nErrorLine = m_Resources.nErrorLine;
 		rollbackOpen();
-		return SIR_EDITOR_WORKSPACE_INVALID_RESOURCES;
+		return SIREditorWorkspaceResult::SIR_EDITOR_WORKSPACE_INVALID_RESOURCES;
 	}
 
 	// Resolve source references before exposing any authored state. The scanner
 	// measures first, so the editor arena owns precisely the required records.
-	sirEditorResourceReferenceScan_t referenceScan = {};
+	sirEditorResourceReferenceScan_t referenceScan {};
 	referenceScan.pszSource = m_pszSource;
 	referenceScan.nSourceBytes = nSourceBytes;
 	referenceScan.pIndex = &m_Resources;
 	uint32_t nRequiredReferences = 0;
-	if ( sirEditorScanResourceReferences( referenceScan, &nRequiredReferences ) != SIR_EDITOR_RESOURCE_OK ) {
+	if ( sirEditorScanResourceReferences( referenceScan, &nRequiredReferences ) != SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_OK ) {
 		rollbackOpen();
-		return SIR_EDITOR_WORKSPACE_INVALID_RESOURCES;
+		return SIREditorWorkspaceResult::SIR_EDITOR_WORKSPACE_INVALID_RESOURCES;
 	}
 	m_pResourceReferences = sirEditorHostAllocate<sirEditorResourceReference_t>( m_Arena, nRequiredReferences );
 	if ( nRequiredReferences != 0 && m_pResourceReferences == nullptr ) {
 		rollbackOpen();
-		return SIR_EDITOR_WORKSPACE_OUT_OF_MEMORY;
+		return SIREditorWorkspaceResult::SIR_EDITOR_WORKSPACE_OUT_OF_MEMORY;
 	}
 	referenceScan.pOutput = m_pResourceReferences;
 	referenceScan.nCapacity = nRequiredReferences;
 	uint32_t nParsedReferences = 0;
-	if ( sirEditorScanResourceReferences( referenceScan, &nParsedReferences ) != SIR_EDITOR_RESOURCE_OK ||
+	if ( sirEditorScanResourceReferences( referenceScan, &nParsedReferences ) != SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_OK ||
 	     nParsedReferences != nRequiredReferences ) {
 		rollbackOpen();
-		return SIR_EDITOR_WORKSPACE_INVALID_RESOURCES;
+		return SIREditorWorkspaceResult::SIR_EDITOR_WORKSPACE_INVALID_RESOURCES;
 	}
 	m_nResourceReferenceCount = nParsedReferences;
 
-	sirEditorTextPropertyIndex_t measuredProperties = {};
-	const sirEditorTextPropertyResult_t eMeasure =
+	sirEditorTextPropertyIndex_t measuredProperties {};
+	const SIREditorTextPropertyResult eMeasure =
 	    sirEditorScanNodeTextProperties( m_pszSource, nSourceBytes, m_Scene, &measuredProperties );
-	if ( eMeasure != SIR_EDITOR_PROPERTY_OK ) {
+	if ( eMeasure != SIREditorTextPropertyResult::SIR_EDITOR_PROPERTY_OK ) {
 		m_nErrorLine = measuredProperties.nErrorLine;
 		rollbackOpen();
-		return SIR_EDITOR_WORKSPACE_INVALID_PROPERTIES;
+		return SIREditorWorkspaceResult::SIR_EDITOR_WORKSPACE_INVALID_PROPERTIES;
 	}
 	m_Properties.nCapacity = measuredProperties.nCount;
 	m_Properties.pProperties = sirEditorHostAllocate<sirEditorTextProperty_t>( m_Arena, m_Properties.nCapacity );
 	if ( m_Properties.nCapacity != 0 && m_Properties.pProperties == nullptr ) {
 		rollbackOpen();
-		return SIR_EDITOR_WORKSPACE_OUT_OF_MEMORY;
+		return SIREditorWorkspaceResult::SIR_EDITOR_WORKSPACE_OUT_OF_MEMORY;
 	}
-	const sirEditorTextPropertyResult_t eProperties = sirEditorScanNodeTextProperties( m_pszSource, nSourceBytes, m_Scene, &m_Properties );
-	if ( eProperties != SIR_EDITOR_PROPERTY_OK || m_Properties.nCount != measuredProperties.nCount ) {
+	const SIREditorTextPropertyResult eProperties = sirEditorScanNodeTextProperties( m_pszSource, nSourceBytes, m_Scene, &m_Properties );
+	if ( eProperties != SIREditorTextPropertyResult::SIR_EDITOR_PROPERTY_OK || m_Properties.nCount != measuredProperties.nCount ) {
 		m_nErrorLine = m_Properties.nErrorLine;
 		rollbackOpen();
-		return SIR_EDITOR_WORKSPACE_INVALID_PROPERTIES;
+		return SIREditorWorkspaceResult::SIR_EDITOR_WORKSPACE_INVALID_PROPERTIES;
 	}
 
 	const uint32_t nHistoryDeltas = nNodes * 2;
@@ -223,7 +223,7 @@ sirEditorWorkspaceResult_t SIREditorSceneWorkspace::finishOpen( size_t nSourceBy
 	while ( nIndexCapacity < nNodes * 2 ) {
 		nIndexCapacity <<= 1;
 	}
-	sirEditorDocumentStorage_t documentStorage = {};
+	sirEditorDocumentStorage_t documentStorage {};
 	documentStorage.pNodes = sirEditorHostAllocate<sirEditorNode_t>( m_Arena, nNodes );
 	documentStorage.pStaging = sirEditorHostAllocate<sirEditorNode_t>( m_Arena, nNodes );
 	documentStorage.pPending = sirEditorHostAllocate<sirEditorMutation_t>( m_Arena, nNodes );
@@ -240,7 +240,7 @@ sirEditorWorkspaceResult_t SIREditorSceneWorkspace::finishOpen( size_t nSourceBy
 	// second owner of the authored scene graph or its undo/redo history.
 	if ( m_Properties.nCount > UINT32_MAX / 4 - nNodes ) {
 		rollbackOpen();
-		return SIR_EDITOR_WORKSPACE_OUT_OF_MEMORY;
+		return SIREditorWorkspaceResult::SIR_EDITOR_WORKSPACE_OUT_OF_MEMORY;
 	}
 	const uint32_t nPropertySlots = m_Properties.nCount + nNodes;
 	const uint32_t nPropertyDeltaSlots = nPropertySlots * 2;
@@ -256,19 +256,19 @@ sirEditorWorkspaceResult_t SIREditorSceneWorkspace::finishOpen( size_t nSourceBy
 	     documentStorage.pPendingProperties == nullptr || documentStorage.pPendingPropertyDeltas == nullptr ||
 	     documentStorage.pHistoryPropertyDeltas == nullptr ) {
 		rollbackOpen();
-		return SIR_EDITOR_WORKSPACE_OUT_OF_MEMORY;
+		return SIREditorWorkspaceResult::SIR_EDITOR_WORKSPACE_OUT_OF_MEMORY;
 	}
 	sirEditorNode_t *pReconcileScratch = sirEditorHostAllocate<sirEditorNode_t>( m_Arena, nNodes );
-	if ( pReconcileScratch == nullptr || m_Document.initialize( documentStorage ) != SIR_EDITOR_OK ) {
+	if ( pReconcileScratch == nullptr || m_Document.initialize( documentStorage ) != SIREditorResult::SIR_EDITOR_OK ) {
 		rollbackOpen();
-		return SIR_EDITOR_WORKSPACE_OUT_OF_MEMORY;
+		return SIREditorWorkspaceResult::SIR_EDITOR_WORKSPACE_OUT_OF_MEMORY;
 	}
-	if ( sirEditorReconcileTextScene( m_Document, m_Scene, pReconcileScratch, nNodes ) != SIR_EDITOR_OK ) {
+	if ( sirEditorReconcileTextScene( m_Document, m_Scene, pReconcileScratch, nNodes ) != SIREditorResult::SIR_EDITOR_OK ) {
 		rollbackOpen();
-		return SIR_EDITOR_WORKSPACE_DOCUMENT_FAILED;
+		return SIREditorWorkspaceResult::SIR_EDITOR_WORKSPACE_DOCUMENT_FAILED;
 	}
 
-	sirEditorHierarchyStorage_t hierarchyStorage = {};
+	sirEditorHierarchyStorage_t hierarchyStorage {};
 	hierarchyStorage.pSnapshot = sirEditorHostAllocate<sirEditorNode_t>( m_Arena, nNodes );
 	hierarchyStorage.pLinks = sirEditorHostAllocate<sirEditorHierarchyLink_t>( m_Arena, nNodes );
 	hierarchyStorage.pState = sirEditorHostAllocate<sirEditorHierarchyState_t>( m_Arena, nNodes );
@@ -280,76 +280,76 @@ sirEditorWorkspaceResult_t SIREditorSceneWorkspace::finishOpen( size_t nSourceBy
 	hierarchyStorage.nCapacity = nNodes;
 	sirEditorHierarchyOrder_t *pOrder = sirEditorHostAllocate<sirEditorHierarchyOrder_t>( m_Arena, nNodes );
 	uint32_t nOrderCount = 0;
-	if ( pOrder == nullptr || m_Hierarchy.initialize( hierarchyStorage, 20 ) != SIR_EDITOR_HIERARCHY_OK ) {
+	if ( pOrder == nullptr || m_Hierarchy.initialize( hierarchyStorage, 20 ) != SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_OK ) {
 		rollbackOpen();
-		return SIR_EDITOR_WORKSPACE_HIERARCHY_FAILED;
+		return SIREditorWorkspaceResult::SIR_EDITOR_WORKSPACE_HIERARCHY_FAILED;
 	}
-	if ( sirEditorHierarchyOrderFromTextScene( m_Scene, pOrder, nNodes, &nOrderCount ) != SIR_EDITOR_HIERARCHY_OK ||
-	     m_Hierarchy.rebuild( m_Document, pOrder, nOrderCount ) != SIR_EDITOR_HIERARCHY_OK ) {
+	if ( sirEditorHierarchyOrderFromTextScene( m_Scene, pOrder, nNodes, &nOrderCount ) != SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_OK ||
+	     m_Hierarchy.rebuild( m_Document, pOrder, nOrderCount ) != SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_OK ) {
 		rollbackOpen();
-		return SIR_EDITOR_WORKSPACE_HIERARCHY_FAILED;
+		return SIREditorWorkspaceResult::SIR_EDITOR_WORKSPACE_HIERARCHY_FAILED;
 	}
 
 	m_bOpen = true;
 	m_nErrorLine = 0;
-	return SIR_EDITOR_WORKSPACE_OK;
+	return SIREditorWorkspaceResult::SIR_EDITOR_WORKSPACE_OK;
 }
 
-sirEditorWorkspaceResult_t SIREditorSceneWorkspace::openTextSource( const char *pszSource, size_t nSourceBytes ) noexcept
+SIREditorWorkspaceResult SIREditorSceneWorkspace::openTextSource( const char *pszSource, size_t nSourceBytes ) noexcept
 {
 	if ( !m_bInitialized ) {
-		return SIR_EDITOR_WORKSPACE_NOT_INITIALIZED;
+		return SIREditorWorkspaceResult::SIR_EDITOR_WORKSPACE_NOT_INITIALIZED;
 	}
 	if ( m_bOpen ) {
-		return SIR_EDITOR_WORKSPACE_ALREADY_OPEN;
+		return SIREditorWorkspaceResult::SIR_EDITOR_WORKSPACE_ALREADY_OPEN;
 	}
 	if ( pszSource == nullptr || nSourceBytes == 0 ) {
-		return SIR_EDITOR_WORKSPACE_INVALID_ARGUMENT;
+		return SIREditorWorkspaceResult::SIR_EDITOR_WORKSPACE_INVALID_ARGUMENT;
 	}
 	m_nErrorLine = 0;
 	char *pDestination = allocateSource( nSourceBytes );
 	if ( pDestination == nullptr ) {
-		return SIR_EDITOR_WORKSPACE_OUT_OF_MEMORY;
+		return SIREditorWorkspaceResult::SIR_EDITOR_WORKSPACE_OUT_OF_MEMORY;
 	}
 	memcpy( pDestination, pszSource, nSourceBytes );
 	return finishOpen( nSourceBytes );
 }
 
-sirEditorWorkspaceResult_t SIREditorSceneWorkspace::openTextFile( const char *pszPath ) noexcept
+SIREditorWorkspaceResult SIREditorSceneWorkspace::openTextFile( const char *pszPath ) noexcept
 {
 	if ( !m_bInitialized ) {
-		return SIR_EDITOR_WORKSPACE_NOT_INITIALIZED;
+		return SIREditorWorkspaceResult::SIR_EDITOR_WORKSPACE_NOT_INITIALIZED;
 	}
 	if ( m_bOpen ) {
-		return SIR_EDITOR_WORKSPACE_ALREADY_OPEN;
+		return SIREditorWorkspaceResult::SIR_EDITOR_WORKSPACE_ALREADY_OPEN;
 	}
 	if ( pszPath == nullptr || *pszPath == '\0' ) {
-		return SIR_EDITOR_WORKSPACE_INVALID_ARGUMENT;
+		return SIREditorWorkspaceResult::SIR_EDITOR_WORKSPACE_INVALID_ARGUMENT;
 	}
 
 	size_t nFileBytes = 0;
-	if ( SIRPlatformFileSystem::readFile( pszPath, nullptr, 0, &nFileBytes ) != SIR_FILESYSTEM_OK || nFileBytes == 0 ||
+	if ( SIRPlatformFileSystem::readFile( pszPath, nullptr, 0, &nFileBytes ) != SIRFileSystemResult::SIR_FILESYSTEM_OK || nFileBytes == 0 ||
 	     nFileBytes > SIR_EDITOR_MAX_SOURCE_BYTES ) {
-		return SIR_EDITOR_WORKSPACE_FILE_IO;
+		return SIREditorWorkspaceResult::SIR_EDITOR_WORKSPACE_FILE_IO;
 	}
 	char *pszDestination = allocateSource( nFileBytes );
 	if ( pszDestination == nullptr ) {
-		return SIR_EDITOR_WORKSPACE_OUT_OF_MEMORY;
+		return SIREditorWorkspaceResult::SIR_EDITOR_WORKSPACE_OUT_OF_MEMORY;
 	}
 
 	size_t nReadBytes = 0;
-	const sirFileSystemResult_t eRead = SIRPlatformFileSystem::readFile( pszPath, pszDestination, nFileBytes, &nReadBytes );
-	if ( eRead != SIR_FILESYSTEM_OK || nReadBytes != nFileBytes ) {
+	const SIRFileSystemResult eRead = SIRPlatformFileSystem::readFile( pszPath, pszDestination, nFileBytes, &nReadBytes );
+	if ( eRead != SIRFileSystemResult::SIR_FILESYSTEM_OK || nReadBytes != nFileBytes ) {
 		rollbackOpen();
-		return SIR_EDITOR_WORKSPACE_FILE_IO;
+		return SIREditorWorkspaceResult::SIR_EDITOR_WORKSPACE_FILE_IO;
 	}
 	return finishOpen( nReadBytes );
 }
 
-sirEditorCatalogBuildResult_t SIREditorSceneWorkspace::buildResourceCatalog( const sirEditorCatalogBuildRequest_t& request ) const noexcept
+SIREditorCatalogBuildResult SIREditorSceneWorkspace::buildResourceCatalog( const sirEditorCatalogBuildRequest_t& request ) const noexcept
 {
 	if ( !m_bOpen ) {
-		return SIR_EDITOR_CATALOG_INVALID_SOURCE;
+		return SIREditorCatalogBuildResult::SIR_EDITOR_CATALOG_INVALID_SOURCE;
 	}
 	// Bind the canonical importer to the open workspace's validated indexes.
 	// The catalog owns only caller-supplied storage and immutable identities.

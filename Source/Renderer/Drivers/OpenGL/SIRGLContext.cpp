@@ -121,14 +121,14 @@ typedef struct sirGLNativeContext_s
 
 void *sirGLResolveNativeProcedure( void *pUserData, const char *pszName ) noexcept
 {
-	sirGLNativeContext_t *pContext = ( sirGLNativeContext_t * )pUserData;
+	sirGLNativeContext_t *pContext = static_cast<sirGLNativeContext_t *>(pUserData);
 	if ( pContext == nullptr || pszName == nullptr || !sirGLContextOwnsThread( pContext ) ) {
 		return nullptr;
 	}
 #if defined( _WIN32 )
-	void *pAddress = ( void * )wglGetProcAddress( pszName );
+	void *pAddress = static_cast<void *>(wglGetProcAddress( pszName ));
 	if ( !sirGLIsUsableProcedure( pAddress ) ) {
-		pAddress = ( void * )GetProcAddress( pContext->pLibrary, pszName );
+		pAddress = static_cast<void *>(GetProcAddress( pContext->pLibrary, pszName ));
 	}
 #else
 	void *pAddress = pContext->pGetProcAddress != nullptr ? pContext->pGetProcAddress( pszName ) : nullptr;
@@ -160,47 +160,47 @@ static void sirGLCopyString( char *pszOutput, size_t nCapacity, const uint8_t *p
 	if ( pString == nullptr ) {
 		return;
 	}
-	strncpy( pszOutput, ( const char * )pString, nCapacity - 1 );
+	strncpy( pszOutput, static_cast<const char *>(pString), nCapacity - 1 );
 	pszOutput[nCapacity - 1] = '\0';
 }
 
-sirGraphicsResult_t sirGLReadNativeProbe( sirGLNativeContext_t *pContext, sirGLProbe_t *pProbe ) noexcept
+SIRGraphicsResult sirGLReadNativeProbe( sirGLNativeContext_t *pContext, sirGLProbe_t *pProbe ) noexcept
 {
 	if ( pContext == nullptr || pProbe == nullptr || !sirGLContextOwnsThread( pContext ) || pContext->pGetString == nullptr ||
 	     pContext->pGetInteger == nullptr ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 #if defined( _WIN32 )
 	if ( wglGetCurrentContext() != pContext->pRenderContext ) {
-		return SIR_GRAPHICS_DEVICE_LOST;
+		return SIRGraphicsResult::SIR_GRAPHICS_DEVICE_LOST;
 	}
 #else
 	if ( pContext->pGetCurrentContext == nullptr || pContext->pGetCurrentContext() != pContext->pRenderContext ) {
-		return SIR_GRAPHICS_DEVICE_LOST;
+		return SIRGraphicsResult::SIR_GRAPHICS_DEVICE_LOST;
 	}
 #endif
-	sirGLProbe_t probe = {};
+	sirGLProbe_t probe {};
 	int32_t nValue = 0;
 	pContext->pGetInteger( 0x821B, &nValue ); // GL_MAJOR_VERSION
-	probe.nMajor = nValue > 0 ? ( uint32_t )nValue : 0;
+	probe.nMajor = nValue > 0 ? static_cast<uint32_t>(nValue) : 0;
 	pContext->pGetInteger( 0x821C, &nValue ); // GL_MINOR_VERSION
-	probe.nMinor = nValue > 0 ? ( uint32_t )nValue : 0;
+	probe.nMinor = nValue > 0 ? static_cast<uint32_t>(nValue) : 0;
 	pContext->pGetInteger( 0x9126, &nValue ); // GL_CONTEXT_PROFILE_MASK
-	probe.nCoreProfileMask = ( uint32_t )nValue;
+	probe.nCoreProfileMask = static_cast<uint32_t>(nValue);
 	pContext->pGetInteger( 0x0D33, &nValue ); // GL_MAX_TEXTURE_SIZE
-	probe.nMaximumTextureSize = nValue > 0 ? ( uint32_t )nValue : 0;
+	probe.nMaximumTextureSize = nValue > 0 ? static_cast<uint32_t>(nValue) : 0;
 	pContext->pGetInteger( 0x8CDF, &nValue ); // GL_MAX_COLOR_ATTACHMENTS
-	probe.nMaximumColorAttachments = nValue > 0 ? ( uint32_t )nValue : 0;
+	probe.nMaximumColorAttachments = nValue > 0 ? static_cast<uint32_t>(nValue) : 0;
 	pContext->pGetInteger( 0x8A2F, &nValue ); // GL_MAX_UNIFORM_BUFFER_BINDINGS
-	probe.nMaximumUniformBindings = nValue > 0 ? ( uint32_t )nValue : 0;
+	probe.nMaximumUniformBindings = nValue > 0 ? static_cast<uint32_t>(nValue) : 0;
 	pContext->pGetInteger( 0x90DD, &nValue ); // GL_MAX_SHADER_STORAGE_BUFFER_BINDINGS
-	probe.nMaximumStorageBindings = nValue > 0 ? ( uint32_t )nValue : 0;
+	probe.nMaximumStorageBindings = nValue > 0 ? static_cast<uint32_t>(nValue) : 0;
 	pContext->pGetInteger( 0x8D57, &nValue ); // GL_MAX_SAMPLES
-	probe.nMaximumSamples = nValue > 0 ? ( uint32_t )nValue : 0;
+	probe.nMaximumSamples = nValue > 0 ? static_cast<uint32_t>(nValue) : 0;
 	sirGLCopyString( probe.szVendor, sizeof( probe.szVendor ), pContext->pGetString( 0x1F00 ) );
 	sirGLCopyString( probe.szRenderer, sizeof( probe.szRenderer ), pContext->pGetString( 0x1F01 ) );
 	*pProbe = probe;
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
 #if defined( _WIN32 )
@@ -215,7 +215,7 @@ static bool sirGLInitWindows( sirGLNativeContext_t *pContext ) noexcept
 	if ( !sirCreateWGLBootstrapWindow( &pContext->window ) ) {
 		return false;
 	}
-	PIXELFORMATDESCRIPTOR pixel = {};
+	PIXELFORMATDESCRIPTOR pixel {};
 	pixel.nSize = sizeof( pixel );
 	pixel.nVersion = 1;
 	pixel.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
@@ -234,8 +234,8 @@ static bool sirGLInitWindows( sirGLNativeContext_t *pContext ) noexcept
 		wglDeleteContext( pLegacy );
 		return false;
 	}
-	sirWGLCreateContextAttribs_t pCreate = ( sirWGLCreateContextAttribs_t )wglGetProcAddress( "wglCreateContextAttribsARB" );
-	if ( !sirGLIsUsableProcedure( ( void * )pCreate ) ) {
+	sirWGLCreateContextAttribs_t pCreate = static_cast<sirWGLCreateContextAttribs_t>(wglGetProcAddress( "wglCreateContextAttribsARB" ));
+	if ( !sirGLIsUsableProcedure( static_cast<void *>(pCreate) ) ) {
 		wglMakeCurrent( nullptr, nullptr );
 		wglDeleteContext( pLegacy );
 		return false;
@@ -251,8 +251,8 @@ static bool sirGLInitWindows( sirGLNativeContext_t *pContext ) noexcept
 		return false;
 	}
 	pContext->pRenderContext = pCore;
-	pContext->pGetString = ( sirGLGetString_t )GetProcAddress( pContext->pLibrary, "glGetString" );
-	pContext->pGetInteger = ( sirGLGetIntegerv_t )GetProcAddress( pContext->pLibrary, "glGetIntegerv" );
+	pContext->pGetString = static_cast<sirGLGetString_t>(GetProcAddress( pContext->pLibrary, "glGetString" ));
+	pContext->pGetInteger = static_cast<sirGLGetIntegerv_t>(GetProcAddress( pContext->pLibrary, "glGetIntegerv" ));
 	return pContext->pGetString != nullptr && pContext->pGetInteger != nullptr;
 }
 #else
@@ -263,23 +263,23 @@ static bool sirGLInitLinux( sirGLNativeContext_t *pContext, const sirGraphicsABI
 	if ( pContext->pLibraryEGL == nullptr || pContext->pLibraryGL == nullptr ) {
 		return false;
 	}
-	const sirEGLGetProcAddress_t pProc = ( sirEGLGetProcAddress_t )dlsym( pContext->pLibraryEGL, "eglGetProcAddress" );
+	const sirEGLGetProcAddress_t pProc = static_cast<sirEGLGetProcAddress_t>(dlsym( pContext->pLibraryEGL, "eglGetProcAddress" ));
 	pContext->pGetProcAddress = pProc;
-	const sirEGLGetDisplay_t pGetDisplay = ( sirEGLGetDisplay_t )dlsym( pContext->pLibraryEGL, "eglGetDisplay" );
-	const sirEGLQueryString_t pQueryString = ( sirEGLQueryString_t )dlsym( pContext->pLibraryEGL, "eglQueryString" );
-	const sirEGLInitialize_t pInitialize = ( sirEGLInitialize_t )dlsym( pContext->pLibraryEGL, "eglInitialize" );
-	const sirEGLChooseConfig_t pChoose = ( sirEGLChooseConfig_t )dlsym( pContext->pLibraryEGL, "eglChooseConfig" );
-	const sirEGLBindAPI_t pBind = ( sirEGLBindAPI_t )dlsym( pContext->pLibraryEGL, "eglBindAPI" );
-	const sirEGLCreatePbufferSurface_t pPbuffer = ( sirEGLCreatePbufferSurface_t )dlsym( pContext->pLibraryEGL, "eglCreatePbufferSurface" );
-	const sirEGLCreateContext_t pCreate = ( sirEGLCreateContext_t )dlsym( pContext->pLibraryEGL, "eglCreateContext" );
-	pContext->pMakeCurrent = ( sirEGLMakeCurrent_t )dlsym( pContext->pLibraryEGL, "eglMakeCurrent" );
-	pContext->pDestroyContext = ( sirEGLDestroyContext_t )dlsym( pContext->pLibraryEGL, "eglDestroyContext" );
-	pContext->pDestroySurface = ( sirEGLDestroySurface_t )dlsym( pContext->pLibraryEGL, "eglDestroySurface" );
-	pContext->pTerminate = ( sirEGLTerminate_t )dlsym( pContext->pLibraryEGL, "eglTerminate" );
-	pContext->pGetCurrentContext = ( sirEGLGetCurrentContext_t )dlsym( pContext->pLibraryEGL, "eglGetCurrentContext" );
-	pContext->pCreateWindowSurface = ( sirEGLCreateWindowSurface_t )dlsym( pContext->pLibraryEGL, "eglCreateWindowSurface" );
-	pContext->pSwapBuffers = ( sirEGLSwapBuffers_t )dlsym( pContext->pLibraryEGL, "eglSwapBuffers" );
-	pContext->pSwapInterval = ( sirEGLSwapInterval_t )dlsym( pContext->pLibraryEGL, "eglSwapInterval" );
+	const sirEGLGetDisplay_t pGetDisplay = static_cast<sirEGLGetDisplay_t>(dlsym( pContext->pLibraryEGL, "eglGetDisplay" ));
+	const sirEGLQueryString_t pQueryString = static_cast<sirEGLQueryString_t>(dlsym( pContext->pLibraryEGL, "eglQueryString" ));
+	const sirEGLInitialize_t pInitialize = static_cast<sirEGLInitialize_t>(dlsym( pContext->pLibraryEGL, "eglInitialize" ));
+	const sirEGLChooseConfig_t pChoose = static_cast<sirEGLChooseConfig_t>(dlsym( pContext->pLibraryEGL, "eglChooseConfig" ));
+	const sirEGLBindAPI_t pBind = static_cast<sirEGLBindAPI_t>(dlsym( pContext->pLibraryEGL, "eglBindAPI" ));
+	const sirEGLCreatePbufferSurface_t pPbuffer = static_cast<sirEGLCreatePbufferSurface_t>(dlsym( pContext->pLibraryEGL, "eglCreatePbufferSurface" ));
+	const sirEGLCreateContext_t pCreate = static_cast<sirEGLCreateContext_t>(dlsym( pContext->pLibraryEGL, "eglCreateContext" ));
+	pContext->pMakeCurrent = static_cast<sirEGLMakeCurrent_t>(dlsym( pContext->pLibraryEGL, "eglMakeCurrent" ));
+	pContext->pDestroyContext = static_cast<sirEGLDestroyContext_t>(dlsym( pContext->pLibraryEGL, "eglDestroyContext" ));
+	pContext->pDestroySurface = static_cast<sirEGLDestroySurface_t>(dlsym( pContext->pLibraryEGL, "eglDestroySurface" ));
+	pContext->pTerminate = static_cast<sirEGLTerminate_t>(dlsym( pContext->pLibraryEGL, "eglTerminate" ));
+	pContext->pGetCurrentContext = static_cast<sirEGLGetCurrentContext_t>(dlsym( pContext->pLibraryEGL, "eglGetCurrentContext" ));
+	pContext->pCreateWindowSurface = static_cast<sirEGLCreateWindowSurface_t>(dlsym( pContext->pLibraryEGL, "eglCreateWindowSurface" ));
+	pContext->pSwapBuffers = static_cast<sirEGLSwapBuffers_t>(dlsym( pContext->pLibraryEGL, "eglSwapBuffers" ));
+	pContext->pSwapInterval = static_cast<sirEGLSwapInterval_t>(dlsym( pContext->pLibraryEGL, "eglSwapInterval" ));
 	if ( pProc == nullptr || pGetDisplay == nullptr || pQueryString == nullptr || pInitialize == nullptr || pChoose == nullptr ||
 	     pBind == nullptr || pPbuffer == nullptr || pCreate == nullptr || pContext->pMakeCurrent == nullptr ||
 	     pContext->pDestroyContext == nullptr || pContext->pDestroySurface == nullptr || pContext->pTerminate == nullptr ||
@@ -287,13 +287,13 @@ static bool sirGLInitLinux( sirGLNativeContext_t *pContext, const sirGraphicsABI
 		return false;
 	}
 	const char *pszExtensions = pQueryString( nullptr, SIR_EGL_EXTENSIONS );
-	const sirEGLGetPlatformDisplay_t pGetPlatform = ( sirEGLGetPlatformDisplay_t )pProc( "eglGetPlatformDisplayEXT" );
+	const sirEGLGetPlatformDisplay_t pGetPlatform = static_cast<sirEGLGetPlatformDisplay_t>(pProc( "eglGetPlatformDisplayEXT" ));
 	if ( pNative != nullptr ) {
 		if ( pNative->pDisplayOrInstance == nullptr ||
-		     ( pNative->nPlatform != SIR_GRAPHICS_SURFACE_X11 && pNative->nPlatform != SIR_GRAPHICS_SURFACE_WAYLAND ) ) {
+		     ( pNative->nPlatform != SIRGraphicsSurfacePlatform::SIR_GRAPHICS_SURFACE_X11 && pNative->nPlatform != SIRGraphicsSurfacePlatform::SIR_GRAPHICS_SURFACE_WAYLAND ) ) {
 			return false;
 		}
-		const uint32_t nPlatform = pNative->nPlatform == SIR_GRAPHICS_SURFACE_X11 ? SIR_EGL_PLATFORM_X11 : SIR_EGL_PLATFORM_WAYLAND;
+		const uint32_t nPlatform = pNative->nPlatform == SIRGraphicsSurfacePlatform::SIR_GRAPHICS_SURFACE_X11 ? SIR_EGL_PLATFORM_X11 : SIR_EGL_PLATFORM_WAYLAND;
 		if ( pGetPlatform != nullptr ) {
 			pContext->pDisplay = pGetPlatform( nPlatform, pNative->pDisplayOrInstance, nullptr );
 		}
@@ -337,14 +337,14 @@ static bool sirGLInitLinux( sirGLNativeContext_t *pContext, const sirGraphicsABI
 	if ( pNative != nullptr && ( pContext->pCreateWindowSurface == nullptr || pContext->pSwapBuffers == nullptr ) ) {
 		return false;
 	}
-	if ( pNative != nullptr && pNative->nPlatform == SIR_GRAPHICS_SURFACE_WAYLAND ) {
+	if ( pNative != nullptr && pNative->nPlatform == SIRGraphicsSurfacePlatform::SIR_GRAPHICS_SURFACE_WAYLAND ) {
 		pContext->pWaylandEGLLibrary = dlopen( "libwayland-egl.so.1", RTLD_NOW | RTLD_LOCAL );
 		if ( pContext->pWaylandEGLLibrary == nullptr ) {
 			return false;
 		}
-		pContext->pWaylandCreate = ( sirWaylandEGLWindowCreate_t )dlsym( pContext->pWaylandEGLLibrary, "wl_egl_window_create" );
-		pContext->pWaylandResize = ( sirWaylandEGLWindowResize_t )dlsym( pContext->pWaylandEGLLibrary, "wl_egl_window_resize" );
-		pContext->pWaylandDestroy = ( sirWaylandEGLWindowDestroy_t )dlsym( pContext->pWaylandEGLLibrary, "wl_egl_window_destroy" );
+		pContext->pWaylandCreate = static_cast<sirWaylandEGLWindowCreate_t>(dlsym( pContext->pWaylandEGLLibrary, "wl_egl_window_create" ));
+		pContext->pWaylandResize = static_cast<sirWaylandEGLWindowResize_t>(dlsym( pContext->pWaylandEGLLibrary, "wl_egl_window_resize" ));
+		pContext->pWaylandDestroy = static_cast<sirWaylandEGLWindowDestroy_t>(dlsym( pContext->pWaylandEGLLibrary, "wl_egl_window_destroy" ));
 		if ( pContext->pWaylandCreate == nullptr || pContext->pWaylandResize == nullptr || pContext->pWaylandDestroy == nullptr ) {
 			return false;
 		}
@@ -358,31 +358,31 @@ static bool sirGLInitLinux( sirGLNativeContext_t *pContext, const sirGraphicsABI
 	     !pContext->pMakeCurrent( pContext->pDisplay, pContext->pSurface, pContext->pSurface, pContext->pRenderContext ) ) {
 		return false;
 	}
-	pContext->pGetString = ( sirGLGetString_t )dlsym( pContext->pLibraryGL, "glGetString" );
-	pContext->pGetInteger = ( sirGLGetIntegerv_t )dlsym( pContext->pLibraryGL, "glGetIntegerv" );
+	pContext->pGetString = static_cast<sirGLGetString_t>(dlsym( pContext->pLibraryGL, "glGetString" ));
+	pContext->pGetInteger = static_cast<sirGLGetIntegerv_t>(dlsym( pContext->pLibraryGL, "glGetIntegerv" ));
 	if ( pContext->pGetString == nullptr ) {
-		pContext->pGetString = ( sirGLGetString_t )pProc( "glGetString" );
+		pContext->pGetString = static_cast<sirGLGetString_t>(pProc( "glGetString" ));
 	}
 	if ( pContext->pGetInteger == nullptr ) {
-		pContext->pGetInteger = ( sirGLGetIntegerv_t )pProc( "glGetIntegerv" );
+		pContext->pGetInteger = static_cast<sirGLGetIntegerv_t>(pProc( "glGetIntegerv" ));
 	}
 	return pContext->pGetString != nullptr && pContext->pGetInteger != nullptr;
 }
 #endif
 
-sirGraphicsResult_t sirGLCreateNativeContextForWindow( const sirGraphicsABIHost_t *pHost, const sirGraphicsABINativeSurface_t *pNative,
+SIRGraphicsResult sirGLCreateNativeContextForWindow( const sirGraphicsABIHost_t *pHost, const sirGraphicsABINativeSurface_t *pNative,
                                                        sirGLNativeContext_t **ppContext ) noexcept
 {
 	if ( pHost == nullptr || ppContext == nullptr || pHost->pAllocate == nullptr || pHost->pFree == nullptr ||
 	     pHost->nSize < sizeof( *pHost ) ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	*ppContext = nullptr;
 	void *pMemory = pHost->pAllocate( pHost->pContext, sizeof( sirGLNativeContext_t ), alignof( sirGLNativeContext_t ) );
 	if ( pMemory == nullptr ) {
-		return SIR_GRAPHICS_OUT_OF_MEMORY;
+		return SIRGraphicsResult::SIR_GRAPHICS_OUT_OF_MEMORY;
 	}
-	sirGLNativeContext_t *pContext = ( sirGLNativeContext_t * )pMemory;
+	sirGLNativeContext_t *pContext = static_cast<sirGLNativeContext_t *>(pMemory);
 	memset( pContext, 0, sizeof( *pContext ) );
 	pContext->host = *pHost;
 #if defined( _WIN32 )
@@ -394,13 +394,13 @@ sirGraphicsResult_t sirGLCreateNativeContextForWindow( const sirGraphicsABIHost_
 #endif
 	if ( !bReady || !sirGLValidateRequired46Functions( sirGLResolveNativeProcedure, pContext ) ) {
 		sirGLDestroyNativeContext( pContext );
-		return SIR_GRAPHICS_UNSUPPORTED;
+		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
 	*ppContext = pContext;
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t sirGLCreateNativeContext( const sirGraphicsABIHost_t *pHost, sirGLNativeContext_t **ppContext ) noexcept
+SIRGraphicsResult sirGLCreateNativeContext( const sirGraphicsABIHost_t *pHost, sirGLNativeContext_t **ppContext ) noexcept
 {
 	return sirGLCreateNativeContextForWindow( pHost, nullptr, ppContext );
 }
@@ -450,33 +450,33 @@ void sirGLDestroyNativeContext( sirGLNativeContext_t *pContext ) noexcept
 	host.pFree( host.pContext, pContext );
 }
 
-sirGraphicsResult_t sirGLRestoreNativeContext( sirGLNativeContext_t *pContext ) noexcept
+SIRGraphicsResult sirGLRestoreNativeContext( sirGLNativeContext_t *pContext ) noexcept
 {
 	if ( pContext == nullptr || !sirGLContextOwnsThread( pContext ) ) {
-		return SIR_GRAPHICS_BUSY;
+		return SIRGraphicsResult::SIR_GRAPHICS_BUSY;
 	}
 #if defined( _WIN32 )
-	return wglMakeCurrent( pContext->window.hDC, pContext->pRenderContext ) ? SIR_GRAPHICS_SUCCESS : SIR_GRAPHICS_DEVICE_LOST;
+	return wglMakeCurrent( pContext->window.hDC, pContext->pRenderContext ) ? SIRGraphicsResult::SIR_GRAPHICS_SUCCESS : SIRGraphicsResult::SIR_GRAPHICS_DEVICE_LOST;
 #else
 	return pContext->pDisplay != nullptr && pContext->pMakeCurrent != nullptr &&
 	               pContext->pMakeCurrent( pContext->pDisplay, pContext->pSurface, pContext->pSurface, pContext->pRenderContext )
-	           ? SIR_GRAPHICS_SUCCESS
-			   : SIR_GRAPHICS_DEVICE_LOST;
+	           ? SIRGraphicsResult::SIR_GRAPHICS_SUCCESS
+			   : SIRGraphicsResult::SIR_GRAPHICS_DEVICE_LOST;
 #endif
 }
 
-sirGraphicsResult_t sirGLCreatePresentWindow( sirGLNativeContext_t *pContext, const sirGraphicsABINativeSurface_t *pNative,
+SIRGraphicsResult sirGLCreatePresentWindow( sirGLNativeContext_t *pContext, const sirGraphicsABINativeSurface_t *pNative,
                                               const sirGraphicsABIPresentDesc_t *pPresent, sirGLPresentWindow_t *pWindow ) noexcept
 {
 	if ( pContext == nullptr || pNative == nullptr || pPresent == nullptr || pWindow == nullptr || pNative->pWindow == nullptr ||
 	     pNative->nWindowGeneration == 0 || pPresent->nWidth == 0 || pPresent->nHeight == 0 || pPresent->nWidth > INT32_MAX ||
 	     pPresent->nHeight > INT32_MAX ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( !sirGLContextOwnsThread( pContext ) ) {
-		return SIR_GRAPHICS_BUSY;
+		return SIRGraphicsResult::SIR_GRAPHICS_BUSY;
 	}
-	sirGLPresentWindow_t window = {};
+	sirGLPresentWindow_t window {};
 	window.pNativeWindow = pNative->pWindow;
 	window.pNativeDisplay = pNative->pDisplayOrInstance;
 	window.nPlatform = pNative->nPlatform;
@@ -484,69 +484,69 @@ sirGraphicsResult_t sirGLCreatePresentWindow( sirGLNativeContext_t *pContext, co
 	window.nWidth = pPresent->nWidth;
 	window.nHeight = pPresent->nHeight;
 #if defined( _WIN32 )
-	if ( pNative->nPlatform != SIR_GRAPHICS_SURFACE_WIN32 ) {
-		return SIR_GRAPHICS_UNSUPPORTED;
+	if ( pNative->nPlatform != SIRGraphicsSurfacePlatform::SIR_GRAPHICS_SURFACE_WIN32 ) {
+		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
-	const HWND hWindow = ( HWND )pNative->pWindow;
+	const HWND hWindow = static_cast<HWND>(pNative->pWindow);
 	HDC hDC = GetDC( hWindow );
 	if ( hDC == nullptr ) {
-		return SIR_GRAPHICS_DEVICE_LOST;
+		return SIRGraphicsResult::SIR_GRAPHICS_DEVICE_LOST;
 	}
 	const int nBootstrapFormat = GetPixelFormat( pContext->window.hDC );
 	if ( nBootstrapFormat == 0 ) {
 		ReleaseDC( hWindow, hDC );
-		return SIR_GRAPHICS_DEVICE_LOST;
+		return SIRGraphicsResult::SIR_GRAPHICS_DEVICE_LOST;
 	}
 	int nExistingFormat = GetPixelFormat( hDC );
 	if ( nExistingFormat == 0 ) {
-		PIXELFORMATDESCRIPTOR pixel = {};
+		PIXELFORMATDESCRIPTOR pixel {};
 		if ( DescribePixelFormat( hDC, nBootstrapFormat, sizeof( pixel ), &pixel ) == 0 ||
 		     !SetPixelFormat( hDC, nBootstrapFormat, &pixel ) ) {
 			ReleaseDC( hWindow, hDC );
-			return SIR_GRAPHICS_UNSUPPORTED;
+			return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 		}
 		nExistingFormat = nBootstrapFormat;
 	}
 	if ( nExistingFormat != nBootstrapFormat || !wglMakeCurrent( hDC, pContext->pRenderContext ) ) {
 		ReleaseDC( hWindow, hDC );
-		return SIR_GRAPHICS_UNSUPPORTED;
+		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
-	window.pDrawable = ( void * )hDC;
+	window.pDrawable = reinterpret_cast<void *>(hDC);
 #else
-	if ( ( pNative->nPlatform != SIR_GRAPHICS_SURFACE_X11 && pNative->nPlatform != SIR_GRAPHICS_SURFACE_WAYLAND ) ||
+	if ( ( pNative->nPlatform != SIRGraphicsSurfacePlatform::SIR_GRAPHICS_SURFACE_X11 && pNative->nPlatform != SIRGraphicsSurfacePlatform::SIR_GRAPHICS_SURFACE_WAYLAND ) ||
 	     pNative->pDisplayOrInstance != pContext->pNativeDisplay || pNative->nPlatform != pContext->nNativePlatform ||
 	     pContext->pCreateWindowSurface == nullptr || pContext->pSwapBuffers == nullptr ) {
-		return SIR_GRAPHICS_UNSUPPORTED;
+		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
 	void *pNativeDrawable = pNative->pWindow;
-	if ( pNative->nPlatform == SIR_GRAPHICS_SURFACE_WAYLAND ) {
+	if ( pNative->nPlatform == SIRGraphicsSurfacePlatform::SIR_GRAPHICS_SURFACE_WAYLAND ) {
 		if ( pContext->pWaylandCreate == nullptr || pContext->pWaylandDestroy == nullptr ) {
-			return SIR_GRAPHICS_UNSUPPORTED;
+			return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 		}
-		window.pWaylandWrapper = pContext->pWaylandCreate( pNative->pWindow, ( int32_t )pPresent->nWidth, ( int32_t )pPresent->nHeight );
+		window.pWaylandWrapper = pContext->pWaylandCreate( pNative->pWindow, static_cast<int32_t>(pPresent->nWidth), static_cast<int32_t>(pPresent->nHeight) );
 		if ( window.pWaylandWrapper == nullptr ) {
-			return SIR_GRAPHICS_DEVICE_LOST;
+			return SIRGraphicsResult::SIR_GRAPHICS_DEVICE_LOST;
 		}
 		pNativeDrawable = window.pWaylandWrapper;
 	}
-	window.pDrawable = ( void * )pContext->pCreateWindowSurface( pContext->pDisplay, pContext->pConfig, pNativeDrawable, nullptr );
-	if ( window.pDrawable == nullptr || !pContext->pMakeCurrent( pContext->pDisplay, ( sirEGLSurface_t )window.pDrawable,
-	                                                             ( sirEGLSurface_t )window.pDrawable, pContext->pRenderContext ) ) {
+	window.pDrawable = static_cast<void *>(pContext->pCreateWindowSurface( pContext->pDisplay, pContext->pConfig, pNativeDrawable, nullptr ));
+	if ( window.pDrawable == nullptr || !pContext->pMakeCurrent( pContext->pDisplay, static_cast<sirEGLSurface_t>(window.pDrawable),
+	                                                             static_cast<sirEGLSurface_t>(window.pDrawable), pContext->pRenderContext ) ) {
 		if ( window.pDrawable != nullptr ) {
-			( void )pContext->pDestroySurface( pContext->pDisplay, ( sirEGLSurface_t )window.pDrawable );
+			static_cast<void>(pContext->pDestroySurface( pContext->pDisplay, static_cast<sirEGLSurface_t>(window.pDrawable) ));
 		}
 		if ( window.pWaylandWrapper != nullptr ) {
 			pContext->pWaylandDestroy( window.pWaylandWrapper );
 		}
-		return SIR_GRAPHICS_UNSUPPORTED;
+		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
 #endif
-	const sirGraphicsResult_t eRestore = sirGLRestoreNativeContext( pContext );
-	if ( eRestore != SIR_GRAPHICS_SUCCESS ) {
+	const SIRGraphicsResult eRestore = sirGLRestoreNativeContext( pContext );
+	if ( eRestore != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 #if defined( _WIN32 )
-		ReleaseDC( hWindow, ( HDC )window.pDrawable );
+		ReleaseDC( hWindow, static_cast<HDC>(window.pDrawable) );
 #else
-		( void )pContext->pDestroySurface( pContext->pDisplay, ( sirEGLSurface_t )window.pDrawable );
+		static_cast<void>(pContext->pDestroySurface( pContext->pDisplay, static_cast<sirEGLSurface_t>(window.pDrawable) ));
 		if ( window.pWaylandWrapper != nullptr ) {
 			pContext->pWaylandDestroy( window.pWaylandWrapper );
 		}
@@ -554,85 +554,85 @@ sirGraphicsResult_t sirGLCreatePresentWindow( sirGLNativeContext_t *pContext, co
 		return eRestore;
 	}
 	*pWindow = window;
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t sirGLResizePresentWindow( sirGLNativeContext_t *pContext, sirGLPresentWindow_t *pWindow, uint32_t nWidth,
+SIRGraphicsResult sirGLResizePresentWindow( sirGLNativeContext_t *pContext, sirGLPresentWindow_t *pWindow, uint32_t nWidth,
                                               uint32_t nHeight ) noexcept
 {
 	if ( pContext == nullptr || pWindow == nullptr || pWindow->pDrawable == nullptr || nWidth == 0 || nHeight == 0 || nWidth > INT32_MAX ||
 	     nHeight > INT32_MAX ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( !sirGLContextOwnsThread( pContext ) ) {
-		return SIR_GRAPHICS_BUSY;
+		return SIRGraphicsResult::SIR_GRAPHICS_BUSY;
 	}
 #if !defined( _WIN32 )
 	if ( pWindow->pWaylandWrapper != nullptr && pContext->pWaylandResize != nullptr ) {
-		pContext->pWaylandResize( pWindow->pWaylandWrapper, ( int32_t )nWidth, ( int32_t )nHeight, 0, 0 );
+		pContext->pWaylandResize( pWindow->pWaylandWrapper, static_cast<int32_t>(nWidth), static_cast<int32_t>(nHeight), 0, 0 );
 	}
 #endif
 	pWindow->nWidth = nWidth;
 	pWindow->nHeight = nHeight;
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t sirGLBeginPresentWindow( sirGLNativeContext_t *pContext, const sirGLPresentWindow_t *pWindow ) noexcept
+SIRGraphicsResult sirGLBeginPresentWindow( sirGLNativeContext_t *pContext, const sirGLPresentWindow_t *pWindow ) noexcept
 {
 	if ( pContext == nullptr || pWindow == nullptr || pWindow->pDrawable == nullptr ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( !sirGLContextOwnsThread( pContext ) ) {
-		return SIR_GRAPHICS_BUSY;
+		return SIRGraphicsResult::SIR_GRAPHICS_BUSY;
 	}
 #if defined( _WIN32 )
-	return wglMakeCurrent( ( HDC )pWindow->pDrawable, pContext->pRenderContext ) ? SIR_GRAPHICS_SUCCESS : SIR_GRAPHICS_DEVICE_LOST;
+	return wglMakeCurrent( static_cast<HDC>(pWindow->pDrawable), pContext->pRenderContext ) ? SIRGraphicsResult::SIR_GRAPHICS_SUCCESS : SIRGraphicsResult::SIR_GRAPHICS_DEVICE_LOST;
 #else
-	return pContext->pMakeCurrent( pContext->pDisplay, ( sirEGLSurface_t )pWindow->pDrawable, ( sirEGLSurface_t )pWindow->pDrawable,
+	return pContext->pMakeCurrent( pContext->pDisplay, static_cast<sirEGLSurface_t>(pWindow->pDrawable), static_cast<sirEGLSurface_t>(pWindow->pDrawable),
 	                               pContext->pRenderContext )
-	           ? SIR_GRAPHICS_SUCCESS
-			   : SIR_GRAPHICS_DEVICE_LOST;
+	           ? SIRGraphicsResult::SIR_GRAPHICS_SUCCESS
+			   : SIRGraphicsResult::SIR_GRAPHICS_DEVICE_LOST;
 #endif
 }
 
-sirGraphicsResult_t sirGLSwapPresentWindow( sirGLNativeContext_t *pContext, const sirGLPresentWindow_t *pWindow ) noexcept
+SIRGraphicsResult sirGLSwapPresentWindow( sirGLNativeContext_t *pContext, const sirGLPresentWindow_t *pWindow ) noexcept
 {
 	if ( pContext == nullptr || pWindow == nullptr || pWindow->pDrawable == nullptr ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( !sirGLContextOwnsThread( pContext ) ) {
-		return SIR_GRAPHICS_BUSY;
+		return SIRGraphicsResult::SIR_GRAPHICS_BUSY;
 	}
 #if defined( _WIN32 )
-	const bool bSwapped = SwapBuffers( ( HDC )pWindow->pDrawable ) != FALSE;
+	const bool bSwapped = SwapBuffers( static_cast<HDC>(pWindow->pDrawable) ) != FALSE;
 #else
 	const bool bSwapped =
-	    pContext->pSwapBuffers != nullptr && pContext->pSwapBuffers( pContext->pDisplay, ( sirEGLSurface_t )pWindow->pDrawable ) != 0;
+	    pContext->pSwapBuffers != nullptr && pContext->pSwapBuffers( pContext->pDisplay, static_cast<sirEGLSurface_t>(pWindow->pDrawable) ) != 0;
 #endif
-	const sirGraphicsResult_t eRestore = sirGLRestoreNativeContext( pContext );
-	return !bSwapped ? SIR_GRAPHICS_DEVICE_LOST : eRestore;
+	const SIRGraphicsResult eRestore = sirGLRestoreNativeContext( pContext );
+	return !bSwapped ? SIRGraphicsResult::SIR_GRAPHICS_DEVICE_LOST : eRestore;
 }
 
-sirGraphicsResult_t sirGLDestroyPresentWindow( sirGLNativeContext_t *pContext, sirGLPresentWindow_t *pWindow ) noexcept
+SIRGraphicsResult sirGLDestroyPresentWindow( sirGLNativeContext_t *pContext, sirGLPresentWindow_t *pWindow ) noexcept
 {
 	if ( pContext == nullptr || pWindow == nullptr || pWindow->pDrawable == nullptr ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( !sirGLContextOwnsThread( pContext ) ) {
-		return SIR_GRAPHICS_BUSY;
+		return SIRGraphicsResult::SIR_GRAPHICS_BUSY;
 	}
-	if ( sirGLRestoreNativeContext( pContext ) != SIR_GRAPHICS_SUCCESS ) {
-		return SIR_GRAPHICS_DEVICE_LOST;
+	if ( sirGLRestoreNativeContext( pContext ) != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
+		return SIRGraphicsResult::SIR_GRAPHICS_DEVICE_LOST;
 	}
 #if defined( _WIN32 )
-	const bool bReleased = ReleaseDC( ( HWND )pWindow->pNativeWindow, ( HDC )pWindow->pDrawable ) != 0;
+	const bool bReleased = ReleaseDC( static_cast<HWND>(pWindow->pNativeWindow), static_cast<HDC>(pWindow->pDrawable) ) != 0;
 #else
 	const bool bReleased =
-	    pContext->pDestroySurface != nullptr && pContext->pDestroySurface( pContext->pDisplay, ( sirEGLSurface_t )pWindow->pDrawable ) != 0;
+	    pContext->pDestroySurface != nullptr && pContext->pDestroySurface( pContext->pDisplay, static_cast<sirEGLSurface_t>(pWindow->pDrawable) ) != 0;
 	if ( pWindow->pWaylandWrapper != nullptr ) {
 		pContext->pWaylandDestroy( pWindow->pWaylandWrapper );
 	}
 #endif
 	*pWindow = {};
-	return bReleased ? SIR_GRAPHICS_SUCCESS : SIR_GRAPHICS_DEVICE_LOST;
+	return bReleased ? SIRGraphicsResult::SIR_GRAPHICS_SUCCESS : SIRGraphicsResult::SIR_GRAPHICS_DEVICE_LOST;
 }

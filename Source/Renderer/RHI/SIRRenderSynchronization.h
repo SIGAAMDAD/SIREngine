@@ -13,10 +13,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRRENDERSYNCHRONIZATION_H__
-#define __SIRENGINE_SIRRENDERSYNCHRONIZATION_H__
+#ifndef __SIR_RENDER_SYNCHRONIZATION_H__
+#define __SIR_RENDER_SYNCHRONIZATION_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -42,11 +42,11 @@ public:
 	}
 	bool isValid( void ) const noexcept
 	{
-		return m_Completion.nDeviceGeneration != 0 && m_Completion.nValue != 0 && m_Completion.eQueue < SIR_GRAPHICS_QUEUE_COUNT;
+		return m_Completion.nDeviceGeneration != 0 && m_Completion.nValue != 0 && m_Completion.eQueue < SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT;
 	}
 
 private:
-	sirGraphicsCompletion_t m_Completion = {};
+	sirGraphicsCompletion_t m_Completion {};
 };
 
-#endif // __SIRENGINE_SIRRENDERSYNCHRONIZATION_H__
+#endif // __SIR_RENDER_SYNCHRONIZATION_H__

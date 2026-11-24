@@ -15,8 +15,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSLABALLOCATOR_H__
-#define __SIRENGINE_SIRSLABALLOCATOR_H__
+#ifndef __SIR_SLABALLOCATOR_H__
+#define __SIR_SLABALLOCATOR_H__
 
 #include <Core/SIRPCH.h>
 
@@ -32,15 +32,14 @@ class SIRMemorySegment;
 
 // Fixed-slot slabs with out-of-band descriptors and explicit empty-slab trim.
 // One allocator owns one exclusive segment. No malloc or virtual dispatch.
-typedef enum sirSlabState_e : uint32_t
-{
+enum class SIRSlabState : uint32_t {
 	SIR_SLAB_DORMANT = 0,
 	SIR_SLAB_EMPTY,
 	SIR_SLAB_PARTIAL,
 	SIR_SLAB_ACTIVE, // Cached allocation slab, intentionally off global lists.
 	SIR_SLAB_FULL,
 	SIR_SLAB_DECOMMITTED
-} sirSlabState_t;
+};
 
 typedef struct sirSlabDesc_s
 {
@@ -107,4 +106,4 @@ private:
 	uint64_t *m_pLiveBits;
 };
 
-#endif // __SIRENGINE_SIRSLABALLOCATOR_H__
+#endif // __SIR_SLABALLOCATOR_H__

@@ -21,7 +21,7 @@ inline bool t3d_vt_feedback_multi_reduce_capture( const uint8_t *pSlot, const si
 {
 	rStats = t3dVTFeedbackReductionStats_t{};
 	rReducer.discardCapture();
-	const uint64_t nCellCount = ( uint64_t )rParams.m_nGridWidth * rParams.m_nGridHeight;
+	const uint64_t nCellCount = static_cast<uint64_t>(rParams.m_nGridWidth) * rParams.m_nGridHeight;
 	const uint64_t expectedWords = T3D_VT_FEEDBACK_GRID_HEADER_WORDS + nCellCount * T3D_VT_FEEDBACK_MULTI_RECORD_WORDS;
 	if ( !pSlot || rParams.m_nGridWidth == 0u || rParams.m_nGridWidth > 240u || rParams.m_nGridHeight == 0u ||
 	     rParams.m_nGridHeight > 136u || rParams.m_nPageCount == 0u || rParams.m_nRecordWords != T3D_VT_FEEDBACK_MULTI_RECORD_WORDS ||
@@ -33,7 +33,7 @@ inline bool t3d_vt_feedback_multi_reduce_capture( const uint8_t *pSlot, const si
 	memcpy( &header, pSlot, sizeof( header ) );
 	if ( !t3d_vt_feedback_multi_validate( header, rParams, nFrame, nEpoch, nDatabase, nDevice, nViewport ) )
 		return false;
-	return rReducer.reduceMulti( pSlot + sizeof( header ), ( uint32_t )nCellCount, rParams.m_nPageCount, pLookup, pUser, rPolicy, rStats );
+	return rReducer.reduceMulti( pSlot + sizeof( header ), static_cast<uint32_t>(nCellCount), rParams.m_nPageCount, pLookup, pUser, rPolicy, rStats );
 }
 
 #endif // TERRAIN3D_VT_FEEDBACK_MULTI_READER_H

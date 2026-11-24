@@ -10,8 +10,8 @@ typedef struct sirEditorTextField_s
 
 static bool sirEditorTextRangesOverlap( const void *pLeft, size_t nLeftBytes, const void *pRight, size_t nRightBytes ) noexcept
 {
-	const uintptr_t nLeft = ( uintptr_t )pLeft;
-	const uintptr_t nRight = ( uintptr_t )pRight;
+	const uintptr_t nLeft = reinterpret_cast<uintptr_t>(pLeft);
+	const uintptr_t nRight = reinterpret_cast<uintptr_t>(pRight);
 	if ( nLeftBytes > UINTPTR_MAX - nLeft || nRightBytes > UINTPTR_MAX - nRight ) {
 		return true;
 	}
@@ -38,7 +38,7 @@ static uint64_t sirEditorHash64( const char *pData, size_t nBytes ) noexcept
 {
 	uint64_t nHash = UINT64_C( 14695981039346656037 );
 	for ( size_t iByte = 0; iByte < nBytes; ++iByte ) {
-		nHash ^= ( uint8_t )pData[iByte];
+		nHash ^= static_cast<uint8_t>(pData[iByte]);
 		nHash *= UINT64_C( 1099511628211 );
 	}
 	return nHash;
@@ -47,7 +47,7 @@ static uint64_t sirEditorHash64( const char *pData, size_t nBytes ) noexcept
 static uint32_t sirEditorHashType( sirEditorTextField_t field ) noexcept
 {
 	const uint64_t nHash = sirEditorHash64( field.pData + 1, field.nLength - 2 );
-	uint32_t nResult = ( uint32_t )( nHash ^ ( nHash >> 32 ) );
+	uint32_t nResult = static_cast<uint32_t>(  nHash ^ ( nHash >> 32 )  );
 	return nResult == 0 ? 1 : nResult;
 }
 
@@ -62,7 +62,7 @@ static bool sirEditorParseUnsigned( sirEditorTextField_t field, uint32_t *pValue
 		if ( c < '0' || c > '9' ) {
 			return false;
 		}
-		uint32_t nDigit = ( uint32_t )( c - '0' );
+		uint32_t nDigit = static_cast<uint32_t>( c - '0' );
 		if ( nValue > ( UINT32_MAX - nDigit ) / 10 ) {
 			return false;
 		}
@@ -72,21 +72,21 @@ static bool sirEditorParseUnsigned( sirEditorTextField_t field, uint32_t *pValue
 	return nValue != 0;
 }
 
-static sirEditorTextSceneResult_t sirEditorDecodeQuoted( sirEditorTextField_t field, char *pDestination, uint32_t nCapacity,
+static SIREditorTextSceneResult sirEditorDecodeQuoted( sirEditorTextField_t field, char *pDestination, uint32_t nCapacity,
                                                          uint32_t *pLength ) noexcept
 {
 	if ( !sirEditorQuotedField( field ) || pLength == nullptr ) {
-		return SIR_EDITOR_TEXT_INVALID_NODE;
+		return SIREditorTextSceneResult::SIR_EDITOR_TEXT_INVALID_NODE;
 	}
 	if ( nCapacity == 0 ) {
-		return SIR_EDITOR_TEXT_OUT_OF_CAPACITY;
+		return SIREditorTextSceneResult::SIR_EDITOR_TEXT_OUT_OF_CAPACITY;
 	}
 	uint32_t nUsed = 0;
 	for ( uint32_t iChar = 1; iChar < field.nLength - 1; ++iChar ) {
 		char c = field.pData[iChar];
 		if ( c == '\\' ) {
 			if ( ++iChar >= field.nLength - 1 ) {
-				return SIR_EDITOR_TEXT_INVALID_NODE;
+				return SIREditorTextSceneResult::SIR_EDITOR_TEXT_INVALID_NODE;
 			}
 			char cEscape = field.pData[iChar];
 			if ( cEscape == 'n' ) {
@@ -96,20 +96,20 @@ static sirEditorTextSceneResult_t sirEditorDecodeQuoted( sirEditorTextField_t fi
 			} else if ( cEscape == '"' || cEscape == '\\' ) {
 				c = cEscape;
 			} else {
-				return SIR_EDITOR_TEXT_INVALID_NODE;
+				return SIREditorTextSceneResult::SIR_EDITOR_TEXT_INVALID_NODE;
 			}
 		}
 		if ( c == '\0' ) {
-			return SIR_EDITOR_TEXT_INVALID_NODE;
+			return SIREditorTextSceneResult::SIR_EDITOR_TEXT_INVALID_NODE;
 		}
 		if ( nUsed >= nCapacity - 1 ) {
-			return SIR_EDITOR_TEXT_OUT_OF_CAPACITY;
+			return SIREditorTextSceneResult::SIR_EDITOR_TEXT_OUT_OF_CAPACITY;
 		}
 		pDestination[nUsed++] = c;
 	}
 	pDestination[nUsed] = '\0';
 	*pLength = nUsed;
-	return SIR_EDITOR_TEXT_OK;
+	return SIREditorTextSceneResult::SIR_EDITOR_TEXT_OK;
 }
 
 static bool sirEditorScanField( const char **ppCursor, const char *pEnd, sirEditorTextField_t *pKey, sirEditorTextField_t *pValue ) noexcept
@@ -132,7 +132,7 @@ static bool sirEditorScanField( const char **ppCursor, const char *pEnd, sirEdit
 		return false;
 	}
 	pKey->pData = pStart;
-	pKey->nLength = ( uint32_t )( pCursor - pStart );
+	pKey->nLength = static_cast<uint32_t>( pCursor - pStart );
 	while ( pCursor < pEnd && sirEditorIsSpace( *pCursor ) ) {
 		++pCursor;
 	}
@@ -173,7 +173,7 @@ static bool sirEditorScanField( const char **ppCursor, const char *pEnd, sirEdit
 		return false;
 	}
 	pValue->pData = pValueStart;
-	pValue->nLength = ( uint32_t )( pCursor - pValueStart );
+	pValue->nLength = static_cast<uint32_t>( pCursor - pValueStart );
 	*ppCursor = pCursor;
 	return true;
 }
@@ -208,15 +208,15 @@ static bool sirEditorFindTag( const char *pStart, const char *pEnd, const char *
 	return false;
 }
 
-static sirEditorTextSceneResult_t sirEditorConsumeNode( const char *pszSource, sirEditorTextSceneIndex_t *pIndex,
+static SIREditorTextSceneResult sirEditorConsumeNode( const char *pszSource, sirEditorTextSceneIndex_t *pIndex,
                                                         sirEditorTextField_t fields[4], uint32_t nLine ) noexcept
 {
 	if ( pIndex->nNodeCount >= pIndex->storage.nNodeCapacity || pIndex->nPathBytes >= pIndex->storage.nPathCapacity ) {
-		return SIR_EDITOR_TEXT_OUT_OF_CAPACITY;
+		return SIREditorTextSceneResult::SIR_EDITOR_TEXT_OUT_OF_CAPACITY;
 	}
 	if ( !sirEditorQuotedField( fields[0] ) || !sirEditorQuotedField( fields[1] ) ||
 	     memchr( fields[1].pData + 1, '\\', fields[1].nLength - 2 ) != nullptr ) {
-		return SIR_EDITOR_TEXT_INVALID_NODE;
+		return SIREditorTextSceneResult::SIR_EDITOR_TEXT_INVALID_NODE;
 	}
 	const uint32_t nPathStart = pIndex->nPathBytes;
 	uint32_t nParentLength = 0;
@@ -225,15 +225,15 @@ static sirEditorTextSceneResult_t sirEditorConsumeNode( const char *pszSource, s
 	bool bRoot = pIndex->nNodeCount == 0;
 	if ( bRoot ) {
 		if ( fields[2].pData != nullptr ) {
-			return SIR_EDITOR_TEXT_INVALID_NODE;
+			return SIREditorTextSceneResult::SIR_EDITOR_TEXT_INVALID_NODE;
 		}
 	} else {
 		if ( fields[2].pData == nullptr ) {
-			return SIR_EDITOR_TEXT_INVALID_NODE;
+			return SIREditorTextSceneResult::SIR_EDITOR_TEXT_INVALID_NODE;
 		}
-		const sirEditorTextSceneResult_t eParent = sirEditorDecodeQuoted( fields[2], pIndex->storage.pszPaths + nPathStart,
+		const SIREditorTextSceneResult eParent = sirEditorDecodeQuoted( fields[2], pIndex->storage.pszPaths + nPathStart,
 		                                                                  pIndex->storage.nPathCapacity - nPathStart, &nParentLength );
-		if ( eParent != SIR_EDITOR_TEXT_OK ) {
+		if ( eParent != SIREditorTextSceneResult::SIR_EDITOR_TEXT_OK ) {
 			return eParent;
 		}
 		if ( nParentLength == 1 && pIndex->storage.pszPaths[nPathStart] == '.' ) {
@@ -253,7 +253,7 @@ static sirEditorTextSceneResult_t sirEditorConsumeNode( const char *pszSource, s
 				}
 			}
 			if ( !bFound ) {
-				return SIR_EDITOR_TEXT_MISSING_PARENT;
+				return SIREditorTextSceneResult::SIR_EDITOR_TEXT_MISSING_PARENT;
 			}
 		}
 	}
@@ -264,13 +264,13 @@ static sirEditorTextSceneResult_t sirEditorConsumeNode( const char *pszSource, s
 	}
 	const uint32_t nNameCapacity = pIndex->storage.nPathCapacity - nPathStart - nPrefixLength;
 	uint32_t nNameLength = 0;
-	const sirEditorTextSceneResult_t eName =
+	const SIREditorTextSceneResult eName =
 	    sirEditorDecodeQuoted( fields[0], pszDestination + nPrefixLength, nNameCapacity, &nNameLength );
-	if ( eName != SIR_EDITOR_TEXT_OK ) {
+	if ( eName != SIREditorTextSceneResult::SIR_EDITOR_TEXT_OK ) {
 		return eName;
 	}
 	if ( nNameLength == 0 || memchr( pszDestination + nPrefixLength, '/', nNameLength ) != nullptr ) {
-		return SIR_EDITOR_TEXT_INVALID_NODE;
+		return SIREditorTextSceneResult::SIR_EDITOR_TEXT_INVALID_NODE;
 	}
 	uint32_t nPathLength = nPrefixLength + nNameLength;
 	// The root's canonical parent path is empty, matching Godot's parent="." convention.
@@ -282,12 +282,12 @@ static sirEditorTextSceneResult_t sirEditorConsumeNode( const char *pszSource, s
 		const sirEditorTextSceneNode_t& previous = pIndex->storage.pNodes[iPrevious];
 		if ( previous.nPathLength == nPathLength &&
 		     memcmp( pszDestination, pIndex->storage.pszPaths + previous.nPathOffset, nPathLength ) == 0 ) {
-			return SIR_EDITOR_TEXT_DUPLICATE_NODE;
+			return SIREditorTextSceneResult::SIR_EDITOR_TEXT_DUPLICATE_NODE;
 		}
 	}
 	uint32_t nUniqueId = 0;
 	if ( fields[3].pData != nullptr && !sirEditorParseUnsigned( fields[3], &nUniqueId ) ) {
-		return SIR_EDITOR_TEXT_INVALID_NODE;
+		return SIREditorTextSceneResult::SIR_EDITOR_TEXT_INVALID_NODE;
 	}
 	uint64_t nId = nUniqueId == 0 ? ( sirEditorHash64( pszDestination, nPathLength ) & UINT64_C( 0x7fffffffffffffff ) )
 	                              : ( UINT64_C( 0x8000000000000000 ) | nUniqueId );
@@ -296,7 +296,7 @@ static sirEditorTextSceneResult_t sirEditorConsumeNode( const char *pszSource, s
 	}
 	for ( uint32_t iPrevious = 0; iPrevious < pIndex->nNodeCount; ++iPrevious ) {
 		if ( pIndex->storage.pNodes[iPrevious].node.nId == nId ) {
-			return SIR_EDITOR_TEXT_DUPLICATE_NODE;
+			return SIREditorTextSceneResult::SIR_EDITOR_TEXT_DUPLICATE_NODE;
 		}
 	}
 	sirEditorTextSceneNode_t& entry = pIndex->storage.pNodes[pIndex->nNodeCount++];
@@ -305,17 +305,17 @@ static sirEditorTextSceneResult_t sirEditorConsumeNode( const char *pszSource, s
 	entry.node.nParentId = nParentId;
 	entry.node.nTypeId = sirEditorHashType( fields[1] );
 	entry.nSourceLine = nLine;
-	entry.nNameOffset = ( uint32_t )( fields[0].pData + 1 - pszSource );
+	entry.nNameOffset = static_cast<uint32_t>( fields[0].pData + 1 - pszSource );
 	entry.nNameLength = fields[0].nLength - 2;
 	entry.nPathOffset = nPathStart;
 	entry.nPathLength = nPathLength;
 	entry.nGodotUniqueId = nUniqueId;
 	pIndex->nPathBytes += nPathLength + 1;
-	return SIR_EDITOR_TEXT_OK;
+	return SIREditorTextSceneResult::SIR_EDITOR_TEXT_OK;
 }
 
-static sirEditorTextSceneResult_t sirEditorFailTextScene( sirEditorTextSceneIndex_t *pIndex, uint32_t nLine,
-                                                          sirEditorTextSceneResult_t eResult ) noexcept
+static SIREditorTextSceneResult sirEditorFailTextScene( sirEditorTextSceneIndex_t *pIndex, uint32_t nLine,
+                                                          SIREditorTextSceneResult eResult ) noexcept
 {
 	pIndex->nErrorLine = nLine;
 	pIndex->nNodeCount = 0;
@@ -323,31 +323,31 @@ static sirEditorTextSceneResult_t sirEditorFailTextScene( sirEditorTextSceneInde
 	return eResult;
 }
 
-sirEditorTextSceneResult_t sirEditorScanTextScene( const char *pszSource, size_t nSourceBytes, sirEditorTextSceneIndex_t *pIndex ) noexcept
+SIREditorTextSceneResult sirEditorScanTextScene( const char *pszSource, size_t nSourceBytes, sirEditorTextSceneIndex_t *pIndex ) noexcept
 {
 	if ( pszSource == nullptr || pIndex == nullptr || pIndex->storage.pNodes == nullptr || pIndex->storage.pszPaths == nullptr ||
 	     pIndex->storage.nNodeCapacity == 0 || pIndex->storage.nPathCapacity == 0 || nSourceBytes > UINT32_MAX ) {
-		return SIR_EDITOR_TEXT_INVALID_ARGUMENT;
+		return SIREditorTextSceneResult::SIR_EDITOR_TEXT_INVALID_ARGUMENT;
 	}
-	if ( ( ( uintptr_t )pIndex->storage.pNodes % alignof( sirEditorTextSceneNode_t ) ) != 0 ) {
-		return SIR_EDITOR_TEXT_INVALID_ARGUMENT;
+	if ( ( reinterpret_cast<uintptr_t>(pIndex->storage.pNodes) % alignof( sirEditorTextSceneNode_t ) ) != 0 ) {
+		return SIREditorTextSceneResult::SIR_EDITOR_TEXT_INVALID_ARGUMENT;
 	}
 #if SIZE_MAX == UINT32_MAX
 	if ( pIndex->storage.nNodeCapacity > SIZE_MAX / sizeof( sirEditorTextSceneNode_t ) ) {
-		return SIR_EDITOR_TEXT_INVALID_ARGUMENT;
+		return SIREditorTextSceneResult::SIR_EDITOR_TEXT_INVALID_ARGUMENT;
 	}
 #endif
-	const size_t nNodesBytes = ( size_t )pIndex->storage.nNodeCapacity * sizeof( sirEditorTextSceneNode_t );
+	const size_t nNodesBytes = static_cast<size_t>(pIndex->storage.nNodeCapacity) * sizeof( sirEditorTextSceneNode_t );
 	if ( sirEditorTextRangesOverlap( pszSource, nSourceBytes, pIndex->storage.pNodes, nNodesBytes ) ||
 	     sirEditorTextRangesOverlap( pszSource, nSourceBytes, pIndex->storage.pszPaths, pIndex->storage.nPathCapacity ) ||
 	     sirEditorTextRangesOverlap( pIndex->storage.pNodes, nNodesBytes, pIndex->storage.pszPaths, pIndex->storage.nPathCapacity ) ) {
-		return SIR_EDITOR_TEXT_INVALID_ARGUMENT;
+		return SIREditorTextSceneResult::SIR_EDITOR_TEXT_INVALID_ARGUMENT;
 	}
 	pIndex->nNodeCount = 0;
 	pIndex->nPathBytes = 0;
 	pIndex->nErrorLine = 0;
 	if ( memchr( pszSource, '\0', nSourceBytes ) != nullptr ) {
-		return SIR_EDITOR_TEXT_INVALID_ARGUMENT;
+		return SIREditorTextSceneResult::SIR_EDITOR_TEXT_INVALID_ARGUMENT;
 	}
 	bool bHeader = false;
 	bool bMultilineQuote = false;
@@ -356,7 +356,7 @@ sirEditorTextSceneResult_t sirEditorScanTextScene( const char *pszSource, size_t
 	const char *pCursor = pszSource;
 	const char *pEnd = pszSource + nSourceBytes;
 	while ( pCursor < pEnd ) {
-		const char *pLineEnd = ( const char * )memchr( pCursor, '\n', ( size_t )( pEnd - pCursor ) );
+		const char *pLineEnd = static_cast<const char *>(memchr( pCursor, '\n', static_cast<size_t>( pEnd - pCursor ) ));
 		if ( pLineEnd == nullptr ) {
 			pLineEnd = pEnd;
 		}
@@ -367,56 +367,57 @@ sirEditorTextSceneResult_t sirEditorScanTextScene( const char *pszSource, size_t
 		if ( pFirst < pLineEnd && *pFirst == '[' && !bMultilineQuote ) {
 			const char *pTagEnd = nullptr;
 			if ( !sirEditorFindTag( pFirst, pLineEnd, &pTagEnd ) ) {
-				return sirEditorFailTextScene( pIndex, nLine, SIR_EDITOR_TEXT_INVALID_TAG );
+				return sirEditorFailTextScene( pIndex, nLine, SIREditorTextSceneResult::SIR_EDITOR_TEXT_INVALID_TAG );
 			}
 			const char *pTrailing = pTagEnd + 1;
 			while ( pTrailing < pLineEnd && sirEditorIsSpace( *pTrailing ) ) {
 				++pTrailing;
 			}
 			if ( pTrailing != pLineEnd && *pTrailing != ';' && *pTrailing != '#' ) {
-				return sirEditorFailTextScene( pIndex, nLine, SIR_EDITOR_TEXT_INVALID_TAG );
+				return sirEditorFailTextScene( pIndex, nLine, SIREditorTextSceneResult::SIR_EDITOR_TEXT_INVALID_TAG );
 			}
 			const char *pNameStart = pFirst + 1;
 			const char *pNameEnd = pNameStart;
 			while ( pNameEnd < pTagEnd && !sirEditorIsSpace( *pNameEnd ) ) {
 				++pNameEnd;
 			}
-			sirEditorTextField_t tag = { pNameStart, ( uint32_t )( pNameEnd - pNameStart ) };
+			sirEditorTextField_t tag = { pNameStart, static_cast<uint32_t>( pNameEnd - pNameStart ) };
 			if ( !bHeader ) {
 				if ( !sirEditorFieldEquals( tag, "gd_scene" ) ) {
-					return sirEditorFailTextScene( pIndex, nLine, SIR_EDITOR_TEXT_INVALID_HEADER );
+					return sirEditorFailTextScene( pIndex, nLine, SIREditorTextSceneResult::SIR_EDITOR_TEXT_INVALID_HEADER );
 				}
 				bHeader = true;
 			} else if ( sirEditorFieldEquals( tag, "node" ) ) {
-				sirEditorTextField_t fields[4] = {};
+				sirEditorTextField_t fields[4];
+				memset( fields, 0, sizeof( fields ) );
 				const char *pField = pNameEnd;
 				while ( pField < pTagEnd ) {
-					sirEditorTextField_t key = {};
-					sirEditorTextField_t value = {};
+					sirEditorTextField_t key {};
+					sirEditorTextField_t value {};
 					if ( !sirEditorScanField( &pField, pTagEnd, &key, &value ) ) {
-						return sirEditorFailTextScene( pIndex, nLine, SIR_EDITOR_TEXT_INVALID_TAG );
+						return sirEditorFailTextScene( pIndex, nLine, SIREditorTextSceneResult::SIR_EDITOR_TEXT_INVALID_TAG );
 					}
 					if ( key.nLength == 0 ) {
 						break;
 					}
 					if ( sirEditorFieldEquals( key, "instance" ) || sirEditorFieldEquals( key, "instance_placeholder" ) ) {
-						return sirEditorFailTextScene( pIndex, nLine, SIR_EDITOR_TEXT_UNSUPPORTED_INSTANCE );
+						return sirEditorFailTextScene( pIndex, nLine, SIREditorTextSceneResult::SIR_EDITOR_TEXT_UNSUPPORTED_INSTANCE );
 					}
 					const char *szKeys[4] = { "name", "type", "parent", "unique_id" };
 					for ( uint32_t iKey = 0; iKey < 4; ++iKey ) {
 						if ( sirEditorFieldEquals( key, szKeys[iKey] ) ) {
 							if ( fields[iKey].pData != nullptr ) {
-								return sirEditorFailTextScene( pIndex, nLine, SIR_EDITOR_TEXT_INVALID_TAG );
+								return sirEditorFailTextScene( pIndex, nLine, SIREditorTextSceneResult::SIR_EDITOR_TEXT_INVALID_TAG );
 							}
 							fields[iKey] = value;
 						}
 					}
 				}
 				if ( fields[1].pData == nullptr ) {
-					return sirEditorFailTextScene( pIndex, nLine, SIR_EDITOR_TEXT_UNSUPPORTED_INSTANCE );
+					return sirEditorFailTextScene( pIndex, nLine, SIREditorTextSceneResult::SIR_EDITOR_TEXT_UNSUPPORTED_INSTANCE );
 				}
-				const sirEditorTextSceneResult_t eNode = sirEditorConsumeNode( pszSource, pIndex, fields, nLine );
-				if ( eNode != SIR_EDITOR_TEXT_OK ) {
+				const SIREditorTextSceneResult eNode = sirEditorConsumeNode( pszSource, pIndex, fields, nLine );
+				if ( eNode != SIREditorTextSceneResult::SIR_EDITOR_TEXT_OK ) {
 					return sirEditorFailTextScene( pIndex, nLine, eNode );
 				}
 			}
@@ -438,34 +439,34 @@ sirEditorTextSceneResult_t sirEditorScanTextScene( const char *pszSource, size_t
 		++nLine;
 	}
 	if ( bMultilineQuote || bEscape ) {
-		return sirEditorFailTextScene( pIndex, nLine, SIR_EDITOR_TEXT_INVALID_TAG );
+		return sirEditorFailTextScene( pIndex, nLine, SIREditorTextSceneResult::SIR_EDITOR_TEXT_INVALID_TAG );
 	}
 	if ( !bHeader || pIndex->nNodeCount == 0 ) {
-		return sirEditorFailTextScene( pIndex, nLine, SIR_EDITOR_TEXT_INVALID_HEADER );
+		return sirEditorFailTextScene( pIndex, nLine, SIREditorTextSceneResult::SIR_EDITOR_TEXT_INVALID_HEADER );
 	}
-	return SIR_EDITOR_TEXT_OK;
+	return SIREditorTextSceneResult::SIR_EDITOR_TEXT_OK;
 }
 
-sirEditorResult_t sirEditorReconcileTextScene( SIREditorSceneDocument& document, const sirEditorTextSceneIndex_t& index,
+SIREditorResult sirEditorReconcileTextScene( SIREditorSceneDocument& document, const sirEditorTextSceneIndex_t& index,
                                                sirEditorNode_t *pSnapshot, uint32_t nSnapshotCapacity ) noexcept
 {
 	if ( index.nNodeCount == 0 || index.nNodeCount > index.storage.nNodeCapacity || index.storage.pNodes == nullptr ||
 	     pSnapshot == nullptr ) {
-		return SIR_EDITOR_INVALID_ARGUMENT;
+		return SIREditorResult::SIR_EDITOR_INVALID_ARGUMENT;
 	}
 #if SIZE_MAX == UINT32_MAX
 	if ( nSnapshotCapacity > SIZE_MAX / sizeof( sirEditorNode_t ) ) {
-		return SIR_EDITOR_INVALID_ARGUMENT;
+		return SIREditorResult::SIR_EDITOR_INVALID_ARGUMENT;
 	}
 #endif
-	if ( sirEditorTextRangesOverlap( pSnapshot, ( size_t )nSnapshotCapacity * sizeof( sirEditorNode_t ), index.storage.pNodes,
-	                                 ( size_t )index.nNodeCount * sizeof( sirEditorTextSceneNode_t ) ) ) {
-		return SIR_EDITOR_INVALID_ARGUMENT;
+	if ( sirEditorTextRangesOverlap( pSnapshot, static_cast<size_t>(nSnapshotCapacity * sizeof(  sirEditorNode_t  )), index.storage.pNodes,
+	                                 static_cast<size_t>(index.nNodeCount) * sizeof( sirEditorTextSceneNode_t ) ) ) {
+		return SIREditorResult::SIR_EDITOR_INVALID_ARGUMENT;
 	}
 	uint32_t nOldCount = 0;
 	uint64_t nRevision = 0;
-	sirEditorResult_t eResult = document.copySnapshot( pSnapshot, nSnapshotCapacity, &nOldCount, &nRevision );
-	if ( eResult != SIR_EDITOR_OK ) {
+	SIREditorResult eResult = document.copySnapshot( pSnapshot, nSnapshotCapacity, &nOldCount, &nRevision );
+	if ( eResult != SIREditorResult::SIR_EDITOR_OK ) {
 		return eResult;
 	}
 	uint32_t nChangeCount = 0;
@@ -495,10 +496,10 @@ sirEditorResult_t sirEditorReconcileTextScene( SIREditorSceneDocument& document,
 		}
 	}
 	if ( nChangeCount == 0 ) {
-		return SIR_EDITOR_OK;
+		return SIREditorResult::SIR_EDITOR_OK;
 	}
 	eResult = document.beginEdit( nRevision );
-	if ( eResult != SIR_EDITOR_OK ) {
+	if ( eResult != SIREditorResult::SIR_EDITOR_OK ) {
 		return eResult;
 	}
 	for ( uint32_t iOld = 0; iOld < nOldCount; ++iOld ) {
@@ -511,7 +512,7 @@ sirEditorResult_t sirEditorReconcileTextScene( SIREditorSceneDocument& document,
 		}
 		if ( !bFound ) {
 			eResult = document.queueRemove( pSnapshot[iOld].nId );
-			if ( eResult != SIR_EDITOR_OK ) {
+			if ( eResult != SIREditorResult::SIR_EDITOR_OK ) {
 				document.cancelEdit();
 				return eResult;
 			}
@@ -528,21 +529,21 @@ sirEditorResult_t sirEditorReconcileTextScene( SIREditorSceneDocument& document,
 		}
 		if ( !bMatch ) {
 			eResult = document.queueUpsert( node );
-			if ( eResult != SIR_EDITOR_OK ) {
+			if ( eResult != SIREditorResult::SIR_EDITOR_OK ) {
 				document.cancelEdit();
 				return eResult;
 			}
 		}
 	}
 	eResult = document.commitEdit();
-	if ( eResult != SIR_EDITOR_OK ) {
+	if ( eResult != SIREditorResult::SIR_EDITOR_OK ) {
 		document.cancelEdit();
 	}
 	return eResult;
 }
 
-static sirEditorTextResourceResult_t sirEditorFailResourceIndex( sirEditorTextResourceIndex_t *pIndex, uint32_t nLine,
-                                                                 sirEditorTextResourceResult_t eResult ) noexcept
+static SIREditorTextResourceResult sirEditorFailResourceIndex( sirEditorTextResourceIndex_t *pIndex, uint32_t nLine,
+                                                                 SIREditorTextResourceResult eResult ) noexcept
 {
 	pIndex->nCount = 0;
 	pIndex->nErrorLine = nLine;
@@ -569,37 +570,38 @@ static bool sirEditorResourceTextEquals( const char *pszSource, const sirEditorT
 	return resource.nIdLength == nIdLength && memcmp( pszSource + resource.nIdOffset, pId, nIdLength ) == 0;
 }
 
-sirEditorTextResourceResult_t sirEditorFindTextResource( const char *pszSource, const sirEditorTextResourceIndex_t& index,
-                                                         sirEditorTextResourceKind_t eKind, const char *pszId, uint32_t nIdLength,
+SIREditorTextResourceResult sirEditorFindTextResource( const char *pszSource, const sirEditorTextResourceIndex_t& index,
+                                                         SIREditorTextResourceKind eKind, const char *pszId, uint32_t nIdLength,
                                                          uint32_t *pOutIndex ) noexcept
 {
 	if ( pszSource == nullptr || pszId == nullptr || pOutIndex == nullptr || nIdLength == 0 || index.nCount > index.nCapacity ||
 	     ( index.nCount != 0 && index.pResources == nullptr ) ||
-	     ( eKind != SIR_EDITOR_RESOURCE_EXTERNAL && eKind != SIR_EDITOR_RESOURCE_EMBEDDED ) ) {
-		return SIR_EDITOR_RESOURCE_INVALID_ARGUMENT;
+	     ( eKind != SIREditorTextResourceKind::SIR_EDITOR_RESOURCE_EXTERNAL && eKind != SIREditorTextResourceKind::SIR_EDITOR_RESOURCE_EMBEDDED ) ) {
+		return SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_INVALID_ARGUMENT;
 	}
 	for ( uint32_t iResource = 0; iResource < index.nCount; ++iResource ) {
 		const sirEditorTextResource_t& resource = index.pResources[iResource];
 		if ( resource.eKind == eKind && sirEditorResourceTextEquals( pszSource, resource, pszId, nIdLength ) ) {
 			*pOutIndex = iResource;
-			return SIR_EDITOR_RESOURCE_OK;
+			return SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_OK;
 		}
 	}
-	return SIR_EDITOR_RESOURCE_MISSING_REFERENCE;
+	return SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_MISSING_REFERENCE;
 }
 
-static sirEditorTextResourceResult_t sirEditorConsumeResourceTag( const char *pszSource, const char *pFields, const char *pTagEnd,
-                                                                  uint32_t nLine, sirEditorTextResourceKind_t eKind,
+static SIREditorTextResourceResult sirEditorConsumeResourceTag( const char *pszSource, const char *pFields, const char *pTagEnd,
+                                                                  uint32_t nLine, SIREditorTextResourceKind eKind,
                                                                   sirEditorTextResourceIndex_t *pIndex ) noexcept
 {
-	sirEditorTextField_t fields[4] = {};
+	sirEditorTextField_t fields[4];
+	memset( fields, 0, sizeof( fields ) );
 	const char *pCursor = pFields;
 	const char *szKeys[4] = { "id", "path", "type", "uid" };
 	while ( pCursor < pTagEnd ) {
-		sirEditorTextField_t key = {};
-		sirEditorTextField_t value = {};
+		sirEditorTextField_t key {};
+		sirEditorTextField_t value {};
 		if ( !sirEditorScanField( &pCursor, pTagEnd, &key, &value ) ) {
-			return SIR_EDITOR_RESOURCE_INVALID_TAG;
+			return SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_INVALID_TAG;
 		}
 		if ( key.nLength == 0 ) {
 			break;
@@ -607,7 +609,7 @@ static sirEditorTextResourceResult_t sirEditorConsumeResourceTag( const char *ps
 		for ( uint32_t iKey = 0; iKey < 4; ++iKey ) {
 			if ( sirEditorFieldEquals( key, szKeys[iKey] ) ) {
 				if ( fields[iKey].pData != nullptr ) {
-					return SIR_EDITOR_RESOURCE_INVALID_TAG;
+					return SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_INVALID_TAG;
 				}
 				fields[iKey] = value;
 				break;
@@ -615,43 +617,43 @@ static sirEditorTextResourceResult_t sirEditorConsumeResourceTag( const char *ps
 		}
 	}
 	if ( !sirEditorValidResourceId( fields[0] ) || !sirEditorQuotedField( fields[2] ) || fields[2].nLength <= 2 ||
-	     ( eKind == SIR_EDITOR_RESOURCE_EXTERNAL && ( !sirEditorQuotedField( fields[1] ) || fields[1].nLength <= 2 ) ) ||
+	     ( eKind == SIREditorTextResourceKind::SIR_EDITOR_RESOURCE_EXTERNAL && ( !sirEditorQuotedField( fields[1] ) || fields[1].nLength <= 2 ) ) ||
 	     ( fields[3].pData != nullptr && ( !sirEditorQuotedField( fields[3] ) || fields[3].nLength <= 2 ) ) ) {
-		return SIR_EDITOR_RESOURCE_INVALID_DECLARATION;
+		return SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_INVALID_DECLARATION;
 	}
 	if ( pIndex->nCount >= pIndex->nCapacity ) {
-		return SIR_EDITOR_RESOURCE_OUT_OF_CAPACITY;
+		return SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_OUT_OF_CAPACITY;
 	}
 
 	const char *pId = fields[0].pData + 1;
 	const uint32_t nIdLength = fields[0].nLength - 2;
 	uint32_t iDuplicate = 0;
-	if ( sirEditorFindTextResource( pszSource, *pIndex, eKind, pId, nIdLength, &iDuplicate ) == SIR_EDITOR_RESOURCE_OK ) {
-		return SIR_EDITOR_RESOURCE_DUPLICATE_ID;
+	if ( sirEditorFindTextResource( pszSource, *pIndex, eKind, pId, nIdLength, &iDuplicate ) == SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_OK ) {
+		return SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_DUPLICATE_ID;
 	}
 
 	sirEditorTextResource_t& resource = pIndex->pResources[pIndex->nCount++];
 	resource = {};
 	resource.eKind = eKind;
 	resource.nSourceLine = nLine;
-	resource.nIdOffset = ( uint32_t )( pId - pszSource );
+	resource.nIdOffset = static_cast<uint32_t>( pId - pszSource );
 	resource.nIdLength = nIdLength;
-	resource.nTypeOffset = ( uint32_t )( fields[2].pData + 1 - pszSource );
+	resource.nTypeOffset = static_cast<uint32_t>( fields[2].pData + 1 - pszSource );
 	resource.nTypeLength = fields[2].nLength - 2;
 	if ( fields[1].pData != nullptr ) {
-		resource.nPathOffset = ( uint32_t )( fields[1].pData + 1 - pszSource );
+		resource.nPathOffset = static_cast<uint32_t>( fields[1].pData + 1 - pszSource );
 		resource.nPathLength = fields[1].nLength - 2;
 	}
 	if ( fields[3].pData != nullptr ) {
-		resource.nUidOffset = ( uint32_t )( fields[3].pData + 1 - pszSource );
+		resource.nUidOffset = static_cast<uint32_t>( fields[3].pData + 1 - pszSource );
 		resource.nUidLength = fields[3].nLength - 2;
 	}
 	resource.nStableKey = sirEditorHash64( pId, nIdLength ) ^
-	                      ( eKind == SIR_EDITOR_RESOURCE_EXTERNAL ? UINT64_C( 0x4ac9e2d51f4c9761 ) : UINT64_C( 0x7d5a2190c3f2e8b4 ) );
+	                      ( eKind == SIREditorTextResourceKind::SIR_EDITOR_RESOURCE_EXTERNAL ? UINT64_C( 0x4ac9e2d51f4c9761 ) : UINT64_C( 0x7d5a2190c3f2e8b4 ) );
 	if ( resource.nStableKey == 0 ) {
 		resource.nStableKey = 1;
 	}
-	return SIR_EDITOR_RESOURCE_OK;
+	return SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_OK;
 }
 
 static bool sirEditorResourceTokenStart( char c ) noexcept
@@ -659,7 +661,7 @@ static bool sirEditorResourceTokenStart( char c ) noexcept
 	return ( c >= 'a' && c <= 'z' ) || ( c >= 'A' && c <= 'Z' ) || ( c >= '0' && c <= '9' ) || c == '_';
 }
 
-static sirEditorTextResourceResult_t sirEditorValidateResourceCalls( const char *pszSource, size_t nSourceBytes,
+static SIREditorTextResourceResult sirEditorValidateResourceCalls( const char *pszSource, size_t nSourceBytes,
                                                                      sirEditorTextResourceIndex_t *pIndex ) noexcept
 {
 	const char *pEnd = pszSource + nSourceBytes;
@@ -699,12 +701,12 @@ static sirEditorTextResourceResult_t sirEditorValidateResourceCalls( const char 
 		if ( pCursor != pszSource && sirEditorResourceTokenStart( pCursor[-1] ) ) {
 			continue;
 		}
-		sirEditorTextResourceKind_t eKind = SIR_EDITOR_RESOURCE_EXTERNAL;
+		SIREditorTextResourceKind eKind = SIREditorTextResourceKind::SIR_EDITOR_RESOURCE_EXTERNAL;
 		uint32_t nFunctionLength = 12;
-		if ( ( size_t )( pEnd - pCursor ) >= 12 && memcmp( pCursor, "ExtResource(", 12 ) == 0 ) {
-			eKind = SIR_EDITOR_RESOURCE_EXTERNAL;
-		} else if ( ( size_t )( pEnd - pCursor ) >= 12 && memcmp( pCursor, "SubResource(", 12 ) == 0 ) {
-			eKind = SIR_EDITOR_RESOURCE_EMBEDDED;
+		if ( static_cast<size_t>( pEnd - pCursor ) >= 12 && memcmp( pCursor, "ExtResource(", 12 ) == 0 ) {
+			eKind = SIREditorTextResourceKind::SIR_EDITOR_RESOURCE_EXTERNAL;
+		} else if ( static_cast<size_t>( pEnd - pCursor ) >= 12 && memcmp( pCursor, "SubResource(", 12 ) == 0 ) {
+			eKind = SIREditorTextResourceKind::SIR_EDITOR_RESOURCE_EMBEDDED;
 		} else {
 			continue;
 		}
@@ -713,55 +715,55 @@ static sirEditorTextResourceResult_t sirEditorValidateResourceCalls( const char 
 			++pCall;
 		}
 		if ( pCall == pEnd || *pCall++ != '"' ) {
-			return sirEditorFailResourceIndex( pIndex, nLine, SIR_EDITOR_RESOURCE_INVALID_REFERENCE );
+			return sirEditorFailResourceIndex( pIndex, nLine, SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_INVALID_REFERENCE );
 		}
 		const char *pId = pCall;
 		while ( pCall < pEnd && *pCall != '"' && *pCall != '\n' ) {
 			if ( !sirEditorResourceTokenStart( *pCall ) ) {
-				return sirEditorFailResourceIndex( pIndex, nLine, SIR_EDITOR_RESOURCE_INVALID_REFERENCE );
+				return sirEditorFailResourceIndex( pIndex, nLine, SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_INVALID_REFERENCE );
 			}
 			++pCall;
 		}
 		if ( pCall == pId || pCall == pEnd || *pCall++ != '"' ) {
-			return sirEditorFailResourceIndex( pIndex, nLine, SIR_EDITOR_RESOURCE_INVALID_REFERENCE );
+			return sirEditorFailResourceIndex( pIndex, nLine, SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_INVALID_REFERENCE );
 		}
-		const uint32_t nIdLength = ( uint32_t )( pCall - pId - 1 );
+		const uint32_t nIdLength = static_cast<uint32_t>( pCall - pId - 1 );
 		while ( pCall < pEnd && sirEditorIsSpace( *pCall ) ) {
 			++pCall;
 		}
 		if ( pCall == pEnd || *pCall != ')' ) {
-			return sirEditorFailResourceIndex( pIndex, nLine, SIR_EDITOR_RESOURCE_INVALID_REFERENCE );
+			return sirEditorFailResourceIndex( pIndex, nLine, SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_INVALID_REFERENCE );
 		}
 		uint32_t iResource = 0;
-		if ( sirEditorFindTextResource( pszSource, *pIndex, eKind, pId, nIdLength, &iResource ) != SIR_EDITOR_RESOURCE_OK ) {
-			return sirEditorFailResourceIndex( pIndex, nLine, SIR_EDITOR_RESOURCE_MISSING_REFERENCE );
+		if ( sirEditorFindTextResource( pszSource, *pIndex, eKind, pId, nIdLength, &iResource ) != SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_OK ) {
+			return sirEditorFailResourceIndex( pIndex, nLine, SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_MISSING_REFERENCE );
 		}
 		pCursor = pCall;
 	}
-	return SIR_EDITOR_RESOURCE_OK;
+	return SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_OK;
 }
 
-sirEditorTextResourceResult_t sirEditorScanTextResources( const char *pszSource, size_t nSourceBytes,
+SIREditorTextResourceResult sirEditorScanTextResources( const char *pszSource, size_t nSourceBytes,
                                                           sirEditorTextResourceIndex_t *pIndex ) noexcept
 {
 	if ( pIndex == nullptr ) {
-		return SIR_EDITOR_RESOURCE_INVALID_ARGUMENT;
+		return SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_INVALID_ARGUMENT;
 	}
 	pIndex->nCount = 0;
 	pIndex->nErrorLine = 0;
 #if SIZE_MAX == UINT32_MAX
 	if ( pIndex->nCapacity > SIZE_MAX / sizeof( sirEditorTextResource_t ) ) {
-		return SIR_EDITOR_RESOURCE_INVALID_ARGUMENT;
+		return SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_INVALID_ARGUMENT;
 	}
 #endif
 	if ( pszSource == nullptr || nSourceBytes > UINT32_MAX || ( pIndex->nCapacity != 0 && pIndex->pResources == nullptr ) ||
-	     ( ( uintptr_t )pIndex->pResources % alignof( sirEditorTextResource_t ) ) != 0 ||
+	     ( reinterpret_cast<uintptr_t>(pIndex->pResources) % alignof( sirEditorTextResource_t ) ) != 0 ||
 	     ( pIndex->nCapacity != 0 && sirEditorTextRangesOverlap( pszSource, nSourceBytes, pIndex->pResources,
-	                                                             ( size_t )pIndex->nCapacity * sizeof( sirEditorTextResource_t ) ) ) ||
+	                                                             static_cast<size_t>(pIndex->nCapacity) * sizeof( sirEditorTextResource_t ) ) ) ||
 	     ( pIndex->nCapacity != 0 && sirEditorTextRangesOverlap( pIndex, sizeof( *pIndex ), pIndex->pResources,
-	                                                             ( size_t )pIndex->nCapacity * sizeof( sirEditorTextResource_t ) ) ) ||
+	                                                             static_cast<size_t>(pIndex->nCapacity) * sizeof( sirEditorTextResource_t ) ) ) ||
 	     memchr( pszSource, '\0', nSourceBytes ) != nullptr ) {
-		return SIR_EDITOR_RESOURCE_INVALID_ARGUMENT;
+		return SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_INVALID_ARGUMENT;
 	}
 	bool bHeader = false;
 	bool bMultilineQuote = false;
@@ -770,7 +772,7 @@ sirEditorTextResourceResult_t sirEditorScanTextResources( const char *pszSource,
 	const char *pCursor = pszSource;
 	const char *pEnd = pszSource + nSourceBytes;
 	while ( pCursor < pEnd ) {
-		const char *pLineEnd = ( const char * )memchr( pCursor, '\n', ( size_t )( pEnd - pCursor ) );
+		const char *pLineEnd = static_cast<const char *>(memchr( pCursor, '\n', static_cast<size_t>( pEnd - pCursor ) ));
 		if ( pLineEnd == nullptr ) {
 			pLineEnd = pEnd;
 		}
@@ -781,32 +783,32 @@ sirEditorTextResourceResult_t sirEditorScanTextResources( const char *pszSource,
 		if ( pFirst < pLineEnd && *pFirst == '[' && !bMultilineQuote ) {
 			const char *pTagEnd = nullptr;
 			if ( !sirEditorFindTag( pFirst, pLineEnd, &pTagEnd ) ) {
-				return sirEditorFailResourceIndex( pIndex, nLine, SIR_EDITOR_RESOURCE_INVALID_TAG );
+				return sirEditorFailResourceIndex( pIndex, nLine, SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_INVALID_TAG );
 			}
 			const char *pTrailing = pTagEnd + 1;
 			while ( pTrailing < pLineEnd && sirEditorIsSpace( *pTrailing ) ) {
 				++pTrailing;
 			}
 			if ( pTrailing != pLineEnd && *pTrailing != '#' && *pTrailing != ';' ) {
-				return sirEditorFailResourceIndex( pIndex, nLine, SIR_EDITOR_RESOURCE_INVALID_TAG );
+				return sirEditorFailResourceIndex( pIndex, nLine, SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_INVALID_TAG );
 			}
 			const char *pNameStart = pFirst + 1;
 			const char *pNameEnd = pNameStart;
 			while ( pNameEnd < pTagEnd && !sirEditorIsSpace( *pNameEnd ) ) {
 				++pNameEnd;
 			}
-			const sirEditorTextField_t tag = { pNameStart, ( uint32_t )( pNameEnd - pNameStart ) };
+			const sirEditorTextField_t tag = { pNameStart, static_cast<uint32_t>( pNameEnd - pNameStart ) };
 			if ( !bHeader ) {
 				if ( !sirEditorFieldEquals( tag, "gd_scene" ) ) {
-					return sirEditorFailResourceIndex( pIndex, nLine, SIR_EDITOR_RESOURCE_INVALID_HEADER );
+					return sirEditorFailResourceIndex( pIndex, nLine, SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_INVALID_HEADER );
 				}
 				bHeader = true;
 			} else if ( sirEditorFieldEquals( tag, "ext_resource" ) || sirEditorFieldEquals( tag, "sub_resource" ) ) {
-				const sirEditorTextResourceKind_t eKind =
-				    sirEditorFieldEquals( tag, "ext_resource" ) ? SIR_EDITOR_RESOURCE_EXTERNAL : SIR_EDITOR_RESOURCE_EMBEDDED;
-				const sirEditorTextResourceResult_t eResult =
+				const SIREditorTextResourceKind eKind =
+				    sirEditorFieldEquals( tag, "ext_resource" ) ? SIREditorTextResourceKind::SIR_EDITOR_RESOURCE_EXTERNAL : SIREditorTextResourceKind::SIR_EDITOR_RESOURCE_EMBEDDED;
+				const SIREditorTextResourceResult eResult =
 				    sirEditorConsumeResourceTag( pszSource, pNameEnd, pTagEnd, nLine, eKind, pIndex );
-				if ( eResult != SIR_EDITOR_RESOURCE_OK ) {
+				if ( eResult != SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_OK ) {
 					return sirEditorFailResourceIndex( pIndex, nLine, eResult );
 				}
 			}
@@ -827,10 +829,10 @@ sirEditorTextResourceResult_t sirEditorScanTextResources( const char *pszSource,
 		++nLine;
 	}
 	if ( bMultilineQuote || bEscape ) {
-		return sirEditorFailResourceIndex( pIndex, nLine, SIR_EDITOR_RESOURCE_INVALID_TAG );
+		return sirEditorFailResourceIndex( pIndex, nLine, SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_INVALID_TAG );
 	}
 	if ( !bHeader ) {
-		return sirEditorFailResourceIndex( pIndex, nLine, SIR_EDITOR_RESOURCE_INVALID_HEADER );
+		return sirEditorFailResourceIndex( pIndex, nLine, SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_INVALID_HEADER );
 	}
 	return sirEditorValidateResourceCalls( pszSource, nSourceBytes, pIndex );
 }

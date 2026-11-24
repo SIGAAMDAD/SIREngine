@@ -44,16 +44,16 @@ const sirMeshKey_t& SIRMeshCollisionSource::getSourceKey( void ) const noexcept
 	return m_Geometry.key;
 }
 
-sirMeshResult_t SIRMeshCollisionSource::initialize( SIRMeshCache& cache, sirMeshHandle_t handle,
+SIRMeshResult SIRMeshCollisionSource::initialize( SIRMeshCache& cache, sirMeshHandle_t handle,
                                                     const sirMeshCollisionProfile_t& profile ) noexcept
 {
 	if ( m_bReady )
-		return SIR_MESH_BUSY;
+		return SIRMeshResult::SIR_MESH_BUSY;
 	if ( profile.nProfileId == 0 || profile.nReserved != 0 )
-		return SIR_MESH_INVALID_ARGUMENT;
-	sirMeshGeometryRead_t read = {};
-	const sirMeshResult_t result = cache.acquire( handle, &read );
-	if ( result != SIR_MESH_OK )
+		return SIRMeshResult::SIR_MESH_INVALID_ARGUMENT;
+	sirMeshGeometryRead_t read {};
+	const SIRMeshResult result = cache.acquire( handle, &read );
+	if ( result != SIRMeshResult::SIR_MESH_OK )
 		return result;
 	m_pCache = &cache;
 	m_Handle = handle;
@@ -61,81 +61,81 @@ sirMeshResult_t SIRMeshCollisionSource::initialize( SIRMeshCache& cache, sirMesh
 	m_Profile = profile;
 	m_nInstances = 0;
 	m_bReady = true;
-	return SIR_MESH_OK;
+	return SIRMeshResult::SIR_MESH_OK;
 }
 
-sirMeshResult_t SIRMeshCollisionSource::acquireInstance( void ) noexcept
+SIRMeshResult SIRMeshCollisionSource::acquireInstance( void ) noexcept
 {
 	if ( !m_bReady )
-		return SIR_MESH_NOT_READY;
+		return SIRMeshResult::SIR_MESH_NOT_READY;
 	if ( m_nInstances == UINT32_MAX )
-		return SIR_MESH_OUT_OF_CAPACITY;
+		return SIRMeshResult::SIR_MESH_OUT_OF_CAPACITY;
 	++m_nInstances;
-	return SIR_MESH_OK;
+	return SIRMeshResult::SIR_MESH_OK;
 }
 
-sirMeshResult_t SIRMeshCollisionSource::releaseInstance( void ) noexcept
+SIRMeshResult SIRMeshCollisionSource::releaseInstance( void ) noexcept
 {
 	if ( !m_bReady )
-		return SIR_MESH_NOT_READY;
+		return SIRMeshResult::SIR_MESH_NOT_READY;
 	if ( m_nInstances == 0 )
-		return SIR_MESH_INVALID_ARGUMENT;
+		return SIRMeshResult::SIR_MESH_INVALID_ARGUMENT;
 	--m_nInstances;
-	return SIR_MESH_OK;
+	return SIRMeshResult::SIR_MESH_OK;
 }
 
-sirMeshResult_t SIRMeshCollisionSource::getTriangle( uint32_t nTriangle, sirMeshCollisionTriangle_t *pOut ) const noexcept
+SIRMeshResult SIRMeshCollisionSource::getTriangle( uint32_t nTriangle, sirMeshCollisionTriangle_t *pOut ) const noexcept
 {
 	if ( !m_bReady )
-		return SIR_MESH_NOT_READY;
+		return SIRMeshResult::SIR_MESH_NOT_READY;
 	if ( pOut == nullptr || nTriangle >= m_Geometry.nIndexCount / 3 )
-		return SIR_MESH_INVALID_ARGUMENT;
-	sirMeshCollisionTriangle_t output = {};
+		return SIRMeshResult::SIR_MESH_INVALID_ARGUMENT;
+	sirMeshCollisionTriangle_t output {};
 	for ( uint32_t i = 0; i < 3; ++i ) {
 		const uint32_t vertex = m_Geometry.pTriangleIndices[nTriangle * 3 + i];
 		memcpy( output.positions + i * 3, m_Geometry.pPositionsXYZ + vertex * 3, 3 * sizeof( float ) );
 	}
 	output.nMaterialId = m_Profile.nMaterialId;
 	*pOut = output;
-	return SIR_MESH_OK;
+	return SIRMeshResult::SIR_MESH_OK;
 }
 
-sirMeshResult_t SIRMeshCollisionSource::raycast( const sirMeshCollisionRay_t& ray, sirMeshCollisionHit_t *pHit ) const noexcept
+SIRMeshResult SIRMeshCollisionSource::raycast( const sirMeshCollisionRay_t& ray, sirMeshCollisionHit_t *pHit ) const noexcept
 {
 	return raycastRange( ray, 0, getTriangleCount(), pHit );
 }
 
-sirMeshResult_t SIRMeshCollisionSource::raycastTriangle( const sirMeshCollisionRay_t& ray, uint32_t nTriangle,
+SIRMeshResult SIRMeshCollisionSource::raycastTriangle( const sirMeshCollisionRay_t& ray, uint32_t nTriangle,
                                                          sirMeshCollisionHit_t *pHit ) const noexcept
 {
 	if ( !m_bReady )
-		return SIR_MESH_NOT_READY;
+		return SIRMeshResult::SIR_MESH_NOT_READY;
 	if ( nTriangle >= getTriangleCount() )
-		return SIR_MESH_INVALID_ARGUMENT;
+		return SIRMeshResult::SIR_MESH_INVALID_ARGUMENT;
 	return raycastRange( ray, nTriangle, 1, pHit );
 }
 
-sirMeshResult_t SIRMeshCollisionSource::raycastRange( const sirMeshCollisionRay_t& ray, uint32_t nStart, uint32_t nCount,
+SIRMeshResult SIRMeshCollisionSource::raycastRange( const sirMeshCollisionRay_t& ray, uint32_t nStart, uint32_t nCount,
                                                       sirMeshCollisionHit_t *pHit ) const noexcept
 {
 	if ( !m_bReady )
-		return SIR_MESH_NOT_READY;
+		return SIRMeshResult::SIR_MESH_NOT_READY;
 	if ( pHit == nullptr || !std::isfinite( ray.fMaxDistance ) || ray.fMaxDistance <= 0.0f )
-		return SIR_MESH_INVALID_ARGUMENT;
+		return SIRMeshResult::SIR_MESH_INVALID_ARGUMENT;
 	float directionLength = 0.0f;
 	for ( uint32_t i = 0; i < 3; ++i ) {
 		if ( !std::isfinite( ray.origin[i] ) || !std::isfinite( ray.direction[i] ) )
-			return SIR_MESH_INVALID_ARGUMENT;
+			return SIRMeshResult::SIR_MESH_INVALID_ARGUMENT;
 		directionLength += ray.direction[i] * ray.direction[i];
 	}
 	if ( !std::isfinite( directionLength ) || directionLength <= 0.0f )
-		return SIR_MESH_INVALID_ARGUMENT;
+		return SIRMeshResult::SIR_MESH_INVALID_ARGUMENT;
 	const float reciprocalLength = 1.0f / std::sqrt( directionLength );
 	const float direction[3] = { ray.direction[0] * reciprocalLength, ray.direction[1] * reciprocalLength,
 	                             ray.direction[2] * reciprocalLength };
 	float closest = ray.fMaxDistance;
 	bool found = false;
-	sirMeshCollisionHit_t best = {};
+	sirMeshCollisionHit_t best {};
 	for ( uint32_t tri = nStart; tri < nStart + nCount; ++tri ) {
 		const float *v[3] = {};
 		for ( uint32_t i = 0; i < 3; ++i )
@@ -175,24 +175,24 @@ sirMeshResult_t SIRMeshCollisionSource::raycastRange( const sirMeshCollisionRay_
 		found = true;
 	}
 	if ( !found )
-		return SIR_MESH_NOT_FOUND;
+		return SIRMeshResult::SIR_MESH_NOT_FOUND;
 	*pHit = best;
-	return SIR_MESH_OK;
+	return SIRMeshResult::SIR_MESH_OK;
 }
 
-sirMeshResult_t SIRMeshCollisionSource::shutdown( void ) noexcept
+SIRMeshResult SIRMeshCollisionSource::shutdown( void ) noexcept
 {
 	if ( !m_bReady )
-		return SIR_MESH_NOT_READY;
+		return SIRMeshResult::SIR_MESH_NOT_READY;
 	if ( m_nInstances != 0 )
-		return SIR_MESH_BUSY;
-	const sirMeshResult_t result = m_pCache->release( m_Handle );
-	if ( result != SIR_MESH_OK )
+		return SIRMeshResult::SIR_MESH_BUSY;
+	const SIRMeshResult result = m_pCache->release( m_Handle );
+	if ( result != SIRMeshResult::SIR_MESH_OK )
 		return result;
 	m_pCache = nullptr;
 	m_Handle = {};
 	m_Geometry = {};
 	m_Profile = {};
 	m_bReady = false;
-	return SIR_MESH_OK;
+	return SIRMeshResult::SIR_MESH_OK;
 }

@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIREDITORTEXTWRITER_H__
-#define __SIRENGINE_SIREDITORTEXTWRITER_H__
+#ifndef __SIR_EDITORTEXTWRITER_H__
+#define __SIR_EDITORTEXTWRITER_H__
 
 #include <Core/SIRPCH.h>
 
@@ -26,15 +26,14 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Editor/Scene/SIREditorTextProperties.h>
 
-typedef enum sirEditorTextWriteResult_e : uint8_t
-{
+enum class SIREditorTextWriteResult : uint8_t {
 	SIR_EDITOR_WRITE_OK = 0,
 	SIR_EDITOR_WRITE_INVALID_ARGUMENT = 1,
 	SIR_EDITOR_WRITE_INVALID_SOURCE = 2,
 	SIR_EDITOR_WRITE_INVALID_SCALAR = 3,
 	SIR_EDITOR_WRITE_DUPLICATE_PATCH = 4,
 	SIR_EDITOR_WRITE_OUT_OF_CAPACITY = 5
-} sirEditorTextWriteResult_t;
+};
 
 typedef struct sirEditorTextEdit_s
 {
@@ -49,8 +48,8 @@ typedef struct sirEditorTextEdit_s
 // The caller reparses the result into the canonical editor document before
 // committing or saving it. No bytes are published on a failed validation.
 // pOutBytes excludes the trailing NUL; output capacity must include it.
-sirEditorTextWriteResult_t sirEditorWriteScalarPatches( const char *pszSource, size_t nSourceBytes,
+SIREditorTextWriteResult sirEditorWriteScalarPatches( const char *pszSource, size_t nSourceBytes,
                                                         const sirEditorTextPropertyIndex_t& index, const sirEditorTextEdit_t *pEdits,
                                                         uint32_t nEdits, char *pszOutput, size_t nCapacity, size_t *pOutBytes ) noexcept;
 
-#endif // __SIRENGINE_SIREDITORTEXTWRITER_H__
+#endif // __SIR_EDITORTEXTWRITER_H__

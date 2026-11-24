@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRD3D12SURFACES_H__
-#define __SIRENGINE_SIRD3D12SURFACES_H__
+#ifndef __SIR_D3_D12_SURFACES_H__
+#define __SIR_D3_D12_SURFACES_H__
 
 #include <Core/SIRPCH.h>
 
@@ -43,8 +43,8 @@ typedef struct sirD3D12SurfaceSlot_s
 	uint32_t nWidth = 0;
 	uint32_t nHeight = 0;
 	uint32_t iAcquiredImage = 0;
-	sirGraphicsFormat_t eFormat = SIR_GRAPHICS_FORMAT_UNKNOWN;
-	sirGraphicsPresentMode_t eMode = SIR_GRAPHICS_PRESENT_FIFO;
+	SIRGraphicsFormat eFormat = SIRGraphicsFormat::SIR_GRAPHICS_FORMAT_UNKNOWN;
+	SIRGraphicsPresentMode eMode = SIRGraphicsPresentMode::SIR_GRAPHICS_PRESENT_FIFO;
 	bool bAllowTearing = false;
 	bool bLive = false;
 	bool bAcquired = false;
@@ -64,10 +64,10 @@ private:
 	bool m_bTearingSupported = false;
 
 	sirD3D12SurfaceSlot_t *findSlot( sirGraphicsHandle_t hSurface ) noexcept;
-	sirGraphicsResult_t validateWindow( const sirGraphicsNativeSurface_t& native, const sirGraphicsPresentDesc_t& present ) const noexcept;
-	sirGraphicsResult_t releaseImages( sirD3D12SurfaceSlot_t& slot ) noexcept;
-	sirGraphicsResult_t importImages( sirD3D12SurfaceSlot_t& slot ) noexcept;
-	sirGraphicsResult_t createSwapchain( sirD3D12SurfaceSlot_t& slot, const sirGraphicsNativeSurface_t& native,
+	SIRGraphicsResult validateWindow( const sirGraphicsNativeSurface_t& native, const sirGraphicsPresentDesc_t& present ) const noexcept;
+	SIRGraphicsResult releaseImages( sirD3D12SurfaceSlot_t& slot ) noexcept;
+	SIRGraphicsResult importImages( sirD3D12SurfaceSlot_t& slot ) noexcept;
+	SIRGraphicsResult createSwapchain( sirD3D12SurfaceSlot_t& slot, const sirGraphicsNativeSurface_t& native,
 	                                     const sirGraphicsPresentDesc_t& present ) noexcept;
 	bool isDirectComplete( uint64_t nFence ) noexcept;
 	bool imageMatches( const sirD3D12SurfaceSlot_t& slot, const sirGraphicsSurfaceImage_t& image ) const noexcept;
@@ -79,15 +79,15 @@ public:
 	SIRD3D12Surfaces& operator=( const SIRD3D12Surfaces& ) = delete;
 	bool initialize( SIRD3D12Device *pNative, SIRD3D12Resources *pResources, uint32_t nGeneration ) noexcept;
 	void shutdown( bool bGpuComplete ) noexcept;
-	sirGraphicsResult_t createSurface( const sirGraphicsNativeSurface_t& native, const sirGraphicsPresentDesc_t& present,
+	SIRGraphicsResult createSurface( const sirGraphicsNativeSurface_t& native, const sirGraphicsPresentDesc_t& present,
 	                                   sirGraphicsHandle_t *pSurface ) noexcept;
-	sirGraphicsResult_t resizeSurface( sirGraphicsHandle_t hSurface, const sirGraphicsNativeSurface_t& native,
+	SIRGraphicsResult resizeSurface( sirGraphicsHandle_t hSurface, const sirGraphicsNativeSurface_t& native,
 	                                   const sirGraphicsPresentDesc_t& present ) noexcept;
-	sirGraphicsResult_t acquireSurfaceImage( sirGraphicsHandle_t hSurface, sirGraphicsSurfaceImage_t *pImage ) noexcept;
-	sirGraphicsResult_t validateSubmission( sirGraphicsQueue_t eQueue, const sirGraphicsSubmission_t& submission ) noexcept;
+	SIRGraphicsResult acquireSurfaceImage( sirGraphicsHandle_t hSurface, sirGraphicsSurfaceImage_t *pImage ) noexcept;
+	SIRGraphicsResult validateSubmission( SIRGraphicsQueue eQueue, const sirGraphicsSubmission_t& submission ) noexcept;
 	void completeSubmission( const sirGraphicsSubmission_t& submission, const sirGraphicsCompletion_t& completion ) noexcept;
-	sirGraphicsResult_t present( const sirGraphicsSurfaceImage_t& image, const sirGraphicsCompletion_t& renderComplete ) noexcept;
-	sirGraphicsResult_t retireSurface( sirGraphicsHandle_t hSurface, const sirGraphicsCompletionSet_t& completion ) noexcept;
+	SIRGraphicsResult present( const sirGraphicsSurfaceImage_t& image, const sirGraphicsCompletion_t& renderComplete ) noexcept;
+	SIRGraphicsResult retireSurface( sirGraphicsHandle_t hSurface, const sirGraphicsCompletionSet_t& completion ) noexcept;
 };
 
-#endif // __SIRENGINE_SIRD3D12SURFACES_H__
+#endif // __SIR_D3_D12_SURFACES_H__

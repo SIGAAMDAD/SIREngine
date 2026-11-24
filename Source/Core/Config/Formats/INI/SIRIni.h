@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRINI_H__
-#define __SIRENGINE_SIRINI_H__
+#ifndef __SIR_INI_H__
+#define __SIR_INI_H__
 
 #include <Core/SIRPCH.h>
 #include <Core/Config/SIRConfigTypes.h>
@@ -61,13 +61,13 @@ public:
 	SIRIniCodec( void ) = delete;
 	~SIRIniCodec( void ) = delete;
 
-	static sirConfigResult_t parse( const sirConfigInput_t& input, const sirConfigLimits_t& limits, const sirIniStorage_t& storage,
+	static SIRConfigResult parse( const sirConfigInput_t& input, const sirConfigLimits_t& limits, const sirIniStorage_t& storage,
 	                                sirIniParseResult_t *pResult ) noexcept;
-	static sirConfigResult_t write( const sirIniEntry_t *pEntries, uint32_t nCount, const sirConfigSink_t& sink,
+	static SIRConfigResult write( const sirIniEntry_t *pEntries, uint32_t nCount, const sirConfigSink_t& sink,
 	                                uint64_t nMaxBytes ) noexcept;
 
 protected:
 private:
 };
 
-#endif // __SIRENGINE_SIRINI_H__
+#endif // __SIR_INI_H__

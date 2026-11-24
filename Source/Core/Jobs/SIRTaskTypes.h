@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRTASKTYPES_H__
-#define __SIRENGINE_SIRTASKTYPES_H__
+#ifndef __SIR_TASKTYPES_H__
+#define __SIR_TASKTYPES_H__
 
 #include <Core/SIRPCH.h>
 
@@ -30,25 +30,22 @@ typedef struct sirTaskHandle_s
 	uint32_t nGeneration;
 } sirTaskHandle_t;
 
-typedef enum sirTaskExecutor_e : uint8_t
-{
+enum class SIRTaskExecutor : uint8_t {
 	SIR_TASK_EXEC_CPU = 0,
 	SIR_TASK_EXEC_MAIN = 1,
 	SIR_TASK_EXEC_RENDER = 2,
 	SIR_TASK_EXEC_PHYSICS = 3,
 	SIR_TASK_EXEC_AUDIO = 4,
 	SIR_TASK_EXEC_COUNT = 5
-} sirTaskExecutor_t;
+};
 
-typedef enum sirTaskPriority_e : uint8_t
-{
+enum class SIRTaskPriority : uint8_t {
 	SIR_TASK_PRIORITY_CRITICAL = 0,
 	SIR_TASK_PRIORITY_NORMAL = 1,
 	SIR_TASK_PRIORITY_BACKGROUND = 2
-} sirTaskPriority_t;
+};
 
-typedef enum sirTaskState_e : uint8_t
-{
+enum class SIRTaskState : uint8_t {
 	SIR_TASK_INVALID = 0,
 	SIR_TASK_QUEUED = 1,
 	SIR_TASK_RUNNING = 2,
@@ -57,20 +54,19 @@ typedef enum sirTaskState_e : uint8_t
 	SIR_TASK_CANCELLED = 5,
 	SIR_TASK_BLOCKED = 6,
 	SIR_TASK_AWAITING_PROVIDER = 7
-} sirTaskState_t;
+};
 
-typedef enum sirTaskResult_e : uint8_t
-{
+enum class SIRTaskResult : uint8_t {
 	SIR_TASK_RESULT_SUCCESS = 0,
 	SIR_TASK_RESULT_FAILURE = 1,
 	SIR_TASK_RESULT_PENDING = 2
-} sirTaskResult_t;
+};
 
 // Provider tasks (render/physics/audio) may return PENDING after scheduling
 // asynchronous work, then acknowledge the completion at a provider safe point.
 // Never captures heap-managed callable state. The caller owns pContext until
 // the task reaches a terminal state and its handle is released.
-typedef sirTaskResult_t ( *sirTaskFunction_t )( void *pContext, sirTaskHandle_t task ) noexcept;
+typedef SIRTaskResult ( *sirTaskFunction_t )( void *pContext, sirTaskHandle_t task ) noexcept;
 
 // Batch indices refer to task positions in the submitted array, not handles.
 // Every dependency must point from a lower index to a higher index.
@@ -78,8 +74,8 @@ typedef struct sirTaskBatchTask_s
 {
 	sirTaskFunction_t pFunction;
 	void *pContext;
-	sirTaskPriority_t ePriority;
-	sirTaskExecutor_t eExecutor;
+	SIRTaskPriority ePriority;
+	SIRTaskExecutor eExecutor;
 } sirTaskBatchTask_t;
 
 typedef struct sirTaskBatchEdge_s
@@ -96,4 +92,4 @@ typedef struct sirTaskBatchDesc_s
 	uint32_t nEdges;
 } sirTaskBatchDesc_t;
 
-#endif // __SIRENGINE_SIRTASKTYPES_H__
+#endif // __SIR_TASKTYPES_H__

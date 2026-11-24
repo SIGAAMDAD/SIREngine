@@ -14,8 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIREVENTTYPES_H__
-#define __SIRENGINE_SIREVENTTYPES_H__
+#ifndef __SIR_EVENTTYPES_H__
+#define __SIR_EVENTTYPES_H__
 
 #include <Core/SIRPCH.h>
 
@@ -74,8 +74,7 @@ typedef struct sirEventScheduleHandle_s
 	}
 } sirEventScheduleHandle_t;
 
-typedef enum sirEventPriority_e : uint8_t
-{
+enum class SIREventPriority : uint8_t {
 	SIR_EVENT_PRIORITY_VERY_LOW = 0,
 	SIR_EVENT_PRIORITY_LOW = 1,
 	SIR_EVENT_PRIORITY_NORMAL = 2,
@@ -83,22 +82,20 @@ typedef enum sirEventPriority_e : uint8_t
 	SIR_EVENT_PRIORITY_VERY_HIGH = 4,
 	SIR_EVENT_PRIORITY_CRITICAL = 5,
 	SIR_EVENT_PRIORITY_COUNT = 6
-} sirEventPriority_t;
+};
 
-typedef enum sirEventEnqueueStatus_e : uint8_t
-{
+enum class SIREventEnqueueStatus : uint8_t {
 	SIR_EVENT_ENQUEUE_OK = 0,
 	SIR_EVENT_ENQUEUE_FULL = 1,
 	SIR_EVENT_ENQUEUE_STOPPED = 2,
 	SIR_EVENT_ENQUEUE_NO_LISTENERS = 3
-} sirEventEnqueueStatus_t;
+};
 
-typedef enum sirEventEntryState_e : uint8_t
-{
+enum class SIREventEntryState : uint8_t {
 	SIR_EVENT_ENTRY_DEAD = 0,
 	SIR_EVENT_ENTRY_ACTIVE = 1,
 	SIR_EVENT_ENTRY_PENDING = 2
-} sirEventEntryState_t;
+};
 
 template <typename TPayload>
 struct sirEventDelegate_s
@@ -109,4 +106,4 @@ struct sirEventDelegate_s
 
 template <typename TPayload>
 using sirEventDelegate_t = sirEventDelegate_s<TPayload>;
-#endif // __SIRENGINE_SIREVENTTYPES_H__
+#endif // __SIR_EVENTTYPES_H__

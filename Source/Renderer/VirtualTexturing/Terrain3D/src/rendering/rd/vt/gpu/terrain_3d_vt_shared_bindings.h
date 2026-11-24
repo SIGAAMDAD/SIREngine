@@ -33,15 +33,14 @@ typedef struct t3dSharedVTBindings_s
 
 // Acquisition status is returned with the published binding snapshot. Forward+
 // callbacks never create or replace VT resources to satisfy this request.
-typedef enum t3dVTAcquireStatus_e : uint8_t
-{
+enum class SIRVTAcquireStatus : uint8_t {
 	T3D_VT_ACQUIRE_READY = 0,
 	T3D_VT_ACQUIRE_UNPUBLISHED,
 	T3D_VT_ACQUIRE_RESOURCE_CLASS_MISMATCH,
 	T3D_VT_ACQUIRE_REBUILD_IN_PROGRESS,
 	T3D_VT_ACQUIRE_INVALID_BINDINGS,
 	T3D_VT_ACQUIRE_FAILED
-} t3dVTAcquireStatus_t;
+};
 
 // Transitional source compatibility for the World Stage-A bridge. New
 // cross-renderer consumers should use t3dSharedVTBindings_t directly.

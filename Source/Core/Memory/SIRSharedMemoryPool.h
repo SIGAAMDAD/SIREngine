@@ -14,8 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSHAREDMEMORYPOOL_H__
-#define __SIRENGINE_SIRSHAREDMEMORYPOOL_H__
+#ifndef __SIR_SHAREDMEMORYPOOL_H__
+#define __SIR_SHAREDMEMORYPOOL_H__
 
 #include <Core/SIRPCH.h>
 
@@ -57,4 +57,4 @@ private:
 	uint64_t m_nCursor;
 };
 
-#endif // __SIRENGINE_SIRSHAREDMEMORYPOOL_H__
+#endif // __SIR_SHAREDMEMORYPOOL_H__

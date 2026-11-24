@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRGLCONTEXT_H__
-#define __SIRENGINE_SIRGLCONTEXT_H__
+#ifndef __SIR_GLCONTEXT_H__
+#define __SIR_GLCONTEXT_H__
 
 #include <Core/SIRPCH.h>
 
@@ -54,20 +54,20 @@ typedef struct sirGLProbe_s
 	char szRenderer[128];
 } sirGLProbe_t;
 
-sirGraphicsResult_t sirGLCreateNativeContext( const sirGraphicsABIHost_t *pHost, sirGLNativeContext_t **ppContext ) noexcept;
-sirGraphicsResult_t sirGLCreateNativeContextForWindow( const sirGraphicsABIHost_t *pHost, const sirGraphicsABINativeSurface_t *pNative,
+SIRGraphicsResult sirGLCreateNativeContext( const sirGraphicsABIHost_t *pHost, sirGLNativeContext_t **ppContext ) noexcept;
+SIRGraphicsResult sirGLCreateNativeContextForWindow( const sirGraphicsABIHost_t *pHost, const sirGraphicsABINativeSurface_t *pNative,
                                                        sirGLNativeContext_t **ppContext ) noexcept;
-sirGraphicsResult_t sirGLRestoreNativeContext( sirGLNativeContext_t *pContext ) noexcept;
-sirGraphicsResult_t sirGLCreatePresentWindow( sirGLNativeContext_t *pContext, const sirGraphicsABINativeSurface_t *pNative,
+SIRGraphicsResult sirGLRestoreNativeContext( sirGLNativeContext_t *pContext ) noexcept;
+SIRGraphicsResult sirGLCreatePresentWindow( sirGLNativeContext_t *pContext, const sirGraphicsABINativeSurface_t *pNative,
                                               const sirGraphicsABIPresentDesc_t *pPresent, sirGLPresentWindow_t *pWindow ) noexcept;
-sirGraphicsResult_t sirGLResizePresentWindow( sirGLNativeContext_t *pContext, sirGLPresentWindow_t *pWindow, uint32_t nWidth,
+SIRGraphicsResult sirGLResizePresentWindow( sirGLNativeContext_t *pContext, sirGLPresentWindow_t *pWindow, uint32_t nWidth,
                                               uint32_t nHeight ) noexcept;
-sirGraphicsResult_t sirGLBeginPresentWindow( sirGLNativeContext_t *pContext, const sirGLPresentWindow_t *pWindow ) noexcept;
-sirGraphicsResult_t sirGLSwapPresentWindow( sirGLNativeContext_t *pContext, const sirGLPresentWindow_t *pWindow ) noexcept;
-sirGraphicsResult_t sirGLDestroyPresentWindow( sirGLNativeContext_t *pContext, sirGLPresentWindow_t *pWindow ) noexcept;
+SIRGraphicsResult sirGLBeginPresentWindow( sirGLNativeContext_t *pContext, const sirGLPresentWindow_t *pWindow ) noexcept;
+SIRGraphicsResult sirGLSwapPresentWindow( sirGLNativeContext_t *pContext, const sirGLPresentWindow_t *pWindow ) noexcept;
+SIRGraphicsResult sirGLDestroyPresentWindow( sirGLNativeContext_t *pContext, sirGLPresentWindow_t *pWindow ) noexcept;
 void sirGLDestroyNativeContext( sirGLNativeContext_t *pContext ) noexcept;
-sirGraphicsResult_t sirGLReadNativeProbe( sirGLNativeContext_t *pContext, sirGLProbe_t *pProbe ) noexcept;
+SIRGraphicsResult sirGLReadNativeProbe( sirGLNativeContext_t *pContext, sirGLProbe_t *pProbe ) noexcept;
 bool sirGLContextOwnsThread( const sirGLNativeContext_t *pContext ) noexcept;
 void *sirGLResolveNativeProcedure( void *pUserData, const char *pszName ) noexcept;
 
-#endif // __SIRENGINE_SIRGLCONTEXT_H__
+#endif // __SIR_GLCONTEXT_H__

@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRFMODRUNTIME_H__
-#define __SIRENGINE_SIRFMODRUNTIME_H__
+#ifndef __SIR_FMODRUNTIME_H__
+#define __SIR_FMODRUNTIME_H__
 
 #include <Core/SIRPCH.h>
 
@@ -37,15 +37,14 @@ of merchantability, fitness for a particular purpose and noninfringement.
 typedef struct sirFMODRuntimeEventResolver_s
 {
 	void *pUserData;
-	sirAudioResult_t ( *resolve )( void *pUserData, uint64_t nEventId, uint64_t nProviderKey, const char **pszEventPath ) noexcept;
+	SIRAudioResult ( *resolve )( void *pUserData, uint64_t nEventId, uint64_t nProviderKey, const char **pszEventPath ) noexcept;
 } sirFMODRuntimeEventResolver_t;
 
-typedef enum sirFMODRuntimeObjectKind_e : uint8_t
-{
+enum class SIRFMODRuntimeObjectKind : uint8_t {
 	SIR_FMOD_RUNTIME_BUS = 1,
 	SIR_FMOD_RUNTIME_VCA = 2,
 	SIR_FMOD_RUNTIME_SNAPSHOT = 3
-} sirFMODRuntimeObjectKind_t;
+};
 
 // The editor/cooker provides these immutable records beside the existing v1
 // audio manifest. The package ID must name the bank supplying this object.
@@ -54,14 +53,14 @@ typedef struct sirFMODRuntimeObject_s
 	uint64_t nObjectId;
 	uint64_t nPackageId;
 	uint64_t nProviderKey;
-	sirFMODRuntimeObjectKind_t eKind;
+	SIRFMODRuntimeObjectKind eKind;
 	uint8_t nReserved[7];
 } sirFMODRuntimeObject_t;
 
 typedef struct sirFMODRuntimeObjectResolver_s
 {
 	void *pUserData;
-	sirAudioResult_t ( *resolve )( void *pUserData, sirFMODRuntimeObjectKind_t eKind, uint64_t nObjectId, uint64_t nProviderKey,
+	SIRAudioResult ( *resolve )( void *pUserData, SIRFMODRuntimeObjectKind eKind, uint64_t nObjectId, uint64_t nProviderKey,
 	                               const char **pszPath ) noexcept;
 } sirFMODRuntimeObjectResolver_t;
 
@@ -70,7 +69,7 @@ typedef struct sirFMODRuntimeObjectResolver_s
 typedef struct sirFMODRuntimeMemoryNativeOps_s
 {
 	uint32_t nAbiVersion;
-	sirAudioResult_t ( *install )( const sirContainerAllocator_t *pAllocator, uint64_t nBudgetBytes ) noexcept;
+	SIRAudioResult ( *install )( const sirContainerAllocator_t *pAllocator, uint64_t nBudgetBytes ) noexcept;
 	sirFMODMemoryBudgetStats_t ( *getStats )( void ) noexcept;
 } sirFMODRuntimeMemoryNativeOps_t;
 
@@ -122,8 +121,8 @@ private:
 	SIRFMODPackageLoader m_Packages;
 	const SIRAudioResourceStore *m_pManifest = nullptr;
 	const sirContainerAllocator_t *m_pAllocator = nullptr;
-	sirFMODRuntimeEventResolver_t m_EventResolver = {};
-	sirFMODRuntimeObjectResolver_t m_ObjectResolver = {};
+	sirFMODRuntimeEventResolver_t m_EventResolver {};
+	sirFMODRuntimeObjectResolver_t m_ObjectResolver {};
 	const sirFMODRuntimeObject_t *m_pObjects = nullptr;
 	uint8_t *m_pEventStates = nullptr;
 	uint8_t *m_pObjectStates = nullptr;
@@ -134,8 +133,8 @@ private:
 	bool m_bInitialized = false;
 	sirFMODMemoryBudgetStats_t ( *m_NativeMemoryStats )( void ) noexcept = nullptr;
 
-	sirAudioResult_t registerNativeParameters( void ) noexcept;
-	sirAudioResult_t bindPackageResources( void ) noexcept;
+	SIRAudioResult registerNativeParameters( void ) noexcept;
+	SIRAudioResult bindPackageResources( void ) noexcept;
 	void rollbackNewBindings( void ) noexcept;
 	void commitNewBindings( void ) noexcept;
 	void synchronizeReleasedBindings( void ) noexcept;
@@ -147,19 +146,19 @@ public:
 	SIRFMODRuntime( const SIRFMODRuntime& ) = delete;
 	SIRFMODRuntime& operator=( const SIRFMODRuntime& ) = delete;
 
-	sirAudioResult_t initialize( const sirFMODRuntimeConfig_t& config, const sirFMODRuntimeNativeOps_t& ops ) noexcept;
-	sirAudioResult_t shutdown( void ) noexcept;
-	sirAudioResult_t loadPackage( uint64_t nPackageId, bool bPreloadSamples ) noexcept;
-	sirAudioResult_t beginLoadPackage( uint64_t nPackageId, bool bPreloadSamples ) noexcept;
-	sirAudioResult_t pollLoadPackage( void ) noexcept;
-	sirAudioResult_t cancelLoadPackage( void ) noexcept;
+	SIRAudioResult initialize( const sirFMODRuntimeConfig_t& config, const sirFMODRuntimeNativeOps_t& ops ) noexcept;
+	SIRAudioResult shutdown( void ) noexcept;
+	SIRAudioResult loadPackage( uint64_t nPackageId, bool bPreloadSamples ) noexcept;
+	SIRAudioResult beginLoadPackage( uint64_t nPackageId, bool bPreloadSamples ) noexcept;
+	SIRAudioResult pollLoadPackage( void ) noexcept;
+	SIRAudioResult cancelLoadPackage( void ) noexcept;
 	uint64_t getPendingPackageId( void ) const noexcept;
-	sirAudioResult_t getSampleState( uint64_t nPackageId, sirFMODSampleState_t& eState ) noexcept;
-	sirAudioResult_t recoverOutput( int32_t iPreferredDriver, bool bFallbackToFirst ) noexcept;
-	sirAudioResult_t releasePackage( uint64_t nPackageId ) noexcept;
-	sirAudioResult_t collectUnused( void ) noexcept;
+	SIRAudioResult getSampleState( uint64_t nPackageId, SIRFMODSampleState& eState ) noexcept;
+	SIRAudioResult recoverOutput( int32_t iPreferredDriver, bool bFallbackToFirst ) noexcept;
+	SIRAudioResult releasePackage( uint64_t nPackageId ) noexcept;
+	SIRAudioResult collectUnused( void ) noexcept;
 	uint32_t update( void ) noexcept;
-	sirAudioResult_t getPlayingTimeline( sirAudioPlayingHandle_t hPlaying, uint32_t& nMilliseconds ) noexcept;
+	SIRAudioResult getPlayingTimeline( sirAudioPlayingHandle_t hPlaying, uint32_t& nMilliseconds ) noexcept;
 	bool isReady( void ) const noexcept;
 	SIRAudioSystem& getAudio( void ) noexcept;
 	SIRFMODContext& getContext( void ) noexcept;
@@ -176,4 +175,4 @@ public:
 sirFMODRuntimeNativeOps_t sirGetFMODRuntimeNativeOps( void ) noexcept;
 sirFMODRuntimeMemoryNativeOps_t sirGetFMODNativeMemoryOps( void ) noexcept;
 
-#endif // __SIRENGINE_SIRFMODRUNTIME_H__
+#endif // __SIR_FMODRUNTIME_H__

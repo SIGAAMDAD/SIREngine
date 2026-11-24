@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRAUDIORESOURCES_H__
-#define __SIRENGINE_SIRAUDIORESOURCES_H__
+#ifndef __SIR_AUDIORESOURCES_H__
+#define __SIR_AUDIORESOURCES_H__
 
 #include <Core/SIRPCH.h>
 
@@ -35,23 +35,20 @@ constexpr uint32_t SIR_AUDIO_MANIFEST_MAGIC = 0x41524953U; // "SIRA" on little-e
 constexpr uint16_t SIR_AUDIO_MANIFEST_VERSION = 1;
 constexpr uint8_t SIR_AUDIO_MANIFEST_LITTLE_ENDIAN = 1;
 
-typedef enum sirAudioProvider_e : uint8_t
-{
+enum class SIRAudioProvider : uint8_t {
 	SIR_AUDIO_PROVIDER_NONE = 0,
 	SIR_AUDIO_PROVIDER_FMOD = 1,
 	SIR_AUDIO_PROVIDER_WWISE = 2,
 	SIR_AUDIO_PROVIDER_OPENAL = 3
-} sirAudioProvider_t;
+};
 
-typedef enum sirAudioBindingMode_e : uint8_t
-{
+enum class SIRAudioBindingMode : uint8_t {
 	SIR_AUDIO_BINDING_REJECT = 0,
 	SIR_AUDIO_BINDING_NATIVE = 1,
 	SIR_AUDIO_BINDING_EMULATED = 2
-} sirAudioBindingMode_t;
+};
 
-typedef enum sirAudioManifestResult_e : uint8_t
-{
+enum class SIRAudioManifestResult : uint8_t {
 	SIR_AUDIO_MANIFEST_OK = 0,
 	SIR_AUDIO_MANIFEST_INVALID_ARGUMENT = 1,
 	SIR_AUDIO_MANIFEST_BAD_SCHEMA = 2,
@@ -64,7 +61,7 @@ typedef enum sirAudioManifestResult_e : uint8_t
 	SIR_AUDIO_MANIFEST_OUT_OF_MEMORY = 9,
 	SIR_AUDIO_MANIFEST_EPOCH_EXHAUSTED = 10,
 	SIR_AUDIO_MANIFEST_CYCLIC_DEPENDENCY = 11
-} sirAudioManifestResult_t;
+};
 
 // Little-endian cooked v1 header. Tables follow directly in this order:
 // packages, events, controls, then uint64_t package-dependency IDs.
@@ -82,7 +79,7 @@ typedef struct sirAudioManifestHeader_s
 	uint32_t nDependencyCount;
 	uint16_t nVersion;
 	uint16_t nHeaderBytes;
-	sirAudioProvider_t eProvider;
+	SIRAudioProvider eProvider;
 	uint8_t nEndianness;
 	uint16_t nFlags;
 	uint64_t nReserved;
@@ -113,9 +110,9 @@ typedef struct sirAudioControlRecord_s
 	float fDefault;
 	float fMinimum;
 	float fMaximum;
-	sirAudioControlScope_t eScope;
-	sirAudioControlType_t eType;
-	sirAudioBindingMode_t eBindingMode;
+	SIRAudioControlScope eScope;
+	SIRAudioControlType eType;
+	SIRAudioBindingMode eBindingMode;
 	uint8_t nReserved;
 } sirAudioControlRecord_t;
 
@@ -144,7 +141,7 @@ typedef struct sirAudioManifestLoadOptions_s
 {
 	const sirContainerAllocator_t *pAllocator;
 	uint64_t nAvailableCapabilities;
-	sirAudioProvider_t eExpectedProvider;
+	SIRAudioProvider eExpectedProvider;
 	uint32_t nSourceProviderId;
 } sirAudioManifestLoadOptions_t;
 
@@ -158,11 +155,11 @@ class SIRAudioResourceStore
 private:
 	const uint8_t *m_pBytes = nullptr;
 	SIRResourceGraph *m_pSourceGraph = nullptr;
-	SIRResourcePinHandle m_SourcePin = {};
-	SIRResourceHandle m_SourceHandle = {};
+	SIRResourcePinHandle m_SourcePin {};
+	SIRResourceHandle m_SourceHandle {};
 	uint64_t m_nSourceRevision = 0;
 	const sirContainerAllocator_t *m_pAllocator = nullptr;
-	sirAudioManifestHeader_t m_Header = {};
+	sirAudioManifestHeader_t m_Header {};
 	uint64_t m_nEpoch = 0;
 	size_t m_nPackageOffset = 0;
 	size_t m_nEventOffset = 0;
@@ -179,14 +176,14 @@ public:
 	SIRAudioResourceStore& operator=( const SIRAudioResourceStore& ) = delete;
 
 	static uint64_t hashPayload( const void *pBytes, size_t nBytes ) noexcept;
-	sirAudioManifestResult_t load( SIRResourceGraph& rGraph, SIRResourceHandle hManifest, SIRResourceChunkId chunkId,
+	SIRAudioManifestResult load( SIRResourceGraph& rGraph, SIRResourceHandle hManifest, SIRResourceChunkId chunkId,
 	                               const sirAudioManifestLoadOptions_t& rOptions ) noexcept;
 	const uint8_t *getBorrowedManifestBytes( void ) const noexcept;
 	uint64_t getSourceRevision( void ) const noexcept;
 	void shutdown( void ) noexcept;
 	bool isLoaded( void ) const noexcept;
 	uint64_t getEpoch( void ) const noexcept;
-	sirAudioProvider_t getProvider( void ) const noexcept;
+	SIRAudioProvider getProvider( void ) const noexcept;
 	uint64_t getBuildFingerprint( void ) const noexcept;
 	uint32_t getEventCount( void ) const noexcept;
 	bool getEventAt( uint32_t iEvent, sirAudioEventRecord_t& event ) const noexcept;
@@ -200,7 +197,7 @@ public:
 	uint32_t getControlCount( void ) const noexcept;
 	bool getControlAt( uint32_t iControl, sirAudioControlRecord_t& control ) const noexcept;
 	bool findControl( uint64_t nControlId, sirAudioControlRecord_t& control ) const noexcept;
-	sirAudioResult_t validateControl( uint64_t nControlId, sirAudioControlScope_t eScope, float fValue ) const noexcept;
+	SIRAudioResult validateControl( uint64_t nControlId, SIRAudioControlScope eScope, float fValue ) const noexcept;
 };
 
-#endif // __SIRENGINE_SIRAUDIORESOURCES_H__
+#endif // __SIR_AUDIORESOURCES_H__

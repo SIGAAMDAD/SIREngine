@@ -24,7 +24,7 @@ SIRScriptCachedProgramSource::SIRScriptCachedProgramSource( void ) noexcept
 
 SIRScriptCachedProgramSource::~SIRScriptCachedProgramSource( void ) noexcept
 {
-	( void )shutdown();
+	static_cast<void>(shutdown());
 }
 
 bool SIRScriptCachedProgramSource::isOwnerThread( void ) const noexcept
@@ -62,57 +62,57 @@ bool SIRScriptCachedProgramSource::sameDescriptor( const sirScriptCachedArtifact
 	       memcmp( a.key.szDigest, b.key.szDigest, 32 ) == 0 && memcmp( a.szPayloadDigest, b.szPayloadDigest, 32 ) == 0;
 }
 
-sirScriptResult_t SIRScriptCachedProgramSource::configure( SIRScriptArtifactCache *pCache, const sirScriptPayloadAllocatorAPI_t& allocator,
+SIRScriptResult SIRScriptCachedProgramSource::configure( SIRScriptArtifactCache *pCache, const sirScriptPayloadAllocatorAPI_t& allocator,
                                                            uint64_t nMaximumResidentBytes ) noexcept
 {
 	if ( !isOwnerThread() || m_bInAllocator ) {
-		return SIR_SCRIPT_BUSY;
+		return SIRScriptResult::SIR_SCRIPT_BUSY;
 	}
 	if ( m_pCache != nullptr ) {
-		return SIR_SCRIPT_WRONG_STATE;
+		return SIRScriptResult::SIR_SCRIPT_WRONG_STATE;
 	}
 	if ( pCache == nullptr || allocator.nABIRevision != SIR_SCRIPT_PAYLOAD_ALLOCATOR_ABI_REVISION || allocator.pAllocate == nullptr ||
 	     allocator.pRelease == nullptr || allocator.nMaximumBytes == 0 || allocator.nMaximumAlignment == 0 ||
 	     ( allocator.nMaximumAlignment & ( allocator.nMaximumAlignment - 1 ) ) != 0 || nMaximumResidentBytes == 0 ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 	m_pCache = pCache;
 	m_Allocator = allocator;
 	m_nMaximumResidentBytes = nMaximumResidentBytes;
-	return SIR_SCRIPT_OK;
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
-sirScriptResult_t SIRScriptCachedProgramSource::registerArtifact( const sirScriptCachedArtifact_t& descriptor,
+SIRScriptResult SIRScriptCachedProgramSource::registerArtifact( const sirScriptCachedArtifact_t& descriptor,
                                                                   sirScriptCachedEntryHandle_t *pHandle ) noexcept
 {
 	if ( !isOwnerThread() || m_bInAllocator ) {
-		return SIR_SCRIPT_BUSY;
+		return SIRScriptResult::SIR_SCRIPT_BUSY;
 	}
 	if ( m_pCache == nullptr ) {
-		return SIR_SCRIPT_WRONG_STATE;
+		return SIRScriptResult::SIR_SCRIPT_WRONG_STATE;
 	}
 	if ( pHandle == nullptr || !validDescriptor( descriptor ) ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 	if ( descriptor.nBytes > m_Allocator.nMaximumBytes || descriptor.nAlignment > m_Allocator.nMaximumAlignment ||
 	     descriptor.nBytes > m_nMaximumResidentBytes ) {
-		return SIR_SCRIPT_CAPACITY_EXCEEDED;
+		return SIRScriptResult::SIR_SCRIPT_CAPACITY_EXCEEDED;
 	}
 
 	int32_t iFree = -1;
 	for ( uint32_t iEntry = 0; iEntry < MAX_ENTRIES; ++iEntry ) {
 		const sirScriptCachedSourceEntry_t& entry = m_szEntries[iEntry];
 		if ( !entry.bOccupied && iFree < 0 ) {
-			iFree = ( int32_t )iEntry;
+			iFree = static_cast<int32_t>(iEntry);
 		}
 		if ( entry.bOccupied && entry.descriptor.artifact.nBackendId == descriptor.artifact.nBackendId &&
 		     entry.descriptor.artifact.nProgramId == descriptor.artifact.nProgramId &&
 		     entry.descriptor.artifact.nRevision == descriptor.artifact.nRevision ) {
-			return sameDescriptor( entry.descriptor, descriptor ) ? SIR_SCRIPT_DUPLICATE : SIR_SCRIPT_TYPE_MISMATCH;
+			return sameDescriptor( entry.descriptor, descriptor ) ? SIRScriptResult::SIR_SCRIPT_DUPLICATE : SIRScriptResult::SIR_SCRIPT_TYPE_MISMATCH;
 		}
 	}
 	if ( iFree < 0 ) {
-		return SIR_SCRIPT_CAPACITY_EXCEEDED;
+		return SIRScriptResult::SIR_SCRIPT_CAPACITY_EXCEEDED;
 	}
 
 	sirScriptCachedSourceEntry_t& entry = m_szEntries[iFree];
@@ -121,30 +121,30 @@ sirScriptResult_t SIRScriptCachedProgramSource::registerArtifact( const sirScrip
 	entry.nPins = 0;
 	entry.allocation = {};
 	entry.bOccupied = true;
-	*pHandle = { ( uint32_t )iFree + 1, entry.nGeneration };
-	return SIR_SCRIPT_OK;
+	*pHandle = { static_cast<uint32_t>(iFree) + 1, entry.nGeneration };
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
-sirScriptResult_t SIRScriptCachedProgramSource::unregisterArtifact( sirScriptCachedEntryHandle_t handle ) noexcept
+SIRScriptResult SIRScriptCachedProgramSource::unregisterArtifact( sirScriptCachedEntryHandle_t handle ) noexcept
 {
 	if ( !isOwnerThread() || m_bInAllocator ) {
-		return SIR_SCRIPT_BUSY;
+		return SIRScriptResult::SIR_SCRIPT_BUSY;
 	}
 	if ( handle.nSlot == 0 || handle.nSlot > MAX_ENTRIES ) {
-		return SIR_SCRIPT_INVALID_HANDLE;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_HANDLE;
 	}
 	sirScriptCachedSourceEntry_t& entry = m_szEntries[handle.nSlot - 1];
 	if ( !entry.bOccupied || entry.nGeneration != handle.nGeneration ) {
-		return SIR_SCRIPT_INVALID_HANDLE;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_HANDLE;
 	}
 	if ( entry.nPins != 0 ) {
-		return SIR_SCRIPT_BUSY;
+		return SIRScriptResult::SIR_SCRIPT_BUSY;
 	}
 	releaseEntry( handle.nSlot - 1 );
 	entry.bOccupied = false;
 	entry.nGeneration = nextGeneration( entry.nGeneration );
 	entry.descriptor = {};
-	return SIR_SCRIPT_OK;
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
 void SIRScriptCachedProgramSource::releaseEntry( uint32_t iEntry ) noexcept
@@ -161,66 +161,66 @@ void SIRScriptCachedProgramSource::releaseEntry( uint32_t iEntry ) noexcept
 	m_bInAllocator = false;
 }
 
-sirScriptResult_t SIRScriptCachedProgramSource::acquire( uint64_t nBackendId, uint64_t nProgramId, uint64_t nRevision,
+SIRScriptResult SIRScriptCachedProgramSource::acquire( uint64_t nBackendId, uint64_t nProgramId, uint64_t nRevision,
                                                          sirScriptProgramView_t *pView, uint64_t *pToken ) noexcept
 {
 	if ( !isOwnerThread() || m_bInAllocator ) {
-		return SIR_SCRIPT_BUSY;
+		return SIRScriptResult::SIR_SCRIPT_BUSY;
 	}
 	if ( m_pCache == nullptr ) {
-		return SIR_SCRIPT_WRONG_STATE;
+		return SIRScriptResult::SIR_SCRIPT_WRONG_STATE;
 	}
 	if ( pView == nullptr || pToken == nullptr || nBackendId == 0 || nProgramId == 0 || nRevision == 0 ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 	int32_t iEntry = -1;
 	for ( uint32_t i = 0; i < MAX_ENTRIES; ++i ) {
 		const sirScriptCachedSourceEntry_t& entry = m_szEntries[i];
 		if ( entry.bOccupied && entry.descriptor.artifact.nBackendId == nBackendId && entry.descriptor.artifact.nProgramId == nProgramId &&
 		     entry.descriptor.artifact.nRevision == nRevision ) {
-			iEntry = ( int32_t )i;
+			iEntry = static_cast<int32_t>(i);
 			break;
 		}
 	}
 	if ( iEntry < 0 ) {
-		return SIR_SCRIPT_NOT_FOUND;
+		return SIRScriptResult::SIR_SCRIPT_NOT_FOUND;
 	}
 	int32_t iLease = -1;
 	for ( uint32_t i = 0; i < MAX_LEASES; ++i ) {
 		if ( !m_szLeases[i].bOccupied ) {
-			iLease = ( int32_t )i;
+			iLease = static_cast<int32_t>(i);
 			break;
 		}
 	}
 	if ( iLease < 0 ) {
-		return SIR_SCRIPT_CAPACITY_EXCEEDED;
+		return SIRScriptResult::SIR_SCRIPT_CAPACITY_EXCEEDED;
 	}
 
 	sirScriptCachedSourceEntry_t& entry = m_szEntries[iEntry];
 	if ( entry.allocation.nToken == 0 ) {
 		if ( entry.descriptor.nBytes > m_nMaximumResidentBytes - m_nResidentBytes ) {
-			return SIR_SCRIPT_CAPACITY_EXCEEDED;
+			return SIRScriptResult::SIR_SCRIPT_CAPACITY_EXCEEDED;
 		}
-		sirScriptPayloadAllocation_t allocation = {};
+		sirScriptPayloadAllocation_t allocation {};
 		m_bInAllocator = true;
-		const sirScriptResult_t eAllocated =
-		    m_Allocator.pAllocate( m_Allocator.pUser, ( uint32_t )entry.descriptor.nBytes, entry.descriptor.nAlignment, &allocation );
+		const SIRScriptResult eAllocated =
+		    m_Allocator.pAllocate( m_Allocator.pUser, static_cast<uint32_t>(entry.descriptor.nBytes), entry.descriptor.nAlignment, &allocation );
 		m_bInAllocator = false;
-		if ( eAllocated != SIR_SCRIPT_OK ) {
+		if ( eAllocated != SIRScriptResult::SIR_SCRIPT_OK ) {
 			// Allocators must return no owned allocation on failure.
 			return eAllocated;
 		}
 		if ( allocation.pData == nullptr || allocation.nToken == 0 ||
-		     ( ( uintptr_t )allocation.pData & ( entry.descriptor.nAlignment - 1 ) ) != 0 ) {
+		     ( reinterpret_cast<uintptr_t>(allocation.pData) & ( entry.descriptor.nAlignment - 1 ) ) != 0 ) {
 			if ( allocation.pData != nullptr && allocation.nToken != 0 ) {
 				m_bInAllocator = true;
 				m_Allocator.pRelease( m_Allocator.pUser, allocation );
 				m_bInAllocator = false;
 			}
-			return SIR_SCRIPT_BACKEND_FAILURE;
+			return SIRScriptResult::SIR_SCRIPT_BACKEND_FAILURE;
 		}
-		const sirScriptResult_t eFetch = m_pCache->fetch( entry.descriptor, allocation.pData, entry.descriptor.nBytes );
-		if ( eFetch != SIR_SCRIPT_OK ) {
+		const SIRScriptResult eFetch = m_pCache->fetch( entry.descriptor, allocation.pData, entry.descriptor.nBytes );
+		if ( eFetch != SIRScriptResult::SIR_SCRIPT_OK ) {
 			m_bInAllocator = true;
 			m_Allocator.pRelease( m_Allocator.pUser, allocation );
 			m_bInAllocator = false;
@@ -235,7 +235,7 @@ sirScriptResult_t SIRScriptCachedProgramSource::acquire( uint64_t nBackendId, ui
 
 	sirScriptCachedSourceLease_t& lease = m_szLeases[iLease];
 	lease.nGeneration = nextGeneration( lease.nGeneration );
-	lease.iEntry = ( uint32_t )iEntry;
+	lease.iEntry = static_cast<uint32_t>(iEntry);
 	lease.bOccupied = true;
 	++entry.nPins;
 	*pView = { nProgramId,
@@ -244,8 +244,8 @@ sirScriptResult_t SIRScriptCachedProgramSource::acquire( uint64_t nBackendId, ui
 	           entry.allocation.pData,
 	           entry.descriptor.nBytes,
 	           entry.descriptor.nAlignment };
-	*pToken = ( ( uint64_t )lease.nGeneration << 32 ) | ( uint32_t )( iLease + 1 );
-	return SIR_SCRIPT_OK;
+	*pToken = ( static_cast<uint64_t>(lease.nGeneration) << 32 ) | static_cast<uint32_t>( iLease + 1 );
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
 void SIRScriptCachedProgramSource::release( uint64_t nToken ) noexcept
@@ -253,8 +253,8 @@ void SIRScriptCachedProgramSource::release( uint64_t nToken ) noexcept
 	if ( !isOwnerThread() || m_bInAllocator ) {
 		return;
 	}
-	const uint32_t nSlot = ( uint32_t )nToken;
-	const uint32_t nGeneration = ( uint32_t )( nToken >> 32 );
+	const uint32_t nSlot = static_cast<uint32_t>(nToken);
+	const uint32_t nGeneration = static_cast<uint32_t>( nToken >> 32 );
 	if ( nSlot == 0 || nSlot > MAX_LEASES || nGeneration == 0 ) {
 		return;
 	}
@@ -273,19 +273,19 @@ void SIRScriptCachedProgramSource::release( uint64_t nToken ) noexcept
 	}
 }
 
-sirScriptResult_t SIRScriptCachedProgramSource::acquireThunk( void *pUser, uint64_t nBackendId, uint64_t nProgramId, uint64_t nRevision,
+SIRScriptResult SIRScriptCachedProgramSource::acquireThunk( void *pUser, uint64_t nBackendId, uint64_t nProgramId, uint64_t nRevision,
                                                               sirScriptProgramView_t *pView, uint64_t *pToken ) noexcept
 {
 	if ( pUser == nullptr ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
-	return ( ( SIRScriptCachedProgramSource * )pUser )->acquire( nBackendId, nProgramId, nRevision, pView, pToken );
+	return static_cast<SIRScriptCachedProgramSource *>(pUser)->acquire( nBackendId, nProgramId, nRevision, pView, pToken );
 }
 
 void SIRScriptCachedProgramSource::releaseThunk( void *pUser, uint64_t nToken ) noexcept
 {
 	if ( pUser != nullptr ) {
-		( ( SIRScriptCachedProgramSource * )pUser )->release( nToken );
+		static_cast<SIRScriptCachedProgramSource *>(pUser)->release( nToken );
 	}
 }
 
@@ -294,14 +294,14 @@ sirScriptProgramSourceAPI_t SIRScriptCachedProgramSource::makeProgramSourceAPI( 
 	return { SIR_SCRIPT_PROGRAM_SOURCE_ABI_REVISION, this, acquireThunk, releaseThunk };
 }
 
-sirScriptResult_t SIRScriptCachedProgramSource::shutdown( void ) noexcept
+SIRScriptResult SIRScriptCachedProgramSource::shutdown( void ) noexcept
 {
 	if ( !isOwnerThread() || m_bInAllocator ) {
-		return SIR_SCRIPT_BUSY;
+		return SIRScriptResult::SIR_SCRIPT_BUSY;
 	}
 	for ( uint32_t iLease = 0; iLease < MAX_LEASES; ++iLease ) {
 		if ( m_szLeases[iLease].bOccupied ) {
-			return SIR_SCRIPT_BUSY;
+			return SIRScriptResult::SIR_SCRIPT_BUSY;
 		}
 	}
 	for ( uint32_t iEntry = 0; iEntry < MAX_ENTRIES; ++iEntry ) {
@@ -316,12 +316,12 @@ sirScriptResult_t SIRScriptCachedProgramSource::shutdown( void ) noexcept
 	m_pCache = nullptr;
 	m_Allocator = {};
 	m_nMaximumResidentBytes = 0;
-	return SIR_SCRIPT_OK;
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
 sirScriptCachedSourceStats_t SIRScriptCachedProgramSource::stats( void ) const noexcept
 {
-	sirScriptCachedSourceStats_t result = {};
+	sirScriptCachedSourceStats_t result {};
 	if ( !isOwnerThread() || m_bInAllocator ) {
 		return result;
 	}

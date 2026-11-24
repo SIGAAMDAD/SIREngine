@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef SIR_CORE_PCH_H
-#define SIR_CORE_PCH_H
+#ifndef __SIR_PCH_H__
+#define __SIR_PCH_H__
 
 // clang-format off
 #if defined(SIR_PRAGMA_ONCE_SUPPORTED) && SIR_PRAGMA_ONCE_SUPPORTED
@@ -317,4 +317,4 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Platform/SIRPlatform.h>
 #endif
 
-#endif // SIR_CORE_PCH_H
+#endif // __SIR_PCH_H__

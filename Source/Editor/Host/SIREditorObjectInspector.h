@@ -8,8 +8,8 @@ License, v2. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIREDITOROBJECTINSPECTOR_H__
-#define __SIRENGINE_SIREDITOROBJECTINSPECTOR_H__
+#ifndef __SIR_EDITOROBJECTINSPECTOR_H__
+#define __SIR_EDITOROBJECTINSPECTOR_H__
 #include <Core/SIRPCH.h>
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -22,7 +22,7 @@ typedef struct sirEditorInspectorEntry_s
 {
 	uint32_t nPropertyId;
 	uint64_t nNameAtom;
-	sirPropertyKind_t eKind;
+	SIRPropertyKind eKind;
 	bool bHasValue;
 	sirPropertyValue_t value;
 } sirEditorInspectorEntry_t;
@@ -33,9 +33,9 @@ class SIREditorObjectInspector
 {
 public:
 	SIREditorObjectInspector( void ) noexcept;
-	sirEditorResult_t initialize( const SIREditorSceneDocument *pDocument, const SIRObjectRegistry *pRegistry ) noexcept;
+	SIREditorResult initialize( const SIREditorSceneDocument *pDocument, const SIRObjectRegistry *pRegistry ) noexcept;
 	void shutdown( void ) noexcept;
-	sirEditorResult_t inspect( uint64_t nNodeId, sirEditorInspectorEntry_t *pOutput, uint32_t nCapacity,
+	SIREditorResult inspect( uint64_t nNodeId, sirEditorInspectorEntry_t *pOutput, uint32_t nCapacity,
 	                           uint32_t *pOutCount ) const noexcept;
 
 protected:
@@ -43,4 +43,4 @@ private:
 	const SIREditorSceneDocument *m_pDocument;
 	const SIRObjectRegistry *m_pRegistry;
 };
-#endif // __SIRENGINE_SIREDITOROBJECTINSPECTOR_H__
+#endif // __SIR_EDITOROBJECTINSPECTOR_H__

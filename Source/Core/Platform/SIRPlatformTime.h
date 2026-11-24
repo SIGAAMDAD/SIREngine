@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRPLATFORMTIME_H__
-#define __SIRENGINE_SIRPLATFORMTIME_H__
+#ifndef __SIR_PLATFORMTIME_H__
+#define __SIR_PLATFORMTIME_H__
 
 #include <Core/SIRPCH.h>
 
@@ -35,4 +35,4 @@ public:
 	static uint64_t getMonotonicNanoseconds( void ) noexcept;
 };
 
-#endif // __SIRENGINE_SIRPLATFORMTIME_H__
+#endif // __SIR_PLATFORMTIME_H__

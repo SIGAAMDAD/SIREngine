@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRGRAPHICSREGISTRY_H__
-#define __SIRENGINE_SIRGRAPHICSREGISTRY_H__
+#ifndef __SIR_GRAPHICSREGISTRY_H__
+#define __SIR_GRAPHICSREGISTRY_H__
 
 #include <Core/SIRPCH.h>
 
@@ -28,7 +28,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 typedef struct sirGraphicsSelection_s
 {
-	sirGraphicsBackend_t eBackend;
+	SIRGraphicsBackend eBackend;
 	sirGraphicsVersion_t nMinimumApiVersion;
 	uint64_t nRequiredFeatures;
 	bool bAllowSoftware;
@@ -48,13 +48,13 @@ public:
 	SIRGraphicsRegistry( const SIRGraphicsRegistry& ) = delete;
 	SIRGraphicsRegistry& operator=( const SIRGraphicsRegistry& ) = delete;
 
-	sirGraphicsResult_t registerDriver( SIRGraphicsDriver *pDriver ) noexcept;
-	sirGraphicsResult_t unregisterDriver( sirGraphicsBackend_t eBackend ) noexcept;
-	SIRGraphicsDriver *findDriver( sirGraphicsBackend_t eBackend ) const noexcept;
-	sirGraphicsResult_t selectDriver( const sirGraphicsSelection_t& selection, SIRGraphicsDriver **ppDriver,
+	SIRGraphicsResult registerDriver( SIRGraphicsDriver *pDriver ) noexcept;
+	SIRGraphicsResult unregisterDriver( SIRGraphicsBackend eBackend ) noexcept;
+	SIRGraphicsDriver *findDriver( SIRGraphicsBackend eBackend ) const noexcept;
+	SIRGraphicsResult selectDriver( const sirGraphicsSelection_t& selection, SIRGraphicsDriver **ppDriver,
 	                                  sirGraphicsAdapterInfo_t *pAdapter ) const noexcept;
 	uint32_t getCount( void ) const noexcept;
 	uint32_t getCapacity( void ) const noexcept;
 };
 
-#endif // __SIRENGINE_SIRGRAPHICSREGISTRY_H__
+#endif // __SIR_GRAPHICSREGISTRY_H__

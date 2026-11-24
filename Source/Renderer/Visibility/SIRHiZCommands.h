@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRHIZCOMMANDS_H__
-#define __SIRENGINE_SIRHIZCOMMANDS_H__
+#ifndef __SIR_HIZCOMMANDS_H__
+#define __SIR_HIZCOMMANDS_H__
 
 #include <Core/SIRPCH.h>
 
@@ -42,13 +42,13 @@ typedef struct sirHiZCommandResources_s
 	sirGraphicsHandle_t hPyramidTexture;
 	sirGraphicsHandle_t hCopyPipeline;
 	sirGraphicsHandle_t hReducePipeline;
-	sirGraphicsState_t eDepthBefore;
-	sirGraphicsState_t ePyramidBefore;
+	SIRGraphicsState eDepthBefore;
+	SIRGraphicsState ePyramidBefore;
 } sirHiZCommandResources_t;
 
 // All argument validation happens before recording. If a driver call fails,
 // the command list has partial commands and must be reset/discarded by caller.
 // A successful return means recorded commands, not GPU completion.
-sirGraphicsResult_t sirHiZRecordPyramid( SIRGraphicsCommandList& commands, const sirHiZCommandResources_t& resources ) noexcept;
+SIRGraphicsResult sirHiZRecordPyramid( SIRGraphicsCommandList& commands, const sirHiZCommandResources_t& resources ) noexcept;
 
-#endif // __SIRENGINE_SIRHIZCOMMANDS_H__
+#endif // __SIR_HIZCOMMANDS_H__

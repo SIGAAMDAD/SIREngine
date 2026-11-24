@@ -12,8 +12,8 @@ express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIRD3D9FORMATS_H__
-#define __SIRENGINE_SIRD3D9FORMATS_H__
+#ifndef __SIR_D3_D9_FORMATS_H__
+#define __SIR_D3_D9_FORMATS_H__
 #include <Core/SIRPCH.h>
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
 #pragma once
@@ -21,7 +21,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #ifdef _WIN32
 #include <Renderer/Drivers/D3D9/SIRD3D9Native.h>
 
-sirGraphicsResult_t sirD3D9NativeMapFormat( sirGraphicsFormat_t eFormat, D3DFORMAT *pNativeFormat ) noexcept;
-sirGraphicsResult_t sirD3D9NativeQueryFormat( sirD3D9Native_t *pNative, sirGraphicsABIFormat_t *pFormat ) noexcept;
+SIRGraphicsResult sirD3D9NativeMapFormat( SIRGraphicsFormat eFormat, D3DFORMAT *pNativeFormat ) noexcept;
+SIRGraphicsResult sirD3D9NativeQueryFormat( sirD3D9Native_t *pNative, sirGraphicsABIFormat_t *pFormat ) noexcept;
 #endif
-#endif // __SIRENGINE_SIRD3D9FORMATS_H__
+#endif // __SIR_D3_D9_FORMATS_H__

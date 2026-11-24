@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRANIMATIONPOSE_H__
-#define __SIRENGINE_SIRANIMATIONPOSE_H__
+#ifndef __SIR_ANIMATIONPOSE_H__
+#define __SIR_ANIMATIONPOSE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -34,7 +34,7 @@ public:
 	SIRAnimationPoseEvaluator( void ) noexcept = default;
 	virtual ~SIRAnimationPoseEvaluator( void ) noexcept = default;
 
-	virtual sirAnimationResult_t evaluate( const sirAnimationPoseEvaluation_t& request, const sirAnimationGraphOutput_t& graphOutput,
+	virtual SIRAnimationResult evaluate( const sirAnimationPoseEvaluation_t& request, const sirAnimationGraphOutput_t& graphOutput,
 	                                       sirAnimationMutablePose_t *pPose ) noexcept = 0;
 
 protected:
@@ -50,11 +50,11 @@ public:
 	SIRAnimationPosePublisher( void ) noexcept = default;
 	virtual ~SIRAnimationPosePublisher( void ) noexcept = default;
 
-	virtual sirAnimationResult_t getLatestPose( sirAnimationInstance_t instance, sirAnimationPoseHandle_t *pHandle ) const noexcept = 0;
+	virtual SIRAnimationResult getLatestPose( sirAnimationInstance_t instance, sirAnimationPoseHandle_t *pHandle ) const noexcept = 0;
 
-	virtual sirAnimationResult_t publishPose( const sirAnimationPosePublication_t& pose, sirAnimationPoseHandle_t *pHandle ) noexcept = 0;
-	virtual sirAnimationResult_t acquirePose( sirAnimationPoseHandle_t handle, sirAnimationPoseView_t *pView ) noexcept = 0;
-	virtual sirAnimationResult_t releasePose( sirAnimationPoseLease_t lease ) noexcept = 0;
+	virtual SIRAnimationResult publishPose( const sirAnimationPosePublication_t& pose, sirAnimationPoseHandle_t *pHandle ) noexcept = 0;
+	virtual SIRAnimationResult acquirePose( sirAnimationPoseHandle_t handle, sirAnimationPoseView_t *pView ) noexcept = 0;
+	virtual SIRAnimationResult releasePose( sirAnimationPoseLease_t lease ) noexcept = 0;
 
 protected:
 private:
@@ -68,10 +68,10 @@ public:
 	SIRAnimationEventSink( void ) noexcept = default;
 	virtual ~SIRAnimationEventSink( void ) noexcept = default;
 
-	virtual sirAnimationResult_t commitEvents( const sirAnimationEventBatch_t& batch, uint64_t *pCommittedCursor ) noexcept = 0;
+	virtual SIRAnimationResult commitEvents( const sirAnimationEventBatch_t& batch, uint64_t *pCommittedCursor ) noexcept = 0;
 
 protected:
 private:
 };
 
-#endif // __SIRENGINE_SIRANIMATIONPOSE_H__
+#endif // __SIR_ANIMATIONPOSE_H__

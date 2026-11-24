@@ -13,10 +13,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRWINDOWSGAMEINPUTBACKEND_H__
-#define __SIRENGINE_SIRWINDOWSGAMEINPUTBACKEND_H__
+#ifndef __SIR_WINDOWSGAMEINPUTBACKEND_H__
+#define __SIR_WINDOWSGAMEINPUTBACKEND_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -50,7 +50,7 @@ public:
 	SIRWindowsGameInputBackend( const SIRWindowsGameInputBackend& ) = delete;
 	SIRWindowsGameInputBackend& operator=( const SIRWindowsGameInputBackend& ) = delete;
 
-	sirInputBackendId_t id( void ) const noexcept override;
+	SIRInputBackendId id( void ) const noexcept override;
 	bool initialize( void ) noexcept;
 	void sample( SIRInputService& service ) noexcept override;
 	void resynchronize( SIRInputService& service ) noexcept override;
@@ -86,4 +86,4 @@ private:
 	std::atomic<bool> m_bOverflow;
 };
 
-#endif // __SIRENGINE_SIRWINDOWSGAMEINPUTBACKEND_H__
+#endif // __SIR_WINDOWSGAMEINPUTBACKEND_H__

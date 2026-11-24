@@ -2,7 +2,7 @@
 #ifndef SIR_READ_MOSTLY_MAP_H
 #define SIR_READ_MOSTLY_MAP_H
 #include <Core/Containers/SIRFrozenHashIndex.h>
-#include <Core/Platform/SIRAtomic.h>
+#include <atomic>
 #include <Core/Platform/SIRSync.h>
 #include <Core/Platform/SIRScopedLock.h>
 #include <new>
@@ -15,9 +15,9 @@ public:
 
 private:
 	const sirContainerAllocator_t *m_pAllocator;
-	mutable SIRAtomic<uint32_t> m_nReaders{ 0 };
-	SIRAtomic<bool> m_bPublishing{ false };
-	SIRAtomic<SIRFrozenHashIndex<K, V, Hash, Equal> *> m_pSnapshot{ nullptr };
+	mutable std::atomic<uint32_t> m_nReaders{ 0 };
+	std::atomic<bool> m_bPublishing{ false };
+	std::atomic<SIRFrozenHashIndex<K, V, Hash, Equal> *> m_pSnapshot{ nullptr };
 	SIRMutex m_writeMutex;
 	static void destroy( const sirContainerAllocator_t *pAllocator, SIRFrozenHashIndex<K, V, Hash, Equal> *pSnapshot ) noexcept
 	{
@@ -38,19 +38,19 @@ public:
 		explicit ReadGuard( const SIRReadMostlyMap *pOwner ) noexcept : m_pOwner( pOwner )
 		{
 			for ( ;; ) {
-				while ( m_pOwner->m_bPublishing.load( SIR_MEMORY_ORDER_ACQUIRE ) ) {
+				while ( m_pOwner->m_bPublishing.load( std::memory_order_acquire ) ) {
 				}
-				m_pOwner->m_nReaders.fetchAdd( 1, SIR_MEMORY_ORDER_ACQUIRE_RELEASE );
-				if ( !m_pOwner->m_bPublishing.load( SIR_MEMORY_ORDER_ACQUIRE ) ) {
-					m_pSnapshot = m_pOwner->m_pSnapshot.load( SIR_MEMORY_ORDER_ACQUIRE );
+				m_pOwner->m_nReaders.fetch_add( 1, std::memory_order_acq_rel );
+				if ( !m_pOwner->m_bPublishing.load( std::memory_order_acquire ) ) {
+					m_pSnapshot = m_pOwner->m_pSnapshot.load( std::memory_order_acquire );
 					break;
 				}
-				m_pOwner->m_nReaders.fetchSub( 1, SIR_MEMORY_ORDER_RELEASE );
+				m_pOwner->m_nReaders.fetch_sub( 1, std::memory_order_release );
 			}
 		}
 		~ReadGuard( void ) noexcept
 		{
-			m_pOwner->m_nReaders.fetchSub( 1, SIR_MEMORY_ORDER_RELEASE );
+			m_pOwner->m_nReaders.fetch_sub( 1, std::memory_order_release );
 		}
 		ReadGuard( const ReadGuard& ) = delete;
 		ReadGuard& operator=( const ReadGuard& ) = delete;
@@ -76,13 +76,13 @@ public:
 	{
 		return ReadGuard( this );
 	}
-	sirContainerResult_t tryPublish( const Entry *pEntries, uint32_t nCount )
+	SIRContainerResult tryPublish( const Entry *pEntries, uint32_t nCount )
 	{
 		SIRScopedLock<SIRMutex> guard( m_writeMutex );
 		void *pMemory = nullptr;
-		sirContainerResult_t eResult = SIRRawStorage::tryAllocate( m_pAllocator, sizeof( SIRFrozenHashIndex<K, V, Hash, Equal> ),
+		SIRContainerResult eResult = SIRRawStorage::tryAllocate( m_pAllocator, sizeof( SIRFrozenHashIndex<K, V, Hash, Equal> ),
 		                                                           alignof( SIRFrozenHashIndex<K, V, Hash, Equal> ), &pMemory );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		auto *pNew = new ( pMemory ) SIRFrozenHashIndex<K, V, Hash, Equal>( m_pAllocator );
@@ -92,17 +92,17 @@ public:
 			destroy( m_pAllocator, pNew );
 			throw;
 		}
-		if ( eResult != SIR_CONTAINER_OK ) {
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			destroy( m_pAllocator, pNew );
 			return eResult;
 		}
-		m_bPublishing.store( true, SIR_MEMORY_ORDER_RELEASE );
-		while ( m_nReaders.load( SIR_MEMORY_ORDER_ACQUIRE ) != 0 ) {
+		m_bPublishing.store( true, std::memory_order_release );
+		while ( m_nReaders.load( std::memory_order_acquire ) != 0 ) {
 		}
-		auto *pOld = m_pSnapshot.exchange( pNew, SIR_MEMORY_ORDER_ACQUIRE_RELEASE );
-		m_bPublishing.store( false, SIR_MEMORY_ORDER_RELEASE );
+		auto *pOld = m_pSnapshot.exchange( pNew, std::memory_order_acq_rel );
+		m_bPublishing.store( false, std::memory_order_release );
 		destroy( m_pAllocator, pOld );
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 };
 #endif

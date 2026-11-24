@@ -12,13 +12,13 @@ express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIRPUBLISHEDSTATE_H__
-#define __SIRENGINE_SIRPUBLISHEDSTATE_H__
+#ifndef __SIR_PUBLISHEDSTATE_H__
+#define __SIR_PUBLISHEDSTATE_H__
 #include <Core/SIRPCH.h>
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
 #pragma once
 #endif
-#include <Core/Platform/SIRAtomic.h>
+#include <atomic>
 #include <type_traits>
 #include <stdint.h>
 
@@ -97,13 +97,13 @@ public:
 		if ( ppState == nullptr || m_nWriteSlot != UINT32_MAX || m_nRevision >= UINT64_MAX / 16 - 1 ) {
 			return false;
 		}
-		const uint64_t nPublished = m_nPublished.load( SIR_MEMORY_ORDER_SEQUENTIAL );
+		const uint64_t nPublished = m_nPublished.load( std::memory_order_seq_cst );
 		for ( uint32_t iOffset = 0; iOffset < Capacity; ++iOffset ) {
 			const uint32_t iSlot = ( m_nCursor + iOffset ) % Capacity;
 			if ( nPublished != 0 && iSlot == ( ( nPublished & 15U ) - 1 ) ) {
 				continue;
 			}
-			if ( m_szSlots[iSlot].m_nPins.load( SIR_MEMORY_ORDER_SEQUENTIAL ) != CLOSED ) {
+			if ( m_szSlots[iSlot].m_nPins.load( std::memory_order_seq_cst ) != CLOSED ) {
 				continue;
 			}
 
@@ -120,19 +120,19 @@ public:
 		if ( m_nWriteSlot == UINT32_MAX ) {
 			return false;
 		}
-		const uint64_t nPrevious = m_nPublished.load( SIR_MEMORY_ORDER_SEQUENTIAL );
+		const uint64_t nPrevious = m_nPublished.load( std::memory_order_seq_cst );
 		const uint32_t iPublishedSlot = m_nWriteSlot;
 		const uint64_t nNextRevision = m_nRevision + 1;
-		const uint64_t nNext = ( nNextRevision << 4U ) | ( uint64_t )( iPublishedSlot + 1 );
+		const uint64_t nNext = ( nNextRevision << 4U ) | static_cast<uint64_t>( iPublishedSlot + 1 );
 
 		// Open the finished immutable slot, then make the new token visible.
-		m_szSlots[iPublishedSlot].m_nPins.store( 0, SIR_MEMORY_ORDER_SEQUENTIAL );
-		m_nPublished.store( nNext, SIR_MEMORY_ORDER_SEQUENTIAL );
+		m_szSlots[iPublishedSlot].m_nPins.store( 0, std::memory_order_seq_cst );
+		m_nPublished.store( nNext, std::memory_order_seq_cst );
 		// An old reader can enter between publication and closure, but must fail
 		// the token recheck and release its pin before this slot is reusable.
 		if ( nPrevious != 0 ) {
-			const uint32_t iOld = ( uint32_t )( ( nPrevious & 15U ) - 1 );
-			m_szSlots[iOld].m_nPins.fetchOr( CLOSED, SIR_MEMORY_ORDER_SEQUENTIAL );
+			const uint32_t iOld = static_cast<uint32_t>(  ( nPrevious & 15U ) - 1  );
+			m_szSlots[iOld].m_nPins.fetch_or( CLOSED, std::memory_order_seq_cst );
 		}
 		m_nRevision = nNextRevision;
 		m_nWriteSlot = UINT32_MAX;
@@ -150,33 +150,33 @@ public:
 			return false;
 		}
 		for ( uint32_t nAttempts = 0; nAttempts < 256; ++nAttempts ) {
-			const uint64_t nToken = m_nPublished.load( SIR_MEMORY_ORDER_SEQUENTIAL );
+			const uint64_t nToken = m_nPublished.load( std::memory_order_seq_cst );
 			if ( nToken == 0 ) {
 				return false;
 			}
-			const uint32_t iSlot = ( uint32_t )( ( nToken & 15U ) - 1 );
-			uint32_t nPins = m_szSlots[iSlot].m_nPins.load( SIR_MEMORY_ORDER_SEQUENTIAL );
+			const uint32_t iSlot = static_cast<uint32_t>(  ( nToken & 15U ) - 1  );
+			uint32_t nPins = m_szSlots[iSlot].m_nPins.load( std::memory_order_seq_cst );
 			if ( ( nPins & CLOSED ) != 0 || nPins == CLOSED - 1 ) {
 				continue;
 			}
-			if ( !m_szSlots[iSlot].m_nPins.compareExchangeWeak( nPins, nPins + 1, SIR_MEMORY_ORDER_SEQUENTIAL ) ) {
+			if ( !m_szSlots[iSlot].m_nPins.compare_exchange_weak( nPins, nPins + 1, std::memory_order_seq_cst ) ) {
 				continue;
 			}
-			if ( m_nPublished.load( SIR_MEMORY_ORDER_SEQUENTIAL ) == nToken ) {
+			if ( m_nPublished.load( std::memory_order_seq_cst ) == nToken ) {
 				lease.m_pOwner = this;
 				lease.m_pState = &m_szSlots[iSlot].m_State;
 				lease.m_nSlot = iSlot;
 				lease.m_nRevision = nToken >> 4U;
 				return true;
 			}
-			m_szSlots[iSlot].m_nPins.fetchSub( 1, SIR_MEMORY_ORDER_SEQUENTIAL );
+			m_szSlots[iSlot].m_nPins.fetch_sub( 1, std::memory_order_seq_cst );
 		}
 		return false;
 	}
 
 	uint64_t getRevision( void ) const noexcept
 	{
-		return m_nPublished.load( SIR_MEMORY_ORDER_ACQUIRE ) >> 4U;
+		return m_nPublished.load( std::memory_order_acquire ) >> 4U;
 	}
 
 private:
@@ -188,19 +188,19 @@ private:
 		Slot( void ) noexcept : m_nPins( CLOSED ), m_State{}
 		{
 		}
-		SIRAtomic<uint32_t> m_nPins;
+		std::atomic<uint32_t> m_nPins;
 		T m_State;
 	};
 
 	void release( uint32_t iSlot ) noexcept
 	{
-		m_szSlots[iSlot].m_nPins.fetchSub( 1, SIR_MEMORY_ORDER_SEQUENTIAL );
+		m_szSlots[iSlot].m_nPins.fetch_sub( 1, std::memory_order_seq_cst );
 	}
 
 	Slot m_szSlots[Capacity];
-	SIRAtomic<uint64_t> m_nPublished;
+	std::atomic<uint64_t> m_nPublished;
 	uint64_t m_nRevision;
 	uint32_t m_nWriteSlot;
 	uint32_t m_nCursor;
 };
-#endif // __SIRENGINE_SIRPUBLISHEDSTATE_H__
+#endif // __SIR_PUBLISHEDSTATE_H__

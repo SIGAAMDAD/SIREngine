@@ -27,79 +27,79 @@ SIRSemaphore::SIRSemaphore( void ) noexcept : m_pHandle( nullptr )
 
 SIRSemaphore::~SIRSemaphore( void ) noexcept
 {
-	( void )close();
+	static_cast<void>(close());
 }
 
-sirSemaphoreResult_t SIRSemaphore::create( uint32_t nInitialCount ) noexcept
+SIRSemaphoreResult SIRSemaphore::create( uint32_t nInitialCount ) noexcept
 {
 	if ( m_pHandle != nullptr || nInitialCount > INT32_MAX ) {
-		return SIR_SEMAPHORE_INVALID_ARGUMENT;
+		return SIRSemaphoreResult::SIR_SEMAPHORE_INVALID_ARGUMENT;
 	}
-	HANDLE hSemaphore = CreateSemaphoreW( nullptr, ( LONG )nInitialCount, LONG_MAX, nullptr );
+	HANDLE hSemaphore = CreateSemaphoreW( nullptr, static_cast<LONG>(nInitialCount), LONG_MAX, nullptr );
 	if ( hSemaphore == nullptr ) {
-		return SIR_SEMAPHORE_OS_ERROR;
+		return SIRSemaphoreResult::SIR_SEMAPHORE_OS_ERROR;
 	}
 	m_pHandle = hSemaphore;
-	return SIR_SEMAPHORE_OK;
+	return SIRSemaphoreResult::SIR_SEMAPHORE_OK;
 }
 
-sirSemaphoreResult_t SIRSemaphore::post( void ) noexcept
+SIRSemaphoreResult SIRSemaphore::post( void ) noexcept
 {
 	if ( m_pHandle == nullptr ) {
-		return SIR_SEMAPHORE_CLOSED;
+		return SIRSemaphoreResult::SIR_SEMAPHORE_CLOSED;
 	}
-	if ( ReleaseSemaphore( ( HANDLE )m_pHandle, 1, nullptr ) != FALSE ) {
-		return SIR_SEMAPHORE_OK;
+	if ( ReleaseSemaphore( static_cast<HANDLE>(m_pHandle), 1, nullptr ) != FALSE ) {
+		return SIRSemaphoreResult::SIR_SEMAPHORE_OK;
 	}
-	return GetLastError() == ERROR_TOO_MANY_POSTS ? SIR_SEMAPHORE_LIMIT_REACHED : SIR_SEMAPHORE_OS_ERROR;
+	return GetLastError() == ERROR_TOO_MANY_POSTS ? SIRSemaphoreResult::SIR_SEMAPHORE_LIMIT_REACHED : SIRSemaphoreResult::SIR_SEMAPHORE_OS_ERROR;
 }
 
-sirSemaphoreResult_t SIRSemaphore::wait( void ) noexcept
+SIRSemaphoreResult SIRSemaphore::wait( void ) noexcept
 {
 	if ( m_pHandle == nullptr ) {
-		return SIR_SEMAPHORE_CLOSED;
+		return SIRSemaphoreResult::SIR_SEMAPHORE_CLOSED;
 	}
-	return WaitForSingleObject( ( HANDLE )m_pHandle, INFINITE ) == WAIT_OBJECT_0 ? SIR_SEMAPHORE_OK : SIR_SEMAPHORE_OS_ERROR;
+	return WaitForSingleObject( static_cast<HANDLE>(m_pHandle), INFINITE ) == WAIT_OBJECT_0 ? SIRSemaphoreResult::SIR_SEMAPHORE_OK : SIRSemaphoreResult::SIR_SEMAPHORE_OS_ERROR;
 }
 
-sirSemaphoreResult_t SIRSemaphore::tryWait( void ) noexcept
+SIRSemaphoreResult SIRSemaphore::tryWait( void ) noexcept
 {
 	if ( m_pHandle == nullptr ) {
-		return SIR_SEMAPHORE_CLOSED;
+		return SIRSemaphoreResult::SIR_SEMAPHORE_CLOSED;
 	}
-	const DWORD nResult = WaitForSingleObject( ( HANDLE )m_pHandle, 0 );
+	const DWORD nResult = WaitForSingleObject( static_cast<HANDLE>(m_pHandle), 0 );
 	if ( nResult == WAIT_OBJECT_0 ) {
-		return SIR_SEMAPHORE_OK;
+		return SIRSemaphoreResult::SIR_SEMAPHORE_OK;
 	}
-	return nResult == WAIT_TIMEOUT ? SIR_SEMAPHORE_WOULD_BLOCK : SIR_SEMAPHORE_OS_ERROR;
+	return nResult == WAIT_TIMEOUT ? SIRSemaphoreResult::SIR_SEMAPHORE_WOULD_BLOCK : SIRSemaphoreResult::SIR_SEMAPHORE_OS_ERROR;
 }
 
-sirSemaphoreResult_t SIRSemaphore::waitFor( uint32_t nMilliseconds ) noexcept
+SIRSemaphoreResult SIRSemaphore::waitFor( uint32_t nMilliseconds ) noexcept
 {
 	if ( m_pHandle == nullptr ) {
-		return SIR_SEMAPHORE_CLOSED;
+		return SIRSemaphoreResult::SIR_SEMAPHORE_CLOSED;
 	}
 	if ( nMilliseconds == 0 ) {
 		return tryWait();
 	}
-	const DWORD nTimeout = nMilliseconds == INFINITE ? INFINITE - 1 : ( DWORD )nMilliseconds;
-	const DWORD nResult = WaitForSingleObject( ( HANDLE )m_pHandle, nTimeout );
+	const DWORD nTimeout = nMilliseconds == INFINITE ? INFINITE - 1 : static_cast<DWORD>(nMilliseconds);
+	const DWORD nResult = WaitForSingleObject( static_cast<HANDLE>(m_pHandle), nTimeout );
 	if ( nResult == WAIT_OBJECT_0 ) {
-		return SIR_SEMAPHORE_OK;
+		return SIRSemaphoreResult::SIR_SEMAPHORE_OK;
 	}
-	return nResult == WAIT_TIMEOUT ? SIR_SEMAPHORE_TIMED_OUT : SIR_SEMAPHORE_OS_ERROR;
+	return nResult == WAIT_TIMEOUT ? SIRSemaphoreResult::SIR_SEMAPHORE_TIMED_OUT : SIRSemaphoreResult::SIR_SEMAPHORE_OS_ERROR;
 }
 
-sirSemaphoreResult_t SIRSemaphore::close( void ) noexcept
+SIRSemaphoreResult SIRSemaphore::close( void ) noexcept
 {
 	if ( m_pHandle == nullptr ) {
-		return SIR_SEMAPHORE_OK;
+		return SIRSemaphoreResult::SIR_SEMAPHORE_OK;
 	}
-	if ( CloseHandle( ( HANDLE )m_pHandle ) == FALSE ) {
-		return SIR_SEMAPHORE_OS_ERROR;
+	if ( CloseHandle( static_cast<HANDLE>(m_pHandle) ) == FALSE ) {
+		return SIRSemaphoreResult::SIR_SEMAPHORE_OS_ERROR;
 	}
 	m_pHandle = nullptr;
-	return SIR_SEMAPHORE_OK;
+	return SIRSemaphoreResult::SIR_SEMAPHORE_OK;
 }
 
 bool SIRSemaphore::isOpen( void ) const noexcept

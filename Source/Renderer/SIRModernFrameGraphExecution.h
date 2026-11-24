@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRMODERNFRAMEGRAPHEXECUTION_H__
-#define __SIRENGINE_SIRMODERNFRAMEGRAPHEXECUTION_H__
+#ifndef __SIR_MODERNFRAMEGRAPHEXECUTION_H__
+#define __SIR_MODERNFRAMEGRAPHEXECUTION_H__
 
 #include <Core/SIRPCH.h>
 
@@ -61,13 +61,13 @@ typedef struct sirModernCompletionQuery_s
 	uint32_t nProviderId;
 	uint32_t nProviderGeneration;
 	uint32_t nLaneCount;
-	uint32_t szQueueToProviderLane[SIR_GRAPHICS_QUEUE_COUNT];
+	uint32_t szQueueToProviderLane[SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT];
 } sirModernCompletionQuery_t;
 
 class SIRModernCompletionObserver
 {
 public:
-	static sirGraphicsResult_t observe( const sirModernCompletionQuery_t& query, SIRRenderingDevice& device,
+	static SIRGraphicsResult observe( const sirModernCompletionQuery_t& query, SIRRenderingDevice& device,
 	                                    sirProviderCompletionSet_t *pObserved ) noexcept;
 
 protected:
@@ -77,8 +77,8 @@ private:
 class SIRModernFrameGraphExecutor
 {
 public:
-	static sirGraphicsResult_t validate( const sirModernFramePlan_t& plan, const sirGraphicsABIPipelineModelCaps_t& caps ) noexcept;
-	static sirGraphicsResult_t execute( const sirModernFramePlan_t& plan, SIRRenderingDevice& device,
+	static SIRGraphicsResult validate( const sirModernFramePlan_t& plan, const sirGraphicsABIPipelineModelCaps_t& caps ) noexcept;
+	static SIRGraphicsResult execute( const sirModernFramePlan_t& plan, SIRRenderingDevice& device,
 	                                    sirModernFrameResult_t *pResult ) noexcept;
 	static bool matchesTransition( const sirGraphicsBarrier_t& barrier, const sirFrameGraphTransition_t& transition,
 	                               sirGraphicsHandle_t hResource ) noexcept;
@@ -87,4 +87,4 @@ protected:
 private:
 };
 
-#endif // __SIRENGINE_SIRMODERNFRAMEGRAPHEXECUTION_H__
+#endif // __SIR_MODERNFRAMEGRAPHEXECUTION_H__

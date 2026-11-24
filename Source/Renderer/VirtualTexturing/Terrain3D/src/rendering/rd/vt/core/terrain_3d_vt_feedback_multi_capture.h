@@ -30,8 +30,8 @@ inline bool t3d_vt_feedback_multi_capture_bytes( const uint32_t nWidth, const ui
 	rTotalBytes = 0u;
 	if ( nWidth == 0u || nHeight == 0u || nLayers == 0u || nLayers > T3D_VT_FEEDBACK_MULTI_MAX_LAYERS )
 		return false;
-	const uint64_t bytes = ( uint64_t )nWidth * nHeight * sizeof( uint32_t );
-	const uint64_t total = bytes * ( ( uint64_t )nLayers + 1u );
+	const uint64_t bytes = static_cast<uint64_t>(nWidth) * nHeight * sizeof( uint32_t );
+	const uint64_t total = bytes * ( static_cast<uint64_t>(nLayers) + 1u );
 	if ( bytes > INT32_MAX || total > T3D_VT_FEEDBACK_MULTI_REPLAY_MAX_BYTES )
 		return false;
 	rPixelBytes = bytes;
@@ -54,7 +54,7 @@ inline bool t3d_vt_feedback_multi_capture_valid( const t3dVTFeedbackMultiCapture
 		if ( count > rCapture.m_nLayers )
 			return false;
 		for ( uint32_t layer = 0u; layer < rCapture.m_nLayers; ++layer ) {
-			const uint32_t page = rCapture.m_pPages[( uint64_t )layer * pixels + i];
+			const uint32_t page = rCapture.m_pPages[static_cast<uint64_t>(layer) * pixels + i];
 			if ( layer < count ) {
 				if ( page >= rCapture.m_nPageCount )
 					return false;

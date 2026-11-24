@@ -49,7 +49,7 @@ bool t3d_vt_file_source_open_cold( const godot::String& rPath, t3dVTFileSource_s
 	// Bound resident package memory to the directory size rather than the texture payload.
 	file->seek( 0u );
 	rMetadata = file->get_buffer( Header.m_nPayloadDataOffset );
-	if ( ( uint64_t )rMetadata.size() != Header.m_nPayloadDataOffset ) {
+	if ( static_cast<uint64_t>(rMetadata.size() != Header.m_nPayloadDataOffset )) {
 		return false;
 	}
 	if ( bStrictHash ) {
@@ -61,7 +61,7 @@ bool t3d_vt_file_source_open_cold( const godot::String& rPath, t3dVTFileSource_s
 		while ( nRemaining != 0u ) {
 			const uint64_t nChunk = nRemaining < 65536u ? nRemaining : 65536u;
 			const godot::PackedByteArray chunk = file->get_buffer( nChunk );
-			if ( ( uint64_t )chunk.size() != nChunk ) {
+			if ( static_cast<uint64_t>(chunk.size() != nChunk )) {
 				rMetadata.clear();
 				return false;
 			}
@@ -111,11 +111,11 @@ bool t3d_vt_file_source_read_payload( t3dVTFileSource_s& rSource, const uint64_t
 	const uint64_t nPhysical = rSource.nPayloadOffset + nOffset;
 	if ( rSource.pNativeFile != NULL ) {
 #if defined( _WIN32 )
-		if ( _fseeki64( rSource.pNativeFile, ( __int64 )nPhysical, SEEK_SET ) != 0 ) {
+		if ( _fseeki64( rSource.pNativeFile, static_cast<__int64>(nPhysical), SEEK_SET ) != 0 ) {
 			return false;
 		}
 #else
-		if ( nPhysical > ( uint64_t )INT64_MAX || fseeko( rSource.pNativeFile, ( off_t )nPhysical, SEEK_SET ) != 0 ) {
+		if ( nPhysical > static_cast<uint64_t>(INT64_MAX) || fseeko( rSource.pNativeFile, static_cast<off_t>(nPhysical), SEEK_SET ) != 0 ) {
 			return false;
 		}
 #endif
@@ -128,7 +128,7 @@ bool t3d_vt_file_source_read_payload( t3dVTFileSource_s& rSource, const uint64_t
 		}
 		rSource.m_File->seek( nPhysical );
 		const godot::PackedByteArray bytes = rSource.m_File->get_buffer( nLength );
-		if ( ( uint32_t )bytes.size() != nLength ) {
+		if ( static_cast<uint32_t>(bytes.size() != nLength )) {
 			return false;
 		}
 		memcpy( pDestination, bytes.ptr(), nLength );

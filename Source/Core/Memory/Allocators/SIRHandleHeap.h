@@ -14,8 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRHANDLEHEAP_H__
-#define __SIRENGINE_SIRHANDLEHEAP_H__
+#ifndef __SIR_HANDLEHEAP_H__
+#define __SIR_HANDLEHEAP_H__
 
 #include <Core/SIRPCH.h>
 
@@ -172,4 +172,4 @@ private:
 	uint32_t m_nSizeRoot;
 };
 
-#endif // __SIRENGINE_SIRHANDLEHEAP_H__
+#endif // __SIR_HANDLEHEAP_H__

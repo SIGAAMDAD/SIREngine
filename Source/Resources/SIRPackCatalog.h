@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRPACKCATALOG_H__
-#define __SIRENGINE_SIRPACKCATALOG_H__
+#ifndef __SIR_PACKCATALOG_H__
+#define __SIR_PACKCATALOG_H__
 
 #include <Core/SIRPCH.h>
 
@@ -43,15 +43,15 @@ public:
 	uint64_t getPackageId( void ) const noexcept;
 
 	static uint64_t requiredScratch( uint32_t nResources, uint32_t nShards ) noexcept;
-	sirPackResult_t open( const void *pBytes, uint64_t nBytes, void *pScratch, uint64_t nScratchBytes ) noexcept;
+	SIRPackResult open( const void *pBytes, uint64_t nBytes, void *pScratch, uint64_t nScratchBytes ) noexcept;
 	void reset( void ) noexcept;
-	sirPackResult_t findResource( const SIRResourceKey& key, sirPackResource_t *pResource ) const noexcept;
-	sirPackResult_t resourceAt( uint32_t iResource, sirPackResource_t *pResource ) const noexcept;
-	sirPackResult_t chunkAt( uint32_t iChunk, sirPackChunk_t *pChunk ) const noexcept;
-	sirPackResult_t shardAt( uint32_t iShard, sirPackShard_t *pShard ) const noexcept;
-	sirPackResult_t dependencyAt( uint32_t iEdge, sirPackDependency_t *pEdge ) const noexcept;
-	sirPackResult_t validateShard( uint32_t iShard, const void *pBytes, uint64_t nBytes ) const noexcept;
-	sirPackResult_t verifyDecodedChunk( uint32_t iChunk, const void *pBytes, uint64_t nBytes ) const noexcept;
+	SIRPackResult findResource( const SIRResourceKey& key, sirPackResource_t *pResource ) const noexcept;
+	SIRPackResult resourceAt( uint32_t iResource, sirPackResource_t *pResource ) const noexcept;
+	SIRPackResult chunkAt( uint32_t iChunk, sirPackChunk_t *pChunk ) const noexcept;
+	SIRPackResult shardAt( uint32_t iShard, sirPackShard_t *pShard ) const noexcept;
+	SIRPackResult dependencyAt( uint32_t iEdge, sirPackDependency_t *pEdge ) const noexcept;
+	SIRPackResult validateShard( uint32_t iShard, const void *pBytes, uint64_t nBytes ) const noexcept;
+	SIRPackResult verifyDecodedChunk( uint32_t iChunk, const void *pBytes, uint64_t nBytes ) const noexcept;
 
 protected:
 private:
@@ -69,7 +69,7 @@ private:
 	uint32_t m_nDependencies;
 
 	uint32_t findIndex( const SIRResourceKey& key ) const noexcept;
-	sirPackResult_t validateTables( uint8_t *pScratch, uint64_t nScratchBytes ) const noexcept;
+	SIRPackResult validateTables( uint8_t *pScratch, uint64_t nScratchBytes ) const noexcept;
 };
 
-#endif // __SIRENGINE_SIRPACKCATALOG_H__
+#endif // __SIR_PACKCATALOG_H__

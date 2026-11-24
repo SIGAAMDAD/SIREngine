@@ -38,18 +38,18 @@ uint64_t SIRD3D11Handles::getAllocatedBytes( void ) const noexcept
 	return m_nAllocatedBytes;
 }
 
-sirGraphicsResult_t SIRD3D11Handles::create( const sirD3D11ObjectInfo_t& object, sirGraphicsHandle_t *pHandle ) noexcept
+SIRGraphicsResult SIRD3D11Handles::create( const sirD3D11ObjectInfo_t& object, sirGraphicsHandle_t *pHandle ) noexcept
 {
 	if ( pHandle == nullptr ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	*pHandle = {};
-	if ( m_nDeviceGeneration == 0 || object.pNativeObject == nullptr || object.eType <= SIR_GRAPHICS_HANDLE_NONE ||
-	     object.eType > SIR_GRAPHICS_HANDLE_SURFACE ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	if ( m_nDeviceGeneration == 0 || object.pNativeObject == nullptr || object.eType <= SIRGraphicsHandleType::SIR_GRAPHICS_HANDLE_NONE ||
+	     object.eType > SIRGraphicsHandleType::SIR_GRAPHICS_HANDLE_SURFACE ) {
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( UINT64_MAX - m_nAllocatedBytes < object.nSizeBytes ) {
-		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+		return SIRGraphicsResult::SIR_GRAPHICS_CAPACITY_EXCEEDED;
 	}
 	for ( uint32_t iSlot = 0; iSlot < CAPACITY; ++iSlot ) {
 		sirD3D11ObjectSlot_t *pSlot = &m_szSlots[iSlot];
@@ -63,42 +63,42 @@ sirGraphicsResult_t SIRD3D11Handles::create( const sirD3D11ObjectInfo_t& object,
 		m_nAllocatedBytes += object.nSizeBytes;
 		++m_nActiveCount;
 		*pHandle = { iSlot, pSlot->nGeneration, m_nDeviceGeneration, object.eType };
-		return SIR_GRAPHICS_SUCCESS;
+		return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 	}
-	return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+	return SIRGraphicsResult::SIR_GRAPHICS_CAPACITY_EXCEEDED;
 }
 
-sirGraphicsResult_t SIRD3D11Handles::lookup( sirGraphicsHandle_t handle, sirD3D11ObjectSlot_t **ppSlot ) noexcept
+SIRGraphicsResult SIRD3D11Handles::lookup( sirGraphicsHandle_t handle, sirD3D11ObjectSlot_t **ppSlot ) noexcept
 {
 	if ( ppSlot == nullptr ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	*ppSlot = nullptr;
 	if ( m_nDeviceGeneration == 0 || handle.nDeviceGeneration != m_nDeviceGeneration || handle.nGeneration == 0 ||
-	     handle.nSlot >= CAPACITY || handle.eType <= SIR_GRAPHICS_HANDLE_NONE || handle.eType > SIR_GRAPHICS_HANDLE_SURFACE ) {
-		return SIR_GRAPHICS_INVALID_HANDLE;
+	     handle.nSlot >= CAPACITY || handle.eType <= SIRGraphicsHandleType::SIR_GRAPHICS_HANDLE_NONE || handle.eType > SIRGraphicsHandleType::SIR_GRAPHICS_HANDLE_SURFACE ) {
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_HANDLE;
 	}
 	sirD3D11ObjectSlot_t *pSlot = &m_szSlots[handle.nSlot];
 	if ( pSlot->object.pNativeObject == nullptr || pSlot->nGeneration != handle.nGeneration || pSlot->object.eType != handle.eType ) {
-		return SIR_GRAPHICS_INVALID_HANDLE;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_HANDLE;
 	}
 	*ppSlot = pSlot;
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t SIRD3D11Handles::destroy( sirGraphicsHandle_t handle, void **ppNativeObject ) noexcept
+SIRGraphicsResult SIRD3D11Handles::destroy( sirGraphicsHandle_t handle, void **ppNativeObject ) noexcept
 {
 	if ( ppNativeObject == nullptr ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	*ppNativeObject = nullptr;
 	sirD3D11ObjectSlot_t *pSlot = nullptr;
-	const sirGraphicsResult_t eLookup = lookup( handle, &pSlot );
-	if ( eLookup != SIR_GRAPHICS_SUCCESS ) {
+	const SIRGraphicsResult eLookup = lookup( handle, &pSlot );
+	if ( eLookup != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 		return eLookup;
 	}
 	if ( pSlot->nMapped != 0 ) {
-		return SIR_GRAPHICS_BUSY;
+		return SIRGraphicsResult::SIR_GRAPHICS_BUSY;
 	}
 	*ppNativeObject = pSlot->object.pNativeObject;
 	m_nAllocatedBytes -= pSlot->object.nSizeBytes;
@@ -108,7 +108,7 @@ sirGraphicsResult_t SIRD3D11Handles::destroy( sirGraphicsHandle_t handle, void *
 	pSlot->nMappedOffsetBytes = 0;
 	// A wrapped generation is permanently retired; no stale handle revival.
 	++pSlot->nGeneration;
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
 sirD3D11ObjectSlot_t *SIRD3D11Handles::getSlot( uint32_t nIndex ) noexcept

@@ -27,11 +27,11 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <stdlib.h>
 #include <stdio.h>
 
-static sirAppWindowPumpResult_t sirNativeWindowHostPump( void *pContext )
+static SIRAppWindowPumpResult sirNativeWindowHostPump( void *pContext )
 {
-	SIRWindowSystem *pWindows = ( SIRWindowSystem * )pContext;
-	const sirWindowResult_t eResult = pWindows->pumpEvents( 256 );
-	return eResult == SIR_WINDOW_OK || eResult == SIR_WINDOW_EVENTS_LOST ? SIR_APP_WINDOW_CONTINUE : SIR_APP_WINDOW_ERROR;
+	SIRWindowSystem *pWindows = static_cast<SIRWindowSystem *>(pContext);
+	const SIRWindowResult eResult = pWindows->pumpEvents( 256 );
+	return eResult == SIRWindowResult::SIR_WINDOW_OK || eResult == SIRWindowResult::SIR_WINDOW_EVENTS_LOST ? SIRAppWindowPumpResult::SIR_APP_WINDOW_CONTINUE : SIRAppWindowPumpResult::SIR_APP_WINDOW_ERROR;
 }
 
 int sirRunWindowHostsWithDriver( SIRWindowDriver& driver, const sirWindowCreateDesc_t *pDescs, uint32_t nWindows ) noexcept
@@ -42,14 +42,15 @@ int sirRunWindowHostsWithDriver( SIRWindowDriver& driver, const sirWindowCreateD
 	SIRWindowSystem windows( driver );
 	SIRApplication app;
 	if ( !app.registerSystem( &windows ) || !app.attachWindowPump( sirNativeWindowHostPump, &windows ) || !app.initialize() ) {
-		( void )app.shutdown();
+		static_cast<void>(app.shutdown());
 		return 1;
 	}
-	sirWindowHandle_t handles[SIR_WINDOW_MAX_WINDOWS] = {};
+	sirWindowHandle_t handles[SIR_WINDOW_MAX_WINDOWS];
+	memset( handles, 0, sizeof( handles ) );
 	uint32_t nCreated = 0;
 	bool bSucceeded = true;
 	for ( uint32_t i = 0; i < nWindows; ++i ) {
-		if ( windows.createWindow( pDescs[i], &handles[i] ) != SIR_WINDOW_OK ) {
+		if ( windows.createWindow( pDescs[i], &handles[i] ) != SIRWindowResult::SIR_WINDOW_OK ) {
 			bSucceeded = false;
 			break;
 		}
@@ -65,13 +66,13 @@ int sirRunWindowHostsWithDriver( SIRWindowDriver& driver, const sirWindowCreateD
 			if ( handles[i].nGeneration == 0 ) {
 				continue;
 			}
-			sirWindowSnapshot_t snapshot = {};
-			if ( windows.querySnapshot( handles[i], &snapshot ) != SIR_WINDOW_OK ) {
+			sirWindowSnapshot_t snapshot {};
+			if ( windows.querySnapshot( handles[i], &snapshot ) != SIRWindowResult::SIR_WINDOW_OK ) {
 				bSucceeded = false;
 				break;
 			}
 			if ( snapshot.bCloseRequested ) {
-				if ( windows.destroyWindow( handles[i] ) != SIR_WINDOW_OK ) {
+				if ( windows.destroyWindow( handles[i] ) != SIRWindowResult::SIR_WINDOW_OK ) {
 					bSucceeded = false;
 					break;
 				}
@@ -82,12 +83,12 @@ int sirRunWindowHostsWithDriver( SIRWindowDriver& driver, const sirWindowCreateD
 	}
 	while ( nCreated != 0 ) {
 		--nCreated;
-		if ( handles[nCreated].nGeneration != 0 && windows.destroyWindow( handles[nCreated] ) != SIR_WINDOW_OK ) {
+		if ( handles[nCreated].nGeneration != 0 && windows.destroyWindow( handles[nCreated] ) != SIRWindowResult::SIR_WINDOW_OK ) {
 			bSucceeded = false;
 		}
 	}
-	const sirSystemResult_t eShutdown = app.shutdown();
-	return bSucceeded && eShutdown == SIR_SYSTEM_OK ? 0 : 1;
+	const SIRSystemResult eShutdown = app.shutdown();
+	return bSucceeded && eShutdown == SIRSystemResult::SIR_SYSTEM_OK ? 0 : 1;
 }
 
 int sirRunWindowHostWithDriver( SIRWindowDriver& driver, const sirWindowCreateDesc_t& desc ) noexcept

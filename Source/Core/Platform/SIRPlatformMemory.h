@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRPLATFORMMEMORY_H__
-#define __SIRENGINE_SIRPLATFORMMEMORY_H__
+#ifndef __SIR_PLATFORMMEMORY_H__
+#define __SIR_PLATFORMMEMORY_H__
 
 #include <Core/SIRPCH.h>
 
@@ -27,23 +27,21 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <stdint.h>
 
 // Optional process fields are described by nValidFields; unavailable values are zero.
-typedef enum sirProcessMemoryField_e : uint32_t
-{
+enum class SIRProcessMemoryField : uint32_t {
 	SIR_PROCESS_MEMORY_RESIDENT = 1U << 0,
 	SIR_PROCESS_MEMORY_PEAK_RESIDENT = 1U << 1,
 	SIR_PROCESS_MEMORY_PRIVATE_COMMITTED = 1U << 2,
 	SIR_PROCESS_MEMORY_VIRTUAL_ADDRESS = 1U << 3,
 	SIR_PROCESS_MEMORY_PAGE_FAULTS = 1U << 4,
 	SIR_PROCESS_MEMORY_ANONYMOUS_RESIDENT = 1U << 5
-} sirProcessMemoryField_t;
+};
 
-typedef enum sirSystemMemoryField_e : uint32_t
-{
+enum class SIRSystemMemoryField : uint32_t {
 	SIR_SYSTEM_MEMORY_COMMIT = 1U << 0,
 	SIR_SYSTEM_MEMORY_GROUP_LIMIT = 1U << 1,
 	SIR_SYSTEM_MEMORY_GROUP_USAGE = 1U << 2,
 	SIR_SYSTEM_MEMORY_SWAP = 1U << 3
-} sirSystemMemoryField_t;
+};
 
 typedef struct sirSystemMemoryStats_s
 {
@@ -81,4 +79,4 @@ public:
 	static bool queryProcess( sirProcessMemoryStats_t *pStats ) noexcept;
 };
 
-#endif // __SIRENGINE_SIRPLATFORMMEMORY_H__
+#endif // __SIR_PLATFORMMEMORY_H__

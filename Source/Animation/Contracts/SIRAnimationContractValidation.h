@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRANIMATIONCONTRACTVALIDATION_H__
-#define __SIRENGINE_SIRANIMATIONCONTRACTVALIDATION_H__
+#ifndef __SIR_ANIMATIONCONTRACTVALIDATION_H__
+#define __SIR_ANIMATIONCONTRACTVALIDATION_H__
 
 #include <Core/SIRPCH.h>
 
@@ -35,27 +35,27 @@ class SIRAnimationContractValidation
 public:
 	SIRAnimationContractValidation( void ) noexcept = delete;
 
-	static sirAnimationResult_t validateVersion( const sirAnimationContractVersion_t& requested ) noexcept;
-	static sirAnimationResult_t validateCapacity( const sirAnimationCapacityContract_t& capacity ) noexcept;
-	static sirAnimationResult_t validateAsset( const sirAnimationAssetRef_t& asset, sirAnimationAssetKind_t eExpectedKind,
+	static SIRAnimationResult validateVersion( const sirAnimationContractVersion_t& requested ) noexcept;
+	static SIRAnimationResult validateCapacity( const sirAnimationCapacityContract_t& capacity ) noexcept;
+	static SIRAnimationResult validateAsset( const sirAnimationAssetRef_t& asset, SIRAnimationAssetKind eExpectedKind,
 	                                           uint64_t nExpectedRevision ) noexcept;
-	static sirAnimationResult_t validateInstance( const sirAnimationInstance_t& instance ) noexcept;
-	static sirAnimationResult_t validateBoneSelection( const sirAnimationBoneSelection_t& bones, uint32_t nMaximumBones ) noexcept;
-	static sirAnimationResult_t validateStateAdvance( const sirAnimationStateSnapshot_t& current,
+	static SIRAnimationResult validateInstance( const sirAnimationInstance_t& instance ) noexcept;
+	static SIRAnimationResult validateBoneSelection( const sirAnimationBoneSelection_t& bones, uint32_t nMaximumBones ) noexcept;
+	static SIRAnimationResult validateStateAdvance( const sirAnimationStateSnapshot_t& current,
 	                                                  const sirAnimationStateSnapshot_t& next ) noexcept;
-	static sirAnimationResult_t validatePublication( const sirAnimationPosePublication_t& pose, uint32_t nMaximumBones ) noexcept;
-	static sirAnimationResult_t validateGraphScratch( const sirAnimationGraphRequest_t& request,
+	static SIRAnimationResult validatePublication( const sirAnimationPosePublication_t& pose, uint32_t nMaximumBones ) noexcept;
+	static SIRAnimationResult validateGraphScratch( const sirAnimationGraphRequest_t& request,
 	                                                  const sirAnimationGraphScratch_t& scratch ) noexcept;
-	static sirAnimationResult_t validateBufferRange( uint64_t nOffset, uint64_t nStride, uint64_t nCount, uint64_t nCapacity ) noexcept;
-	static sirAnimationResult_t validateAuthorityAck( const sirAnimationAuthorityRequest_t& request,
+	static SIRAnimationResult validateBufferRange( uint64_t nOffset, uint64_t nStride, uint64_t nCount, uint64_t nCapacity ) noexcept;
+	static SIRAnimationResult validateAuthorityAck( const sirAnimationAuthorityRequest_t& request,
 	                                                  const sirAnimationAuthorityAck_t& acknowledgement ) noexcept;
-	static sirAnimationResult_t validateGraphicsCompletion( const sirGraphicsCompletionSet_t& completion,
+	static SIRAnimationResult validateGraphicsCompletion( const sirGraphicsCompletionSet_t& completion,
 	                                                        uint32_t nExpectedDeviceGeneration ) noexcept;
-	static sirAnimationResult_t selectDeformation( const sirGraphicsCapabilities_t& graphics, sirAnimationDeformationMode_t ePreferred,
-	                                               sirAnimationDeformationMode_t *pSelected ) noexcept;
+	static SIRAnimationResult selectDeformation( const sirGraphicsCapabilities_t& graphics, SIRAnimationDeformationMode ePreferred,
+	                                               SIRAnimationDeformationMode *pSelected ) noexcept;
 
 protected:
 private:
 };
 
-#endif // __SIRENGINE_SIRANIMATIONCONTRACTVALIDATION_H__
+#endif // __SIR_ANIMATIONCONTRACTVALIDATION_H__

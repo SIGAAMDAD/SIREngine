@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRTERRAINREGIONBUNDLE_H__
-#define __SIRENGINE_SIRTERRAINREGIONBUNDLE_H__
+#ifndef __SIR_TERRAINREGIONBUNDLE_H__
+#define __SIR_TERRAINREGIONBUNDLE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -33,8 +33,7 @@ typedef struct sirTerrainRegionBundleView_s
 	uint32_t nRegionCount;
 } sirTerrainRegionBundleView_t;
 
-typedef enum sirTerrainBundleResult_e : uint8_t
-{
+enum class SIRTerrainBundleResult : uint8_t {
 	SIR_TERRAIN_BUNDLE_SUCCESS = 0,
 	SIR_TERRAIN_BUNDLE_INVALID_ARGUMENT,
 	SIR_TERRAIN_BUNDLE_INVALID_FORMAT,
@@ -44,7 +43,7 @@ typedef enum sirTerrainBundleResult_e : uint8_t
 	SIR_TERRAIN_BUNDLE_DUPLICATE_OR_UNSORTED,
 	SIR_TERRAIN_BUNDLE_OVERLAPPING_BUFFERS,
 	SIR_TERRAIN_BUNDLE_NOT_FOUND
-} sirTerrainBundleResult_t;
+};
 
 // Versioned, uncompressed terrain-only region index. The caller owns all buffers.
 // Embedded R16 regions must be sorted by signed (X,Z) in ascending order.
@@ -56,15 +55,15 @@ public:
 	static constexpr uint32_t ENTRY_BYTES = 40;
 	static constexpr uint32_t MAX_REGIONS = 65535;
 
-	static sirTerrainBundleResult_t measure( const sirTerrainConstByteSpan_t *pRegions, uint32_t nCount, size_t& nBytes ) noexcept;
-	static sirTerrainBundleResult_t write( const sirTerrainConstByteSpan_t *pRegions, uint32_t nCount, sirTerrainMutableByteSpan_t output,
+	static SIRTerrainBundleResult measure( const sirTerrainConstByteSpan_t *pRegions, uint32_t nCount, size_t& nBytes ) noexcept;
+	static SIRTerrainBundleResult write( const sirTerrainConstByteSpan_t *pRegions, uint32_t nCount, sirTerrainMutableByteSpan_t output,
 	                                       size_t& nWritten ) noexcept;
-	static sirTerrainBundleResult_t open( sirTerrainConstByteSpan_t input, sirTerrainRegionBundleView_t& view ) noexcept;
-	static sirTerrainBundleResult_t find( const sirTerrainRegionBundleView_t& view, int32_t iRegionX, int32_t iRegionZ,
+	static SIRTerrainBundleResult open( sirTerrainConstByteSpan_t input, sirTerrainRegionBundleView_t& view ) noexcept;
+	static SIRTerrainBundleResult find( const sirTerrainRegionBundleView_t& view, int32_t iRegionX, int32_t iRegionZ,
 	                                      sirTerrainConstByteSpan_t& region ) noexcept;
 
 protected:
 private:
 };
 
-#endif // __SIRENGINE_SIRTERRAINREGIONBUNDLE_H__
+#endif // __SIR_TERRAINREGIONBUNDLE_H__

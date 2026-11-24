@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRD3D11DRIVER_H__
-#define __SIRENGINE_SIRD3D11DRIVER_H__
+#ifndef __SIR_D3_D11_DRIVER_H__
+#define __SIR_D3_D11_DRIVER_H__
 
 #include <Core/SIRPCH.h>
 
@@ -35,12 +35,12 @@ public:
 	SIRD3D11Driver( void ) noexcept = default;
 	~SIRD3D11Driver( void ) noexcept override;
 
-	sirGraphicsBackend_t getBackend( void ) const noexcept override;
-	sirGraphicsResult_t getAdapterCount( uint32_t *pCount ) const noexcept override;
+	SIRGraphicsBackend getBackend( void ) const noexcept override;
+	SIRGraphicsResult getAdapterCount( uint32_t *pCount ) const noexcept override;
 
-	sirGraphicsResult_t queryAdapter( uint32_t nAdapterIndex, sirGraphicsAdapterInfo_t *pInfo ) const noexcept override;
-	sirGraphicsResult_t createDevice( const sirGraphicsDeviceCreateDesc_t& desc, SIRRenderingDevice **ppDevice ) noexcept override;
-	sirGraphicsResult_t destroyDevice( SIRRenderingDevice *pDevice ) noexcept override;
+	SIRGraphicsResult queryAdapter( uint32_t nAdapterIndex, sirGraphicsAdapterInfo_t *pInfo ) const noexcept override;
+	SIRGraphicsResult createDevice( const sirGraphicsDeviceCreateDesc_t& desc, SIRRenderingDevice **ppDevice ) noexcept override;
+	SIRGraphicsResult destroyDevice( SIRRenderingDevice *pDevice ) noexcept override;
 
 protected:
 private:
@@ -49,6 +49,6 @@ private:
 	uint32_t m_nNextDeviceGeneration = 1;
 };
 
-sirGraphicsResult_t sirD3D11RegisterDriver( SIRGraphicsRegistry *pRegistry, SIRD3D11Driver *pDriver ) noexcept;
+SIRGraphicsResult sirD3D11RegisterDriver( SIRGraphicsRegistry *pRegistry, SIRD3D11Driver *pDriver ) noexcept;
 
-#endif // __SIRENGINE_SIRD3D11DRIVER_H__
+#endif // __SIR_D3_D11_DRIVER_H__

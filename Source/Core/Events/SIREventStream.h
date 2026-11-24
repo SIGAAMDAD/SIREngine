@@ -14,8 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIREVENTSTREAM_H__
-#define __SIRENGINE_SIREVENTSTREAM_H__
+#ifndef __SIR_EVENTSTREAM_H__
+#define __SIR_EVENTSTREAM_H__
 
 #include <Core/SIRPCH.h>
 
@@ -105,4 +105,4 @@ private:
 	bool m_bDraining;
 };
 
-#endif // __SIRENGINE_SIREVENTSTREAM_H__
+#endif // __SIR_EVENTSTREAM_H__

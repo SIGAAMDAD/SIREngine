@@ -20,11 +20,11 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <string.h>
 
-sirUIResult_t SIRControlTree::initialize( sirUIControl_t *pControls, uint32_t *pStack, uint32_t nCapacity ) noexcept
+SIRUIResult SIRControlTree::initialize( sirUIControl_t *pControls, uint32_t *pStack, uint32_t nCapacity ) noexcept
 {
 	if ( m_pControls != nullptr || pControls == nullptr || pStack == nullptr || nCapacity == 0 ||
 	     nCapacity > UINT32_MAX / sizeof( *pControls ) ) {
-		return SIR_UI_INVALID_ARGUMENT;
+		return SIRUIResult::SIR_UI_INVALID_ARGUMENT;
 	}
 	m_pControls = pControls;
 	m_pStack = pStack;
@@ -34,7 +34,7 @@ sirUIResult_t SIRControlTree::initialize( sirUIControl_t *pControls, uint32_t *p
 	m_nLayoutEpoch = 1;
 	m_nPaintEpoch = 1;
 	memset( pControls, 0, nCapacity * sizeof( *pControls ) );
-	return SIR_UI_OK;
+	return SIRUIResult::SIR_UI_OK;
 }
 
 void SIRControlTree::shutdown( void ) noexcept
@@ -54,17 +54,17 @@ bool SIRControlTree::isValid( const sirUIHandle_t& handle ) const noexcept
 	       m_pControls[handle.iSlot].nGeneration == handle.nGeneration;
 }
 
-sirUIResult_t SIRControlTree::create( const sirUIHandle_t *pParent, const sirUIRect_t& requested, sirUILayout_t eLayout, bool bFocusable,
+SIRUIResult SIRControlTree::create( const sirUIHandle_t *pParent, const sirUIRect_t& requested, SIRUILayout eLayout, bool bFocusable,
                                       bool bClipChildren, sirUIHandle_t *pOutHandle ) noexcept
 {
 	if ( m_pControls == nullptr ) {
-		return SIR_UI_NOT_INITIALIZED;
+		return SIRUIResult::SIR_UI_NOT_INITIALIZED;
 	}
-	if ( pOutHandle == nullptr || requested.nWidth > INT32_MAX || requested.nHeight > INT32_MAX || eLayout > SIR_UI_LAYOUT_VERTICAL ) {
-		return SIR_UI_INVALID_ARGUMENT;
+	if ( pOutHandle == nullptr || requested.nWidth > INT32_MAX || requested.nHeight > INT32_MAX || eLayout > SIRUILayout::SIR_UI_LAYOUT_VERTICAL ) {
+		return SIRUIResult::SIR_UI_INVALID_ARGUMENT;
 	}
 	if ( pParent != nullptr && !isValid( *pParent ) ) {
-		return SIR_UI_STALE_HANDLE;
+		return SIRUIResult::SIR_UI_STALE_HANDLE;
 	}
 	uint32_t iSlot = UINT32_MAX;
 	for ( uint32_t iCurrent = 0; iCurrent < m_nCapacity; ++iCurrent ) {
@@ -74,7 +74,7 @@ sirUIResult_t SIRControlTree::create( const sirUIHandle_t *pParent, const sirUIR
 		}
 	}
 	if ( iSlot == UINT32_MAX ) {
-		return SIR_UI_OUT_OF_CAPACITY;
+		return SIRUIResult::SIR_UI_OUT_OF_CAPACITY;
 	}
 	sirUIControl_t& control = m_pControls[iSlot];
 	const uint32_t nGeneration = control.nGeneration + 1;
@@ -102,13 +102,13 @@ sirUIResult_t SIRControlTree::create( const sirUIHandle_t *pParent, const sirUIR
 	*pOutHandle = { iSlot, nGeneration };
 	++m_nCount;
 	++m_nLayoutEpoch;
-	return SIR_UI_OK;
+	return SIRUIResult::SIR_UI_OK;
 }
 
-sirUIResult_t SIRControlTree::remove( sirUIHandle_t handle ) noexcept
+SIRUIResult SIRControlTree::remove( sirUIHandle_t handle ) noexcept
 {
 	if ( !isValid( handle ) ) {
-		return SIR_UI_STALE_HANDLE;
+		return SIRUIResult::SIR_UI_STALE_HANDLE;
 	}
 	sirUIControl_t& root = m_pControls[handle.iSlot];
 	if ( root.iParent != UINT32_MAX ) {
@@ -120,7 +120,7 @@ sirUIResult_t SIRControlTree::remove( sirUIHandle_t handle ) noexcept
 			pCurrent = &m_pControls[*pCurrent].iNextSibling;
 		}
 		if ( *pCurrent != handle.iSlot ) {
-			return SIR_UI_INVALID_LAYOUT;
+			return SIRUIResult::SIR_UI_INVALID_LAYOUT;
 		}
 		*pCurrent = root.iNextSibling;
 		if ( parent.iLastChild == handle.iSlot ) {
@@ -147,13 +147,13 @@ sirUIResult_t SIRControlTree::remove( sirUIHandle_t handle ) noexcept
 	}
 	++m_nLayoutEpoch;
 	++m_nPaintEpoch;
-	return SIR_UI_OK;
+	return SIRUIResult::SIR_UI_OK;
 }
 
-sirUIResult_t SIRControlTree::setVisible( sirUIHandle_t handle, bool bVisible ) noexcept
+SIRUIResult SIRControlTree::setVisible( sirUIHandle_t handle, bool bVisible ) noexcept
 {
 	if ( !isValid( handle ) ) {
-		return SIR_UI_STALE_HANDLE;
+		return SIRUIResult::SIR_UI_STALE_HANDLE;
 	}
 	sirUIControl_t& control = m_pControls[handle.iSlot];
 	if ( control.bVisible != bVisible ) {
@@ -170,48 +170,48 @@ sirUIResult_t SIRControlTree::setVisible( sirUIHandle_t handle, bool bVisible ) 
 		}
 		++m_nPaintEpoch;
 	}
-	return SIR_UI_OK;
+	return SIRUIResult::SIR_UI_OK;
 }
 
-sirUIResult_t SIRControlTree::setRequestedRect( sirUIHandle_t handle, const sirUIRect_t& requested ) noexcept
+SIRUIResult SIRControlTree::setRequestedRect( sirUIHandle_t handle, const sirUIRect_t& requested ) noexcept
 {
 	if ( !isValid( handle ) || requested.nWidth > INT32_MAX || requested.nHeight > INT32_MAX ) {
-		return SIR_UI_INVALID_ARGUMENT;
+		return SIRUIResult::SIR_UI_INVALID_ARGUMENT;
 	}
 	m_pControls[handle.iSlot].requested = requested;
 	++m_nLayoutEpoch;
-	return SIR_UI_OK;
+	return SIRUIResult::SIR_UI_OK;
 }
 
 bool SIRControlTree::contains( const sirUIRect_t& bounds, int32_t iX, int32_t iY ) noexcept
 {
-	return ( int64_t )iX >= bounds.iX && ( int64_t )iY >= bounds.iY && ( int64_t )iX < ( int64_t )bounds.iX + bounds.nWidth &&
-	       ( int64_t )iY < ( int64_t )bounds.iY + bounds.nHeight;
+	return static_cast<int64_t>(iX) >= bounds.iX && static_cast<int64_t>(iY) >= bounds.iY && static_cast<int64_t>(iX) < static_cast<int64_t>(bounds.iX) + bounds.nWidth &&
+	       static_cast<int64_t>(iY) < static_cast<int64_t>(bounds.iY) + bounds.nHeight;
 }
 
 sirUIRect_t SIRControlTree::intersection( const sirUIRect_t& a, const sirUIRect_t& b ) noexcept
 {
 	const int64_t nLeft = a.iX > b.iX ? a.iX : b.iX;
 	const int64_t nTop = a.iY > b.iY ? a.iY : b.iY;
-	const int64_t nRightA = ( int64_t )a.iX + a.nWidth;
-	const int64_t nRightB = ( int64_t )b.iX + b.nWidth;
-	const int64_t nBottomA = ( int64_t )a.iY + a.nHeight;
-	const int64_t nBottomB = ( int64_t )b.iY + b.nHeight;
+	const int64_t nRightA = static_cast<int64_t>(a.iX) + a.nWidth;
+	const int64_t nRightB = static_cast<int64_t>(b.iX) + b.nWidth;
+	const int64_t nBottomA = static_cast<int64_t>(a.iY) + a.nHeight;
+	const int64_t nBottomB = static_cast<int64_t>(b.iY) + b.nHeight;
 	const int64_t nRight = nRightA < nRightB ? nRightA : nRightB;
 	const int64_t nBottom = nBottomA < nBottomB ? nBottomA : nBottomB;
 	if ( nRight <= nLeft || nBottom <= nTop ) {
-		return { ( int32_t )nLeft, ( int32_t )nTop, 0, 0 };
+		return { static_cast<int32_t>(nLeft), static_cast<int32_t>(nTop), 0, 0 };
 	}
-	return { ( int32_t )nLeft, ( int32_t )nTop, ( uint32_t )( nRight - nLeft ), ( uint32_t )( nBottom - nTop ) };
+	return { static_cast<int32_t>(nLeft), static_cast<int32_t>(nTop), static_cast<uint32_t>( nRight - nLeft ), static_cast<uint32_t>( nBottom - nTop ) };
 }
 
-sirUIResult_t SIRControlTree::layout( const sirUIRect_t& viewport ) noexcept
+SIRUIResult SIRControlTree::layout( const sirUIRect_t& viewport ) noexcept
 {
 	if ( m_pControls == nullptr ) {
-		return SIR_UI_NOT_INITIALIZED;
+		return SIRUIResult::SIR_UI_NOT_INITIALIZED;
 	}
 	if ( viewport.nWidth > INT32_MAX || viewport.nHeight > INT32_MAX ) {
-		return SIR_UI_INVALID_ARGUMENT;
+		return SIRUIResult::SIR_UI_INVALID_ARGUMENT;
 	}
 	uint32_t nTop = 0;
 	for ( uint32_t iSlot = 0; iSlot < m_nCapacity; ++iSlot ) {
@@ -228,31 +228,31 @@ sirUIResult_t SIRControlTree::layout( const sirUIRect_t& viewport ) noexcept
 		uint64_t nFlowY = 0;
 		for ( uint32_t iChild = parent.iFirstChild; iChild != UINT32_MAX; iChild = m_pControls[iChild].iNextSibling ) {
 			sirUIControl_t& child = m_pControls[iChild];
-			const int64_t iX = ( int64_t )parent.bounds.iX + child.requested.iX;
-			const int64_t iY = ( int64_t )parent.bounds.iY + child.requested.iY + ( parent.eLayout == SIR_UI_LAYOUT_VERTICAL ? nFlowY : 0 );
+			const int64_t iX = static_cast<int64_t>(parent.bounds.iX) + child.requested.iX;
+			const int64_t iY = static_cast<int64_t>(parent.bounds.iY) + child.requested.iY + ( parent.eLayout == SIRUILayout::SIR_UI_LAYOUT_VERTICAL ? nFlowY : 0 );
 			if ( iX < INT32_MIN || iX > INT32_MAX || iY < INT32_MIN || iY > INT32_MAX ) {
-				return SIR_UI_INVALID_LAYOUT;
+				return SIRUIResult::SIR_UI_INVALID_LAYOUT;
 			}
-			child.bounds = { ( int32_t )iX, ( int32_t )iY, child.requested.nWidth == 0 ? parent.bounds.nWidth : child.requested.nWidth,
+			child.bounds = { static_cast<int32_t>(iX), static_cast<int32_t>(iY), child.requested.nWidth == 0 ? parent.bounds.nWidth : child.requested.nWidth,
 			                 child.requested.nHeight };
 			child.clip = parent.bClipChildren ? intersection( parent.clip, parent.bounds ) : parent.clip;
-			if ( parent.eLayout == SIR_UI_LAYOUT_VERTICAL ) {
+			if ( parent.eLayout == SIRUILayout::SIR_UI_LAYOUT_VERTICAL ) {
 				nFlowY += child.requested.nHeight;
 			}
 			m_pStack[nTop++] = iChild;
 		}
 	}
 	++m_nPaintEpoch;
-	return SIR_UI_OK;
+	return SIRUIResult::SIR_UI_OK;
 }
 
-sirUIResult_t SIRControlTree::hitTest( int32_t iX, int32_t iY, sirUIHandle_t *pOutHandle ) noexcept
+SIRUIResult SIRControlTree::hitTest( int32_t iX, int32_t iY, sirUIHandle_t *pOutHandle ) noexcept
 {
 	if ( m_pControls == nullptr ) {
-		return SIR_UI_NOT_INITIALIZED;
+		return SIRUIResult::SIR_UI_NOT_INITIALIZED;
 	}
 	if ( pOutHandle == nullptr ) {
-		return SIR_UI_INVALID_ARGUMENT;
+		return SIRUIResult::SIR_UI_INVALID_ARGUMENT;
 	}
 	*pOutHandle = { UINT32_MAX, 0 };
 	uint32_t iCandidate = UINT32_MAX;
@@ -275,29 +275,29 @@ sirUIResult_t SIRControlTree::hitTest( int32_t iX, int32_t iY, sirUIHandle_t *pO
 		}
 		iCandidate = iNext;
 	}
-	return SIR_UI_OK;
+	return SIRUIResult::SIR_UI_OK;
 }
 
-sirUIResult_t SIRControlTree::dispatch( const sirUIInput_t& input, sirUIHandle_t *pTarget ) noexcept
+SIRUIResult SIRControlTree::dispatch( const sirUIInput_t& input, sirUIHandle_t *pTarget ) noexcept
 {
 	if ( m_pControls == nullptr ) {
-		return SIR_UI_NOT_INITIALIZED;
+		return SIRUIResult::SIR_UI_NOT_INITIALIZED;
 	}
 	if ( pTarget == nullptr ) {
-		return SIR_UI_INVALID_ARGUMENT;
+		return SIRUIResult::SIR_UI_INVALID_ARGUMENT;
 	}
-	if ( input.eType == SIR_UI_INPUT_KEY_DOWN ) {
+	if ( input.eType == SIRUIInputType::SIR_UI_INPUT_KEY_DOWN ) {
 		*pTarget = m_Focus;
-		return SIR_UI_OK;
+		return SIRUIResult::SIR_UI_OK;
 	}
-	if ( input.eType != SIR_UI_INPUT_POINTER_DOWN && input.eType != SIR_UI_INPUT_POINTER_MOVE ) {
-		return SIR_UI_INVALID_ARGUMENT;
+	if ( input.eType != SIRUIInputType::SIR_UI_INPUT_POINTER_DOWN && input.eType != SIRUIInputType::SIR_UI_INPUT_POINTER_MOVE ) {
+		return SIRUIResult::SIR_UI_INVALID_ARGUMENT;
 	}
-	const sirUIResult_t eResult = hitTest( input.iX, input.iY, pTarget );
-	if ( eResult != SIR_UI_OK ) {
+	const SIRUIResult eResult = hitTest( input.iX, input.iY, pTarget );
+	if ( eResult != SIRUIResult::SIR_UI_OK ) {
 		return eResult;
 	}
-	if ( input.eType == SIR_UI_INPUT_POINTER_DOWN ) {
+	if ( input.eType == SIRUIInputType::SIR_UI_INPUT_POINTER_DOWN ) {
 		sirUIHandle_t focus = { UINT32_MAX, 0 };
 		if ( isValid( *pTarget ) && m_pControls[pTarget->iSlot].bFocusable ) {
 			focus = *pTarget;
@@ -307,16 +307,16 @@ sirUIResult_t SIRControlTree::dispatch( const sirUIInput_t& input, sirUIHandle_t
 			++m_nPaintEpoch;
 		}
 	}
-	return SIR_UI_OK;
+	return SIRUIResult::SIR_UI_OK;
 }
 
-sirUIResult_t SIRControlTree::getBounds( sirUIHandle_t handle, sirUIRect_t *pOutBounds ) const noexcept
+SIRUIResult SIRControlTree::getBounds( sirUIHandle_t handle, sirUIRect_t *pOutBounds ) const noexcept
 {
 	if ( !isValid( handle ) || pOutBounds == nullptr ) {
-		return SIR_UI_STALE_HANDLE;
+		return SIRUIResult::SIR_UI_STALE_HANDLE;
 	}
 	*pOutBounds = m_pControls[handle.iSlot].bounds;
-	return SIR_UI_OK;
+	return SIRUIResult::SIR_UI_OK;
 }
 
 sirUIHandle_t SIRControlTree::getFocus( void ) const noexcept

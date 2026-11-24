@@ -74,6 +74,6 @@ if(SIR_STANDARDS_REQUIRED_IN_ALL)
     add_custom_target(sir-standards-required ALL DEPENDS sir-standards-check)
 endif()
 
-# Publish an authentic CMake compile database for clangd on both OSes.
+# Publish an authentic Ninja/Make compile database for clangd on both OSes.
 # clangd searches ancestors of edited files, so the root copy is deliberate.
 sir_add_standards_gate(sir-clangd-db publish-compdb)

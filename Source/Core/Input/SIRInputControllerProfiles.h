@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRINPUTCONTROLLERPROFILES_H__
-#define __SIRENGINE_SIRINPUTCONTROLLERPROFILES_H__
+#ifndef __SIR_INPUTCONTROLLERPROFILES_H__
+#define __SIR_INPUTCONTROLLERPROFILES_H__
 
 #include <Core/SIRPCH.h>
 
@@ -34,7 +34,7 @@ constexpr uint32_t SIR_INPUT_COOKED_PROFILE_AXIS_BYTES = 6;
 constexpr uint32_t SIR_INPUT_COOKED_PROFILE_MAX_BYTES =
     SIR_INPUT_COOKED_PROFILE_HEADER_BYTES +
     SIR_INPUT_CONTROLLER_PROFILE_CAPACITY * ( SIR_INPUT_COOKED_PROFILE_RECORD_BYTES + SIR_INPUT_CONTROLLER_BUTTON_MAP_CAPACITY * 4 +
-	                                          SIR_INPUT_AXIS_COUNT * SIR_INPUT_COOKED_PROFILE_AXIS_BYTES );
+	                                          static_cast<uint32_t>( SIRInputAxisCode::SIR_INPUT_AXIS_COUNT ) * SIR_INPUT_COOKED_PROFILE_AXIS_BYTES );
 
 typedef struct sirInputControllerButtonBinding_s
 {
@@ -61,7 +61,7 @@ typedef struct sirInputControllerProfile_s
 	bool bReplaceButtons;
 	bool bReplaceAxes;
 	sirInputControllerButtonBinding_t buttons[SIR_INPUT_CONTROLLER_BUTTON_MAP_CAPACITY];
-	sirInputControllerAxisBinding_t axes[SIR_INPUT_AXIS_COUNT];
+	sirInputControllerAxisBinding_t axes[static_cast<size_t>( SIRInputAxisCode::SIR_INPUT_AXIS_COUNT )];
 } sirInputControllerProfile_t;
 
 // Registration occurs before discovery. Profiles are copied into each device
@@ -84,4 +84,4 @@ private:
 	uint32_t m_nCount;
 };
 
-#endif // __SIRENGINE_SIRINPUTCONTROLLERPROFILES_H__
+#endif // __SIR_INPUTCONTROLLERPROFILES_H__

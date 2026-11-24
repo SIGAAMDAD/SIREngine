@@ -21,7 +21,7 @@ bool sirCreateWGLBootstrapWindow( sirWGLBootstrapWindow_t *pWindow ) noexcept
 		return false;
 	}
 	const HINSTANCE hInstance = GetModuleHandleA( nullptr );
-	WNDCLASSA windowClass = {};
+	WNDCLASSA windowClass {};
 	windowClass.lpfnWndProc = DefWindowProcA;
 	windowClass.hInstance = hInstance;
 	windowClass.lpszClassName = "SIREngineGL46Context";

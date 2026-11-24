@@ -13,10 +13,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRHAZARDPTR_H__
-#define __SIRENGINE_SIRHAZARDPTR_H__
+#ifndef __SIR_HAZARDPTR_H__
+#define __SIR_HAZARDPTR_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -24,7 +24,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-#include <Core/Platform/SIRAtomic.h>
+#include <atomic>
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -39,8 +39,8 @@ public:
 	SIRHazardRecord( const SIRHazardRecord& ) = delete;
 	SIRHazardRecord& operator=( const SIRHazardRecord& ) = delete;
 
-	SIRAtomic<void *> m_pProtected;
-	SIRAtomic<uint32_t> m_nClaimed;
+	std::atomic<void *> m_pProtected;
+	std::atomic<uint32_t> m_nClaimed;
 };
 
 class SIRHazardDomain
@@ -67,13 +67,13 @@ public:
 			return nullptr;
 		}
 
-		const uint32_t nNext = m_nClaimCursor.fetchAdd( 1, SIR_MEMORY_ORDER_RELAXED );
+		const uint32_t nNext = m_nClaimCursor.fetch_add( 1, std::memory_order_relaxed );
 		const uint32_t nMask = m_nCapacity - 1;
 		const uint32_t iRecordStart = ( ( m_nCapacity & nMask ) == 0 ) ? ( nNext & nMask ) : ( nNext % m_nCapacity );
 		uint32_t iRecord = iRecordStart;
 		for ( uint32_t nAttempt = 0; nAttempt < m_nCapacity; ++nAttempt ) {
 			uint32_t nVacant = 0;
-			if ( m_pRecords[iRecord].m_nClaimed.compareExchangeStrong( nVacant, 1 ) ) {
+			if ( m_pRecords[iRecord].m_nClaimed.compare_exchange_strong( nVacant, 1 ) ) {
 				return &m_pRecords[iRecord];
 			}
 			++iRecord;
@@ -99,7 +99,7 @@ public:
 private:
 	SIRHazardRecord *m_pRecords;
 	uint32_t m_nCapacity;
-	SIRAtomic<uint32_t> m_nClaimCursor;
+	std::atomic<uint32_t> m_nClaimCursor;
 };
 
 template <typename T>
@@ -129,7 +129,7 @@ public:
 		}
 		return *this;
 	}
-	bool protect( SIRHazardDomain& rDomain, const SIRAtomic<T *>& rSource ) noexcept
+	bool protect( SIRHazardDomain& rDomain, const std::atomic<T *>& rSource ) noexcept
 	{
 		reset();
 		SIRHazardRecord *pRecord = rDomain.claim();
@@ -228,4 +228,4 @@ private:
 	uint32_t m_nCount = 0;
 };
 
-#endif // __SIRENGINE_SIRHAZARDPTR_H__
+#endif // __SIR_HAZARDPTR_H__

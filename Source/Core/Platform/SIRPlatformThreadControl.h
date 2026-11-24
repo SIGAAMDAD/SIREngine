@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRPLATFORMTHREADCONTROL_H__
-#define __SIRENGINE_SIRPLATFORMTHREADCONTROL_H__
+#ifndef __SIR_PLATFORMTHREADCONTROL_H__
+#define __SIR_PLATFORMTHREADCONTROL_H__
 
 #include <Core/SIRPCH.h>
 
@@ -26,21 +26,19 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <stdint.h>
 
-typedef enum sirThreadControlResult_e : uint8_t
-{
+enum class SIRThreadControlResult : uint8_t {
 	SIR_THREAD_CONTROL_OK = 0,
 	SIR_THREAD_CONTROL_INVALID_ARGUMENT = 1,
 	SIR_THREAD_CONTROL_ACCESS_DENIED = 2,
 	SIR_THREAD_CONTROL_UNSUPPORTED = 3,
 	SIR_THREAD_CONTROL_OS_ERROR = 4
-} sirThreadControlResult_t;
+};
 
-typedef enum sirThreadPriority_e : uint8_t
-{
+enum class SIRThreadPriority : uint8_t {
 	SIR_THREAD_PRIORITY_BACKGROUND = 0,
 	SIR_THREAD_PRIORITY_NORMAL = 1,
 	SIR_THREAD_PRIORITY_HIGH = 2
-} sirThreadPriority_t;
+};
 
 typedef struct sirThreadAffinity_s
 {
@@ -59,11 +57,11 @@ public:
 
 	// Opaque OS thread identity, stable for the lifetime of the calling thread.
 	static uint64_t getCurrentThreadId( void ) noexcept;
-	static sirThreadControlResult_t setCurrentName( const char *pszName ) noexcept;
-	static sirThreadControlResult_t getCurrentName( char *pszName, uint32_t nCapacity ) noexcept;
-	static sirThreadControlResult_t setCurrentAffinity( const sirThreadAffinity_t& rAffinity ) noexcept;
-	static sirThreadControlResult_t getCurrentAffinity( sirThreadAffinity_t *pAffinity ) noexcept;
-	static sirThreadControlResult_t setCurrentPriority( sirThreadPriority_t ePriority ) noexcept;
+	static SIRThreadControlResult setCurrentName( const char *pszName ) noexcept;
+	static SIRThreadControlResult getCurrentName( char *pszName, uint32_t nCapacity ) noexcept;
+	static SIRThreadControlResult setCurrentAffinity( const sirThreadAffinity_t& rAffinity ) noexcept;
+	static SIRThreadControlResult getCurrentAffinity( sirThreadAffinity_t *pAffinity ) noexcept;
+	static SIRThreadControlResult setCurrentPriority( SIRThreadPriority ePriority ) noexcept;
 };
 
-#endif // __SIRENGINE_SIRPLATFORMTHREADCONTROL_H__
+#endif // __SIR_PLATFORMTHREADCONTROL_H__

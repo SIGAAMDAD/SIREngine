@@ -157,7 +157,7 @@ bool Terrain3DVTResourceImage::service_initialize_cold( const uint32_t nMaxWorkU
 			if ( m_nInitializeBufferCursor < T3D_VT_GPU_BUFFER_COUNT ) {
 				const uint32_t iBuffer = m_nInitializeBufferCursor++;
 				if ( m_Plan.nBufferBytes[iBuffer] != 0u ) {
-					bReady = create_storage_buffer_cold( ( t3dVTGpuBufferId_t )iBuffer, m_Plan.nBufferBytes[iBuffer] );
+					bReady = create_storage_buffer_cold( static_cast<t3dVTGpuBufferId_t>(iBuffer), m_Plan.nBufferBytes[iBuffer] );
 				}
 				++nUnits;
 			} else {
@@ -166,7 +166,7 @@ bool Terrain3DVTResourceImage::service_initialize_cold( const uint32_t nMaxWorkU
 			}
 		} else if ( m_nInitializeStage == 1u ) {
 			if ( m_nInitializeChannelCursor < T3D_VT_CHANNEL_COUNT ) {
-				const t3dVTResourceChannel_t Channel = ( t3dVTResourceChannel_t )m_nInitializeChannelCursor++;
+				const t3dVTResourceChannel_t Channel = static_cast<t3dVTResourceChannel_t>(m_nInitializeChannelCursor)++;
 				bReady = create_vt_channel_cold( Channel, t3d_vt_channel_page_count( m_Limits, Channel ),
 				                                 m_InitializeProfile.nVtPhysicalTileSize, t3d_vt_channel_format( Channel ) ) &&
 				         create_vt_tail_channel_cold( Channel, t3d_vt_channel_format( Channel ) );
@@ -208,7 +208,7 @@ void Terrain3DVTResourceImage::shutdown_cold()
 		return;
 	}
 
-	for ( int32_t iChannel = ( int32_t )T3D_VT_CHANNEL_COUNT - 1; iChannel >= 0; --iChannel ) {
+	for ( int32_t iChannel = static_cast<int32_t>(T3D_VT_CHANNEL_COUNT) - 1; iChannel >= 0; --iChannel ) {
 		if ( m_vtTail[iChannel].isValid() ) {
 			const uint64_t bytes = m_vtTail[iChannel].bytes();
 			m_vtTail[iChannel].releaseTracked( *m_pContext );
@@ -218,8 +218,8 @@ void Terrain3DVTResourceImage::shutdown_cold()
 			m_Stats.nLiveTextureBytes = m_Stats.nLiveTextureBytes >= bytes ? m_Stats.nLiveTextureBytes - bytes : 0u;
 		}
 	}
-	for ( int32_t iChannel = ( int32_t )T3D_VT_CHANNEL_COUNT - 1; iChannel >= 0; --iChannel ) {
-		for ( int32_t iBank = ( int32_t )m_nVtBankCount[iChannel] - 1; iBank >= 0; --iBank ) {
+	for ( int32_t iChannel = static_cast<int32_t>(T3D_VT_CHANNEL_COUNT) - 1; iChannel >= 0; --iChannel ) {
+		for ( int32_t iBank = static_cast<int32_t>(m_nVtBankCount[iChannel]) - 1; iBank >= 0; --iBank ) {
 			if ( m_vtPhysical[iChannel][iBank].isValid() ) {
 				const uint64_t bytes = m_vtPhysical[iChannel][iBank].bytes();
 				m_vtPhysical[iChannel][iBank].releaseTracked( *m_pContext );
@@ -231,7 +231,7 @@ void Terrain3DVTResourceImage::shutdown_cold()
 		}
 	}
 
-	for ( int32_t iBuffer = ( int32_t )T3D_VT_GPU_BUFFER_COUNT - 1; iBuffer >= 0; --iBuffer ) {
+	for ( int32_t iBuffer = static_cast<int32_t>(T3D_VT_GPU_BUFFER_COUNT) - 1; iBuffer >= 0; --iBuffer ) {
 		if ( m_buffers[iBuffer].isValid() ) {
 			m_buffers[iBuffer].releaseTracked( *m_pContext );
 			++m_Stats.nGpuFreeCount;
@@ -325,7 +325,7 @@ const t3dVTGpuResourceStats_t& Terrain3DVTResourceImage::get_stats() const
 
 const RID& Terrain3DVTResourceImage::get_buffer_rid( t3dVTGpuBufferId_t pBuffer ) const
 {
-	if ( ( uint32_t )pBuffer >= T3D_VT_GPU_BUFFER_COUNT ) {
+	if ( static_cast<uint32_t>(pBuffer) >= T3D_VT_GPU_BUFFER_COUNT ) {
 		return m_hInvalid;
 	}
 	return m_buffers[pBuffer].rid();
@@ -333,12 +333,12 @@ const RID& Terrain3DVTResourceImage::get_buffer_rid( t3dVTGpuBufferId_t pBuffer 
 
 const Terrain3DRdGpuBuffer *Terrain3DVTResourceImage::get_buffer( t3dVTGpuBufferId_t pBuffer ) const
 {
-	return ( uint32_t )pBuffer < T3D_VT_GPU_BUFFER_COUNT ? &m_buffers[pBuffer] : NULL;
+	return static_cast<uint32_t>(pBuffer) < T3D_VT_GPU_BUFFER_COUNT ? &m_buffers[pBuffer] : NULL;
 }
 
 uint32_t Terrain3DVTResourceImage::get_vt_bank_count( t3dVTResourceChannel_t pChannel ) const
 {
-	if ( ( uint32_t )pChannel >= T3D_VT_CHANNEL_COUNT ) {
+	if ( static_cast<uint32_t>(pChannel) >= T3D_VT_CHANNEL_COUNT ) {
 		return 0u;
 	}
 	return m_nVtBankCount[pChannel];
@@ -346,7 +346,7 @@ uint32_t Terrain3DVTResourceImage::get_vt_bank_count( t3dVTResourceChannel_t pCh
 
 uint32_t Terrain3DVTResourceImage::get_vt_bank_layer_count( t3dVTResourceChannel_t pChannel, uint32_t pBank ) const
 {
-	if ( ( uint32_t )pChannel >= T3D_VT_CHANNEL_COUNT ) {
+	if ( static_cast<uint32_t>(pChannel) >= T3D_VT_CHANNEL_COUNT ) {
 		return 0u;
 	}
 	if ( pBank >= m_nVtBankCount[pChannel] ) {
@@ -357,7 +357,7 @@ uint32_t Terrain3DVTResourceImage::get_vt_bank_layer_count( t3dVTResourceChannel
 
 const RID& Terrain3DVTResourceImage::get_vt_bank_rid( t3dVTResourceChannel_t pChannel, uint32_t pBank ) const
 {
-	if ( ( uint32_t )pChannel >= T3D_VT_CHANNEL_COUNT ) {
+	if ( static_cast<uint32_t>(pChannel) >= T3D_VT_CHANNEL_COUNT ) {
 		return m_hInvalid;
 	}
 	if ( pBank >= m_nVtBankCount[pChannel] ) {
@@ -368,7 +368,7 @@ const RID& Terrain3DVTResourceImage::get_vt_bank_rid( t3dVTResourceChannel_t pCh
 
 const RID& Terrain3DVTResourceImage::get_vt_tail_rid( t3dVTResourceChannel_t pChannel ) const
 {
-	if ( ( uint32_t )pChannel >= T3D_VT_CHANNEL_COUNT ) {
+	if ( static_cast<uint32_t>(pChannel) >= T3D_VT_CHANNEL_COUNT ) {
 		return m_hInvalid;
 	}
 	return m_vtTail[pChannel].rid();
@@ -377,13 +377,13 @@ const RID& Terrain3DVTResourceImage::get_vt_tail_rid( t3dVTResourceChannel_t pCh
 bool Terrain3DVTResourceImage::update_vt_bank_layer( t3dVTResourceChannel_t pChannel, uint32_t pBank, uint32_t pLayer,
                                                      const PackedByteArray& rData ) const
 {
-	return m_pContext && ( uint32_t )pChannel < T3D_VT_CHANNEL_COUNT && pBank < m_nVtBankCount[pChannel] &&
+	return m_pContext && static_cast<uint32_t>(pChannel) < T3D_VT_CHANNEL_COUNT && pBank < m_nVtBankCount[pChannel] &&
 	       pLayer < m_nVtBankLayers[pChannel][pBank] && m_vtPhysical[pChannel][pBank].updateLayerTracked( *m_pContext, pLayer, rData );
 }
 
 bool Terrain3DVTResourceImage::update_vt_tail_layer( t3dVTResourceChannel_t pChannel, uint32_t pLayer, const PackedByteArray& rData ) const
 {
-	return m_pContext && ( uint32_t )pChannel < T3D_VT_CHANNEL_COUNT &&
+	return m_pContext && static_cast<uint32_t>(pChannel) < T3D_VT_CHANNEL_COUNT &&
 	       m_vtTail[pChannel].updateLayerTracked( *m_pContext, pLayer, rData, T3D_GPU_PUBLICATION );
 }
 
@@ -416,9 +416,9 @@ bool Terrain3DVTResourceImage::validate_device_cold( const t3dWorldLimits_t& pLi
 	}
 
 	for ( uint32_t iChannel = 0u; iChannel < T3D_VT_CHANNEL_COUNT; ++iChannel ) {
-		const uint32_t nPages = t3d_vt_channel_page_count( pLimits, ( t3dVTResourceChannel_t )iChannel );
-		t3dVTBankLayout_t Layout = {};
-		if ( !t3d_vt_compute_bank_layout( nPages, ( uint32_t )nMaxArrayLayers, Layout ) ) {
+		const uint32_t nPages = t3d_vt_channel_page_count( pLimits, static_cast<t3dVTResourceChannel_t>(iChannel) );
+		t3dVTBankLayout_t Layout {};
+		if ( !t3d_vt_compute_bank_layout( nPages, static_cast<uint32_t>(nMaxArrayLayers), Layout ) ) {
 			return false;
 		}
 	}
@@ -430,7 +430,7 @@ bool Terrain3DVTResourceImage::validate_device_cold( const t3dWorldLimits_t& pLi
 		                                                 RenderingDevice::TEXTURE_USAGE_CAN_COPY_TO_BIT );
 
 	for ( uint32_t iChannel = 0u; iChannel < T3D_VT_CHANNEL_COUNT; ++iChannel ) {
-		if ( !Terrain3DRdTexture::supportsFormatUsage( m_pRenderingDevice, t3d_vt_channel_format( ( t3dVTResourceChannel_t )iChannel ),
+		if ( !Terrain3DRdTexture::supportsFormatUsage( m_pRenderingDevice, t3d_vt_channel_formatstatic_cast<t3dVTResourceChannel_t>(iChannel),
 		                                               VtUsage ) ) {
 			return false;
 		}
@@ -444,7 +444,7 @@ bool Terrain3DVTResourceImage::create_storage_buffer_cold( t3dVTGpuBufferId_t pB
 	if ( m_pRenderingDevice == NULL || m_pContext == NULL ) {
 		return false;
 	}
-	if ( ( uint32_t )pBuffer >= T3D_VT_GPU_BUFFER_COUNT ) {
+	if ( static_cast<uint32_t>(pBuffer) >= T3D_VT_GPU_BUFFER_COUNT ) {
 		return false;
 	}
 	if ( pBytes == 0u || pBytes > UINT32_MAX ) {
@@ -458,7 +458,7 @@ bool Terrain3DVTResourceImage::create_storage_buffer_cold( t3dVTGpuBufferId_t pB
 	    pBuffer == T3D_VT_GPU_BUFFER_FRAGMENT_PARAMS ? T3D_RD_CONTEXT_RESOURCE_UNIFORM_BUFFER : T3D_RD_CONTEXT_RESOURCE_STORAGE_BUFFER;
 	spec.m_memory = T3D_RD_CONTEXT_MEMORY_STORAGE;
 	spec.m_growth = T3D_GPU_EXACT;
-	if ( !m_buffers[pBuffer].configure( spec ) || !m_buffers[pBuffer].createTracked( *m_pContext, ( uint32_t )pBytes ) ) {
+	if ( !m_buffers[pBuffer].configure( spec ) || !m_buffers[pBuffer].createTracked( *m_pContext, static_cast<uint32_t>(pBytes) ) ) {
 		return false;
 	}
 
@@ -471,11 +471,11 @@ bool Terrain3DVTResourceImage::create_storage_buffer_cold( t3dVTGpuBufferId_t pB
 bool Terrain3DVTResourceImage::create_vt_channel_cold( t3dVTResourceChannel_t pChannel, uint32_t pPageCount, uint32_t pTileSize,
                                                        RenderingDevice::DataFormat pFormat )
 {
-	if ( m_pRenderingDevice == NULL || m_pContext == NULL || ( uint32_t )pChannel >= T3D_VT_CHANNEL_COUNT || pPageCount == 0u ) {
+	if ( m_pRenderingDevice == NULL || m_pContext == NULL || static_cast<uint32_t>(pChannel) >= T3D_VT_CHANNEL_COUNT || pPageCount == 0u ) {
 		return false;
 	}
-	const uint32_t nMaxArrayLayers = ( uint32_t )m_pRenderingDevice->limit_get( RenderingDevice::LIMIT_MAX_TEXTURE_ARRAY_LAYERS );
-	t3dVTBankLayout_t Layout = {};
+	const uint32_t nMaxArrayLayers = static_cast<uint32_t>(m_pRenderingDevice->limit_get( RenderingDevice::LIMIT_MAX_TEXTURE_ARRAY_LAYERS ));
+	t3dVTBankLayout_t Layout {};
 	if ( !t3d_vt_compute_bank_layout( pPageCount, nMaxArrayLayers, Layout ) ) {
 		return false;
 	}
@@ -489,7 +489,7 @@ bool Terrain3DVTResourceImage::create_vt_channel_cold( t3dVTResourceChannel_t pC
 		const uint64_t nBankBytes = nRemainingPages == nLayers ? nRemainingBytes : nBytesPerLayer * nLayers;
 		t3dRdTextureSpec_t spec;
 		spec.m_name =
-		    String( "Terrain3D VT channel " ) + String::num_uint64( ( uint64_t )pChannel ) + " bank " + String::num_uint64( nBank );
+		    String( "Terrain3D VT channel " ) + String::num_uint64static_cast<uint64_t>(pChannel) + " bank " + String::num_uint64( nBank );
 		spec.m_owner = T3D_RD_CONTEXT_OWNER_VT;
 		spec.m_memory = T3D_RD_CONTEXT_MEMORY_TERRAIN_TEXTURE;
 		spec.m_layout.m_format = pFormat;
@@ -516,12 +516,12 @@ bool Terrain3DVTResourceImage::create_vt_channel_cold( t3dVTResourceChannel_t pC
 
 bool Terrain3DVTResourceImage::create_vt_tail_channel_cold( t3dVTResourceChannel_t pChannel, RenderingDevice::DataFormat pFormat )
 {
-	if ( m_pRenderingDevice == NULL || m_pContext == NULL || ( uint32_t )pChannel >= T3D_VT_CHANNEL_COUNT ||
+	if ( m_pRenderingDevice == NULL || m_pContext == NULL || static_cast<uint32_t>(pChannel) >= T3D_VT_CHANNEL_COUNT ||
 	     m_Plan.nVtTailBytes[pChannel] == 0u ) {
 		return false;
 	}
 	t3dRdTextureSpec_t spec;
-	spec.m_name = String( "Terrain3D VT tail channel " ) + String::num_uint64( ( uint64_t )pChannel );
+	spec.m_name = String( "Terrain3D VT tail channel " ) + String::num_uint64static_cast<uint64_t>(pChannel);
 	spec.m_owner = T3D_RD_CONTEXT_OWNER_VT;
 	spec.m_memory = T3D_RD_CONTEXT_MEMORY_TERRAIN_TEXTURE;
 	spec.m_layout.m_format = pFormat;

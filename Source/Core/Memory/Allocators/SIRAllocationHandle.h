@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef SIRENGINE_SIRALLOCATIONHANDLE_H
-#define SIRENGINE_SIRALLOCATIONHANDLE_H
+#ifndef __SIR_ALLOCATIONHANDLE_H__
+#define __SIR_ALLOCATIONHANDLE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -101,7 +101,7 @@ private:
 	}
 
 	SIRHandleHeap *m_pHeap = nullptr;
-	sirMemoryHandle_t m_Handle = {};
+	sirMemoryHandle_t m_Handle {};
 	T *m_pObject = nullptr;
 };
 
@@ -127,7 +127,7 @@ public:
 		if ( pObject == nullptr ) {
 			return {};
 		}
-		return SIRAllocationPin<T>( m_pHeap, m_Handle, ( T * )pObject );
+		return SIRAllocationPin<T>( m_pHeap, m_Handle, static_cast<T *>(pObject) );
 	}
 	bool release( void ) noexcept
 	{
@@ -153,7 +153,7 @@ public:
 			return result;
 		}
 
-		sirMemoryHandle_t handle = {};
+		sirMemoryHandle_t handle {};
 		void *pMemory = pHeap->alloc( sizeof( T ), alignof( T ), &handle );
 		if ( pMemory == nullptr ) {
 			return result;
@@ -167,8 +167,8 @@ public:
 
 private:
 	SIRHandleHeap *m_pHeap = nullptr;
-	sirMemoryHandle_t m_Handle = {};
+	sirMemoryHandle_t m_Handle {};
 	uint64_t m_nHeapGeneration = 0;
 };
 
-#endif // SIRENGINE_SIRALLOCATIONHANDLE_H
+#endif // __SIR_ALLOCATIONHANDLE_H__

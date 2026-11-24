@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRPLATFORMFILESYSTEM_H__
-#define __SIRENGINE_SIRPLATFORMFILESYSTEM_H__
+#ifndef __SIR_PLATFORMFILESYSTEM_H__
+#define __SIR_PLATFORMFILESYSTEM_H__
 
 #include <Core/SIRPCH.h>
 
@@ -27,8 +27,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <stdint.h>
 #include <stddef.h>
 
-typedef enum sirFileSystemResult_e : uint8_t
-{
+enum class SIRFileSystemResult : uint8_t {
 	SIR_FILESYSTEM_OK = 0,
 	SIR_FILESYSTEM_INVALID_ARGUMENT = 1,
 	SIR_FILESYSTEM_NOT_FOUND = 2,
@@ -39,27 +38,25 @@ typedef enum sirFileSystemResult_e : uint8_t
 	SIR_FILESYSTEM_IO_ERROR = 7,
 	SIR_FILESYSTEM_INVALID_PATH = 8,
 	SIR_FILESYSTEM_OUT_OF_CAPACITY = 9
-} sirFileSystemResult_t;
+};
 
-typedef enum sirFileSystemEntryType_e : uint8_t
-{
+enum class SIRFileSystemEntryType : uint8_t {
 	SIR_FILESYSTEM_REGULAR_FILE = 0,
 	SIR_FILESYSTEM_DIRECTORY = 1,
 	SIR_FILESYSTEM_SYMLINK = 2,
 	SIR_FILESYSTEM_OTHER = 3
-} sirFileSystemEntryType_t;
+};
 
 typedef struct sirFileSystemInfo_s
 {
 	uint64_t nSizeBytes;
 	uint64_t nModifiedNanoseconds;
-	sirFileSystemEntryType_t eType;
+	SIRFileSystemEntryType eType;
 } sirFileSystemInfo_t;
 
 // Save operation results preserve precommit/committed states distinctly
 // from generic filesystem query and read outcomes.
-typedef enum sirPlatformAtomicResult_e : uint8_t
-{
+enum class SIRPlatformAtomicResult : uint8_t {
 	SIR_ATOMIC_SAVE_OK = 0,
 	SIR_ATOMIC_SAVE_INVALID_ARGUMENT = 1,
 	SIR_ATOMIC_SAVE_INVALID_PATH = 2,
@@ -69,7 +66,7 @@ typedef enum sirPlatformAtomicResult_e : uint8_t
 	SIR_ATOMIC_SAVE_COMMITTED_NOT_DURABLE = 6,
 	SIR_ATOMIC_SAVE_CONFLICT = 7,
 	SIR_ATOMIC_SAVE_OUT_OF_CAPACITY = 8
-} sirPlatformAtomicResult_t;
+};
 
 // A sibling staging file is exclusively created, synced, then atomically
 // published with an optional optimistic comparison of expected prior bytes.
@@ -95,20 +92,20 @@ public:
 	SIRPlatformFileSystem( void ) = delete;
 	~SIRPlatformFileSystem( void ) = delete;
 
-	static sirFileSystemResult_t query( const char *pszPath, sirFileSystemInfo_t *pInfo ) noexcept;
-	static sirFileSystemResult_t createDirectory( const char *pszPath, bool bRecursive ) noexcept;
-	static sirFileSystemResult_t removeDirectory( const char *pszPath ) noexcept;
-	static sirFileSystemResult_t renameReplace( const char *pszOldPath, const char *pszNewPath ) noexcept;
-	static sirFileSystemResult_t enumerate( const char *pszDirectory, sirFileSystemVisitor_t pVisitor, void *pContext ) noexcept;
-	static sirFileSystemResult_t readFile( const char *pszPath, char *pszOutput, size_t nCapacity, size_t *pOutBytes ) noexcept;
-	static sirPlatformAtomicResult_t writeAtomically( const sirFileSystemAtomicWriteRequest_t& request ) noexcept;
+	static SIRFileSystemResult query( const char *pszPath, sirFileSystemInfo_t *pInfo ) noexcept;
+	static SIRFileSystemResult createDirectory( const char *pszPath, bool bRecursive ) noexcept;
+	static SIRFileSystemResult removeDirectory( const char *pszPath ) noexcept;
+	static SIRFileSystemResult renameReplace( const char *pszOldPath, const char *pszNewPath ) noexcept;
+	static SIRFileSystemResult enumerate( const char *pszDirectory, sirFileSystemVisitor_t pVisitor, void *pContext ) noexcept;
+	static SIRFileSystemResult readFile( const char *pszPath, char *pszOutput, size_t nCapacity, size_t *pOutBytes ) noexcept;
+	static SIRPlatformAtomicResult writeAtomically( const sirFileSystemAtomicWriteRequest_t& request ) noexcept;
 
 protected:
 private:
 	static const char *lastSeparator( const char *pszPath ) noexcept;
 	static bool validPaths( const char *pszDestination, const char *pszTemporary ) noexcept;
-	static sirFileSystemResult_t readFilePlatform( const char *pszPath, char *pszOutput, size_t nCapacity, size_t *pOutBytes ) noexcept;
-	static sirPlatformAtomicResult_t writeAtomicallyPlatform( const sirFileSystemAtomicWriteRequest_t& request ) noexcept;
+	static SIRFileSystemResult readFilePlatform( const char *pszPath, char *pszOutput, size_t nCapacity, size_t *pOutBytes ) noexcept;
+	static SIRPlatformAtomicResult writeAtomicallyPlatform( const sirFileSystemAtomicWriteRequest_t& request ) noexcept;
 };
 
-#endif // __SIRENGINE_SIRPLATFORMFILESYSTEM_H__
+#endif // __SIR_PLATFORMFILESYSTEM_H__

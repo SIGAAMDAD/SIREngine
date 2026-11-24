@@ -15,8 +15,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRRINGBUFFER_H__
-#define __SIRENGINE_SIRRINGBUFFER_H__
+#ifndef __SIR_RINGBUFFER_H__
+#define __SIR_RINGBUFFER_H__
 
 #include <Core/SIRPCH.h>
 
@@ -44,10 +44,10 @@ private:
 
 	bool overlapsStorage( const T *pItems, uint32_t nCount ) const noexcept
 	{
-		const uintptr_t nStorage = ( uintptr_t )m_pData;
-		const uintptr_t nInput = ( uintptr_t )pItems;
-		const uint64_t nStorageBytes = ( uint64_t )m_nCapacity * sizeof( T );
-		const uint64_t nInputBytes = ( uint64_t )nCount * sizeof( T );
+		const uintptr_t nStorage = reinterpret_cast<uintptr_t>(m_pData);
+		const uintptr_t nInput = reinterpret_cast<uintptr_t>(pItems);
+		const uint64_t nStorageBytes = static_cast<uint64_t>(m_nCapacity * sizeof(  T  ));
+		const uint64_t nInputBytes = static_cast<uint64_t>(nCount * sizeof(  T  ));
 		if ( nInput >= nStorage ) {
 			return nInput - nStorage < nStorageBytes;
 		}
@@ -57,9 +57,9 @@ private:
 	uint32_t wrapIndex( uint64_t iIndex ) const noexcept
 	{
 		if ( ( m_nCapacity & ( m_nCapacity - 1 ) ) == 0 ) {
-			return ( uint32_t )iIndex & ( m_nCapacity - 1 );
+			return static_cast<uint32_t>(iIndex) & ( m_nCapacity - 1 );
 		}
-		return ( uint32_t )( iIndex >= m_nCapacity ? iIndex - m_nCapacity : iIndex );
+		return static_cast<uint32_t>( iIndex >= m_nCapacity ? iIndex - m_nCapacity : iIndex );
 	}
 
 public:
@@ -75,19 +75,19 @@ public:
 	SIRRingBuffer( SIRRingBuffer&& ) = delete;
 	SIRRingBuffer& operator=( SIRRingBuffer&& ) = delete;
 
-	sirContainerResult_t tryInitialize( uint32_t nCapacity ) noexcept
+	SIRContainerResult tryInitialize( uint32_t nCapacity ) noexcept
 	{
 		if ( m_nCapacity != 0 || nCapacity == 0 ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		size_t nBytes = 0;
 		if ( !SIRRawStorage::checkedMultiply( nCapacity, sizeof( T ), &nBytes ) ) {
-			return SIR_CONTAINER_SIZE_OVERFLOW;
+			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
 		void *pMemory = nullptr;
-		sirContainerResult_t eResult = SIRRawStorage::tryAllocate( m_pAllocator, nBytes, alignof( T ), &pMemory );
-		if ( eResult == SIR_CONTAINER_OK ) {
-			m_pData = ( T * )pMemory;
+		SIRContainerResult eResult = SIRRawStorage::tryAllocate( m_pAllocator, nBytes, alignof( T ), &pMemory );
+		if ( eResult == SIRContainerResult::SIR_CONTAINER_OK ) {
+			m_pData = static_cast<T *>(pMemory);
 			m_nCapacity = nCapacity;
 		}
 		return eResult;
@@ -117,59 +117,59 @@ public:
 
 	T *back( void ) noexcept
 	{
-		return m_nSize == 0 ? nullptr : &m_pData[wrapIndex( ( uint64_t )m_iHead + m_nSize - 1 )];
+		return m_nSize == 0 ? nullptr : &m_pData[wrapIndex( static_cast<uint64_t>(m_iHead) + m_nSize - 1 )];
 	}
 
 	const T *back( void ) const noexcept
 	{
-		return m_nSize == 0 ? nullptr : &m_pData[wrapIndex( ( uint64_t )m_iHead + m_nSize - 1 )];
+		return m_nSize == 0 ? nullptr : &m_pData[wrapIndex( static_cast<uint64_t>(m_iHead) + m_nSize - 1 )];
 	}
 
 	template <typename... Args>
-	sirContainerResult_t tryEmplaceFront( Args&&...args )
+	SIRContainerResult tryEmplaceFront( Args&&...args )
 	{
 		if ( m_nCapacity == 0 ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		if ( m_nSize == m_nCapacity ) {
-			return SIR_CONTAINER_FULL;
+			return SIRContainerResult::SIR_CONTAINER_FULL;
 		}
 		uint32_t iNewHead = m_iHead == 0 ? m_nCapacity - 1 : m_iHead - 1;
 		new ( m_pData + iNewHead ) T( std::forward<Args>( args )... );
 		m_iHead = iNewHead;
 		++m_nSize;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
-	sirContainerResult_t tryPushFront( const T& value )
+	SIRContainerResult tryPushFront( const T& value )
 	{
 		return tryEmplaceFront( value );
 	}
-	sirContainerResult_t tryPushFront( T&& value )
+	SIRContainerResult tryPushFront( T&& value )
 	{
 		return tryEmplaceFront( std::move( value ) );
 	}
 
 	template <typename... Args>
-	sirContainerResult_t tryEmplaceBack( Args&&...args )
+	SIRContainerResult tryEmplaceBack( Args&&...args )
 	{
 		if ( m_nCapacity == 0 ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		if ( m_nSize == m_nCapacity ) {
-			return SIR_CONTAINER_FULL;
+			return SIRContainerResult::SIR_CONTAINER_FULL;
 		}
-		uint32_t iSlot = wrapIndex( ( uint64_t )m_iHead + m_nSize );
+		uint32_t iSlot = wrapIndex( static_cast<uint64_t>(m_iHead) + m_nSize );
 		new ( m_pData + iSlot ) T( std::forward<Args>( args )... );
 		++m_nSize;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
-	sirContainerResult_t tryPushBack( const T& value )
+	SIRContainerResult tryPushBack( const T& value )
 	{
 		return tryEmplaceBack( value );
 	}
-	sirContainerResult_t tryPushBack( T&& value )
+	SIRContainerResult tryPushBack( T&& value )
 	{
 		return tryEmplaceBack( std::move( value ) );
 	}
@@ -177,23 +177,23 @@ public:
 	// Batched API for trivially copyable elements. The entire operation either
 	// succeeds or leaves the ring unchanged. Source/destination aliasing with
 	// this ring's backing allocation is rejected before any modification.
-	sirContainerResult_t tryPushBackMany( const T *pItems, uint32_t nCount ) noexcept
+	SIRContainerResult tryPushBackMany( const T *pItems, uint32_t nCount ) noexcept
 	{
 		static_assert( std::is_trivially_copyable<T>::value, "Bulk push requires trivially copyable elements" );
 		if ( nCount == 0 ) {
-			return SIR_CONTAINER_OK;
+			return SIRContainerResult::SIR_CONTAINER_OK;
 		}
 		if ( pItems == nullptr || m_nCapacity == 0 ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		if ( nCount > m_nCapacity - m_nSize ) {
-			return SIR_CONTAINER_FULL;
+			return SIRContainerResult::SIR_CONTAINER_FULL;
 		}
 		if ( overlapsStorage( pItems, nCount ) ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 
-		const uint32_t iTail = wrapIndex( ( uint64_t )m_iHead + m_nSize );
+		const uint32_t iTail = wrapIndex( static_cast<uint64_t>(m_iHead) + m_nSize );
 		const uint32_t nFirst = nCount < m_nCapacity - iTail ? nCount : m_nCapacity - iTail;
 		for ( uint32_t iIndex = 0; iIndex < nFirst; ++iIndex ) {
 			new ( m_pData + iTail + iIndex ) T( pItems[iIndex] );
@@ -202,23 +202,23 @@ public:
 			new ( m_pData + iIndex - nFirst ) T( pItems[iIndex] );
 		}
 		m_nSize += nCount;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
-	sirContainerResult_t tryPopFrontMany( T *pOutput, uint32_t nCount ) noexcept
+	SIRContainerResult tryPopFrontMany( T *pOutput, uint32_t nCount ) noexcept
 	{
 		static_assert( std::is_trivially_copyable<T>::value, "Bulk pop requires trivially copyable elements" );
 		if ( nCount == 0 ) {
-			return SIR_CONTAINER_OK;
+			return SIRContainerResult::SIR_CONTAINER_OK;
 		}
 		if ( pOutput == nullptr ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		if ( nCount > m_nSize ) {
-			return SIR_CONTAINER_EMPTY;
+			return SIRContainerResult::SIR_CONTAINER_EMPTY;
 		}
 		if ( overlapsStorage( pOutput, nCount ) ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 
 		const uint32_t nFirst = nCount < m_nCapacity - m_iHead ? nCount : m_nCapacity - m_iHead;
@@ -230,31 +230,31 @@ public:
 			pOutput[iIndex] = m_pData[iIndex - nFirst];
 			m_pData[iIndex - nFirst].~T();
 		}
-		m_iHead = wrapIndex( ( uint64_t )m_iHead + nCount );
+		m_iHead = wrapIndex( static_cast<uint64_t>(m_iHead) + nCount );
 		m_nSize -= nCount;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
-	sirContainerResult_t tryPopFront( void ) noexcept
+	SIRContainerResult tryPopFront( void ) noexcept
 	{
 		if ( m_nSize == 0 ) {
-			return SIR_CONTAINER_EMPTY;
+			return SIRContainerResult::SIR_CONTAINER_EMPTY;
 		}
 		m_pData[m_iHead].~T();
-		m_iHead = wrapIndex( ( uint64_t )m_iHead + 1 );
+		m_iHead = wrapIndex( static_cast<uint64_t>(m_iHead) + 1 );
 		--m_nSize;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
-	sirContainerResult_t tryPopBack( void ) noexcept
+	SIRContainerResult tryPopBack( void ) noexcept
 	{
 		if ( m_nSize == 0 ) {
-			return SIR_CONTAINER_EMPTY;
+			return SIRContainerResult::SIR_CONTAINER_EMPTY;
 		}
-		uint32_t iLast = wrapIndex( ( uint64_t )m_iHead + m_nSize - 1 );
+		uint32_t iLast = wrapIndex( static_cast<uint64_t>(m_iHead) + m_nSize - 1 );
 		m_pData[iLast].~T();
 		--m_nSize;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
 	void clear( void ) noexcept
@@ -268,15 +268,15 @@ public:
 	void clearAndRelease( void ) noexcept
 	{
 		clear();
-		SIRRawStorage::deallocate( m_pAllocator, m_pData, ( size_t )m_nCapacity * sizeof( T ), alignof( T ) );
+		SIRRawStorage::deallocate( m_pAllocator, m_pData, static_cast<size_t>(m_nCapacity * sizeof(  T  )), alignof( T ) );
 		m_pData = nullptr;
 		m_nCapacity = 0;
 	}
 
 	sirContainerFootprint_t getFootprint( void ) const noexcept
 	{
-		return { 0, ( uint64_t )m_nCapacity * sizeof( T ), 0, 0, ( uint64_t )m_nSize * sizeof( T ) };
+		return { 0, static_cast<uint64_t>(m_nCapacity * sizeof(  T  )), 0, 0, static_cast<uint64_t>(m_nSize * sizeof(  T  )) };
 	}
 };
 
-#endif // __SIRENGINE_SIRRINGBUFFER_H__
+#endif // __SIR_RINGBUFFER_H__

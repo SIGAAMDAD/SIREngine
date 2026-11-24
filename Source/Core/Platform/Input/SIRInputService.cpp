@@ -19,7 +19,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 static bool sirInputRumbleOutput( void *pContext, sirInputDeviceId_t hDevice, uint16_t nLeft, uint16_t nRight ) noexcept
 {
-	return ( ( SIRInputService * )pContext )->vibrate( hDevice, nLeft, nRight );
+	return static_cast<SIRInputService *>(pContext)->vibrate( hDevice, nLeft, nRight );
 }
 
 SIRInputService::SIRInputService( void ) noexcept
@@ -28,7 +28,7 @@ SIRInputService::SIRInputService( void ) noexcept
 {
 }
 
-bool SIRInputService::hasBackend( sirInputBackendId_t eSource ) const noexcept
+bool SIRInputService::hasBackend( SIRInputBackendId eSource ) const noexcept
 {
 	for ( uint32_t i = 0; i < m_nBackendCount; ++i ) {
 		if ( m_pBackends[i]->id() == eSource ) {
@@ -48,17 +48,17 @@ bool SIRInputService::attach( SIRInputBackend& backend ) noexcept
 	return true;
 }
 
-sirInputTimestamp_t SIRInputService::timestamp( uint64_t nNative, sirInputClockSource_t eClock ) const noexcept
+sirInputTimestamp_t SIRInputService::timestamp( uint64_t nNative, SIRInputClockSource eClock ) const noexcept
 {
 	// A caller-supplied engine monotonic value is the receipt timestamp.
 	// Only genuinely independent source clocks require a second clock read.
-	if ( nNative != 0 && eClock == SIR_INPUT_CLOCK_ENGINE_MONOTONIC ) {
-		return { nNative, nNative, SIR_INPUT_CLOCK_ENGINE_MONOTONIC, 0 };
+	if ( nNative != 0 && eClock == SIRInputClockSource::SIR_INPUT_CLOCK_ENGINE_MONOTONIC ) {
+		return { nNative, nNative, SIRInputClockSource::SIR_INPUT_CLOCK_ENGINE_MONOTONIC, 0 };
 	}
 	const uint64_t nReceivedNs = SIRPlatformTime::getMonotonicNanoseconds();
 	const bool bNative = nNative != 0;
-	return { bNative ? nNative : nReceivedNs, nReceivedNs, bNative ? eClock : SIR_INPUT_CLOCK_ENGINE_MONOTONIC,
-	         ( uint8_t )( bNative ? 1 : 0 ) };
+	return { bNative ? nNative : nReceivedNs, nReceivedNs, bNative ? eClock : SIRInputClockSource::SIR_INPUT_CLOCK_ENGINE_MONOTONIC,
+	         static_cast<uint8_t>( bNative ? 1 : 0 ) };
 }
 
 bool SIRInputService::begin( uint64_t nTick ) noexcept
@@ -79,7 +79,7 @@ void SIRInputService::sample( void ) noexcept
 			m_pBackends[i]->sample( *this );
 		}
 		if ( m_Haptics.hasWork() ) {
-			( void )m_Haptics.advance( SIRPlatformTime::getMonotonicNanoseconds(), m_bHapticsPaused, sirInputRumbleOutput, this );
+			static_cast<void>(m_Haptics.advance( SIRPlatformTime::getMonotonicNanoseconds(), m_bHapticsPaused, sirInputRumbleOutput, this ));
 		}
 	}
 }
@@ -125,7 +125,7 @@ bool SIRInputService::captureHistoryTick( SIRInputHistory& history, const sirInp
 	     ( nCount != 0 && pKeys == nullptr ) ) {
 		return false;
 	}
-	sirInputReplayFrame_t inputFrame = {};
+	sirInputReplayFrame_t inputFrame {};
 	inputFrame.nTick = pFrame->nTick;
 	inputFrame.nCount = nCount;
 	for ( uint32_t i = 0; i < nCount; ++i ) {
@@ -163,7 +163,7 @@ bool SIRInputService::queueHistoryTick( const SIRInputHistory& history, uint64_t
 	if ( !m_bReplayActive || !m_State.collecting() || nTick != m_nCollectingTick ) {
 		return false;
 	}
-	sirInputReplayFrame_t frame = {};
+	sirInputReplayFrame_t frame {};
 	return history.read( nTick, &frame ) && queueReplayTick( frame );
 }
 
@@ -212,7 +212,7 @@ const SIRInputText& SIRInputService::text( void ) const noexcept
 
 bool SIRInputService::scheduleRumble( const sirInputHapticRequest_t& request, sirInputHapticHandle_t *pHandle ) noexcept
 {
-	if ( m_bStopping || ( hapticCapabilities( request.hDevice ) & SIR_INPUT_HAPTIC_CAP_RUMBLE ) == 0 ) {
+	if ( m_bStopping || ( hapticCapabilities( request.hDevice ) & SIRInputHapticCapability::SIR_INPUT_HAPTIC_CAP_RUMBLE ) == 0 ) {
 		return false;
 	}
 	return m_Haptics.schedule( request, SIRPlatformTime::getMonotonicNanoseconds(), pHandle );
@@ -228,13 +228,13 @@ void SIRInputService::setHapticsPaused( bool bPaused ) noexcept
 	m_bHapticsPaused = bPaused;
 	if ( bPaused ) {
 		if ( m_Haptics.hasWork() ) {
-			( void )m_Haptics.advance( SIRPlatformTime::getMonotonicNanoseconds(), true, sirInputRumbleOutput, this );
+			static_cast<void>(m_Haptics.advance( SIRPlatformTime::getMonotonicNanoseconds(), true, sirInputRumbleOutput, this ));
 		}
 		for ( uint32_t i = 0; i < SIR_INPUT_DEVICE_CAPACITY; ++i ) {
-			sirInputDeviceDescriptor_t desc = {};
-			if ( m_Registry.inspectSlot( i, &desc ) && desc.bConnected && desc.key.eClass == SIR_INPUT_CONTROLLER ) {
-				( void )vibrate( desc.id, 0, 0 );
-				( void )vibrateTriggers( desc.id, 0, 0 );
+			sirInputDeviceDescriptor_t desc {};
+			if ( m_Registry.inspectSlot( i, &desc ) && desc.bConnected && desc.key.eClass == SIRInputDeviceClass::SIR_INPUT_CONTROLLER ) {
+				static_cast<void>(vibrate( desc.id, 0, 0 ));
+				static_cast<void>(vibrateTriggers( desc.id, 0, 0 ));
 			}
 		}
 	}
@@ -242,25 +242,25 @@ void SIRInputService::setHapticsPaused( bool bPaused ) noexcept
 
 uint32_t SIRInputService::hapticCapabilities( sirInputDeviceId_t hDevice ) const noexcept
 {
-	sirInputDeviceDescriptor_t desc = {};
-	if ( !m_Registry.describe( hDevice, &desc ) || desc.key.eClass != SIR_INPUT_CONTROLLER ) {
-		return SIR_INPUT_HAPTIC_CAP_NONE;
+	sirInputDeviceDescriptor_t desc {};
+	if ( !m_Registry.describe( hDevice, &desc ) || desc.key.eClass != SIRInputDeviceClass::SIR_INPUT_CONTROLLER ) {
+		return SIRInputHapticCapability::SIR_INPUT_HAPTIC_CAP_NONE;
 	}
 	for ( uint32_t i = 0; i < m_nBackendCount; ++i ) {
 		if ( m_pBackends[i]->id() == desc.key.eBackend ) {
 			return m_pBackends[i]->hapticCapabilities( hDevice );
 		}
 	}
-	return SIR_INPUT_HAPTIC_CAP_NONE;
+	return SIRInputHapticCapability::SIR_INPUT_HAPTIC_CAP_NONE;
 }
 
 bool SIRInputService::vibrateTriggers( sirInputDeviceId_t hDevice, uint16_t nLeft, uint16_t nRight ) noexcept
 {
 	if ( m_bStopping || ( m_bHapticsPaused && ( nLeft != 0 || nRight != 0 ) ) ||
-	     ( hapticCapabilities( hDevice ) & SIR_INPUT_HAPTIC_CAP_TRIGGER_RUMBLE ) == 0 ) {
+	     ( hapticCapabilities( hDevice ) & SIRInputHapticCapability::SIR_INPUT_HAPTIC_CAP_TRIGGER_RUMBLE ) == 0 ) {
 		return false;
 	}
-	sirInputDeviceDescriptor_t desc = {};
+	sirInputDeviceDescriptor_t desc {};
 	if ( !m_Registry.describe( hDevice, &desc ) ) {
 		return false;
 	}
@@ -288,7 +288,7 @@ bool SIRInputService::recover( void ) noexcept
 	return true;
 }
 
-bool SIRInputService::verifyOwner( sirInputBackendId_t eSource, sirInputDeviceId_t id, sirInputDeviceDescriptor_t *pOut ) const noexcept
+bool SIRInputService::verifyOwner( SIRInputBackendId eSource, sirInputDeviceId_t id, sirInputDeviceDescriptor_t *pOut ) const noexcept
 {
 	return hasBackend( eSource ) && m_Registry.describe( id, pOut ) && pOut->key.eBackend == eSource;
 }
@@ -299,25 +299,25 @@ bool SIRInputService::connect( const sirInputHardwareKey_t& key, sirInputDeviceI
 	     !m_Registry.connect( key, pOut ) ) {
 		return false;
 	}
-	if ( !m_State.postDevice( *pOut, key.eClass, SIR_INPUT_CONNECTED, timestamp( 0, SIR_INPUT_CLOCK_ENGINE_MONOTONIC ) ) ) {
+	if ( !m_State.postDevice( *pOut, key.eClass, SIRInputSignal::SIR_INPUT_CONNECTED, timestamp( 0, SIRInputClockSource::SIR_INPUT_CLOCK_ENGINE_MONOTONIC ) ) ) {
 		m_Registry.disconnect( *pOut );
 		return false;
 	}
 	return true;
 }
 
-bool SIRInputService::disconnect( sirInputBackendId_t eSource, sirInputDeviceId_t id ) noexcept
+bool SIRInputService::disconnect( SIRInputBackendId eSource, sirInputDeviceId_t id ) noexcept
 {
-	sirInputDeviceDescriptor_t desc = {};
+	sirInputDeviceDescriptor_t desc {};
 	if ( !m_State.collecting() || !verifyOwner( eSource, id, &desc ) ) {
 		return false;
 	}
 	// Always retire the handle, even when queue capacity is exhausted.
 	const bool bQueued =
-	    m_State.postDevice( id, desc.key.eClass, SIR_INPUT_DISCONNECTED, timestamp( 0, SIR_INPUT_CLOCK_ENGINE_MONOTONIC ) );
+	    m_State.postDevice( id, desc.key.eClass, SIRInputSignal::SIR_INPUT_DISCONNECTED, timestamp( 0, SIRInputClockSource::SIR_INPUT_CLOCK_ENGINE_MONOTONIC ) );
 	m_Haptics.forgetDevice( id, sirInputRumbleOutput, this );
-	( void )vibrate( id, 0, 0 );
-	( void )vibrateTriggers( id, 0, 0 );
+	static_cast<void>(vibrate( id, 0, 0 ));
+	static_cast<void>(vibrateTriggers( id, 0, 0 ));
 	m_State.clearDevice( id );
 	m_Registry.disconnect( id );
 	return bQueued;
@@ -331,44 +331,44 @@ bool SIRInputService::describe( sirInputDeviceId_t id, sirInputDeviceDescriptor_
 {
 	return m_Registry.describe( id, pOut );
 }
-bool SIRInputService::findDevice( sirInputBackendId_t eSource, uint64_t nNative, sirInputDeviceId_t *pOut ) const noexcept
+bool SIRInputService::findDevice( SIRInputBackendId eSource, uint64_t nNative, sirInputDeviceId_t *pOut ) const noexcept
 {
 	return m_Registry.resolve( eSource, nNative, pOut );
 }
 
-bool SIRInputService::emitControls( sirInputBackendId_t eSource, sirInputDeviceId_t id, const sirInputControlChange_t *pChanges,
-                                    uint32_t nCount, uint64_t nTime, sirInputClockSource_t eClock ) noexcept
+bool SIRInputService::emitControls( SIRInputBackendId eSource, sirInputDeviceId_t id, const sirInputControlChange_t *pChanges,
+                                    uint32_t nCount, uint64_t nTime, SIRInputClockSource eClock ) noexcept
 {
-	sirInputDeviceClass_t eClass = SIR_INPUT_KEYBOARD;
+	SIRInputDeviceClass eClass = SIRInputDeviceClass::SIR_INPUT_KEYBOARD;
 	return m_Registry.authorize( eSource, id, &eClass ) && m_State.postChanges( id, eClass, pChanges, nCount, timestamp( nTime, eClock ) );
 }
 
-bool SIRInputService::emitPointer( sirInputBackendId_t eSource, sirInputDeviceId_t id, sirInputSignal_t eSignal, uint16_t nControl,
-                                   int32_t nX, int32_t nY, uint64_t nTime, sirInputClockSource_t eClock ) noexcept
+bool SIRInputService::emitPointer( SIRInputBackendId eSource, sirInputDeviceId_t id, SIRInputSignal eSignal, uint16_t nControl,
+                                   int32_t nX, int32_t nY, uint64_t nTime, SIRInputClockSource eClock ) noexcept
 {
-	sirInputDeviceClass_t eClass = SIR_INPUT_KEYBOARD;
+	SIRInputDeviceClass eClass = SIRInputDeviceClass::SIR_INPUT_KEYBOARD;
 	return m_Registry.authorize( eSource, id, &eClass ) &&
 	       m_State.postPointer( id, eClass, eSignal, nControl, nX, nY, timestamp( nTime, eClock ) );
 }
 
-bool SIRInputService::resynchronizeControls( sirInputBackendId_t eSource, sirInputDeviceId_t id, const sirInputControlChange_t *pChanges,
+bool SIRInputService::resynchronizeControls( SIRInputBackendId eSource, sirInputDeviceId_t id, const sirInputControlChange_t *pChanges,
                                              uint32_t nCount ) noexcept
 {
-	sirInputDeviceClass_t eClass = SIR_INPUT_KEYBOARD;
+	SIRInputDeviceClass eClass = SIRInputDeviceClass::SIR_INPUT_KEYBOARD;
 	return m_Registry.authorize( eSource, id, &eClass ) && hasBackend( eSource ) &&
 	       m_State.postResyncChanges( id, eClass, pChanges, nCount );
 }
 
-bool SIRInputService::loseState( sirInputBackendId_t eSource, sirInputDeviceId_t id ) noexcept
+bool SIRInputService::loseState( SIRInputBackendId eSource, sirInputDeviceId_t id ) noexcept
 {
-	sirInputDeviceClass_t eClass = SIR_INPUT_KEYBOARD;
+	SIRInputDeviceClass eClass = SIRInputDeviceClass::SIR_INPUT_KEYBOARD;
 	if ( !m_Registry.authorize( eSource, id, &eClass ) ) {
 		return false;
 	}
-	return m_State.postDevice( id, eClass, SIR_INPUT_RESYNC, timestamp( 0, SIR_INPUT_CLOCK_ENGINE_MONOTONIC ) );
+	return m_State.postDevice( id, eClass, SIRInputSignal::SIR_INPUT_RESYNC, timestamp( 0, SIRInputClockSource::SIR_INPUT_CLOCK_ENGINE_MONOTONIC ) );
 }
 
-bool SIRInputService::loseBackendState( sirInputBackendId_t eSource ) noexcept
+bool SIRInputService::loseBackendState( SIRInputBackendId eSource ) noexcept
 {
 	if ( m_bStopping || !m_State.collecting() || !hasBackend( eSource ) ) {
 		return false;
@@ -376,7 +376,7 @@ bool SIRInputService::loseBackendState( sirInputBackendId_t eSource ) noexcept
 
 	bool bOkay = true;
 	for ( uint32_t iSlot = 0; iSlot < SIR_INPUT_DEVICE_CAPACITY; ++iSlot ) {
-		sirInputDeviceDescriptor_t desc = {};
+		sirInputDeviceDescriptor_t desc {};
 		if ( !m_Registry.inspectSlot( iSlot, &desc ) || !desc.bConnected || desc.key.eBackend != eSource ) {
 			continue;
 		}
@@ -392,8 +392,8 @@ bool SIRInputService::vibrate( sirInputDeviceId_t id, uint16_t nLeft, uint16_t n
 	if ( m_bHapticsPaused && ( nLeft != 0 || nRight != 0 ) ) {
 		return false;
 	}
-	sirInputDeviceDescriptor_t desc = {};
-	if ( !m_Registry.describe( id, &desc ) || desc.key.eClass != SIR_INPUT_CONTROLLER ) {
+	sirInputDeviceDescriptor_t desc {};
+	if ( !m_Registry.describe( id, &desc ) || desc.key.eClass != SIRInputDeviceClass::SIR_INPUT_CONTROLLER ) {
 		return false;
 	}
 	for ( uint32_t i = 0; i < m_nBackendCount; ++i ) {

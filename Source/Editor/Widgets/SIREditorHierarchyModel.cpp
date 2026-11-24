@@ -16,8 +16,8 @@ static bool sirEditorHierarchyLinkLess( const sirEditorHierarchyLink_t& a, const
 
 static bool sirEditorHierarchyOverlap( const void *pA, size_t nA, const void *pB, size_t nB ) noexcept
 {
-	uintptr_t nLeft = ( uintptr_t )pA;
-	uintptr_t nRight = ( uintptr_t )pB;
+	uintptr_t nLeft = reinterpret_cast<uintptr_t>(pA);
+	uintptr_t nRight = reinterpret_cast<uintptr_t>(pB);
 	if ( nA > UINTPTR_MAX - nLeft || nB > UINTPTR_MAX - nRight ) {
 		return true;
 	}
@@ -29,32 +29,32 @@ static bool sirEditorHierarchyOrderLess( const sirEditorHierarchyOrder_t& a, con
 	return a.nId < b.nId;
 }
 
-sirEditorHierarchyResult_t sirEditorHierarchyOrderFromTextScene( const sirEditorTextSceneIndex_t& index, sirEditorHierarchyOrder_t *pOutput,
+SIREditorHierarchyResult sirEditorHierarchyOrderFromTextScene( const sirEditorTextSceneIndex_t& index, sirEditorHierarchyOrder_t *pOutput,
                                                                  uint32_t nCapacity, uint32_t *pOutCount ) noexcept
 {
 	if ( pOutCount == nullptr ) {
-		return SIR_EDITOR_HIERARCHY_INVALID_ARGUMENT;
+		return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_INVALID_ARGUMENT;
 	}
 	*pOutCount = 0;
 	if ( index.nNodeCount > index.storage.nNodeCapacity ) {
-		return SIR_EDITOR_HIERARCHY_INVALID_SOURCE;
+		return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_INVALID_SOURCE;
 	}
 
 	if ( index.nNodeCount > nCapacity ) {
-		return SIR_EDITOR_HIERARCHY_OUT_OF_CAPACITY;
+		return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_OUT_OF_CAPACITY;
 	}
 	if ( index.nNodeCount != 0 && ( pOutput == nullptr || index.storage.pNodes == nullptr ) ) {
-		return SIR_EDITOR_HIERARCHY_INVALID_ARGUMENT;
+		return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_INVALID_ARGUMENT;
 	}
 	if ( index.nNodeCount != 0 &&
-	     sirEditorHierarchyOverlap( pOutput, ( size_t )index.nNodeCount * sizeof( sirEditorHierarchyOrder_t ), index.storage.pNodes,
-	                                ( size_t )index.nNodeCount * sizeof( sirEditorTextSceneNode_t ) ) ) {
-		return SIR_EDITOR_HIERARCHY_INVALID_ARGUMENT;
+	     sirEditorHierarchyOverlap( pOutput, static_cast<size_t>(index.nNodeCount) * sizeof( sirEditorHierarchyOrder_t ), index.storage.pNodes,
+	                                static_cast<size_t>(index.nNodeCount) * sizeof( sirEditorTextSceneNode_t ) ) ) {
+		return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_INVALID_ARGUMENT;
 	}
 	for ( uint32_t iNode = 0; iNode < index.nNodeCount; ++iNode ) {
 		const sirEditorTextSceneNode_t& node = index.storage.pNodes[iNode];
 		if ( node.node.nId == 0 || node.nSourceLine == 0 ) {
-			return SIR_EDITOR_HIERARCHY_INVALID_SOURCE;
+			return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_INVALID_SOURCE;
 		}
 	}
 	for ( uint32_t iNode = 0; iNode < index.nNodeCount; ++iNode ) {
@@ -65,11 +65,11 @@ sirEditorHierarchyResult_t sirEditorHierarchyOrderFromTextScene( const sirEditor
 	for ( uint32_t iNode = 1; iNode < index.nNodeCount; ++iNode ) {
 		if ( pOutput[iNode].nId == pOutput[iNode - 1].nId ) {
 			*pOutCount = 0;
-			return SIR_EDITOR_HIERARCHY_INVALID_SOURCE;
+			return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_INVALID_SOURCE;
 		}
 	}
 	*pOutCount = index.nNodeCount;
-	return SIR_EDITOR_HIERARCHY_OK;
+	return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_OK;
 }
 
 SIREditorHierarchyModel::SIREditorHierarchyModel( void ) noexcept
@@ -78,11 +78,11 @@ SIREditorHierarchyModel::SIREditorHierarchyModel( void ) noexcept
 {
 }
 
-sirEditorHierarchyResult_t SIREditorHierarchyModel::initialize( const sirEditorHierarchyStorage_t& storage,
+SIREditorHierarchyResult SIREditorHierarchyModel::initialize( const sirEditorHierarchyStorage_t& storage,
                                                                 uint32_t nDefaultRowHeight ) noexcept
 {
 	if ( m_bInitialized || storage.nCapacity == 0 || storage.nCapacity == UINT32_MAX || nDefaultRowHeight == 0 ) {
-		return SIR_EDITOR_HIERARCHY_INVALID_ARGUMENT;
+		return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_INVALID_ARGUMENT;
 	}
 	const void *szPointers[8] = { storage.pSnapshot, storage.pLinks,   storage.pState,    storage.pNextState,
 	                              storage.pStack,    storage.pVisible, storage.pListRows, storage.pFenwick };
@@ -96,28 +96,28 @@ sirEditorHierarchyResult_t SIREditorHierarchyModel::initialize( const sirEditorH
 	                            sizeof( uint64_t ) };
 	for ( uint32_t iBuffer = 0; iBuffer < 8; ++iBuffer ) {
 		if ( szPointers[iBuffer] == nullptr ) {
-			return SIR_EDITOR_HIERARCHY_INVALID_ARGUMENT;
+			return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_INVALID_ARGUMENT;
 		}
-		size_t nCount = ( size_t )storage.nCapacity + ( iBuffer == 7 ? 1u : 0u );
+		size_t nCount = static_cast<size_t>(storage.nCapacity) + ( iBuffer == 7 ? 1u : 0u );
 		if ( nCount > SIZE_MAX / szSizes[iBuffer] ) {
-			return SIR_EDITOR_HIERARCHY_INVALID_ARGUMENT;
+			return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_INVALID_ARGUMENT;
 		}
 		for ( uint32_t iPrevious = 0; iPrevious < iBuffer; ++iPrevious ) {
-			size_t nPreviousCount = ( size_t )storage.nCapacity + ( iPrevious == 7 ? 1u : 0u );
+			size_t nPreviousCount = static_cast<size_t>(storage.nCapacity) + ( iPrevious == 7 ? 1u : 0u );
 			if ( sirEditorHierarchyOverlap( szPointers[iBuffer], nCount * szSizes[iBuffer], szPointers[iPrevious],
 			                                nPreviousCount * szSizes[iPrevious] ) ) {
-				return SIR_EDITOR_HIERARCHY_INVALID_ARGUMENT;
+				return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_INVALID_ARGUMENT;
 			}
 		}
 	}
 
-	if ( m_List.initialize( storage.pListRows, storage.pFenwick, storage.nCapacity ) != SIR_EDITOR_LIST_OK ) {
-		return SIR_EDITOR_HIERARCHY_INVALID_ARGUMENT;
+	if ( m_List.initialize( storage.pListRows, storage.pFenwick, storage.nCapacity ) != SIREditorVirtualListResult::SIR_EDITOR_LIST_OK ) {
+		return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_INVALID_ARGUMENT;
 	}
 	m_Storage = storage;
 	m_nDefaultRowHeight = nDefaultRowHeight;
 	m_bInitialized = true;
-	return SIR_EDITOR_HIERARCHY_OK;
+	return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_OK;
 }
 
 void SIREditorHierarchyModel::shutdown( void ) noexcept
@@ -185,7 +185,7 @@ bool SIREditorHierarchyModel::hasChildren( uint64_t nId ) const noexcept
 	return iFirst < m_nNodeCount && m_Storage.pLinks[iFirst].nParentId == nId;
 }
 
-sirEditorHierarchyResult_t SIREditorHierarchyModel::buildVisibleRows( void ) noexcept
+SIREditorHierarchyResult SIREditorHierarchyModel::buildVisibleRows( void ) noexcept
 {
 	uint32_t nStack = 0;
 	uint32_t nVisible = 0;
@@ -204,7 +204,7 @@ sirEditorHierarchyResult_t SIREditorHierarchyModel::buildVisibleRows( void ) noe
 		const sirEditorHierarchyLink_t& link = m_Storage.pLinks[cursor.iNext++];
 		uint32_t iState = findState( link.nId, m_Storage.pState, m_nNodeCount );
 		if ( iState == UINT32_MAX || nVisible >= m_Storage.nCapacity ) {
-			return SIR_EDITOR_HIERARCHY_INVALID_SOURCE;
+			return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_INVALID_SOURCE;
 		}
 		const sirEditorHierarchyState_t& state = m_Storage.pState[iState];
 		bool bChildren = hasChildren( link.nId );
@@ -214,18 +214,18 @@ sirEditorHierarchyResult_t SIREditorHierarchyModel::buildVisibleRows( void ) noe
 
 		if ( bChildren && state.bExpanded ) {
 			if ( nStack >= m_Storage.nCapacity ) {
-				return SIR_EDITOR_HIERARCHY_INVALID_SOURCE;
+				return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_INVALID_SOURCE;
 			}
 			m_Storage.pStack[nStack++] = { findFirstChild( link.nId ), findAfterChildren( link.nId ), cursor.nDepth + 1 };
 		}
 	}
-	if ( m_List.setRows( m_Storage.pListRows, nVisible ) != SIR_EDITOR_LIST_OK ) {
-		return SIR_EDITOR_HIERARCHY_INVALID_SOURCE;
+	if ( m_List.setRows( m_Storage.pListRows, nVisible ) != SIREditorVirtualListResult::SIR_EDITOR_LIST_OK ) {
+		return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_INVALID_SOURCE;
 	}
 	m_nVisibleCount = nVisible;
 	++m_nLayoutEpoch;
 	++m_nPaintEpoch;
-	return SIR_EDITOR_HIERARCHY_OK;
+	return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_OK;
 }
 
 uint32_t SIREditorHierarchyModel::findVisibleRow( uint64_t nId ) const noexcept
@@ -238,28 +238,28 @@ uint32_t SIREditorHierarchyModel::findVisibleRow( uint64_t nId ) const noexcept
 	return UINT32_MAX;
 }
 
-sirEditorHierarchyResult_t SIREditorHierarchyModel::rebuild( const SIREditorSceneDocument& document,
+SIREditorHierarchyResult SIREditorHierarchyModel::rebuild( const SIREditorSceneDocument& document,
                                                              const sirEditorHierarchyOrder_t *pOrder, uint32_t nOrderCount ) noexcept
 {
 	if ( !m_bInitialized ) {
-		return SIR_EDITOR_HIERARCHY_NOT_INITIALIZED;
+		return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_NOT_INITIALIZED;
 	}
 	uint32_t nCount = 0;
 	uint64_t nRevision = 0;
-	sirEditorResult_t eResult = document.copySnapshot( m_Storage.pSnapshot, m_Storage.nCapacity, &nCount, &nRevision );
-	if ( eResult == SIR_EDITOR_OUT_OF_CAPACITY ) {
-		return SIR_EDITOR_HIERARCHY_OUT_OF_CAPACITY;
+	SIREditorResult eResult = document.copySnapshot( m_Storage.pSnapshot, m_Storage.nCapacity, &nCount, &nRevision );
+	if ( eResult == SIREditorResult::SIR_EDITOR_OUT_OF_CAPACITY ) {
+		return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_OUT_OF_CAPACITY;
 	}
-	if ( eResult != SIR_EDITOR_OK ) {
-		return SIR_EDITOR_HIERARCHY_INVALID_SOURCE;
+	if ( eResult != SIREditorResult::SIR_EDITOR_OK ) {
+		return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_INVALID_SOURCE;
 	}
 	if ( ( pOrder == nullptr && nOrderCount != 0 ) || ( pOrder != nullptr && nOrderCount != nCount ) ) {
-		return SIR_EDITOR_HIERARCHY_INVALID_ARGUMENT;
+		return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_INVALID_ARGUMENT;
 	}
 	for ( uint32_t iNode = 0; iNode < nCount; ++iNode ) {
 		const sirEditorNode_t& node = m_Storage.pSnapshot[iNode];
 		if ( pOrder != nullptr && pOrder[iNode].nId != node.nId ) {
-			return SIR_EDITOR_HIERARCHY_INVALID_ARGUMENT;
+			return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_INVALID_ARGUMENT;
 		}
 		uint32_t iPrior = findState( node.nId, m_Storage.pState, m_nNodeCount );
 		m_Storage.pNextState[iNode] = iPrior == UINT32_MAX ? sirEditorHierarchyState_t{ node.nId, m_nDefaultRowHeight, node.nParentId == 0 }
@@ -282,98 +282,98 @@ bool SIREditorHierarchyModel::isCurrent( const SIREditorSceneDocument& document 
 	return m_bInitialized && m_nSourceRevision != 0 && m_nSourceRevision == document.getRevision();
 }
 
-sirEditorHierarchyResult_t SIREditorHierarchyModel::setExpanded( const SIREditorSceneDocument& document, uint64_t nId,
+SIREditorHierarchyResult SIREditorHierarchyModel::setExpanded( const SIREditorSceneDocument& document, uint64_t nId,
                                                                  bool bExpanded ) noexcept
 {
 	if ( !m_bInitialized ) {
-		return SIR_EDITOR_HIERARCHY_NOT_INITIALIZED;
+		return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_NOT_INITIALIZED;
 	}
 	if ( !isCurrent( document ) ) {
-		return SIR_EDITOR_HIERARCHY_STALE_SOURCE;
+		return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_STALE_SOURCE;
 	}
 	uint32_t iState = findState( nId, m_Storage.pState, m_nNodeCount );
 	if ( iState == UINT32_MAX ) {
-		return SIR_EDITOR_HIERARCHY_NOT_FOUND;
+		return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_NOT_FOUND;
 	}
 	if ( m_Storage.pState[iState].bExpanded == bExpanded ) {
-		return SIR_EDITOR_HIERARCHY_OK;
+		return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_OK;
 	}
 	m_Storage.pState[iState].bExpanded = bExpanded;
 	return buildVisibleRows();
 }
 
-sirEditorHierarchyResult_t SIREditorHierarchyModel::setSelected( const SIREditorSceneDocument& document, uint64_t nId ) noexcept
+SIREditorHierarchyResult SIREditorHierarchyModel::setSelected( const SIREditorSceneDocument& document, uint64_t nId ) noexcept
 {
 	if ( !m_bInitialized ) {
-		return SIR_EDITOR_HIERARCHY_NOT_INITIALIZED;
+		return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_NOT_INITIALIZED;
 	}
 	if ( !isCurrent( document ) ) {
-		return SIR_EDITOR_HIERARCHY_STALE_SOURCE;
+		return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_STALE_SOURCE;
 	}
 	if ( nId != 0 && findState( nId, m_Storage.pState, m_nNodeCount ) == UINT32_MAX ) {
-		return SIR_EDITOR_HIERARCHY_NOT_FOUND;
+		return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_NOT_FOUND;
 	}
 	if ( m_nSelectedId != nId ) {
 		m_nSelectedId = nId;
 		++m_nPaintEpoch;
 	}
-	return SIR_EDITOR_HIERARCHY_OK;
+	return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_OK;
 }
 
-sirEditorHierarchyResult_t SIREditorHierarchyModel::setRowHeight( const SIREditorSceneDocument& document, uint64_t nId,
+SIREditorHierarchyResult SIREditorHierarchyModel::setRowHeight( const SIREditorSceneDocument& document, uint64_t nId,
                                                                   uint32_t nHeight ) noexcept
 {
 	if ( !m_bInitialized ) {
-		return SIR_EDITOR_HIERARCHY_NOT_INITIALIZED;
+		return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_NOT_INITIALIZED;
 	}
 	if ( !isCurrent( document ) ) {
-		return SIR_EDITOR_HIERARCHY_STALE_SOURCE;
+		return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_STALE_SOURCE;
 	}
 	uint32_t iState = findState( nId, m_Storage.pState, m_nNodeCount );
 	if ( iState == UINT32_MAX ) {
-		return SIR_EDITOR_HIERARCHY_NOT_FOUND;
+		return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_NOT_FOUND;
 	}
 	if ( nHeight == 0 ) {
-		return SIR_EDITOR_HIERARCHY_INVALID_ARGUMENT;
+		return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_INVALID_ARGUMENT;
 	}
 	if ( m_Storage.pState[iState].nRowHeight == nHeight ) {
-		return SIR_EDITOR_HIERARCHY_OK;
+		return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_OK;
 	}
 	uint32_t iRow = findVisibleRow( nId );
-	if ( iRow != UINT32_MAX && m_List.setHeight( iRow, nHeight ) != SIR_EDITOR_LIST_OK ) {
-		return SIR_EDITOR_HIERARCHY_INVALID_SOURCE;
+	if ( iRow != UINT32_MAX && m_List.setHeight( iRow, nHeight ) != SIREditorVirtualListResult::SIR_EDITOR_LIST_OK ) {
+		return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_INVALID_SOURCE;
 	}
 	m_Storage.pState[iState].nRowHeight = nHeight;
 	if ( iRow != UINT32_MAX ) {
 		++m_nLayoutEpoch;
 		++m_nPaintEpoch;
 	}
-	return SIR_EDITOR_HIERARCHY_OK;
+	return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_OK;
 }
 
-sirEditorHierarchyResult_t SIREditorHierarchyModel::getVisibleRange( uint64_t nScroll, uint64_t nViewportHeight, uint64_t nOverscan,
+SIREditorHierarchyResult SIREditorHierarchyModel::getVisibleRange( uint64_t nScroll, uint64_t nViewportHeight, uint64_t nOverscan,
                                                                      sirEditorVirtualRange_t *pOutRange ) const noexcept
 {
 	if ( !m_bInitialized ) {
-		return SIR_EDITOR_HIERARCHY_NOT_INITIALIZED;
+		return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_NOT_INITIALIZED;
 	}
-	if ( m_List.getVisibleRange( nScroll, nViewportHeight, nOverscan, pOutRange ) != SIR_EDITOR_LIST_OK ) {
-		return SIR_EDITOR_HIERARCHY_INVALID_ARGUMENT;
+	if ( m_List.getVisibleRange( nScroll, nViewportHeight, nOverscan, pOutRange ) != SIREditorVirtualListResult::SIR_EDITOR_LIST_OK ) {
+		return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_INVALID_ARGUMENT;
 	}
-	return SIR_EDITOR_HIERARCHY_OK;
+	return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_OK;
 }
 
-sirEditorHierarchyResult_t SIREditorHierarchyModel::getVisibleRow( uint32_t iRow, sirEditorHierarchyRow_t *pOutRow ) const noexcept
+SIREditorHierarchyResult SIREditorHierarchyModel::getVisibleRow( uint32_t iRow, sirEditorHierarchyRow_t *pOutRow ) const noexcept
 {
 	if ( !m_bInitialized ) {
-		return SIR_EDITOR_HIERARCHY_NOT_INITIALIZED;
+		return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_NOT_INITIALIZED;
 	}
 	if ( pOutRow == nullptr || iRow >= m_nVisibleCount ) {
-		return SIR_EDITOR_HIERARCHY_INVALID_ARGUMENT;
+		return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_INVALID_ARGUMENT;
 	}
 	*pOutRow = m_Storage.pVisible[iRow];
 	pOutRow->bSelected = pOutRow->nId == m_nSelectedId;
-	return SIR_EDITOR_HIERARCHY_OK;
+	return SIREditorHierarchyResult::SIR_EDITOR_HIERARCHY_OK;
 }
 
 uint32_t SIREditorHierarchyModel::getVisibleCount( void ) const noexcept

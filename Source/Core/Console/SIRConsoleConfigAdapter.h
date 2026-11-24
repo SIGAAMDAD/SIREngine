@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRCONSOLECONFIGADAPTER_H__
-#define __SIRENGINE_SIRCONSOLECONFIGADAPTER_H__
+#ifndef __SIR_CONSOLECONFIGADAPTER_H__
+#define __SIR_CONSOLECONFIGADAPTER_H__
 
 #include <Core/SIRPCH.h>
 #include <Core/Console/SIRConsoleService.h>
@@ -35,7 +35,7 @@ typedef struct sirConsoleConfigReadRequest_s
 	uint32_t nRead;
 } sirConsoleConfigReadRequest_t;
 
-typedef sirConfigResult_t ( *sirConsoleConfigRead_t )( void *pContext, sirConsoleConfigReadRequest_t *pRequest ) noexcept;
+typedef SIRConfigResult ( *sirConsoleConfigRead_t )( void *pContext, sirConsoleConfigReadRequest_t *pRequest ) noexcept;
 
 typedef struct sirConsoleConfigStorage_s
 {
@@ -58,10 +58,10 @@ public:
 
 	const sirConfigDiagnostic_t& getLastDiagnostic( void ) const noexcept;
 
-	sirConfigResult_t initialize( SIRCVarConfigAdapter& adapter, const sirConsoleConfigStorage_t& storage ) noexcept;
+	SIRConfigResult initialize( SIRCVarConfigAdapter& adapter, const sirConsoleConfigStorage_t& storage ) noexcept;
 	void shutdown( void ) noexcept;
 
-	static sirRegistrationResult_t execute( void *pContext, const char *pszFileName, uint32_t nBytes,
+	static SIRRegistrationResult execute( void *pContext, const char *pszFileName, uint32_t nBytes,
 	                                        const sirConsoleSubmission_t& submission ) noexcept;
 
 protected:
@@ -72,4 +72,4 @@ private:
 	bool m_bExecuting;
 };
 
-#endif // __SIRENGINE_SIRCONSOLECONFIGADAPTER_H__
+#endif // __SIR_CONSOLECONFIGADAPTER_H__

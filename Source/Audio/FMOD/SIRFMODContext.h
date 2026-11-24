@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRFMODCONTEXT_H__
-#define __SIRENGINE_SIRFMODCONTEXT_H__
+#ifndef __SIR_FMODCONTEXT_H__
+#define __SIR_FMODCONTEXT_H__
 
 #include <Core/SIRPCH.h>
 
@@ -26,18 +26,16 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Audio/SIRAudioTypes.h>
 #include <Core/Platform/SIRPlatformContext.h>
-#include <Core/Platform/SIRAtomic.h>
+#include <atomic>
 
-typedef enum sirFMODContextState_e : uint8_t
-{
+enum class SIRFMODContextState : uint8_t {
 	SIR_FMOD_CONTEXT_EMPTY = 0,
 	SIR_FMOD_CONTEXT_CREATED = 1,
 	SIR_FMOD_CONTEXT_READY = 2,
 	SIR_FMOD_CONTEXT_RELEASE_FAILED = 3
-} sirFMODContextState_t;
+};
 
-typedef enum sirFMODContextResult_e : uint8_t
-{
+enum class SIRFMODContextResult : uint8_t {
 	SIR_FMOD_OK = 0,
 	SIR_FMOD_INVALID_ARGUMENT = 1,
 	SIR_FMOD_BAD_STATE = 2,
@@ -45,7 +43,7 @@ typedef enum sirFMODContextResult_e : uint8_t
 	SIR_FMOD_VERSION_MISMATCH = 4,
 	SIR_FMOD_INVALID_DRIVER = 5,
 	SIR_FMOD_RELEASE_ERROR = 6
-} sirFMODContextResult_t;
+};
 
 typedef struct sirFMODContextConfig_s
 {
@@ -87,7 +85,7 @@ private:
 	friend class SIRFMODBankStore;
 	friend class SIRFMODMixerBackend;
 	friend class SIRFMODSnapshotBackend;
-	sirFMODNativeOps_t m_Ops = {};
+	sirFMODNativeOps_t m_Ops {};
 	void *m_pStudio = nullptr;
 	void *m_pCoreBorrowed = nullptr;
 	uint32_t m_nRuntimeVersion = 0;
@@ -98,14 +96,14 @@ private:
 	int32_t m_nLastNativeResult = 0;
 	uint32_t m_nBorrowedBankObjects = 0;
 	uint32_t m_nUnscopedBankObjects = 0;
-	SIRAtomic<uint32_t> m_nDeviceLossSignals = SIRAtomic<uint32_t>( 0 );
+	std::atomic<uint32_t> m_nDeviceLossSignals = std::atomic<uint32_t>( 0 );
 	uint32_t m_nAcknowledgedDeviceLoss = 0;
 	uint32_t m_nRecoveryAttempts = 0;
 	uint32_t m_nSuccessfulRecoveries = 0;
 	bool m_bNoSound = false;
-	sirFMODContextState_t m_eState = SIR_FMOD_CONTEXT_EMPTY;
+	SIRFMODContextState m_eState = SIRFMODContextState::SIR_FMOD_CONTEXT_EMPTY;
 
-	sirFMODContextResult_t rollback( sirFMODContextResult_t eOriginalError, int32_t nNativeError ) noexcept;
+	SIRFMODContextResult rollback( SIRFMODContextResult eOriginalError, int32_t nNativeError ) noexcept;
 	bool pinBorrowedBankObject( bool bBankScoped = false ) noexcept;
 	void unpinBorrowedBankObject( bool bBankScoped = false ) noexcept;
 
@@ -115,18 +113,18 @@ public:
 	SIRFMODContext( const SIRFMODContext& ) = delete;
 	SIRFMODContext& operator=( const SIRFMODContext& ) = delete;
 
-	sirFMODContextResult_t initialize( const sirFMODContextConfig_t& config, const sirFMODNativeOps_t& ops ) noexcept;
-	sirFMODContextResult_t update( void ) noexcept;
-	sirFMODContextResult_t shutdown( void ) noexcept;
-	sirFMODContextResult_t getDriverCount( int32_t& nCount ) noexcept;
-	sirFMODContextResult_t changeDriver( int32_t iDriver ) noexcept;
-	sirFMODContextResult_t recoverOutput( int32_t iPreferredDriver, bool bFallbackToFirst ) noexcept;
+	SIRFMODContextResult initialize( const sirFMODContextConfig_t& config, const sirFMODNativeOps_t& ops ) noexcept;
+	SIRFMODContextResult update( void ) noexcept;
+	SIRFMODContextResult shutdown( void ) noexcept;
+	SIRFMODContextResult getDriverCount( int32_t& nCount ) noexcept;
+	SIRFMODContextResult changeDriver( int32_t iDriver ) noexcept;
+	SIRFMODContextResult recoverOutput( int32_t iPreferredDriver, bool bFallbackToFirst ) noexcept;
 	bool needsDeviceRecovery( void ) const noexcept;
 	uint32_t getDeviceLossSignalCount( void ) const noexcept;
 	uint32_t getSuccessfulRecoveryCount( void ) const noexcept;
 	static void notifyDeviceLoss( void *pOwner ) noexcept;
 	bool isReady( void ) const noexcept;
-	sirFMODContextState_t getState( void ) const noexcept;
+	SIRFMODContextState getState( void ) const noexcept;
 	int32_t getLastNativeResult( void ) const noexcept;
 	uint32_t getRuntimeVersion( void ) const noexcept;
 	uint64_t getEpoch( void ) const noexcept;
@@ -139,4 +137,4 @@ public:
 // Does not require an FMOD SDK header at the call site.
 sirFMODNativeOps_t sirGetFMODNativeOps( void ) noexcept;
 
-#endif // __SIRENGINE_SIRFMODCONTEXT_H__
+#endif // __SIR_FMODCONTEXT_H__

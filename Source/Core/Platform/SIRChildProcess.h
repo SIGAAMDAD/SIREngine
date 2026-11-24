@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRCHILDPROCESS_H__
-#define __SIRENGINE_SIRCHILDPROCESS_H__
+#ifndef __SIR_CHILDPROCESS_H__
+#define __SIR_CHILDPROCESS_H__
 
 #include <Core/SIRPCH.h>
 
@@ -26,8 +26,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <stdint.h>
 
-typedef enum sirChildProcessResult_e : uint8_t
-{
+enum class SIRChildProcessResult : uint8_t {
 	SIR_CHILD_PROCESS_OK = 0,
 	SIR_CHILD_PROCESS_INVALID_ARGUMENT = 1,
 	SIR_CHILD_PROCESS_ALREADY_OPEN = 2,
@@ -36,7 +35,7 @@ typedef enum sirChildProcessResult_e : uint8_t
 	SIR_CHILD_PROCESS_TIMED_OUT = 5,
 	SIR_CHILD_PROCESS_SPAWN_FAILED = 6,
 	SIR_CHILD_PROCESS_OS_ERROR = 7
-} sirChildProcessResult_t;
+};
 
 typedef struct sirChildProcessLaunch_s
 {
@@ -69,14 +68,14 @@ public:
 	SIRChildProcess( const SIRChildProcess& ) = delete;
 	SIRChildProcess& operator=( const SIRChildProcess& ) = delete;
 
-	sirChildProcessResult_t start( const sirChildProcessLaunch_t& rLaunch ) noexcept;
-	sirChildProcessResult_t poll( bool *pbExited, uint32_t *pnExitCode ) noexcept;
-	sirChildProcessResult_t wait( uint32_t *pnExitCode ) noexcept;
-	sirChildProcessResult_t waitFor( uint32_t nMilliseconds, uint32_t *pnExitCode ) noexcept;
-	sirChildProcessResult_t terminate( void ) noexcept;
-	sirChildProcessResult_t close( void ) noexcept;
+	SIRChildProcessResult start( const sirChildProcessLaunch_t& rLaunch ) noexcept;
+	SIRChildProcessResult poll( bool *pbExited, uint32_t *pnExitCode ) noexcept;
+	SIRChildProcessResult wait( uint32_t *pnExitCode ) noexcept;
+	SIRChildProcessResult waitFor( uint32_t nMilliseconds, uint32_t *pnExitCode ) noexcept;
+	SIRChildProcessResult terminate( void ) noexcept;
+	SIRChildProcessResult close( void ) noexcept;
 	bool isOpen( void ) const noexcept;
 	uint32_t getProcessId( void ) const noexcept;
 };
 
-#endif // __SIRENGINE_SIRCHILDPROCESS_H__
+#endif // __SIR_CHILDPROCESS_H__

@@ -13,18 +13,27 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef SIRENGINE_SIRLOCALSHAREDPTR_H
-#define SIRENGINE_SIRLOCALSHAREDPTR_H
+#ifndef __SIR_MATH_H__
+#define __SIR_MATH_H__
 
 #include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
-	#pragma once
+    #pragma once
 #endif
 // clang-format on
 
-// Local shared and weak pointers use a non-atomic counter policy.
-#include <Core/Memory/SIRSharedPtr.h>
+#define SIR_IS_POWER_OF_TWO( nValue ) \
+	( ( nValue ) != 0 && ( ( ( nValue ) & ( ( nValue ) - 1 ) ) == 0 ) )
 
-#endif // SIRENGINE_SIRLOCALSHAREDPTR_H
+#define SIR_ALIGN_DOWN( nValue, nAlignment ) \
+	( static_cast<uintptr_t>( nValue ) & ~( static_cast<uintptr_t>( nAlignment ) - 1u ) )
+
+#define SIR_ALIGN_UP( nValue, nAlignment ) \
+	( ( static_cast<uintptr_t>( nValue ) + static_cast<uintptr_t>( nAlignment ) - 1u ) & ~( static_cast<uintptr_t>( nAlignment ) - 1u ) )
+
+#define SIR_ROUND_UP_MULTIPLE( nValue, nMultiple ) \
+	( ( ( nValue ) / ( nMultiple ) + ( ( nValue ) % ( nMultiple ) != 0 ) ) * ( nMultiple ) )
+
+#endif // __SIR_MATH_H__

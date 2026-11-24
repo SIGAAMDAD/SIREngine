@@ -23,7 +23,7 @@ SIRInputHaptics::SIRInputHaptics( void ) noexcept : m_Effects{}, m_Motors{}, m_n
 
 bool SIRInputHaptics::schedule( const sirInputHapticRequest_t& request, uint64_t nNowNs, sirInputHapticHandle_t *pHandle ) noexcept
 {
-	const uint64_t nDuration = ( uint64_t )request.nAttackMs + request.nSustainMs + request.nReleaseMs;
+	const uint64_t nDuration = static_cast<uint64_t>(request.nAttackMs) + request.nSustainMs + request.nReleaseMs;
 	if ( request.hDevice.nSlot >= SIR_INPUT_DEVICE_CAPACITY || request.hDevice.nGeneration == 0 || nDuration == 0 ||
 	     nDuration > SIR_INPUT_HAPTIC_MAX_DURATION_MS || ( request.nLeft == 0 && request.nRight == 0 ) || pHandle == nullptr ) {
 		return false;
@@ -66,10 +66,10 @@ uint32_t SIRInputHaptics::gain( const sirInputHapticEffect_t& effect, uint64_t n
 		return 0;
 	}
 	if ( request.nAttackMs != 0 && nElapsed < nAttackEnd ) {
-		return ( uint32_t )( nElapsed * 65535 / request.nAttackMs );
+		return static_cast<uint32_t>( nElapsed * 65535 / request.nAttackMs );
 	}
 	if ( request.nReleaseMs != 0 && nElapsed >= nSustainEnd ) {
-		return ( uint32_t )( ( nEnd - nElapsed ) * 65535 / request.nReleaseMs );
+		return static_cast<uint32_t>(  ( nEnd - nElapsed ) * 65535 / request.nReleaseMs  );
 	}
 	return 65535;
 }
@@ -80,10 +80,14 @@ bool SIRInputHaptics::advance( uint64_t nNowNs, bool bPaused, sirInputRumbleSink
 		return false;
 	}
 
-	int32_t szPriority[SIR_INPUT_DEVICE_CAPACITY] = {};
-	uint16_t szLeft[SIR_INPUT_DEVICE_CAPACITY] = {};
-	uint16_t szRight[SIR_INPUT_DEVICE_CAPACITY] = {};
-	sirInputDeviceId_t szDevices[SIR_INPUT_DEVICE_CAPACITY] = {};
+	int32_t szPriority[SIR_INPUT_DEVICE_CAPACITY];
+	memset( szPriority, 0, sizeof( szPriority ) );
+	uint16_t szLeft[SIR_INPUT_DEVICE_CAPACITY];
+	memset( szLeft, 0, sizeof( szLeft ) );
+	uint16_t szRight[SIR_INPUT_DEVICE_CAPACITY];
+	memset( szRight, 0, sizeof( szRight ) );
+	sirInputDeviceId_t szDevices[SIR_INPUT_DEVICE_CAPACITY];
+	memset( szDevices, 0, sizeof( szDevices ) );
 	for ( uint32_t i = 0; i < SIR_INPUT_DEVICE_CAPACITY; ++i ) {
 		szPriority[i] = -1;
 	}
@@ -93,7 +97,7 @@ bool SIRInputHaptics::advance( uint64_t nNowNs, bool bPaused, sirInputRumbleSink
 			continue;
 		}
 		const uint32_t nGain = gain( effect, nNowNs );
-		const uint64_t nEnd = ( uint64_t )effect.request.nAttackMs + effect.request.nSustainMs + effect.request.nReleaseMs;
+		const uint64_t nEnd = static_cast<uint64_t>(effect.request.nAttackMs) + effect.request.nSustainMs + effect.request.nReleaseMs;
 		if ( nNowNs >= effect.nStartNs && ( nNowNs - effect.nStartNs ) / 1000000 >= nEnd ) {
 			effect.bActive = false;
 			--m_nActive;
@@ -108,8 +112,8 @@ bool SIRInputHaptics::advance( uint64_t nNowNs, bool bPaused, sirInputRumbleSink
 		if ( nPriority < szPriority[iSlot] ) {
 			continue;
 		}
-		const uint16_t nLeft = ( uint16_t )( ( uint32_t )effect.request.nLeft * nGain / 65535 );
-		const uint16_t nRight = ( uint16_t )( ( uint32_t )effect.request.nRight * nGain / 65535 );
+		const uint16_t nLeft = ( uint16_t )( static_cast<uint32_t>(effect.request.nLeft) * nGain / 65535 );
+		const uint16_t nRight = ( uint16_t )( static_cast<uint32_t>(effect.request.nRight) * nGain / 65535 );
 		if ( nPriority > szPriority[iSlot] ) {
 			szPriority[iSlot] = nPriority;
 			szLeft[iSlot] = nLeft;
@@ -166,7 +170,7 @@ void SIRInputHaptics::forgetDevice( sirInputDeviceId_t hDevice, sirInputRumbleSi
 		sirInputHapticMotorState_t& motor = m_Motors[hDevice.nSlot];
 		if ( motor.bActive && motor.hDevice.nGeneration == hDevice.nGeneration ) {
 			if ( pSink != nullptr ) {
-				( void )pSink( pContext, hDevice, 0, 0 );
+				static_cast<void>(pSink( pContext, hDevice, 0, 0 ));
 			}
 			motor = {};
 			--m_nOutput;
@@ -178,7 +182,7 @@ void SIRInputHaptics::stopAll( sirInputRumbleSink_t pSink, void *pContext ) noex
 {
 	for ( uint32_t i = 0; i < SIR_INPUT_DEVICE_CAPACITY; ++i ) {
 		if ( m_Motors[i].bActive && pSink != nullptr ) {
-			( void )pSink( pContext, m_Motors[i].hDevice, 0, 0 );
+			static_cast<void>(pSink( pContext, m_Motors[i].hDevice, 0, 0 ));
 		}
 	}
 	memset( m_Motors, 0, sizeof( m_Motors ) );

@@ -12,8 +12,8 @@ express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIRSTRINGPOOL_H__
-#define __SIRENGINE_SIRSTRINGPOOL_H__
+#ifndef __SIR_STRINGPOOL_H__
+#define __SIR_STRINGPOOL_H__
 
 #include <Core/SIRPCH.h>
 #include <Core/Containers/SIRContainerResult.h>
@@ -98,7 +98,7 @@ inline uint32_t SIRStringAtom::getId( void ) const noexcept
 
 inline uint64_t SIRStringAtom::hash( void ) const noexcept
 {
-	return ( uint64_t )m_nId;
+	return static_cast<uint64_t>(m_nId);
 }
 
 inline bool SIRStringAtom::isValid( void ) const noexcept
@@ -171,8 +171,7 @@ private:
 	uint32_t m_nBytes;
 };
 
-typedef enum sirStringStatus_e : uint8_t
-{
+enum class SIRStringStatus : uint8_t {
 	SIR_STRING_OK = 0,
 	SIR_STRING_NOT_INITIALIZED,
 	SIR_STRING_INVALID_ATOM,
@@ -181,7 +180,7 @@ typedef enum sirStringStatus_e : uint8_t
 	SIR_STRING_OUTPUT_TOO_SMALL,
 	SIR_STRING_ALL_SLOTS_PINNED,
 	SIR_STRING_CAPACITY_EXHAUSTED
-} sirStringStatus_t;
+};
 
 /* The whole registry, immutable catalog, mutable text arena and decoded cache
    are carved from one caller-owned contiguous memory span. No hot-path heap. */
@@ -237,7 +236,7 @@ public:
 	const char *data( void ) noexcept;
 	uint32_t bytes( void ) noexcept;
 	bool isPinned( void ) const noexcept;
-	sirStringStatus_t get( const char *& pText, uint32_t& nBytes ) noexcept;
+	SIRStringStatus get( const char *& pText, uint32_t& nBytes ) noexcept;
 
 	void set( SIRStringPool *pPool, SIRStringAtom atom ) noexcept;
 	void release( void ) noexcept;
@@ -326,12 +325,12 @@ public:
 	}
 
 	/* Reacquiring the same atom into the same live lease is idempotent. */
-	sirStringStatus_t acquire( SIRStringAtom atom, SIRStringLease& lease ) noexcept;
+	SIRStringStatus acquire( SIRStringAtom atom, SIRStringLease& lease ) noexcept;
 
 	/* Direct raw pointer remains valid only until pool retirement/shutdown.
 	   Compressed cooked names return nullptr; use acquire() for those. */
 	const char *peekRaw( SIRStringAtom atom, uint32_t& nBytes ) const noexcept;
-	sirStringStatus_t decodeInto( SIRStringAtom atom, char *pszOutput, size_t nCapacity, uint32_t& nWritten ) const noexcept;
+	SIRStringStatus decodeInto( SIRStringAtom atom, char *pszOutput, size_t nCapacity, uint32_t& nWritten ) const noexcept;
 	static uint64_t hashString( const char *pszString, size_t nLength ) noexcept;
 	SIRStringAtom atomFromCookedOrdinal( uint32_t nOrdinal, uint64_t nExpectedCatalogHash ) const noexcept;
 
@@ -358,7 +357,7 @@ private:
 	SIRStringAtom makeAtom( uint32_t nLocalIndex ) const noexcept;
 	bool resolveIndex( SIRStringAtom atom, uint32_t& nIndex ) const noexcept;
 	bool tryAcquireHot( uint32_t nIndex, uint32_t nAtomId, SIRStringLease& lease ) const noexcept;
-	sirStringStatus_t acquireTiered( uint32_t nIndex, SIRStringAtom atom, SIRStringLease& lease ) noexcept;
+	SIRStringStatus acquireTiered( uint32_t nIndex, SIRStringAtom atom, SIRStringLease& lease ) noexcept;
 	void releaseLease( uint32_t nSlot, uint32_t nGeneration ) noexcept;
 	void resetState( void ) noexcept;
 
@@ -425,4 +424,4 @@ private:
 	mutable SIRSpinLock m_cacheLock;
 };
 
-#endif // __SIRENGINE_SIRSTRINGPOOL_H__
+#endif // __SIR_STRINGPOOL_H__

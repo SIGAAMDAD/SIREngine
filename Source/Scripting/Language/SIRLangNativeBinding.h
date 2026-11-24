@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRLANGNATIVEBINDING_H__
-#define __SIRENGINE_SIRLANGNATIVEBINDING_H__
+#ifndef __SIR_LANGNATIVEBINDING_H__
+#define __SIR_LANGNATIVEBINDING_H__
 
 #include <Core/SIRPCH.h>
 
@@ -35,6 +35,6 @@ typedef struct sirLangNativeBindingContext_s
 // This callback can be passed directly to sirLangGraphVMBackend_t::pNativeCall.
 // The immutable published registry remains the sole native binding authority.
 // Invocation uses canonical value frames; no VM pointers enter the host ABI.
-sirLangVMError_t SIRLangInvokeNativeBinding( const sirLangVMCall_t& call, sirLangVMValue_t *pResult, void *pUser ) noexcept;
+SIRLangVMError SIRLangInvokeNativeBinding( const sirLangVMCall_t& call, sirLangVMValue_t *pResult, void *pUser ) noexcept;
 
-#endif // __SIRENGINE_SIRLANGNATIVEBINDING_H__
+#endif // __SIR_LANGNATIVEBINDING_H__

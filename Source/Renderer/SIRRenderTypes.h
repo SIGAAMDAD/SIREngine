@@ -13,10 +13,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRRENDERTYPES_H__
-#define __SIRENGINE_SIRRENDERTYPES_H__
+#ifndef __SIR_RENDERTYPES_H__
+#define __SIR_RENDERTYPES_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -34,34 +34,34 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // Buffer texturing is missing from the current shared usage/binding enums.
 // Reserve additive values for their one-time canonical migration.
 constexpr uint32_t SIR_RENDER_USAGE_TEXEL = 1U << 10;
-constexpr sirGraphicsBindingType_t SIR_RENDER_BINDING_TEXEL_BUFFER = static_cast<sirGraphicsBindingType_t>( 5U );
+constexpr SIRGraphicsBindingType SIR_RENDER_BINDING_TEXEL_BUFFER = static_cast<SIRGraphicsBindingType>( 5U );
 
 // Reserved extension handle tags. Integrate into sirGraphicsHandleType_t
 // when binary ABI and native type validators are migrated together.
-constexpr sirGraphicsHandleType_t SIR_RENDER_HANDLE_QUERY_POOL = static_cast<sirGraphicsHandleType_t>( 8U );
-constexpr sirGraphicsHandleType_t SIR_RENDER_HANDLE_ACCELERATION_STRUCTURE = static_cast<sirGraphicsHandleType_t>( 9U );
+constexpr SIRGraphicsHandleType SIR_RENDER_HANDLE_QUERY_POOL = static_cast<SIRGraphicsHandleType>( 8U );
+constexpr SIRGraphicsHandleType SIR_RENDER_HANDLE_ACCELERATION_STRUCTURE = static_cast<SIRGraphicsHandleType>( 9U );
 
-typedef enum sirRenderLoadOp_e : uint32_t
+enum class SIRRenderLoadOp : uint32_t
 {
 	SIR_RENDER_LOAD_OP_LOAD = 0,
 	SIR_RENDER_LOAD_OP_CLEAR = 1,
 	SIR_RENDER_LOAD_OP_DONT_CARE = 2
-} sirRenderLoadOp_t;
+};
 
-typedef enum sirRenderStoreOp_e : uint32_t
+enum class SIRRenderStoreOp : uint32_t
 {
 	SIR_RENDER_STORE_OP_STORE = 0,
 	SIR_RENDER_STORE_OP_DONT_CARE = 1
-} sirRenderStoreOp_t;
+};
 
-typedef enum sirRenderAspect_e : uint32_t
+enum class SIRRenderAspect : uint32_t
 {
 	SIR_RENDER_ASPECT_COLOR = 1U << 0,
 	SIR_RENDER_ASPECT_DEPTH = 1U << 1,
 	SIR_RENDER_ASPECT_STENCIL = 1U << 2
-} sirRenderAspect_t;
+};
 
-typedef enum sirRenderStage_e : uint64_t
+enum class SIRRenderStage : uint64_t
 {
 	SIR_RENDER_STAGE_TOP = 1ULL << 0,
 	SIR_RENDER_STAGE_INDIRECT = 1ULL << 1,
@@ -79,9 +79,9 @@ typedef enum sirRenderStage_e : uint64_t
 	SIR_RENDER_STAGE_BOTTOM = 1ULL << 13,
 	SIR_RENDER_STAGE_ALL_GRAPHICS = 1ULL << 14,
 	SIR_RENDER_STAGE_ALL_COMMANDS = 1ULL << 15
-} sirRenderStage_t;
+};
 
-typedef enum sirRenderAccess_e : uint64_t
+enum class SIRRenderAccess : uint64_t
 {
 	SIR_RENDER_ACCESS_INDIRECT_READ = 1ULL << 0,
 	SIR_RENDER_ACCESS_VERTEX_INDEX_READ = 1ULL << 1,
@@ -101,34 +101,34 @@ typedef enum sirRenderAccess_e : uint64_t
 	SIR_RENDER_ACCESS_MEMORY_WRITE = 1ULL << 15,
 	SIR_RENDER_ACCESS_ACCELERATION_STRUCTURE_READ = 1ULL << 16,
 	SIR_RENDER_ACCESS_ACCELERATION_STRUCTURE_WRITE = 1ULL << 17
-} sirRenderAccess_t;
+};
 
-typedef enum sirRenderBarrierPhase_e : uint32_t
+enum class SIRRenderBarrierPhase : uint32_t
 {
 	SIR_RENDER_BARRIER_PHASE_FULL = 0,
 	SIR_RENDER_BARRIER_PHASE_RELEASE = 1,
 	SIR_RENDER_BARRIER_PHASE_ACQUIRE = 2
-} sirRenderBarrierPhase_t;
+};
 
-typedef enum sirRenderQueryType_e : uint32_t
+enum class SIRRenderQueryType : uint32_t
 {
 	SIR_RENDER_QUERY_TIMESTAMP = 0,
 	SIR_RENDER_QUERY_OCCLUSION = 1,
 	SIR_RENDER_QUERY_PIPELINE_STATISTICS = 2
-} sirRenderQueryType_t;
+};
 
-typedef enum sirRenderAccelerationStructureType_e : uint32_t
+enum class SIRRenderAccelerationStructureType : uint32_t
 {
 	SIR_RENDER_ACCELERATION_STRUCTURE_BOTTOM_LEVEL = 0,
 	SIR_RENDER_ACCELERATION_STRUCTURE_TOP_LEVEL = 1
-} sirRenderAccelerationStructureType_t;
+};
 
-typedef enum sirRenderMemoryResidency_e : uint32_t
+enum class SIRRenderMemoryResidency : uint32_t
 {
 	SIR_RENDER_MEMORY_RESIDENCY_UNKNOWN = 0,
 	SIR_RENDER_MEMORY_RESIDENCY_RESIDENT = 1,
 	SIR_RENDER_MEMORY_RESIDENCY_EVICTED = 2
-} sirRenderMemoryResidency_t;
+};
 
 // For a texture view, ranges name mip/layer intervals and aspects. Buffer
 // views use sirRenderBufferRange_t. Counts must be nonzero.
@@ -153,8 +153,8 @@ typedef struct sirRenderAttachmentDesc_s
 {
 	sirGraphicsHandle_t hView;
 	sirGraphicsHandle_t hResolveView;
-	sirRenderLoadOp_t eLoad;
-	sirRenderStoreOp_t eStore;
+	SIRRenderLoadOp eLoad;
+	SIRRenderStoreOp eStore;
 	float szClearColor[4];
 	uint32_t nAspectMask;
 } sirRenderAttachmentDesc_t;
@@ -163,10 +163,10 @@ typedef struct sirRenderAttachmentDesc_s
 typedef struct sirRenderDepthStencilAttachmentDesc_s
 {
 	sirGraphicsHandle_t hView;
-	sirRenderLoadOp_t eDepthLoad;
-	sirRenderStoreOp_t eDepthStore;
-	sirRenderLoadOp_t eStencilLoad;
-	sirRenderStoreOp_t eStencilStore;
+	SIRRenderLoadOp eDepthLoad;
+	SIRRenderStoreOp eDepthStore;
+	SIRRenderLoadOp eStencilLoad;
+	SIRRenderStoreOp eStencilStore;
 	float fClearDepth;
 	uint32_t nClearStencil;
 } sirRenderDepthStencilAttachmentDesc_t;
@@ -187,7 +187,7 @@ typedef struct sirRenderFramebufferDesc_s
 typedef struct sirRenderSamplerDesc_s
 {
 	sirGraphicsSamplerDesc_t base;
-	sirGraphicsCompareOp_t eCompare;
+	SIRGraphicsCompareOp eCompare;
 	float szBorderColor[4];
 	float fLodBias;
 	bool bComparisonEnabled;
@@ -226,14 +226,14 @@ typedef struct sirRenderBindingLayoutDesc_s
 // must be paired with a real ownership transfer where required by the API.
 typedef struct sirRenderBarrierDesc_s
 {
-	sirGraphicsBarrierType_t eType;
-	sirRenderBarrierPhase_t ePhase;
+	SIRGraphicsBarrierType eType;
+	SIRRenderBarrierPhase ePhase;
 	sirGraphicsHandle_t hResource;
 	sirGraphicsHandle_t hAliasedResource;
-	sirGraphicsState_t eBefore;
-	sirGraphicsState_t eAfter;
-	sirGraphicsQueue_t eSourceQueue;
-	sirGraphicsQueue_t eDestinationQueue;
+	SIRGraphicsState eBefore;
+	SIRGraphicsState eAfter;
+	SIRGraphicsQueue eSourceQueue;
+	SIRGraphicsQueue eDestinationQueue;
 	uint64_t nSourceStages;
 	uint64_t nDestinationStages;
 	uint64_t nSourceAccess;
@@ -305,7 +305,7 @@ typedef struct sirRenderIndirectDispatchDesc_s
 
 typedef struct sirRenderQueryPoolDesc_s
 {
-	sirRenderQueryType_t eType;
+	SIRRenderQueryType eType;
 	uint32_t nQueryCount;
 	uint32_t nStatisticsMask;
 } sirRenderQueryPoolDesc_t;
@@ -335,7 +335,7 @@ typedef struct sirRenderMemoryRequirements_s
 typedef struct sirRenderMemoryStatus_s
 {
 	sirGraphicsHandle_t hResource;
-	sirRenderMemoryResidency_t eResidency;
+	SIRRenderMemoryResidency eResidency;
 	uint64_t nCommittedBytes;
 	uint64_t nResidentBytes;
 	bool bExternalBacking;
@@ -343,7 +343,7 @@ typedef struct sirRenderMemoryStatus_s
 
 typedef struct sirRenderQueueCapabilities_s
 {
-	sirGraphicsQueue_t eQueue;
+	SIRGraphicsQueue eQueue;
 	bool bTimestampSupported;
 	bool bConcurrentSubmission;
 	double fNanosecondsPerTimestampTick;
@@ -367,7 +367,7 @@ typedef struct sirRenderExtendedCapabilities_s
 // graphics buffer; acceleration structures and SBT records borrow it.
 typedef struct sirRenderAccelerationStructureDesc_s
 {
-	sirRenderAccelerationStructureType_t eType;
+	SIRRenderAccelerationStructureType eType;
 	sirGraphicsHandle_t hBackingBuffer;
 	sirRenderBufferRange_t range;
 	uint32_t nBuildFlags;
@@ -405,4 +405,4 @@ static_assert( sizeof( sirRenderDispatchIndirectArgs_t ) == 12, "Indirect dispat
 static_assert( sizeof( sirGraphicsHandle_t ) == 16, "RHI uses the existing 16-byte handle" );
 static_assert( sizeof( sirGraphicsCompletion_t ) == 16, "RHI uses the existing 16-byte completion token" );
 
-#endif // __SIRENGINE_SIRRENDERTYPES_H__
+#endif // __SIR_RENDERTYPES_H__

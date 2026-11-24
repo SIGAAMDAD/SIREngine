@@ -112,7 +112,7 @@ static_assert( ( T3D_COMP_SURF_PHYSICAL_TILE / 4u ) * ( T3D_COMP_SURF_PHYSICAL_T
 inline bool t3d_comp_surf_host_little_endian()
 {
 	const uint32_t sentinel = 1u;
-	return ( ( const uint8_t * )&sentinel )[0] == 1u;
+	return ( static_cast<const uint8_t *>(&sentinel) )[0] == 1u;
 }
 inline bool t3d_comp_surf_range_within( const uint64_t offset, const uint64_t size, const uint64_t end )
 {

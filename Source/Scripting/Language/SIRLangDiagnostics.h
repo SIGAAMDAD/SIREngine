@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRLANGDIAGNOSTICS_H__
-#define __SIRENGINE_SIRLANGDIAGNOSTICS_H__
+#ifndef __SIR_LANGDIAGNOSTICS_H__
+#define __SIR_LANGDIAGNOSTICS_H__
 
 #include <Core/SIRPCH.h>
 
@@ -28,7 +28,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // source-byte offsets. No UI toolkit types or editor-owned memory is stored.
 typedef struct sirLangEditorDiagnostic_s
 {
-	sirLangCompilePhase_t ePhase;
+	SIRLangCompilePhase ePhase;
 	uint32_t nCode;
 	uint32_t nOffset;
 	uint32_t nLength;
@@ -47,4 +47,4 @@ uint32_t SIRLangCollectCompileDiagnostics( const sirLangCompileWorkspace_t *pWor
 // supplied an invalid destination. Never invokes a compiler pass.
 bool SIRLangGetCompileDiagnostic( const sirLangCompileWorkspace_t *pWorkspace, sirLangEditorDiagnostic_t *pDiagnostic ) noexcept;
 
-#endif // __SIRENGINE_SIRLANGDIAGNOSTICS_H__
+#endif // __SIR_LANGDIAGNOSTICS_H__

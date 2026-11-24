@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRCONFIGTYPES_H__
-#define __SIRENGINE_SIRCONFIGTYPES_H__
+#ifndef __SIR_CONFIGTYPES_H__
+#define __SIR_CONFIGTYPES_H__
 
 #include <Core/SIRPCH.h>
 
@@ -27,8 +27,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Containers/SIRContainerResult.h>
 #include <Core/Containers/SIRString.h>
 
-typedef enum sirConfigResult_e : uint8_t
-{
+enum class SIRConfigResult : uint8_t {
 	SIR_CONFIG_OK = 0,
 	SIR_CONFIG_END,
 	SIR_CONFIG_NOT_FOUND,
@@ -46,7 +45,7 @@ typedef enum sirConfigResult_e : uint8_t
 	SIR_CONFIG_UNSUPPORTED_FEATURE,
 	SIR_CONFIG_UNSUPPORTED_VERSION,
 	SIR_CONFIG_INTERNAL_ERROR
-} sirConfigResult_t;
+};
 
 typedef struct sirConfigInput_s
 {
@@ -58,13 +57,13 @@ typedef struct sirConfigInput_s
 typedef struct sirConfigSource_s
 {
 	void *pContext;
-	sirConfigResult_t ( *pfnRead )( void *, uint8_t *, uint64_t, uint64_t * );
+	SIRConfigResult ( *pfnRead )( void *, uint8_t *, uint64_t, uint64_t * );
 } sirConfigSource_t;
 
 typedef struct sirConfigSink_s
 {
 	void *pContext;
-	sirConfigResult_t ( *pfnWrite )( void *, const uint8_t *, uint64_t );
+	SIRConfigResult ( *pfnWrite )( void *, const uint8_t *, uint64_t );
 } sirConfigSink_t;
 
 typedef struct sirConfigLimits_s
@@ -94,7 +93,7 @@ typedef struct sirConfigParseContext_s
 
 typedef struct sirConfigDiagnostic_s
 {
-	sirConfigResult_t eResult;
+	SIRConfigResult eResult;
 	uint64_t nByteOffset;
 	uint32_t nLine;
 	uint32_t nColumn;
@@ -102,4 +101,4 @@ typedef struct sirConfigDiagnostic_s
 	uint32_t nFormatErrorCode;
 } sirConfigDiagnostic_t;
 
-#endif // __SIRENGINE_SIRCONFIGTYPES_H__
+#endif // __SIR_CONFIGTYPES_H__

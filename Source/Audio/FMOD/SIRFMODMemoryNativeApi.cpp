@@ -14,6 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Audio/FMOD/SIRFMODRuntime.h>
+#include <atomic>
 #include <Core/Containers/SIRRawStorage.h>
 #include <fmod.hpp>
 #include <stdint.h>
@@ -31,9 +32,9 @@ typedef struct sirFMODNativeAllocationHeader_s
 
 static constexpr uint64_t SIR_FMOD_NATIVE_ALLOCATION_SIGNATURE = 0x534952464D4F4441ULL;
 static_assert( sizeof( sirFMODNativeAllocationHeader_t ) == 16, "Native FMOD allocation alignment contract" );
-static sirContainerAllocator_t s_FMODNativeUpstream = {};
+static sirContainerAllocator_t s_FMODNativeUpstream {};
 static SIRFMODMemoryBudget s_FMODNativeBudget;
-static SIRAtomic<uint32_t> s_nFMODMemoryInstalled( 0 );
+static std::atomic<uint32_t> s_nFMODMemoryInstalled( 0 );
 static uint64_t s_nFMODNativeBudgetBytes = 0;
 
 static void *fmodNativeAllocate( unsigned int nBytes, FMOD_MEMORY_TYPE, const char * ) noexcept
@@ -43,14 +44,14 @@ static void *fmodNativeAllocate( unsigned int nBytes, FMOD_MEMORY_TYPE, const ch
 		return nullptr;
 	}
 	size_t nTotal = 0;
-	if ( !SIRRawStorage::checkedAdd( ( size_t )nBytes, sizeof( sirFMODNativeAllocationHeader_t ), &nTotal ) ) {
+	if ( !SIRRawStorage::checkedAdd( static_cast<size_t>(nBytes), sizeof( sirFMODNativeAllocationHeader_t ), &nTotal ) ) {
 		return nullptr;
 	}
 	void *pBase = pAllocator->pfnAllocate( pAllocator->pContext, nTotal, 16 );
 	if ( pBase == nullptr ) {
 		return nullptr;
 	}
-	sirFMODNativeAllocationHeader_t *pHeader = ( sirFMODNativeAllocationHeader_t * )pBase;
+	sirFMODNativeAllocationHeader_t *pHeader = static_cast<sirFMODNativeAllocationHeader_t *>(pBase);
 	pHeader->nPayloadBytes = nBytes;
 	pHeader->nSignature = SIR_FMOD_NATIVE_ALLOCATION_SIGNATURE;
 	return pHeader + 1;
@@ -61,7 +62,7 @@ static void fmodNativeFree( void *pMemory, FMOD_MEMORY_TYPE, const char * ) noex
 	if ( pMemory == nullptr ) {
 		return;
 	}
-	sirFMODNativeAllocationHeader_t *pHeader = ( ( sirFMODNativeAllocationHeader_t * )pMemory ) - 1;
+	sirFMODNativeAllocationHeader_t *pHeader = static_cast<sirFMODNativeAllocationHeader_t *>(pMemory) - 1;
 	if ( pHeader->nSignature != SIR_FMOD_NATIVE_ALLOCATION_SIGNATURE ) {
 		abort();
 	}
@@ -81,7 +82,7 @@ static void *fmodNativeReallocate( void *pMemory, unsigned int nBytes, FMOD_MEMO
 		fmodNativeFree( pMemory, eType, pszSource );
 		return nullptr;
 	}
-	const sirFMODNativeAllocationHeader_t *pHeader = ( ( const sirFMODNativeAllocationHeader_t * )pMemory ) - 1;
+	const sirFMODNativeAllocationHeader_t *pHeader = static_cast<const sirFMODNativeAllocationHeader_t *>(pMemory) - 1;
 	if ( pHeader->nSignature != SIR_FMOD_NATIVE_ALLOCATION_SIGNATURE ) {
 		abort();
 	}
@@ -113,42 +114,42 @@ static void F_CALL fmodNativeFreeCallback( void *pMemory, FMOD_MEMORY_TYPE eType
 	fmodNativeFree( pMemory, eType, pszSource );
 }
 
-static sirAudioResult_t sirInstallFMODNativeMemory( const sirContainerAllocator_t *pAllocator, uint64_t nBudgetBytes ) noexcept
+static SIRAudioResult sirInstallFMODNativeMemory( const sirContainerAllocator_t *pAllocator, uint64_t nBudgetBytes ) noexcept
 {
 	if ( !SIRRawStorage::isValidAllocator( pAllocator ) || nBudgetBytes == 0 ) {
-		return SIR_AUDIO_INVALID_ARGUMENT;
+		return SIRAudioResult::SIR_AUDIO_INVALID_ARGUMENT;
 	}
 	uint32_t nExpected = 0;
-	if ( !s_nFMODMemoryInstalled.compareExchangeStrong( nExpected, 1, SIR_MEMORY_ORDER_ACQUIRE_RELEASE ) ) {
+	if ( !s_nFMODMemoryInstalled.compare_exchange_strong( nExpected, 1, std::memory_order_acq_rel ) ) {
 		if ( nExpected == 2 && s_nFMODNativeBudgetBytes == nBudgetBytes && s_FMODNativeUpstream.pContext == pAllocator->pContext &&
 		     s_FMODNativeUpstream.pfnAllocate == pAllocator->pfnAllocate &&
 		     s_FMODNativeUpstream.pfnDeallocate == pAllocator->pfnDeallocate && s_FMODNativeUpstream.nDomainId == pAllocator->nDomainId &&
 		     s_FMODNativeUpstream.nOwnerTag == pAllocator->nOwnerTag ) {
-			return SIR_AUDIO_OK;
+			return SIRAudioResult::SIR_AUDIO_OK;
 		}
-		return SIR_AUDIO_BUSY;
+		return SIRAudioResult::SIR_AUDIO_BUSY;
 	}
 	s_FMODNativeUpstream = *pAllocator;
 	s_nFMODNativeBudgetBytes = nBudgetBytes;
-	if ( s_FMODNativeBudget.configure( &s_FMODNativeUpstream, nBudgetBytes ) != SIR_AUDIO_OK ) {
-		s_nFMODMemoryInstalled.store( 0, SIR_MEMORY_ORDER_RELEASE );
-		return SIR_AUDIO_INVALID_ARGUMENT;
+	if ( s_FMODNativeBudget.configure( &s_FMODNativeUpstream, nBudgetBytes ) != SIRAudioResult::SIR_AUDIO_OK ) {
+		s_nFMODMemoryInstalled.store( 0, std::memory_order_release );
+		return SIRAudioResult::SIR_AUDIO_INVALID_ARGUMENT;
 	}
 	// Must run before any Studio or Core System object exists.
 	const FMOD_RESULT eResult = FMOD::Memory_Initialize( nullptr, 0, fmodNativeAllocateCallback, fmodNativeReallocateCallback,
 	                                                     fmodNativeFreeCallback, FMOD_MEMORY_ALL );
 	if ( eResult != FMOD_OK ) {
 		s_FMODNativeBudget.shutdown();
-		s_nFMODMemoryInstalled.store( 0, SIR_MEMORY_ORDER_RELEASE );
-		return SIR_AUDIO_BACKEND_ERROR;
+		s_nFMODMemoryInstalled.store( 0, std::memory_order_release );
+		return SIRAudioResult::SIR_AUDIO_BACKEND_ERROR;
 	}
-	s_nFMODMemoryInstalled.store( 2, SIR_MEMORY_ORDER_RELEASE );
-	return SIR_AUDIO_OK;
+	s_nFMODMemoryInstalled.store( 2, std::memory_order_release );
+	return SIRAudioResult::SIR_AUDIO_OK;
 }
 
 static sirFMODMemoryBudgetStats_t sirGetFMODNativeMemoryStats( void ) noexcept
 {
-	return s_nFMODMemoryInstalled.load( SIR_MEMORY_ORDER_ACQUIRE ) == 2 ? s_FMODNativeBudget.getStats() : sirFMODMemoryBudgetStats_t{};
+	return s_nFMODMemoryInstalled.load( std::memory_order_acquire ) == 2 ? s_FMODNativeBudget.getStats() : sirFMODMemoryBudgetStats_t{};
 }
 
 sirFMODRuntimeMemoryNativeOps_t sirGetFMODNativeMemoryOps( void ) noexcept

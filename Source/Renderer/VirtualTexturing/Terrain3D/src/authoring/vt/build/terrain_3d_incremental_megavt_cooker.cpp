@@ -53,10 +53,10 @@ static bool t3dMegaVTCaptureColors( const t3dMegaVTAuthoringInputs_t& rInputs, c
 			if ( color->get_format() != Image::FORMAT_RGBA8 || color->get_width() <= 0 || color->get_height() <= 0 ) {
 				return false;
 			}
-			source.m_nWidth = ( uint32_t )color->get_width();
-			source.m_nHeight = ( uint32_t )color->get_height();
+			source.m_nWidth = static_cast<uint32_t>(color->get_width());
+			source.m_nHeight = static_cast<uint32_t>(color->get_height());
 			source.m_bytes = color->get_data();
-			if ( ( uint64_t )source.m_bytes.size() < ( uint64_t )source.m_nWidth * source.m_nHeight * 4u ) {
+			if ( static_cast<uint64_t>(source.m_bytes.size() < static_cast<uint64_t>(source.m_nWidth) * source.m_nHeight * 4u )) {
 				return false;
 			}
 		}
@@ -76,7 +76,7 @@ static uint64_t t3dMegaVTSourceFingerprint( const t3dMegaVTColorCapture_t& rCapt
 		const t3dMegaVTColorSource_t& source = rCapture.m_neighbors[i];
 		hash = t3dHashFnv1a64LittleU32( hash, source.m_nWidth );
 		hash = t3dHashFnv1a64LittleU32( hash, source.m_nHeight );
-		hash = t3dHashFnv1a64( source.m_bytes.ptr(), ( uint64_t )source.m_bytes.size(), hash );
+		hash = t3dHashFnv1a64( source.m_bytes.ptr(), static_cast<uint64_t>(source.m_bytes.size(), hash ));
 	}
 	return hash == 0u ? 1u : hash;
 }
@@ -90,7 +90,7 @@ static PackedByteArray t3dMegaVTSourceSignatureBytes( const uint64_t nFingerprin
 	uint8_t *const pBytes = result.ptrw();
 	const uint64_t values[2] = { 0x3152435354563344ULL, nFingerprint }; // D3VT SCR1 versioned header.
 	for ( uint32_t i = 0u; i < 16u; ++i ) {
-		pBytes[i] = ( uint8_t )( values[i / 8u] >> ( ( i % 8u ) * 8u ) );
+		pBytes[i] = static_cast<uint8_t>(  values[i / 8u] >> ( ( i % 8u ) * 8u )  );
 	}
 	return result;
 }
@@ -107,18 +107,18 @@ static float t3dMegaVTColorTap( const t3dMegaVTColorCapture_t& rCapture, int x, 
 	if ( center.m_nWidth == 0u || center.m_nHeight == 0u ) {
 		return nComponent == 3u ? 0.5f : 1.0f;
 	}
-	const int dx = x < 0 ? -1 : ( x >= ( int )center.m_nWidth ? 1 : 0 );
-	const int dz = z < 0 ? -1 : ( z >= ( int )center.m_nHeight ? 1 : 0 );
+	const int dx = x < 0 ? -1 : ( x >= static_cast<int>(center.m_nWidth) ? 1 : 0 );
+	const int dz = z < 0 ? -1 : ( z >= static_cast<int>(center.m_nHeight) ? 1 : 0 );
 	const t3dMegaVTColorSource_t& neighbor = rCapture.m_neighbors[( dz + 1 ) * 3 + dx + 1];
 	const bool bNeighbor = neighbor.m_nWidth == center.m_nWidth && neighbor.m_nHeight == center.m_nHeight;
 	const t3dMegaVTColorSource_t& source = bNeighbor ? neighbor : center;
 	if ( bNeighbor ) {
-		x -= dx * ( int )center.m_nWidth;
-		z -= dz * ( int )center.m_nHeight;
+		x -= dx * static_cast<int>(center.m_nWidth);
+		z -= dz * static_cast<int>(center.m_nHeight);
 	}
-	x = CLAMP( x, 0, ( int )source.m_nWidth - 1 );
-	z = CLAMP( z, 0, ( int )source.m_nHeight - 1 );
-	return ( float )source.m_bytes.ptr()[( ( uint64_t )z * source.m_nWidth + x ) * 4u + nComponent] / 255.0f;
+	x = CLAMP( x, 0, static_cast<int>(source.m_nWidth) - 1 );
+	z = CLAMP( z, 0, static_cast<int>(source.m_nHeight) - 1 );
+	return static_cast<float>(source.m_bytes.ptr()[( static_cast<uint64_t>(z) * source.m_nWidth + x )) * 4u + nComponent] / 255.0f;
 }
 
 static float t3dMegaVTColorSample( const t3dMegaVTColorCapture_t& rCapture, const float u, const float v, const uint32_t nComponent )
@@ -129,7 +129,7 @@ static float t3dMegaVTColorSample( const t3dMegaVTColorCapture_t& rCapture, cons
 	}
 	const float x = u * center.m_nWidth - 0.5f;
 	const float z = v * center.m_nHeight - 0.5f;
-	const int ix = ( int )floorf( x ), iz = ( int )floorf( z );
+	const int ix = static_cast<int>(floorf( x ), iz = static_cast<int>(floorf( z )));
 	const float fx = x - ix, fz = z - iz;
 	const float a = t3dMegaVTColorTap( rCapture, ix, iz, nComponent );
 	const float b = t3dMegaVTColorTap( rCapture, ix + 1, iz, nComponent );
@@ -152,14 +152,14 @@ static bool t3dMegaVTBuildPixels( const t3dMegaVTColorCapture_t& rCapture, t3dMe
 		return false;
 	}
 	const bool bReuse = rPixels.m_nExtent == nExtent && rPixels.m_nRegionIndex == rCapture.m_nRegionIndex &&
-	                    rPixels.m_albedo.size() == ( int64_t )nExtent * nExtent * 4u &&
-	                    rPixels.m_pbr.size() == ( int64_t )( nExtent / 2u ) * ( nExtent / 2u ) * 4u;
+	                    rPixels.m_albedo.size() == static_cast<int64_t>(nExtent) * nExtent * 4u &&
+	                    rPixels.m_pbr.size() == static_cast<int64_t>( nExtent / 2u ) * ( nExtent / 2u ) * 4u;
 	const uint32_t nPages = nExtent / T3D_VT_PAGE_INTERIOR;
 	const uint32_t nDirtyMask = bReuse ? rCapture.m_nDirtyMip0Mask : ( 1u << ( nPages * nPages ) ) - 1u;
 	rPixels.m_nExtent = nExtent;
 	rPixels.m_nRegionIndex = rCapture.m_nRegionIndex;
-	if ( rPixels.m_albedo.resize( ( int64_t )nExtent * nExtent * 4u ) != OK ||
-	     rPixels.m_pbr.resize( ( int64_t )( nExtent / 2u ) * ( nExtent / 2u ) * 4u ) != OK ) {
+	if ( rPixels.m_albedo.resize( static_cast<int64_t>(nExtent) * nExtent * 4u ) != OK ||
+	     rPixels.m_pbr.resize( static_cast<int64_t>( nExtent / 2u ) * ( nExtent / 2u ) * 4u ) != OK ) {
 		return false;
 	}
 	// Albedo stores linear painted color via the V1 sRGB family. PBR's blue
@@ -176,7 +176,7 @@ static bool t3dMegaVTBuildPixels( const t3dMegaVTColorCapture_t& rCapture, t3dMe
 				if ( ( nDirtyMask & ( 1u << nPage ) ) == 0u ) {
 					continue;
 				}
-				uint8_t *const pPixel = pPixels + ( ( uint64_t )z * nSide + x ) * 4u;
+				uint8_t *const pPixel = pPixels + ( static_cast<uint64_t>(z) * nSide + x ) * 4u;
 				const float u = ( x + 0.5f ) / nSide, v = ( z + 0.5f ) / nSide;
 				if ( channel == 0u ) {
 					for ( uint32_t c = 0u; c < 3u; ++c ) {
@@ -227,7 +227,7 @@ bool Terrain3DIncrementalMegaVTCooker::captureRegionCold( const t3dMegaVTAuthori
 {
 	// Capture and worker storage must be admitted before taking Image snapshots.
 	// Native owner-thread metadata is charged by its allocator separately.
-	const uint64_t nCaptureLimit = 9u * ( ( uint64_t )T3D_REGION_SIZE * T3D_REGION_SIZE * 4u + 64u );
+	const uint64_t nCaptureLimit = 9u * ( static_cast<uint64_t>(T3D_REGION_SIZE) * T3D_REGION_SIZE * 4u + 64u );
 	const uint64_t nPayloadBytes = getRetainedPayloadBytesCold();
 	const uint64_t nRetained = getRetainedCpuBytesCold();
 	if ( nRetained > m_nCpuByteLimit || nCaptureLimit + m_nWorkerByteLimit > m_nCpuByteLimit - nRetained ||
@@ -285,7 +285,7 @@ void Terrain3DIncrementalMegaVTCooker::retireClaimCold( Terrain3DTerrainMegaVT& 
 			m_nRetryAfterUsec[index] = 0u;
 		}
 	}
-	( void )rMegaVT.cancelIncrementalCookHot( m_ticket );
+	static_cast<void>(rMegaVT.cancelIncrementalCookHot( m_ticket ));
 	m_ticket = t3dTerrainMegaVTCookTicket_t{};
 	m_workerFragment.clear();
 	m_capture = t3dMegaVTColorCapture_t{};
@@ -441,14 +441,14 @@ static bool t3dMegaVTFileEqualsBytesCold( const String& rPath, const PackedByteA
 	if ( rPath.is_empty() || rBytes.is_empty() )
 		return false;
 	const Ref<FileAccess> file = FileAccess::open( rPath, FileAccess::READ );
-	if ( file.is_null() || file->get_length() != ( uint64_t )rBytes.size() )
+	if ( file.is_null() || file->get_length() != static_cast<uint64_t>(rBytes.size() ))
 		return false;
 	uint8_t scratch[65536u];
 	const uint8_t *const expected = rBytes.ptr();
 	uint64_t offset = 0u;
-	while ( offset < ( uint64_t )rBytes.size() ) {
-		const uint64_t count = MIN( ( uint64_t )sizeof( scratch ), ( uint64_t )rBytes.size() - offset );
-		if ( file->get_buffer( scratch, count ) != count || memcmp( scratch, expected + offset, ( size_t )count ) != 0 )
+	while ( offset < static_cast<uint64_t>(rBytes.size() )) {
+		const uint64_t count = MIN( static_cast<uint64_t>(sizeof( scratch ), static_cast<uint64_t>(rBytes.size() - offset )));
+		if ( file->get_buffer( scratch, count ) != count || memcmp( scratch, expected + offset, static_cast<size_t>(count) ) != 0 )
 			return false;
 		offset += count;
 	}
@@ -475,15 +475,15 @@ bool Terrain3DIncrementalMegaVTCooker::publishedArtifactsMatchCold( const String
 Dictionary Terrain3DIncrementalMegaVTCooker::getExportCacheDiagnosticsCold( void )
 {
 	Dictionary result;
-	result["export_fragment_reused_count"] = ( int64_t )s_exportCacheCounters.m_nReused;
-	result["export_fragment_cooked_count"] = ( int64_t )s_exportCacheCounters.m_nCooked;
-	result["export_fragment_cache_writes"] = ( int64_t )s_exportCacheCounters.m_nCacheWrites;
-	result["export_fragment_cache_write_failures"] = ( int64_t )s_exportCacheCounters.m_nCacheWriteFailures;
-	result["export_fragment_reused_bytes"] = ( int64_t )s_exportCacheCounters.m_nReusedBytes;
-	result["export_fragment_cooked_bytes"] = ( int64_t )s_exportCacheCounters.m_nCookedBytes;
-	result["export_megavt_merged_bytes"] = ( int64_t )s_exportCacheCounters.m_nMergedBytes;
-	result["export_package_noop_publications"] = ( int64_t )s_exportCacheCounters.m_nNoOpPublications;
-	result["export_megavt_generation"] = ( int64_t )s_exportCacheCounters.m_nLastGeneration;
+	result["export_fragment_reused_count"] = static_cast<int64_t>(s_exportCacheCounters.m_nReused);
+	result["export_fragment_cooked_count"] = static_cast<int64_t>(s_exportCacheCounters.m_nCooked);
+	result["export_fragment_cache_writes"] = static_cast<int64_t>(s_exportCacheCounters.m_nCacheWrites);
+	result["export_fragment_cache_write_failures"] = static_cast<int64_t>(s_exportCacheCounters.m_nCacheWriteFailures);
+	result["export_fragment_reused_bytes"] = static_cast<int64_t>(s_exportCacheCounters.m_nReusedBytes);
+	result["export_fragment_cooked_bytes"] = static_cast<int64_t>(s_exportCacheCounters.m_nCookedBytes);
+	result["export_megavt_merged_bytes"] = static_cast<int64_t>(s_exportCacheCounters.m_nMergedBytes);
+	result["export_package_noop_publications"] = static_cast<int64_t>(s_exportCacheCounters.m_nNoOpPublications);
+	result["export_megavt_generation"] = static_cast<int64_t>(s_exportCacheCounters.m_nLastGeneration);
 	return result;
 }
 
@@ -505,7 +505,7 @@ static bool t3dMegaVTLoadExportFragmentCold( const String& rPath, const uint64_t
 		return false;
 	PackedByteArray candidate = file->get_buffer( bytes );
 	t3dVTPackBaselineView_t view{};
-	if ( ( uint64_t )candidate.size() != bytes || !t3d_vt_pack_open_baseline_view( candidate.ptr(), bytes, view ) )
+	if ( static_cast<uint64_t>(candidate.size() != bytes || !t3d_vt_pack_open_baseline_view( candidate.ptr(), bytes, view ) ))
 		return false;
 	if ( view.m_pHeader->m_nAllocationCount != 1u ||
 	     view.m_pAllocationKeys[0].m_nStableKey != t3d_vt_terrain_region_stable_key( nRegionIndex ) )
@@ -540,12 +540,12 @@ static bool t3dMegaVTPublishCachePairCold( const String& rPath, const PackedByte
 	if ( source.stagePacked( signature ) != OK || fragment.stagePacked( rFragment ) != OK || source.publish() != OK ||
 	     fragment.publish() != OK ) {
 		rError = !fragment.getError().is_empty() ? fragment.getError() : source.getError();
-		( void )fragment.rollback();
-		( void )source.rollback();
+		static_cast<void>(fragment.rollback());
+		static_cast<void>(source.rollback());
 		return false;
 	}
-	( void )fragment.commit();
-	( void )source.commit();
+	static_cast<void>(fragment.commit());
+	static_cast<void>(source.commit());
 	return true;
 }
 
@@ -616,7 +616,7 @@ bool Terrain3DIncrementalMegaVTCooker::restoreCachedRegionCold( const t3dMegaVTA
 	}
 	const PackedByteArray bytes = file->get_buffer( nBytes );
 	t3dVTPackBaselineView_t view{};
-	if ( ( uint64_t )bytes.size() != nBytes || !t3d_vt_pack_open_baseline_view( bytes.ptr(), nBytes, view ) ||
+	if ( static_cast<uint64_t>(bytes.size() != nBytes || !t3d_vt_pack_open_baseline_view( bytes.ptr(), nBytes, view )) ||
 	     view.m_pHeader->m_nAllocationCount != 1u ||
 	     view.m_pAllocationKeys[0].m_nStableKey != t3d_vt_terrain_region_stable_key( nRegionIndex ) ||
 	     view.m_pAllocations[0].m_nGeneration != nSourceGeneration || view.m_pAllocations[0].m_nConsumer != T3D_VT_CONSUMER_CLIPMAP ||
@@ -664,8 +664,8 @@ void Terrain3DIncrementalMegaVTCooker::restoreCachedRegionsCold( const t3dMegaVT
 		if ( region.is_null() || region->isDeleted() ) {
 			continue;
 		}
-		const uint32_t nSourceGeneration = ( uint32_t )region->getMegaVTSourceGeneration();
-		const uint32_t nDirty = ( uint32_t )region->getMegaVTDirtyMip0Mask();
+		const uint32_t nSourceGeneration = static_cast<uint32_t>(region->getMegaVTSourceGeneration());
+		const uint32_t nDirty = static_cast<uint32_t>(region->getMegaVTDirtyMip0Mask());
 		if ( !restoreCachedRegionCold( rInputs, index, nSourceGeneration, nDirty, nRetainedBytes ) && nDirty == 0u &&
 		     nSourceGeneration != 0u && !m_bStartupRecoveryRegion[index] ) {
 			m_bStartupRecoveryRegion[index] = true;
@@ -706,7 +706,7 @@ void Terrain3DIncrementalMegaVTCooker::discardStagedBatchCold( Terrain3DTerrainM
 				m_nFailedSourceGenerations[index] = ticket.m_nGeneration;
 			}
 		}
-		( void )rMegaVT.cancelIncrementalCookHot( ticket );
+		static_cast<void>(rMegaVT.cancelIncrementalCookHot( ticket ));
 		for ( size_t j = 0u; j < m_pixelCache.size(); ++j ) {
 			if ( m_pixelCache[j].m_nRegionIndex == index ) {
 				m_pixelCache.erase( m_pixelCache.begin() + j );
@@ -810,7 +810,7 @@ void Terrain3DIncrementalMegaVTCooker::finishPublicationCold( const t3dMegaVTAut
 			// Last-chance generation validation. Files can still be restored;
 			// subsequent dirty claims must regenerate the current package.
 			for ( size_t j = publications.size(); j > 0u; --j ) {
-				( void )publications[j - 1u].rollback();
+				static_cast<void>(publications)[j - 1u].rollback();
 			}
 			discardStagedBatchCold( rMegaVT, rHost, "MegaVT batch acceptance rejected a changed source", true );
 			return;
@@ -828,7 +828,7 @@ void Terrain3DIncrementalMegaVTCooker::finishPublicationCold( const t3dMegaVTAut
 		++m_nAccepted;
 	}
 	for ( size_t i = 0u; i < publications.size(); ++i ) {
-		( void )publications[i].commit();
+		static_cast<void>(publications)[i].commit();
 	}
 	for ( uint32_t i = 0u; i < m_nStagedCount; ++i ) {
 		m_stagedRegions[i] = t3dMegaVTStagedRegion_t{};
@@ -960,11 +960,11 @@ void Terrain3DIncrementalMegaVTCooker::updateCold( const t3dMegaVTAuthoringInput
 					continue;
 				}
 				uint32_t generation = 0u, mask = 0u;
-				( void )rMegaVT.getPersistentEditorState( i, generation, mask );
+				static_cast<void>(rMegaVT.getPersistentEditorState( i, generation, mask ));
 				if ( mask == 0u && m_fragments[i].is_empty() ) {
-					const uint32_t pages = ( uint32_t )region->m_nMip0WidthPages * region->m_nMip0HeightPages;
+					const uint32_t pages = static_cast<uint32_t>(region->m_nMip0WidthPages) * region->m_nMip0HeightPages;
 					mask = pages >= 32u ? UINT32_MAX : ( 1u << pages ) - 1u;
-					( void )rMegaVT.importPersistentEditorStateHot( i, generation, mask );
+					static_cast<void>(rMegaVT.importPersistentEditorStateHot( i, generation, mask ));
 				}
 				if ( mask != 0u ) {
 					++m_nForceRegionCount;
@@ -1026,7 +1026,7 @@ void Terrain3DIncrementalMegaVTCooker::updateCold( const t3dMegaVTAuthoringInput
 			continue;
 		}
 		uint32_t generation = 0u, mask = 0u;
-		( void )rMegaVT.getPersistentEditorState( index, generation, mask );
+		static_cast<void>(rMegaVT.getPersistentEditorState( index, generation, mask ));
 		if ( m_bStartupRecoveryRegion[index] && generation != m_nStartupRecoverySourceGeneration[index] ) {
 			m_bStartupRecoveryRegion[index] = false;
 			if ( m_nRecoveryOutstanding != 0u ) {
@@ -1052,14 +1052,14 @@ void Terrain3DIncrementalMegaVTCooker::updateCold( const t3dMegaVTAuthoringInput
 				++m_nRecoveryOutstanding;
 				++m_nRecoveryTotal;
 			}
-			const uint32_t nMip0Pages = ( uint32_t )region->m_nMip0WidthPages * region->m_nMip0HeightPages;
+			const uint32_t nMip0Pages = static_cast<uint32_t>(region->m_nMip0WidthPages) * region->m_nMip0HeightPages;
 			const uint32_t nDirtyMask = nMip0Pages >= 32u ? UINT32_MAX : ( 1u << nMip0Pages ) - 1u;
 			bDirty |= rMegaVT.importPersistentEditorStateHot( index, generation, nDirtyMask );
 		}
 	}
 	// Missing cache-derived dirty masks are transient until a successful
 	// batch commits; do not rewrite the source's persisted editor dirty state here.
-	( void )bDirty;
+	static_cast<void>(bDirty);
 	if ( bRecompose ) {
 		rHost.requestMegaVTPackageRecomposeCold();
 	}
@@ -1092,13 +1092,13 @@ void Terrain3DIncrementalMegaVTCooker::shutdownCold( Terrain3DTerrainMegaVT& rMe
 	if ( m_worker.joinable() ) {
 		m_worker.join();
 	}
-	( void )rMegaVT.cancelIncrementalCookHot( m_ticket );
+	static_cast<void>(rMegaVT.cancelIncrementalCookHot( m_ticket ));
 	m_ticket = t3dTerrainMegaVTCookTicket_t{};
 	m_capture = t3dMegaVTColorCapture_t{};
 	m_pixels = t3dMegaVTRegionPixels_t{};
 	m_workerFragment.clear();
 	for ( uint32_t i = 0u; i < m_nStagedCount; ++i ) {
-		( void )rMegaVT.cancelIncrementalCookHot( m_stagedRegions[i].m_ticket );
+		static_cast<void>(rMegaVT.cancelIncrementalCookHot( m_stagedRegions[i].m_ticket ));
 		m_stagedRegions[i] = t3dMegaVTStagedRegion_t{};
 	}
 	m_nStagedCount = 0u;
@@ -1123,7 +1123,7 @@ void Terrain3DIncrementalMegaVTCooker::shutdownCold( Terrain3DTerrainMegaVT& rMe
 	memset( m_nFailedSourceGenerations, 0, sizeof( m_nFailedSourceGenerations ) );
 	m_cpuMemory.reset();
 	for ( uint32_t i = 0u; i < T3D_REGION_SLOTS; ++i ) {
-		( void )rMegaVT.cancelIncrementalCookHot( m_forceTickets[i] );
+		static_cast<void>(rMegaVT.cancelIncrementalCookHot( m_forceTickets[i] ));
 		m_forceTickets[i] = t3dTerrainMegaVTCookTicket_t{};
 		m_forceFragments[i].clear();
 	}
@@ -1173,11 +1173,11 @@ bool Terrain3DIncrementalMegaVTCooker::composePackageCold( PackedByteArray& rPac
 	if ( packages.size() <= ( rPackage.is_empty() ? 0u : 1u ) ) {
 		return true;
 	}
-	const uint32_t nGeneration = t3dNextGeneration( ( uint32_t )( nSignature ^ ( nSignature >> 32u ) ) );
+	const uint32_t nGeneration = t3dNextGeneration( static_cast<uint32_t>(  nSignature ^ ( nSignature >> 32u )  ) );
 	PackedByteArray merged;
 	Terrain3DSharedMemoryReservation mergedMemory;
-	const uint64_t nRetained = getRetainedCpuBytesCold() + ( uint64_t )rPackage.size() +
-	                           ( pApprovedComposedFragment != NULL ? ( uint64_t )pApprovedComposedFragment->size() : 0u );
+	const uint64_t nRetained = getRetainedCpuBytesCold() + static_cast<uint64_t>(rPackage.size()) +
+	                           ( pApprovedComposedFragment != NULL ? static_cast<uint64_t>(pApprovedComposedFragment->size() : 0u ));
 	m_nCompositionWorkingBytes = 0u;
 	m_nCompositionWorkingLimit = nRetained < m_nCpuByteLimit ? m_nCpuByteLimit - nRetained : 0u;
 	Terrain3DMemoryAccount *const pAccount = g_t3dMemoryAccount;
@@ -1195,7 +1195,7 @@ bool Terrain3DIncrementalMegaVTCooker::composePackageCold( PackedByteArray& rPac
 	}
 	t3dVTMergeStatistics_t statistics;
 	const uint64_t nStart = t3dSteadyClockUsec();
-	const bool bMerged = t3d_vt_godot_merge_packages( packages.data(), ( uint32_t )packages.size(), nGeneration, merged,
+	const bool bMerged = t3d_vt_godot_merge_packages( packages.data(), static_cast<uint32_t>(packages.size()), nGeneration, merged,
 	                                                  m_nCompositionWorkingLimit, &statistics, &mergedMemory );
 	m_nMergeUsec = t3dSteadyClockUsec() - nStart;
 	m_nPayloadComparisons = statistics.m_nPayloadComparisons;
@@ -1248,7 +1248,7 @@ struct t3dMegaVTRetainedByteCounter_t
 		m_seen[m_nSeen++] = pBytes;
 		// Godot exposes size, not backing capacity. Include allocation/header
 		// slack and report this as an estimate; aliases count only once.
-		m_nBytes += ( uint64_t )rBytes.size() + 64u;
+		m_nBytes += static_cast<uint64_t>(rBytes.size()) + 64u;
 	}
 };
 
@@ -1278,7 +1278,7 @@ size_t Terrain3DIncrementalMegaVTCooker::getRetainedPayloadBytesCold( void ) con
 	for ( uint32_t i = 0u; i < m_nStagedCount; ++i ) {
 		counter.add( m_stagedRegions[i].m_fragment );
 	}
-	return counter.m_nBytes > SIZE_MAX ? SIZE_MAX : ( size_t )counter.m_nBytes;
+	return counter.m_nBytes > SIZE_MAX ? SIZE_MAX : static_cast<size_t>(counter.m_nBytes);
 }
 
 size_t Terrain3DIncrementalMegaVTCooker::getRetainedCpuBytesCold( void ) const
@@ -1290,7 +1290,7 @@ void Terrain3DIncrementalMegaVTCooker::trimCpuReservationCold( void )
 {
 	// Call only after releasing bytes or after a previously admitted transition.
 	// A live worker keeps its bounded allowance until it has joined.
-	( void )m_cpuMemory.resize( getRetainedPayloadBytesCold() );
+	static_cast<void>(m_cpuMemory.resize( getRetainedPayloadBytesCold() ));
 }
 
 Dictionary Terrain3DIncrementalMegaVTCooker::getDiagnosticsCold( void ) const
@@ -1298,38 +1298,38 @@ Dictionary Terrain3DIncrementalMegaVTCooker::getDiagnosticsCold( void ) const
 	Dictionary result;
 	result["worker_active"] = m_worker.joinable();
 	result["publication_pending"] = m_bBatchRequested;
-	result["staged_regions"] = ( int64_t )m_nStagedCount;
-	result["batched_publications"] = ( int64_t )m_nBatchedPublications;
-	result["unchanged_region_fragments"] = ( int64_t )m_nUnchangedFragments;
-	result["startup_recovery_pending_regions"] = ( int64_t )m_nRecoveryOutstanding;
-	result["startup_recovery_total_regions"] = ( int64_t )m_nRecoveryTotal;
-	result["submitted"] = ( int64_t )m_nSubmitted;
-	result["accepted"] = ( int64_t )m_nAccepted;
-	result["stale_rejected"] = ( int64_t )m_nRejected;
-	result["failures"] = ( int64_t )m_nFailures;
+	result["staged_regions"] = static_cast<int64_t>(m_nStagedCount);
+	result["batched_publications"] = static_cast<int64_t>(m_nBatchedPublications);
+	result["unchanged_region_fragments"] = static_cast<int64_t>(m_nUnchangedFragments);
+	result["startup_recovery_pending_regions"] = static_cast<int64_t>(m_nRecoveryOutstanding);
+	result["startup_recovery_total_regions"] = static_cast<int64_t>(m_nRecoveryTotal);
+	result["submitted"] = static_cast<int64_t>(m_nSubmitted);
+	result["accepted"] = static_cast<int64_t>(m_nAccepted);
+	result["stale_rejected"] = static_cast<int64_t>(m_nRejected);
+	result["failures"] = static_cast<int64_t>(m_nFailures);
 	result["last_error"] = m_lastError;
-	result["pixel_cache_regions"] = ( int64_t )m_pixelCache.size();
-	result["cache_restored_regions"] = ( int64_t )m_nCacheRestored;
-	result["cache_rejected_regions"] = ( int64_t )m_nCacheRejected;
+	result["pixel_cache_regions"] = static_cast<int64_t>(m_pixelCache.size());
+	result["cache_restored_regions"] = static_cast<int64_t>(m_nCacheRestored);
+	result["cache_rejected_regions"] = static_cast<int64_t>(m_nCacheRejected);
 	uint32_t retrying = 0u;
 	for ( uint32_t i = 0u; i < T3D_REGION_SLOTS; ++i ) {
 		retrying += m_nRetryAfterUsec[i] != 0u ? 1u : 0u;
 	}
-	result["transient_retry_regions"] = ( int64_t )retrying;
-	result["retained_cpu_bytes"] = ( int64_t )getRetainedCpuBytesCold();
-	result["reserved_cpu_bytes"] = ( int64_t )m_cpuMemory.bytes();
+	result["transient_retry_regions"] = static_cast<int64_t>(retrying);
+	result["retained_cpu_bytes"] = static_cast<int64_t>(getRetainedCpuBytesCold());
+	result["reserved_cpu_bytes"] = static_cast<int64_t>(m_cpuMemory.bytes());
 	if ( m_authoringMemoryAccount.get() != NULL ) {
 		const auto stats = m_authoringMemoryAccount.get()->stats();
-		result["authoring_account_committed_bytes"] = ( int64_t )stats.committed;
-		result["authoring_account_peak_bytes"] = ( int64_t )stats.peak;
-		result["authoring_account_denied_allocations"] = ( int64_t )stats.denied;
+		result["authoring_account_committed_bytes"] = static_cast<int64_t>(stats.committed);
+		result["authoring_account_peak_bytes"] = static_cast<int64_t>(stats.peak);
+		result["authoring_account_denied_allocations"] = static_cast<int64_t>(stats.denied);
 	}
-	result["cpu_byte_limit"] = ( int64_t )m_nCpuByteLimit;
-	result["peak_cpu_byte_estimate"] = ( int64_t )m_nPeakCpuByteEstimate;
-	result["composition_usec"] = ( int64_t )m_nMergeUsec;
-	result["payload_comparisons"] = ( int64_t )m_nPayloadComparisons;
-	result["composition_required_working_bytes"] = ( int64_t )m_nCompositionWorkingBytes;
-	result["composition_working_byte_limit"] = ( int64_t )m_nCompositionWorkingLimit;
+	result["cpu_byte_limit"] = static_cast<int64_t>(m_nCpuByteLimit);
+	result["peak_cpu_byte_estimate"] = static_cast<int64_t>(m_nPeakCpuByteEstimate);
+	result["composition_usec"] = static_cast<int64_t>(m_nMergeUsec);
+	result["payload_comparisons"] = static_cast<int64_t>(m_nPayloadComparisons);
+	result["composition_required_working_bytes"] = static_cast<int64_t>(m_nCompositionWorkingBytes);
+	result["composition_working_byte_limit"] = static_cast<int64_t>(m_nCompositionWorkingLimit);
 	return result;
 }
 
@@ -1354,7 +1354,7 @@ bool Terrain3DIncrementalMegaVTCooker::appendRuntimeRegionsCold( const t3dMegaVT
 	}
 	const TypedArray<Vector2i> locations = pData->getRegionLocations();
 	eastl::vector<PackedByteArray, Terrain3DEastlAllocator> packages;
-	if ( !t3dContainerReserveCold( packages, ( size_t )locations.size() + 1u ) ) {
+	if ( !t3dContainerReserveCold( packages, static_cast<size_t>(locations.size() + 1u ) )) {
 		rError = "Terrain MegaVT export package list allocation failed";
 		return false;
 	}
@@ -1363,7 +1363,7 @@ bool Terrain3DIncrementalMegaVTCooker::appendRuntimeRegionsCold( const t3dMegaVT
 	}
 	t3dAtomicBool_t cancel{ false };
 	uint64_t nSignature = rGeneration;
-	uint64_t nRetainedBytes = rPackage.is_empty() ? 0u : ( uint64_t )rPackage.size() + 64u;
+	uint64_t nRetainedBytes = rPackage.is_empty() ? 0u : static_cast<uint64_t>(rPackage.size()) + 64u;
 	if ( !locations.is_empty() && !buffer_memory.resize( nRetainedBytes ) ) {
 		rError = "Total terrain memory budget rejected MegaVT export inputs";
 		return false;
@@ -1393,7 +1393,7 @@ bool Terrain3DIncrementalMegaVTCooker::appendRuntimeRegionsCold( const t3dMegaVT
 		}
 		for ( uint32_t n = 0u; n < 9u; ++n ) {
 			if ( !capture.m_neighbors[n].m_bytes.is_empty() ) {
-				nCaptureBytes += ( uint64_t )capture.m_neighbors[n].m_bytes.size() + 64u;
+				nCaptureBytes += static_cast<uint64_t>(capture.m_neighbors[n].m_bytes.size)() + 64u;
 			}
 		}
 		const uint64_t nPixelBytes = 2u * 512u * 512u * 4u;
@@ -1417,14 +1417,14 @@ bool Terrain3DIncrementalMegaVTCooker::appendRuntimeRegionsCold( const t3dMegaVT
 			                                                               capture.m_nExtent, nAvailableBytes, fragment );
 		if ( reused ) {
 			++s_exportCacheCounters.m_nReused;
-			s_exportCacheCounters.m_nReusedBytes += ( uint64_t )fragment.size();
+			s_exportCacheCounters.m_nReusedBytes += static_cast<uint64_t>(fragment.size());
 		} else {
 			if ( !t3dMegaVTBuildPixels( capture, pixels, cancel ) || !t3dMegaVTCookPixels( capture, pixels, fragment, nAvailableBytes ) ) {
 				rError = "Terrain MegaVT region export failed";
 				return false;
 			}
 			++s_exportCacheCounters.m_nCooked;
-			s_exportCacheCounters.m_nCookedBytes += ( uint64_t )fragment.size();
+			s_exportCacheCounters.m_nCookedBytes += static_cast<uint64_t>(fragment.size());
 			// The cache is derived and optional; a write failure must not
 			// invalidate successfully cooked V1 shipping bytes.
 			if ( !cacheDirectory.is_empty() && DirAccess::make_dir_recursive_absolute( cacheDirectory ) == OK ) {
@@ -1439,7 +1439,7 @@ bool Terrain3DIncrementalMegaVTCooker::appendRuntimeRegionsCold( const t3dMegaVT
 		}
 		nSignature ^= t3dHashPublicationBytes( fragment.ptr(), fragment.size() );
 		packages.push_back( fragment );
-		nRetainedBytes += ( uint64_t )fragment.size() + 64u;
+		nRetainedBytes += static_cast<uint64_t>(fragment.size()) + 64u;
 		if ( !buffer_memory.resize( nRetainedBytes + nCaptureBytes + nPixelBytes ) ) {
 			rError = "Total terrain memory budget rejected MegaVT export fragment";
 			return false;
@@ -1455,17 +1455,17 @@ bool Terrain3DIncrementalMegaVTCooker::appendRuntimeRegionsCold( const t3dMegaVT
 	if ( locations.is_empty() ) {
 		return true;
 	}
-	const uint32_t nGeneration = t3dNextGeneration( ( uint32_t )( nSignature ^ ( nSignature >> 32u ) ) );
+	const uint32_t nGeneration = t3dNextGeneration( static_cast<uint32_t>(  nSignature ^ ( nSignature >> 32u )  ) );
 	PackedByteArray merged;
 	if ( nRetainedBytes >= rInputs.m_nCpuByteLimit ||
-	     !t3d_vt_godot_merge_packages( packages.data(), ( uint32_t )packages.size(), nGeneration, merged,
+	     !t3d_vt_godot_merge_packages( packages.data(), static_cast<uint32_t>(packages.size()), nGeneration, merged,
 	                                   rInputs.m_nCpuByteLimit - nRetainedBytes ) ) {
 		rError = "Terrain MegaVT export composition failed";
 		return false;
 	}
 	rPackage = merged;
 	rGeneration = nGeneration;
-	s_exportCacheCounters.m_nMergedBytes = ( uint64_t )merged.size();
+	s_exportCacheCounters.m_nMergedBytes = static_cast<uint64_t>(merged.size());
 	s_exportCacheCounters.m_nLastGeneration = nGeneration;
 	return true;
 }
@@ -1489,7 +1489,7 @@ bool Terrain3DIncrementalMegaVTCooker::finishForceRecookAllRegionsCold(
 		m_lastError = "Missing staged MegaVT shipping package";
 		success = false;
 	}
-	if ( success && !t3dContainerReserveCold( publications, ( size_t )m_nForceRegionCount * 2u + 3u ) ) {
+	if ( success && !t3dContainerReserveCold( publications, static_cast<size_t>(m_nForceRegionCount) * 2u + 3u ) ) {
 		m_lastError = "MegaVT batch publication staging allocation failed";
 		success = false;
 	}
@@ -1575,13 +1575,13 @@ bool Terrain3DIncrementalMegaVTCooker::finishForceRecookAllRegionsCold(
 			}
 		} else {
 			for ( size_t i = publications.size(); i > 0u; --i ) {
-				( void )publications[i - 1u].rollback();
+				static_cast<void>(publications)[i - 1u].rollback();
 			}
 		}
 	}
 	for ( uint32_t i = 0u; i < T3D_REGION_SLOTS; ++i ) {
 		if ( !success && m_forceTickets[i].m_nClaimId != 0u ) {
-			( void )rMegaVT.cancelIncrementalCookHot( m_forceTickets[i] );
+			static_cast<void>(rMegaVT.cancelIncrementalCookHot( m_forceTickets[i] ));
 		}
 		m_forceFragments[i].clear();
 		m_forceTickets[i] = t3dTerrainMegaVTCookTicket_t{};
@@ -1627,14 +1627,14 @@ uint32_t t3d_megatexture_cooker_page_count( uint32_t nWidth, uint32_t nHeight )
 	uint64_t nPageCount = 0u;
 	const uint32_t nMipCount = t3d_vt_page_builder_mip_count( nWidth, nHeight );
 	for ( uint32_t iMip = 0u; iMip < nMipCount; ++iMip ) {
-		nPageCount += ( uint64_t )t3d_vt_page_builder_pages_wide( nWidth ) * t3d_vt_page_builder_pages_high( nHeight );
+		nPageCount += static_cast<uint64_t>(t3d_vt_page_builder_pages_wide( nWidth ) * t3d_vt_page_builder_pages_high( nHeight ));
 		if ( nPageCount > UINT32_MAX ) {
 			return 0u;
 		}
 		nWidth = nWidth > 1u ? nWidth >> 1u : 1u;
 		nHeight = nHeight > 1u ? nHeight >> 1u : 1u;
 	}
-	return ( uint32_t )nPageCount;
+	return static_cast<uint32_t>(nPageCount);
 }
 
 bool t3d_megatexture_cooker_build_page_u8( const uint8_t *pMipPixels, const uint32_t nMipWidth, const uint32_t nMipHeight,

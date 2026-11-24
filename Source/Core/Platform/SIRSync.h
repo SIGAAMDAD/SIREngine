@@ -14,8 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 */
 
-#ifndef __SIRENGINE_SIRSYNC_H__
-#define __SIRENGINE_SIRSYNC_H__
+#ifndef __SIR_SYNC_H__
+#define __SIR_SYNC_H__
 
 #include <Core/SIRPCH.h>
 
@@ -36,7 +36,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #error "SIREngine synchronization requires a Windows or Linux backend"
 #endif
 
-#include <Core/Platform/SIRAtomic.h>
+#include <atomic>
 
 class SIRConditionVariable;
 
@@ -109,7 +109,7 @@ public:
 	void unlock( void ) noexcept;
 
 private:
-	SIRAtomicFlag m_Lock;
+	std::atomic<bool> m_Lock;
 };
 
-#endif // __SIRENGINE_SIRSYNC_H__
+#endif // __SIR_SYNC_H__

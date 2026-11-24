@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRGLFORMATS_H__
-#define __SIRENGINE_SIRGLFORMATS_H__
+#ifndef __SIR_GLFORMATS_H__
+#define __SIR_GLFORMATS_H__
 
 #include <Core/SIRPCH.h>
 
@@ -33,7 +33,7 @@ typedef struct sirGLFormatDispatch_s
 	uint32_t ( *pGetError )( void );
 } sirGLFormatDispatch_t;
 
-sirGraphicsResult_t sirGLLoadFormatDispatch( sirGLProcedureLookup_t pLookup, void *pContext, sirGLFormatDispatch_t *pAPI ) noexcept;
-sirGraphicsResult_t sirGLQueryNativeFormat( const sirGLFormatDispatch_t *pAPI, sirGraphicsABIFormat_t *pFormat ) noexcept;
+SIRGraphicsResult sirGLLoadFormatDispatch( sirGLProcedureLookup_t pLookup, void *pContext, sirGLFormatDispatch_t *pAPI ) noexcept;
+SIRGraphicsResult sirGLQueryNativeFormat( const sirGLFormatDispatch_t *pAPI, sirGraphicsABIFormat_t *pFormat ) noexcept;
 
-#endif // __SIRENGINE_SIRGLFORMATS_H__
+#endif // __SIR_GLFORMATS_H__

@@ -23,7 +23,7 @@ static bool sirIniSpace( uint8_t nByte ) noexcept
 
 static bool sirIniValidUtf8( const char *pszValue, uint32_t nLength ) noexcept
 {
-	const uint8_t *pBytes = ( const uint8_t * )pszValue;
+	const uint8_t *pBytes = reinterpret_cast<const uint8_t *>(pszValue);
 	for ( uint32_t iByte = 0; iByte < nLength; ) {
 		const uint8_t nHead = pBytes[iByte];
 		if ( nHead == 0 ) {
@@ -73,7 +73,7 @@ typedef struct sirIniLocation_s
 	uint32_t nColumn;
 } sirIniLocation_t;
 
-static sirConfigResult_t sirIniFail( sirConfigResult_t eError, sirIniLocation_t location, sirConfigDiagnostic_t *pDiagnostic ) noexcept
+static SIRConfigResult sirIniFail( SIRConfigResult eError, sirIniLocation_t location, sirConfigDiagnostic_t *pDiagnostic ) noexcept
 {
 	if ( pDiagnostic != nullptr ) {
 		*pDiagnostic = {};
@@ -91,10 +91,10 @@ static bool sirIniSameAscii( const char *pszLeft, const char *pszRight ) noexcep
 		char nA = *pszLeft++;
 		char nB = *pszRight++;
 		if ( nA >= 'A' && nA <= 'Z' ) {
-			nA = ( char )( nA + 32 );
+			nA = static_cast<char>( nA + 32 );
 		}
 		if ( nB >= 'A' && nB <= 'Z' ) {
-			nB = ( char )( nB + 32 );
+			nB = static_cast<char>( nB + 32 );
 		}
 		if ( nA != nB ) {
 			return false;
@@ -103,33 +103,34 @@ static bool sirIniSameAscii( const char *pszLeft, const char *pszRight ) noexcep
 	return *pszLeft == *pszRight;
 }
 
-sirConfigResult_t SIRIniCodec::parse( const sirConfigInput_t& input, const sirConfigLimits_t& limits, const sirIniStorage_t& storage,
+SIRConfigResult SIRIniCodec::parse( const sirConfigInput_t& input, const sirConfigLimits_t& limits, const sirIniStorage_t& storage,
                                       sirIniParseResult_t *pResult ) noexcept
 {
 	if ( pResult == nullptr ) {
-		return SIR_CONFIG_INVALID_ARGUMENT;
+		return SIRConfigResult::SIR_CONFIG_INVALID_ARGUMENT;
 	}
 	*pResult = {};
 	uint32_t *pCount = &pResult->nCount;
 	sirConfigDiagnostic_t *pDiagnostic = &pResult->diagnostic;
 	if ( ( input.nBytes != 0 && input.pBytes == nullptr ) || storage.pEntries == nullptr || storage.pszValues == nullptr ||
 	     storage.nEntryCapacity == 0 || storage.nValueStride < 2 || storage.nEntryCapacity > SIZE_MAX / storage.nValueStride ||
-	     storage.nValueCapacity < ( size_t )storage.nEntryCapacity * storage.nValueStride || limits.nMaxInputBytes == 0 ||
+	     storage.nValueCapacity < static_cast<size_t>(storage.nEntryCapacity) * storage.nValueStride || limits.nMaxInputBytes == 0 ||
 	     limits.nMaxScalarBytes == 0 || limits.nMaxNodes == 0 ) {
-		return sirIniFail( SIR_CONFIG_INVALID_ARGUMENT, { 0, 1, 1 }, pDiagnostic );
+		return sirIniFail( SIRConfigResult::SIR_CONFIG_INVALID_ARGUMENT, { 0, 1, 1 }, pDiagnostic );
 	}
 	*pCount = 0;
 	if ( input.nBytes > limits.nMaxInputBytes ) {
-		return sirIniFail( SIR_CONFIG_LIMIT_EXCEEDED, { 0, 1, 1 }, pDiagnostic );
+		return sirIniFail( SIRConfigResult::SIR_CONFIG_LIMIT_EXCEEDED, { 0, 1, 1 }, pDiagnostic );
 	}
-	char szSection[SIR_INI_MAX_SECTION_BYTES + 1] = {};
+	char szSection[SIR_INI_MAX_SECTION_BYTES + 1];
+	memset( szSection, 0, sizeof( szSection ) );
 	uint64_t nOffset = 0;
 	uint32_t nLine = 1;
 	while ( nOffset < input.nBytes ) {
 		const uint64_t nStart = nOffset;
 		while ( nOffset < input.nBytes && input.pBytes[nOffset] != '\n' && input.pBytes[nOffset] != '\r' ) {
 			if ( input.pBytes[nOffset] == 0 ) {
-				return sirIniFail( SIR_CONFIG_INVALID_ENCODING, { nOffset, nLine, ( uint32_t )( nOffset - nStart + 1 ) }, pDiagnostic );
+				return sirIniFail( SIRConfigResult::SIR_CONFIG_INVALID_ENCODING, { nOffset, nLine, static_cast<uint32_t>( nOffset - nStart + 1 ) }, pDiagnostic );
 			}
 			++nOffset;
 		}
@@ -142,7 +143,7 @@ sirConfigResult_t SIRIniCodec::parse( const sirConfigInput_t& input, const sirCo
 			}
 		}
 		if ( limits.nMaxRowBytes != 0 && nEnd - nStart > limits.nMaxRowBytes ) {
-			return sirIniFail( SIR_CONFIG_LIMIT_EXCEEDED, { nStart, nLine, 1 }, pDiagnostic );
+			return sirIniFail( SIRConfigResult::SIR_CONFIG_LIMIT_EXCEEDED, { nStart, nLine, 1 }, pDiagnostic );
 		}
 		uint64_t nHead = nStart;
 		while ( nHead < nEnd && sirIniSpace( input.pBytes[nHead] ) ) {
@@ -157,13 +158,13 @@ sirConfigResult_t SIRIniCodec::parse( const sirConfigInput_t& input, const sirCo
 			while ( nClose < nEnd && input.pBytes[nClose] != ']' ) {
 				++nClose;
 			}
-			const size_t nLength = ( size_t )( nClose - nHead - 1 );
+			const size_t nLength = static_cast<size_t>( nClose - nHead - 1 );
 			if ( nClose == nEnd || nLength == 0 || nLength > SIR_INI_MAX_SECTION_BYTES ) {
-				return sirIniFail( SIR_CONFIG_SYNTAX_ERROR, { nHead, nLine, 1 }, pDiagnostic );
+				return sirIniFail( SIRConfigResult::SIR_CONFIG_SYNTAX_ERROR, { nHead, nLine, 1 }, pDiagnostic );
 			}
 			for ( uint64_t iByte = nClose + 1; iByte < nEnd; ++iByte ) {
 				if ( !sirIniSpace( input.pBytes[iByte] ) ) {
-					return sirIniFail( SIR_CONFIG_SYNTAX_ERROR, { iByte, nLine, 1 }, pDiagnostic );
+					return sirIniFail( SIRConfigResult::SIR_CONFIG_SYNTAX_ERROR, { iByte, nLine, 1 }, pDiagnostic );
 				}
 			}
 			memcpy( szSection, input.pBytes + nHead + 1, nLength );
@@ -176,18 +177,18 @@ sirConfigResult_t SIRIniCodec::parse( const sirConfigInput_t& input, const sirCo
 			++nEqual;
 		}
 		if ( nEqual == nEnd ) {
-			return sirIniFail( SIR_CONFIG_SYNTAX_ERROR, { nHead, nLine, 1 }, pDiagnostic );
+			return sirIniFail( SIRConfigResult::SIR_CONFIG_SYNTAX_ERROR, { nHead, nLine, 1 }, pDiagnostic );
 		}
 		uint64_t nKeyEnd = nEqual;
 		while ( nKeyEnd > nHead && sirIniSpace( input.pBytes[nKeyEnd - 1] ) ) {
 			--nKeyEnd;
 		}
-		const size_t nKeyLen = ( size_t )( nKeyEnd - nHead );
+		const size_t nKeyLen = static_cast<size_t>( nKeyEnd - nHead );
 		if ( nKeyLen == 0 || nKeyLen > SIR_INI_MAX_KEY_BYTES ) {
-			return sirIniFail( SIR_CONFIG_LIMIT_EXCEEDED, { nHead, nLine, 1 }, pDiagnostic );
+			return sirIniFail( SIRConfigResult::SIR_CONFIG_LIMIT_EXCEEDED, { nHead, nLine, 1 }, pDiagnostic );
 		}
 		if ( *pCount >= storage.nEntryCapacity || *pCount >= limits.nMaxNodes ) {
-			return sirIniFail( SIR_CONFIG_LIMIT_EXCEEDED, { nHead, nLine, 1 }, pDiagnostic );
+			return sirIniFail( SIRConfigResult::SIR_CONFIG_LIMIT_EXCEEDED, { nHead, nLine, 1 }, pDiagnostic );
 		}
 		sirIniEntry_t& entry = storage.pEntries[*pCount];
 		entry = {};
@@ -197,14 +198,14 @@ sirConfigResult_t SIRIniCodec::parse( const sirConfigInput_t& input, const sirCo
 		for ( uint32_t iPrev = 0; iPrev < *pCount; ++iPrev ) {
 			const sirIniEntry_t& prev = storage.pEntries[iPrev];
 			if ( sirIniSameAscii( prev.szKey, entry.szKey ) && sirIniSameAscii( prev.szSection, entry.szSection ) ) {
-				return sirIniFail( SIR_CONFIG_DUPLICATE_KEY, { nHead, nLine, 1 }, pDiagnostic );
+				return sirIniFail( SIRConfigResult::SIR_CONFIG_DUPLICATE_KEY, { nHead, nLine, 1 }, pDiagnostic );
 			}
 		}
 		uint64_t nValueStart = nEqual + 1;
 		while ( nValueStart < nEnd && sirIniSpace( input.pBytes[nValueStart] ) ) {
 			++nValueStart;
 		}
-		char *pszValue = storage.pszValues + ( size_t )( *pCount ) * storage.nValueStride;
+		char *pszValue = storage.pszValues + static_cast<size_t>( *pCount ) * storage.nValueStride;
 		uint32_t nBytes = 0;
 		if ( nValueStart < nEnd && input.pBytes[nValueStart] == '"' ) {
 			entry.bQuoted = true;
@@ -219,7 +220,7 @@ sirConfigResult_t SIRIniCodec::parse( const sirConfigInput_t& input, const sirCo
 				}
 				if ( nByte == '\\' ) {
 					if ( ++iByte == nEnd ) {
-						return sirIniFail( SIR_CONFIG_SYNTAX_ERROR, { nStart, nLine, 1 }, pDiagnostic );
+						return sirIniFail( SIRConfigResult::SIR_CONFIG_SYNTAX_ERROR, { nStart, nLine, 1 }, pDiagnostic );
 					}
 					const uint8_t nEscape = input.pBytes[iByte];
 					if ( nEscape == 'n' ) {
@@ -231,22 +232,22 @@ sirConfigResult_t SIRIniCodec::parse( const sirConfigInput_t& input, const sirCo
 					} else if ( nEscape == '"' || nEscape == '\\' ) {
 						nByte = nEscape;
 					} else {
-						return sirIniFail( SIR_CONFIG_SYNTAX_ERROR, { iByte, nLine, 1 }, pDiagnostic );
+						return sirIniFail( SIRConfigResult::SIR_CONFIG_SYNTAX_ERROR, { iByte, nLine, 1 }, pDiagnostic );
 					}
 				}
 				if ( nBytes + 1 >= storage.nValueStride || nBytes + 1 > limits.nMaxScalarBytes ) {
-					return sirIniFail( SIR_CONFIG_LIMIT_EXCEEDED, { nStart, nLine, 1 }, pDiagnostic );
+					return sirIniFail( SIRConfigResult::SIR_CONFIG_LIMIT_EXCEEDED, { nStart, nLine, 1 }, pDiagnostic );
 				}
-				pszValue[nBytes++] = ( char )nByte;
+				pszValue[nBytes++] = static_cast<char>(nByte);
 			}
 			if ( !bClosed ) {
-				return sirIniFail( SIR_CONFIG_SYNTAX_ERROR, { nStart, nLine, 1 }, pDiagnostic );
+				return sirIniFail( SIRConfigResult::SIR_CONFIG_SYNTAX_ERROR, { nStart, nLine, 1 }, pDiagnostic );
 			}
 			while ( iByte < nEnd && sirIniSpace( input.pBytes[iByte] ) ) {
 				++iByte;
 			}
 			if ( iByte < nEnd && input.pBytes[iByte] != ';' && input.pBytes[iByte] != '#' ) {
-				return sirIniFail( SIR_CONFIG_SYNTAX_ERROR, { iByte, nLine, 1 }, pDiagnostic );
+				return sirIniFail( SIRConfigResult::SIR_CONFIG_SYNTAX_ERROR, { iByte, nLine, 1 }, pDiagnostic );
 			}
 		} else {
 			uint64_t nStop = nValueStart;
@@ -257,15 +258,15 @@ sirConfigResult_t SIRIniCodec::parse( const sirConfigInput_t& input, const sirCo
 				--nStop;
 			}
 			if ( nStop - nValueStart >= storage.nValueStride || nStop - nValueStart > limits.nMaxScalarBytes ) {
-				return sirIniFail( SIR_CONFIG_LIMIT_EXCEEDED, { nStart, nLine, 1 }, pDiagnostic );
+				return sirIniFail( SIRConfigResult::SIR_CONFIG_LIMIT_EXCEEDED, { nStart, nLine, 1 }, pDiagnostic );
 			}
-			nBytes = ( uint32_t )( nStop - nValueStart );
+			nBytes = static_cast<uint32_t>( nStop - nValueStart );
 			if ( nBytes != 0 ) {
 				memcpy( pszValue, input.pBytes + nValueStart, nBytes );
 			}
 		}
 		if ( !sirIniValidUtf8( pszValue, nBytes ) ) {
-			return sirIniFail( SIR_CONFIG_INVALID_ENCODING, { nStart, nLine, 1 }, pDiagnostic );
+			return sirIniFail( SIRConfigResult::SIR_CONFIG_INVALID_ENCODING, { nStart, nLine, 1 }, pDiagnostic );
 		}
 		pszValue[nBytes] = 0;
 		entry.pszValue = pszValue;
@@ -275,22 +276,22 @@ sirConfigResult_t SIRIniCodec::parse( const sirConfigInput_t& input, const sirCo
 	}
 	if ( pDiagnostic != nullptr ) {
 		*pDiagnostic = {};
-		pDiagnostic->eResult = SIR_CONFIG_OK;
+		pDiagnostic->eResult = SIRConfigResult::SIR_CONFIG_OK;
 	}
-	return SIR_CONFIG_OK;
+	return SIRConfigResult::SIR_CONFIG_OK;
 }
 
 // Writer validates the entire size bound before emitting any bytes to a sink.
-static sirConfigResult_t sirIniEmit( const sirConfigSink_t& sink, const void *pBytes, uint64_t nBytes ) noexcept
+static SIRConfigResult sirIniEmit( const sirConfigSink_t& sink, const void *pBytes, uint64_t nBytes ) noexcept
 {
-	return nBytes == 0 ? SIR_CONFIG_OK : sink.pfnWrite( sink.pContext, ( const uint8_t * )pBytes, nBytes );
+	return nBytes == 0 ? SIRConfigResult::SIR_CONFIG_OK : sink.pfnWrite( sink.pContext, static_cast<const uint8_t *>(pBytes), nBytes );
 }
 
-sirConfigResult_t SIRIniCodec::write( const sirIniEntry_t *pEntries, uint32_t nCount, const sirConfigSink_t& sink,
+SIRConfigResult SIRIniCodec::write( const sirIniEntry_t *pEntries, uint32_t nCount, const sirConfigSink_t& sink,
                                       uint64_t nMaxBytes ) noexcept
 {
 	if ( sink.pfnWrite == nullptr || ( nCount != 0 && pEntries == nullptr ) || nMaxBytes == 0 ) {
-		return SIR_CONFIG_INVALID_ARGUMENT;
+		return SIRConfigResult::SIR_CONFIG_INVALID_ARGUMENT;
 	}
 	uint64_t nTotal = 0;
 	const char *pszSection = "";
@@ -300,12 +301,12 @@ sirConfigResult_t SIRIniCodec::write( const sirIniEntry_t *pEntries, uint32_t nC
 		const size_t nKey = strlen( entry.szKey );
 		if ( nSection == 0 || nSection > SIR_INI_MAX_SECTION_BYTES || nKey == 0 || nKey > SIR_INI_MAX_KEY_BYTES ||
 		     ( entry.nValueBytes != 0 && entry.pszValue == nullptr ) || !sirIniValidUtf8( entry.pszValue, entry.nValueBytes ) ) {
-			return SIR_CONFIG_INVALID_ARGUMENT;
+			return SIRConfigResult::SIR_CONFIG_INVALID_ARGUMENT;
 		}
 		if ( i > 0 ) {
 			const int nCmp = strcmp( pEntries[i - 1].szSection, entry.szSection );
 			if ( nCmp > 0 || ( nCmp == 0 && strcmp( pEntries[i - 1].szKey, entry.szKey ) >= 0 ) ) {
-				return SIR_CONFIG_DUPLICATE_KEY;
+				return SIRConfigResult::SIR_CONFIG_DUPLICATE_KEY;
 			}
 		}
 		if ( strcmp( pszSection, entry.szSection ) != 0 ) {
@@ -314,26 +315,26 @@ sirConfigResult_t SIRIniCodec::write( const sirIniEntry_t *pEntries, uint32_t nC
 		}
 		nTotal += nKey + 6;
 		for ( uint32_t j = 0; j < entry.nValueBytes; ++j ) {
-			const uint8_t nByte = ( uint8_t )entry.pszValue[j];
+			const uint8_t nByte = static_cast<uint8_t>(entry.pszValue[j]);
 			nTotal += nByte == '\n' || nByte == '\r' || nByte == '\t' || nByte == '\\' || nByte == '"' ? 2 : 1;
 		}
 		if ( nTotal > nMaxBytes ) {
-			return SIR_CONFIG_LIMIT_EXCEEDED;
+			return SIRConfigResult::SIR_CONFIG_LIMIT_EXCEEDED;
 		}
 	}
 	pszSection = "";
 	for ( uint32_t i = 0; i < nCount; ++i ) {
 		const sirIniEntry_t& entry = pEntries[i];
 		if ( strcmp( pszSection, entry.szSection ) != 0 ) {
-			if ( sirIniEmit( sink, "[", 1 ) != SIR_CONFIG_OK ||
-			     sirIniEmit( sink, entry.szSection, strlen( entry.szSection ) ) != SIR_CONFIG_OK ||
-			     sirIniEmit( sink, "]\n", 2 ) != SIR_CONFIG_OK ) {
-				return SIR_CONFIG_IO_ERROR;
+			if ( sirIniEmit( sink, "[", 1 ) != SIRConfigResult::SIR_CONFIG_OK ||
+			     sirIniEmit( sink, entry.szSection, strlen( entry.szSection ) ) != SIRConfigResult::SIR_CONFIG_OK ||
+			     sirIniEmit( sink, "]\n", 2 ) != SIRConfigResult::SIR_CONFIG_OK ) {
+				return SIRConfigResult::SIR_CONFIG_IO_ERROR;
 			}
 			pszSection = entry.szSection;
 		}
-		if ( sirIniEmit( sink, entry.szKey, strlen( entry.szKey ) ) != SIR_CONFIG_OK || sirIniEmit( sink, " = \"", 4 ) != SIR_CONFIG_OK ) {
-			return SIR_CONFIG_IO_ERROR;
+		if ( sirIniEmit( sink, entry.szKey, strlen( entry.szKey ) ) != SIRConfigResult::SIR_CONFIG_OK || sirIniEmit( sink, " = \"", 4 ) != SIRConfigResult::SIR_CONFIG_OK ) {
+			return SIRConfigResult::SIR_CONFIG_IO_ERROR;
 		}
 		for ( uint32_t j = 0; j < entry.nValueBytes; ++j ) {
 			const char nByte = entry.pszValue[j];
@@ -348,16 +349,16 @@ sirConfigResult_t SIRIniCodec::write( const sirIniEntry_t *pEntries, uint32_t nC
 				szEscape[1] = nByte;
 			}
 			if ( szEscape[1] != 0 ) {
-				if ( sirIniEmit( sink, szEscape, 2 ) != SIR_CONFIG_OK ) {
-					return SIR_CONFIG_IO_ERROR;
+				if ( sirIniEmit( sink, szEscape, 2 ) != SIRConfigResult::SIR_CONFIG_OK ) {
+					return SIRConfigResult::SIR_CONFIG_IO_ERROR;
 				}
-			} else if ( sirIniEmit( sink, &nByte, 1 ) != SIR_CONFIG_OK ) {
-				return SIR_CONFIG_IO_ERROR;
+			} else if ( sirIniEmit( sink, &nByte, 1 ) != SIRConfigResult::SIR_CONFIG_OK ) {
+				return SIRConfigResult::SIR_CONFIG_IO_ERROR;
 			}
 		}
-		if ( sirIniEmit( sink, "\"\n", 2 ) != SIR_CONFIG_OK ) {
-			return SIR_CONFIG_IO_ERROR;
+		if ( sirIniEmit( sink, "\"\n", 2 ) != SIRConfigResult::SIR_CONFIG_OK ) {
+			return SIRConfigResult::SIR_CONFIG_IO_ERROR;
 		}
 	}
-	return SIR_CONFIG_OK;
+	return SIRConfigResult::SIR_CONFIG_OK;
 }

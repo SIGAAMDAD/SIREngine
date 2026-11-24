@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef SIRENGINE_SIRRESOURCEPINPTR_H
-#define SIRENGINE_SIRRESOURCEPINPTR_H
+#ifndef __SIR_RESOURCEPINPTR_H__
+#define __SIR_RESOURCEPINPTR_H__
 
 #include <Core/SIRPCH.h>
 
@@ -52,4 +52,4 @@ private:
 	uint64_t m_nRevision;
 };
 
-#endif // SIRENGINE_SIRRESOURCEPINPTR_H
+#endif // __SIR_RESOURCEPINPTR_H__

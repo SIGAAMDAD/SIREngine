@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRCONSOLESYSTEM_H__
-#define __SIRENGINE_SIRCONSOLESYSTEM_H__
+#ifndef __SIR_CONSOLESYSTEM_H__
+#define __SIR_CONSOLESYSTEM_H__
 
 #include <Core/SIRPCH.h>
 
@@ -49,18 +49,18 @@ public:
 	bool isInitialized( void ) const noexcept;
 	SIRConsoleService& getConsole( void ) noexcept;
 	const sirConsolePumpReport_t& getLastPumpReport( void ) const noexcept;
-	sirRegistrationResult_t getLastPumpResult( void ) const noexcept;
+	SIRRegistrationResult getLastPumpResult( void ) const noexcept;
 
-	sirSystemResult_t initialize( void ) noexcept override;
+	SIRSystemResult initialize( void ) noexcept override;
 	void update( float fDeltaSeconds ) noexcept override;
-	sirSystemResult_t shutdown( void ) noexcept override;
+	SIRSystemResult shutdown( void ) noexcept override;
 
 protected:
 private:
 	sirConsoleSystemConfig_t m_Config;
 	SIRConsoleService m_Service;
 	sirConsolePumpReport_t m_LastPumpReport;
-	sirRegistrationResult_t m_eLastPumpResult;
+	SIRRegistrationResult m_eLastPumpResult;
 };
 
-#endif // __SIRENGINE_SIRCONSOLESYSTEM_H__
+#endif // __SIR_CONSOLESYSTEM_H__

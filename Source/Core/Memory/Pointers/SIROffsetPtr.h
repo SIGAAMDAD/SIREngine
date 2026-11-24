@@ -13,10 +13,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIROFFSETPTR_H__
-#define __SIRENGINE_SIROFFSETPTR_H__
+#ifndef __SIR_OFFSETPTR_H__
+#define __SIR_OFFSETPTR_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -52,14 +52,14 @@ public:
 		if ( pBase == nullptr || !isValid() ) {
 			return nullptr;
 		}
-		if ( ( uint64_t )m_nOffset > nBytes || sizeof( T ) > nBytes - m_nOffset ) {
+		if ( static_cast<uint64_t>(m_nOffset) > nBytes || sizeof( T ) > nBytes - m_nOffset ) {
 			return nullptr;
 		}
-		const uintptr_t nAddress = ( uintptr_t )pBase + m_nOffset;
-		if ( nAddress < ( uintptr_t )pBase || nAddress % alignof( T ) != 0 ) {
+		const uintptr_t nAddress = reinterpret_cast<uintptr_t>(pBase) + m_nOffset;
+		if ( nAddress < reinterpret_cast<uintptr_t>(pBase) || nAddress % alignof( T ) != 0 ) {
 			return nullptr;
 		}
-		return ( const T * )nAddress;
+		return reinterpret_cast<const T *>(nAddress);
 	}
 	void reset( void ) noexcept
 	{
@@ -70,4 +70,4 @@ private:
 	uint32_t m_nOffset;
 };
 
-#endif // __SIRENGINE_SIROFFSETPTR_H__
+#endif // __SIR_OFFSETPTR_H__

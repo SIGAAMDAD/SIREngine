@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSCRIPTINGRESS_H__
-#define __SIRENGINE_SIRSCRIPTINGRESS_H__
+#ifndef __SIR_SCRIPTINGRESS_H__
+#define __SIR_SCRIPTINGRESS_H__
 
 #include <Core/SIRPCH.h>
 
@@ -25,7 +25,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <Scripting/Core/SIRScriptScheduler.h>
-#include <Core/Platform/SIRAtomic.h>
+#include <atomic>
 
 // Payload ownership transfers by value; no producer-owned pointer survives
 // submission. Event type validation is the caller's responsibility.
@@ -39,7 +39,7 @@ typedef struct sirScriptIngressPacket_s
 
 typedef struct sirScriptIngressSlot_s
 {
-	SIRAtomic<uint64_t> nSequence;
+	std::atomic<uint64_t> nSequence;
 	sirScriptIngressPacket_t packet;
 } sirScriptIngressSlot_t;
 
@@ -54,10 +54,10 @@ public:
 	SIRScriptIngress( const SIRScriptIngress& ) = delete;
 	SIRScriptIngress& operator=( const SIRScriptIngress& ) = delete;
 
-	sirScriptResult_t tryPost( sirScriptPhase_t ePhase, const sirScriptIngressPacket_t& packet ) noexcept;
-	bool tryPop( sirScriptPhase_t ePhase, uint64_t nEndTicket, sirScriptIngressPacket_t *pPacket ) noexcept;
-	uint64_t snapshotTail( sirScriptPhase_t ePhase ) const noexcept;
-	uint32_t pendingCount( sirScriptPhase_t ePhase ) const noexcept;
+	SIRScriptResult tryPost( SIRScriptPhase ePhase, const sirScriptIngressPacket_t& packet ) noexcept;
+	bool tryPop( SIRScriptPhase ePhase, uint64_t nEndTicket, sirScriptIngressPacket_t *pPacket ) noexcept;
+	uint64_t snapshotTail( SIRScriptPhase ePhase ) const noexcept;
+	uint32_t pendingCount( SIRScriptPhase ePhase ) const noexcept;
 	void close( void ) noexcept;
 	void clear( void ) noexcept;
 
@@ -67,14 +67,14 @@ private:
 	typedef struct sirScriptIngressQueue_s
 	{
 		alignas( 64 ) uint64_t nHead;
-		alignas( 64 ) SIRAtomic<uint64_t> nTail;
-		SIRAtomic<uint32_t> nCount;
+		alignas( 64 ) std::atomic<uint64_t> nTail;
+		std::atomic<uint32_t> nCount;
 		sirScriptIngressSlot_t szSlots[CAPACITY];
 	} sirScriptIngressQueue_t;
 
-	sirScriptIngressQueue_t m_szQueues[SIR_SCRIPT_PHASE_COUNT];
-	SIRAtomic<uint32_t> m_nActiveProducers;
-	SIRAtomic<bool> m_bClosed;
+	sirScriptIngressQueue_t m_szQueues[static_cast<size_t>( SIRScriptPhase::SIR_SCRIPT_PHASE_COUNT )];
+	std::atomic<uint32_t> m_nActiveProducers;
+	std::atomic<bool> m_bClosed;
 };
 
-#endif // __SIRENGINE_SIRSCRIPTINGRESS_H__
+#endif // __SIR_SCRIPTINGRESS_H__

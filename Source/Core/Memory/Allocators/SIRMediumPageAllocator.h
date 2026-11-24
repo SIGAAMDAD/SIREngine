@@ -14,8 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRMEDIUMPAGEALLOCATOR_H__
-#define __SIRENGINE_SIRMEDIUMPAGEALLOCATOR_H__
+#ifndef __SIR_MEDIUMPAGEALLOCATOR_H__
+#define __SIR_MEDIUMPAGEALLOCATOR_H__
 
 #include <Core/SIRPCH.h>
 
@@ -77,4 +77,4 @@ private:
 	uint32_t m_nLive;
 };
 
-#endif // __SIRENGINE_SIRMEDIUMPAGEALLOCATOR_H__
+#endif // __SIR_MEDIUMPAGEALLOCATOR_H__

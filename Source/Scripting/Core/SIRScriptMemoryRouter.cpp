@@ -25,23 +25,23 @@ sirScriptPayloadAllocatorAPI_t SIRScriptMemoryRouter::makeAPI( SIRAllocationRout
 	return { SIR_SCRIPT_PAYLOAD_ALLOCATOR_ABI_REVISION, pRouter, nMaximumBytes, nMaximumAlignment, allocate, release };
 }
 
-sirScriptResult_t SIRScriptMemoryRouter::allocate( void *pContext, uint32_t nBytes, uint32_t nAlignment,
+SIRScriptResult SIRScriptMemoryRouter::allocate( void *pContext, uint32_t nBytes, uint32_t nAlignment,
                                                    sirScriptPayloadAllocation_t *pAllocation ) noexcept
 {
 	if ( pContext == nullptr || pAllocation == nullptr || nBytes == 0 ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 	*pAllocation = {};
-	SIRAllocationRouter *pRouter = ( SIRAllocationRouter * )pContext;
-	sirRoutedAllocation_t allocation = {};
-	if ( !pRouter->alloc( nBytes, nAlignment, &allocation, SIR_LIFETIME_ARBITRARY ) ) {
-		return SIR_SCRIPT_CAPACITY_EXCEEDED;
+	SIRAllocationRouter *pRouter = static_cast<SIRAllocationRouter *>(pContext);
+	sirRoutedAllocation_t allocation {};
+	if ( !pRouter->alloc( nBytes, nAlignment, &allocation, SIRAllocationLifetime::SIR_LIFETIME_ARBITRARY ) ) {
+		return SIRScriptResult::SIR_SCRIPT_CAPACITY_EXCEEDED;
 	}
 	// Preserve the routed backing and exact requested size without a second
 	// metadata allocation. Both values are 32 bits in sirRoutedAllocation_t.
 	pAllocation->pData = allocation.pMemory;
-	pAllocation->nToken = ( ( uint64_t )allocation.nBacking << 32 ) | allocation.nBytes;
-	return SIR_SCRIPT_OK;
+	pAllocation->nToken = ( static_cast<uint64_t>(allocation.nBacking) << 32 ) | allocation.nBytes;
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
 void SIRScriptMemoryRouter::release( void *pContext, sirScriptPayloadAllocation_t allocation ) noexcept
@@ -49,7 +49,7 @@ void SIRScriptMemoryRouter::release( void *pContext, sirScriptPayloadAllocation_
 	if ( pContext == nullptr || allocation.pData == nullptr || allocation.nToken == 0 ) {
 		return;
 	}
-	SIRAllocationRouter *pRouter = ( SIRAllocationRouter * )pContext;
-	sirRoutedAllocation_t routed = { allocation.pData, ( uint32_t )allocation.nToken, ( uint32_t )( allocation.nToken >> 32 ) };
-	( void )pRouter->free( &routed );
+	SIRAllocationRouter *pRouter = static_cast<SIRAllocationRouter *>(pContext);
+	sirRoutedAllocation_t routed = { allocation.pData, static_cast<uint32_t>(allocation.nToken), static_cast<uint32_t>( allocation.nToken >> 32 ) };
+	static_cast<void>(pRouter->free( &routed ));
 }

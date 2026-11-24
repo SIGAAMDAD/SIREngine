@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIREDITORFILESAVE_H__
-#define __SIRENGINE_SIREDITORFILESAVE_H__
+#ifndef __SIR_EDITORFILESAVE_H__
+#define __SIR_EDITORFILESAVE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -26,8 +26,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Editor/Scene/SIREditorScalarBinding.h>
 
-typedef enum sirEditorFileSaveResult_e : uint8_t
-{
+enum class SIREditorFileSaveResult : uint8_t {
 	SIR_EDITOR_FILE_SAVE_OK = 0,
 	SIR_EDITOR_FILE_SAVE_INVALID_ARGUMENT = 1,
 	SIR_EDITOR_FILE_SAVE_INVALID_PATH = 2,
@@ -39,7 +38,7 @@ typedef enum sirEditorFileSaveResult_e : uint8_t
 	SIR_EDITOR_FILE_SAVE_SERIALIZATION_FAILED = 8,
 	SIR_EDITOR_FILE_SAVE_UNSUPPORTED_EDIT = 9,
 	SIR_EDITOR_FILE_SAVE_CONFLICT = 10
-} sirEditorFileSaveResult_t;
+};
 
 typedef struct sirEditorFileWriteRequest_s
 {
@@ -75,12 +74,12 @@ typedef struct sirEditorSceneSaveRequest_s
 // destination has already changed. Optional expected bytes are checked both
 // before staging and immediately before replacement; external writers that
 // race after the final comparison require higher-level file locking.
-sirEditorFileSaveResult_t sirEditorWriteFileAtomically( const sirEditorFileWriteRequest_t& request ) noexcept;
+SIREditorFileSaveResult sirEditorWriteFileAtomically( const sirEditorFileWriteRequest_t& request ) noexcept;
 
 // Exports the canonical scene document to caller-owned scratch and then saves
 // it via the same atomic path; no second authored graph is created. The
 // workspace source remains the original snapshot until caller closes/reopens.
 // Node hierarchy mutations fail closed until a complete node writer is ported.
-sirEditorFileSaveResult_t sirEditorSaveBoundScene( const sirEditorSceneSaveRequest_t& request ) noexcept;
+SIREditorFileSaveResult sirEditorSaveBoundScene( const sirEditorSceneSaveRequest_t& request ) noexcept;
 
-#endif // __SIRENGINE_SIREDITORFILESAVE_H__
+#endif // __SIR_EDITORFILESAVE_H__

@@ -40,19 +40,19 @@ static const t3dVTFixedProfileDesc_t s_VtFixedProfiles[T3D_VT_FIXED_PROFILE_COUN
 
 const t3dVTFixedProfileDesc_t *t3d_vt_fixed_profile_get( const t3dVTFixedProfile_t Profile )
 {
-	if ( ( uint32_t )( Profile ) >= T3D_VT_FIXED_PROFILE_COUNT ) {
+	if ( static_cast<uint32_t>( Profile ) >= T3D_VT_FIXED_PROFILE_COUNT ) {
 		return NULL;
 	}
-	return &s_VtFixedProfiles[( uint32_t )( Profile )];
+	return &s_VtFixedProfiles[static_cast<uint32_t>( Profile )];
 }
 
 uint32_t t3d_vt_fixed_profile_channel_extent( const t3dVTFixedProfile_t Profile, const t3dVTLogicalChannel_t Channel )
 {
 	const t3dVTFixedProfileDesc_t *const pProfile = t3d_vt_fixed_profile_get( Profile );
-	if ( pProfile == NULL || ( uint32_t )( Channel ) >= T3D_VT_LOGICAL_CHANNEL_COUNT ) {
+	if ( pProfile == NULL || static_cast<uint32_t>( Channel ) >= T3D_VT_LOGICAL_CHANNEL_COUNT ) {
 		return 0u;
 	}
-	return pProfile->m_nExtent[( uint32_t )( Channel )];
+	return pProfile->m_nExtent[static_cast<uint32_t>( Channel )];
 }
 
 uint32_t t3d_vt_fixed_profile_mip0_pages( const t3dVTFixedProfile_t Profile, const t3dVTLogicalChannel_t Channel )
@@ -82,7 +82,7 @@ bool t3d_vt_fixed_profile_quality_base_mip( const t3dVTFixedProfile_t HighestPro
 	if ( nExtent != nTargetExtent || nMip >= nMipCount || nMip > 0xffu ) {
 		return false;
 	}
-	rBaseMip = ( uint8_t )nMip;
+	rBaseMip = static_cast<uint8_t>(nMip);
 	return true;
 }
 
@@ -158,7 +158,7 @@ t3dVTFixedProfile_t t3d_vt_fixed_profile_highest_supported( const t3dVTConsumer_
 		return T3D_VT_FIXED_PROFILE_INVALID;
 	}
 	for ( uint32_t iProfile = T3D_VT_FIXED_PROFILE_COUNT; iProfile > 0u; --iProfile ) {
-		const t3dVTFixedProfile_t Profile = ( t3dVTFixedProfile_t )( iProfile - 1u );
+		const t3dVTFixedProfile_t Profile = static_cast<t3dVTFixedProfile_t>( iProfile - 1u );
 		if ( t3d_vt_fixed_profile_source_supports( Profile, Consumer, nAuthoredChannelMask, nSourceExtent ) ) {
 			return Profile;
 		}

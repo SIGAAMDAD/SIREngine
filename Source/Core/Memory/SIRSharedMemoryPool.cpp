@@ -16,7 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/Memory/SIRSharedMemoryPool.h>
 #include <Core/Memory/SIRMemorySegment.h>
-#include <Core/Memory/SIRMemoryUtils.h>
+#include <Core/SIRMath.h>
 
 SIRSharedMemoryPool::SIRSharedMemoryPool( void ) : m_pSegment( nullptr ), m_nCursor( 0 )
 {

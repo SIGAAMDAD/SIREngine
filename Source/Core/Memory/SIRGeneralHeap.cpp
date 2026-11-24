@@ -22,7 +22,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Memory/Allocators/SIRTLSFAllocator.h>
 #include <Core/Memory/Allocators/SIRBuddyAllocator.h>
 #include <Core/Memory/Allocators/SIRPageRunAllocator.h>
-#include <Core/Memory/SIRMemoryUtils.h>
+#include <Core/SIRMath.h>
 #include <Core/Memory/SIRMemorySegment.h>
 
 #include <cstring>
@@ -39,8 +39,8 @@ bool SIRGeneralHeap::contains( const SIRMemorySegment *pSegment, const void *pMe
 	if ( pSegment == nullptr || pMemory == nullptr ) {
 		return false;
 	}
-	const uintptr_t nBase = ( ( uintptr_t )( pSegment->getBase() ) );
-	const uintptr_t nPointer = ( ( uintptr_t )( pMemory ) );
+	const uintptr_t nBase = reinterpret_cast<uintptr_t>(pSegment->getBase());
+	const uintptr_t nPointer = reinterpret_cast<uintptr_t>(pMemory);
 	return nPointer >= nBase && nPointer - nBase < pSegment->getReservedBytes();
 }
 
@@ -49,8 +49,8 @@ bool SIRGeneralHeap::overlap( const SIRMemorySegment *pA, const SIRMemorySegment
 	if ( pA == nullptr || pB == nullptr ) {
 		return false;
 	}
-	const uintptr_t nA = ( ( uintptr_t )( pA->getBase() ) );
-	const uintptr_t nB = ( ( uintptr_t )( pB->getBase() ) );
+	const uintptr_t nA = reinterpret_cast<uintptr_t>(pA->getBase());
+	const uintptr_t nB = reinterpret_cast<uintptr_t>(pB->getBase());
 	return ( nA <= nB && nB - nA < pA->getReservedBytes() ) || ( nB <= nA && nA - nB < pB->getReservedBytes() );
 }
 
@@ -73,9 +73,9 @@ bool SIRGeneralHeap::init( const sirGeneralHeapConfig_t& config )
 	return true;
 }
 
-bool SIRGeneralHeap::isConfiguredForDomain( sirMemoryDomain_t eDomain ) const noexcept
+bool SIRGeneralHeap::isConfiguredForDomain( SIRMemoryDomain eDomain ) const noexcept
 {
-	return m_bInitialized && eDomain < SIR_MEMORY_DOMAIN_COUNT && m_Config.pSmallSegment->getDomain() == eDomain &&
+	return m_bInitialized && eDomain < SIRMemoryDomain::SIR_MEMORY_DOMAIN_COUNT && m_Config.pSmallSegment->getDomain() == eDomain &&
 	       m_Config.pMediumSegment->getDomain() == eDomain && m_Config.pLargeSegment->getDomain() == eDomain;
 }
 
@@ -89,21 +89,21 @@ bool SIRGeneralHeap::detachThread( void )
 	return m_bInitialized && m_Config.pSmall->detach();
 }
 
-sirHeapRoute_t SIRGeneralHeap::routePointer( const void *pMemory ) const
+SIRHeapRoute SIRGeneralHeap::routePointer( const void *pMemory ) const
 {
 	if ( !m_bInitialized ) {
-		return SIR_HEAP_NONE;
+		return SIRHeapRoute::SIR_HEAP_NONE;
 	}
 	if ( contains( m_Config.pSmallSegment, pMemory ) ) {
-		return SIR_HEAP_SMALL;
+		return SIRHeapRoute::SIR_HEAP_SMALL;
 	}
 	if ( contains( m_Config.pMediumSegment, pMemory ) ) {
-		return SIR_HEAP_MEDIUM;
+		return SIRHeapRoute::SIR_HEAP_MEDIUM;
 	}
 	if ( contains( m_Config.pLargeSegment, pMemory ) ) {
-		return SIR_HEAP_LARGE;
+		return SIRHeapRoute::SIR_HEAP_LARGE;
 	}
-	return SIR_HEAP_NONE;
+	return SIRHeapRoute::SIR_HEAP_NONE;
 }
 
 void *SIRGeneralHeap::allocRaw( size_t nBytes, size_t nAlignment )
@@ -122,10 +122,10 @@ void *SIRGeneralHeap::allocRaw( size_t nBytes, size_t nAlignment )
 					m_Config.pSmall->serviceOrphans( 128 );
 				}
 			}
-			void *pMemory = m_Config.pSmall->alloc( ( ( uint32_t )( nBytes ) ), ( ( uint32_t )( nAlignment ) ) );
+			void *pMemory = m_Config.pSmall->alloc( static_cast<uint32_t>( nBytes ), static_cast<uint32_t>( nAlignment ) );
 			if ( pMemory == nullptr ) {
 				m_Config.pSmall->drainRemote();
-				pMemory = m_Config.pSmall->alloc( ( ( uint32_t )( nBytes ) ), ( ( uint32_t )( nAlignment ) ) );
+				pMemory = m_Config.pSmall->alloc( static_cast<uint32_t>( nBytes ), static_cast<uint32_t>( nAlignment ) );
 			}
 			return pMemory;
 		}
@@ -137,12 +137,12 @@ void *SIRGeneralHeap::allocRaw( size_t nBytes, size_t nAlignment )
 			return nullptr;
 		}
 		SIRScopedLock<SIRMutex> lock( m_MediumMutex );
-		return m_Config.bUseTLSF ? m_Config.pTLSF->alloc( ( ( uint32_t )( nBytes ) ), ( ( uint32_t )( nAlignment ) ) )
-		                         : m_Config.pFreeList->alloc( ( ( uint32_t )( nBytes ) ), ( ( uint32_t )( nAlignment ) ) );
+		return m_Config.bUseTLSF ? m_Config.pTLSF->alloc( static_cast<uint32_t>( nBytes ), static_cast<uint32_t>( nAlignment ) )
+		                         : m_Config.pFreeList->alloc( static_cast<uint32_t>( nBytes ), static_cast<uint32_t>( nAlignment ) );
 	}
 	SIRScopedLock<SIRMutex> lock( m_LargeMutex );
-	return m_Config.bUsePageRuns ? m_Config.pPageRuns->alloc( ( ( uint64_t )( nBytes ) ), ( ( uint64_t )( nAlignment ) ) )
-	                             : m_Config.pLarge->alloc( ( ( uint64_t )( nBytes ) ), ( ( uint64_t )( nAlignment ) ) );
+	return m_Config.bUsePageRuns ? m_Config.pPageRuns->alloc( static_cast<uint64_t>( nBytes ), static_cast<uint64_t>( nAlignment ) )
+	                             : m_Config.pLarge->alloc( static_cast<uint64_t>( nBytes ), static_cast<uint64_t>( nAlignment ) );
 }
 
 void *SIRGeneralHeap::alloc( size_t nBytes )
@@ -171,13 +171,13 @@ void *SIRGeneralHeap::allocZeroed( size_t nCount, size_t nBytes )
 size_t SIRGeneralHeap::getUsableSize( const void *pMemory ) const
 {
 	switch ( routePointer( pMemory ) ) {
-	case SIR_HEAP_SMALL:
+	case SIRHeapRoute::SIR_HEAP_SMALL:
 		return m_Config.pSmall->getUsableSize( pMemory );
-	case SIR_HEAP_MEDIUM: {
+	case SIRHeapRoute::SIR_HEAP_MEDIUM: {
 		SIRScopedLock<SIRMutex> lock( m_MediumMutex );
 		return m_Config.bUseTLSF ? m_Config.pTLSF->getUsableSize( pMemory ) : m_Config.pFreeList->getUsableSize( pMemory );
 	}
-	case SIR_HEAP_LARGE: {
+	case SIRHeapRoute::SIR_HEAP_LARGE: {
 		SIRScopedLock<SIRMutex> lock( m_LargeMutex );
 		return ( ( size_t )( m_Config.bUsePageRuns ? m_Config.pPageRuns->getUsableSize( pMemory )
 		                                           : m_Config.pLarge->getUsableSize( pMemory ) ) );
@@ -189,7 +189,7 @@ size_t SIRGeneralHeap::getUsableSize( const void *pMemory ) const
 
 bool SIRGeneralHeap::owns( const void *pMemory ) const
 {
-	return routePointer( pMemory ) != SIR_HEAP_NONE;
+	return routePointer( pMemory ) != SIRHeapRoute::SIR_HEAP_NONE;
 }
 
 bool SIRGeneralHeap::tryFree( void *pMemory )
@@ -198,7 +198,7 @@ bool SIRGeneralHeap::tryFree( void *pMemory )
 		return true;
 	}
 	switch ( routePointer( pMemory ) ) {
-	case SIR_HEAP_SMALL: {
+	case SIRHeapRoute::SIR_HEAP_SMALL: {
 		const bool bFreed = m_Config.pSmall->free( pMemory );
 		if ( bFreed ) {
 			if ( m_Config.pSmall->hasPendingOrphans() ) {
@@ -207,11 +207,11 @@ bool SIRGeneralHeap::tryFree( void *pMemory )
 		}
 		return bFreed;
 	}
-	case SIR_HEAP_MEDIUM: {
+	case SIRHeapRoute::SIR_HEAP_MEDIUM: {
 		SIRScopedLock<SIRMutex> lock( m_MediumMutex );
 		return m_Config.bUseTLSF ? m_Config.pTLSF->free( pMemory ) : m_Config.pFreeList->free( pMemory );
 	}
-	case SIR_HEAP_LARGE: {
+	case SIRHeapRoute::SIR_HEAP_LARGE: {
 		SIRScopedLock<SIRMutex> lock( m_LargeMutex );
 		return m_Config.bUsePageRuns ? m_Config.pPageRuns->free( pMemory ) : m_Config.pLarge->free( pMemory );
 	}
@@ -222,7 +222,7 @@ bool SIRGeneralHeap::tryFree( void *pMemory )
 
 void SIRGeneralHeap::free( void *pMemory )
 {
-	( void )tryFree( pMemory );
+	static_cast<void>(tryFree( pMemory ));
 }
 
 void *SIRGeneralHeap::realloc( void *pMemory, size_t nNewBytes )
@@ -246,7 +246,7 @@ void *SIRGeneralHeap::reallocAligned( void *pMemory, size_t nNewBytes, size_t nA
 	if ( !SIR_IS_POWER_OF_TWO( nAlignment ) ) {
 		return nullptr;
 	}
-	if ( nNewBytes <= nOldCapacity && ( ( ( uintptr_t )( pMemory ) ) % nAlignment ) == 0 ) {
+	if ( nNewBytes <= nOldCapacity && ( reinterpret_cast<uintptr_t>(pMemory) % nAlignment ) == 0 ) {
 		return pMemory;
 	}
 	void *pNew = allocAligned( nNewBytes, nAlignment );

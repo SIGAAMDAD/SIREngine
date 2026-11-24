@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRLANGLEXER_H__
-#define __SIRENGINE_SIRLANGLEXER_H__
+#ifndef __SIR_LANGLEXER_H__
+#define __SIR_LANGLEXER_H__
 
 #include <Core/SIRPCH.h>
 
@@ -36,4 +36,4 @@ sirLangToken_t SIRLangLexerNext( sirLangLexer_t *pLexer ) noexcept;
 // without changing the lexer/source-span representation.
 bool SIRLangIsKeyword( const uint8_t *pBytes, uint32_t nBytes ) noexcept;
 
-#endif // __SIRENGINE_SIRLANGLEXER_H__
+#endif // __SIR_LANGLEXER_H__

@@ -17,14 +17,14 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 uint32_t SIRInputBackend::hapticCapabilities( sirInputDeviceId_t hDevice ) const noexcept
 {
-	( void )hDevice;
-	return SIR_INPUT_HAPTIC_CAP_NONE;
+	static_cast<void>(hDevice);
+	return SIRInputHapticCapability::SIR_INPUT_HAPTIC_CAP_NONE;
 }
 
 bool SIRInputBackend::vibrateTriggers( sirInputDeviceId_t hDevice, uint16_t nLeft, uint16_t nRight ) noexcept
 {
-	( void )hDevice;
-	( void )nLeft;
-	( void )nRight;
+	static_cast<void>(hDevice);
+	static_cast<void>(nLeft);
+	static_cast<void>(nRight);
 	return false;
 }

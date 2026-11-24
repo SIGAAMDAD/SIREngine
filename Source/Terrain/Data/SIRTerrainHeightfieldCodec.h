@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRTERRAINHEIGHTFIELDCODEC_H__
-#define __SIRENGINE_SIRTERRAINHEIGHTFIELDCODEC_H__
+#ifndef __SIR_TERRAINHEIGHTFIELDCODEC_H__
+#define __SIR_TERRAINHEIGHTFIELDCODEC_H__
 
 #include <Core/SIRPCH.h>
 
@@ -61,8 +61,7 @@ typedef struct sirTerrainMutableHeightSpan_s
 	size_t nCapacity;
 } sirTerrainMutableHeightSpan_t;
 
-typedef enum sirTerrainCodecResult_e : uint8_t
-{
+enum class SIRTerrainCodecResult : uint8_t {
 	SIR_TERRAIN_CODEC_SUCCESS = 0,
 	SIR_TERRAIN_CODEC_INVALID_ARGUMENT,
 	SIR_TERRAIN_CODEC_INVALID_FORMAT,
@@ -71,7 +70,7 @@ typedef enum sirTerrainCodecResult_e : uint8_t
 	SIR_TERRAIN_CODEC_BAD_CHECKSUM,
 	SIR_TERRAIN_CODEC_NONFINITE_HEIGHT,
 	SIR_TERRAIN_CODEC_STALE_REVISION
-} sirTerrainCodecResult_t;
+};
 
 // Fixed 64-byte little-endian header followed by row-major R16_UNORM heights.
 // Stateless, allocation-free codec; callers own lifetime and publication.
@@ -85,15 +84,15 @@ public:
 	static size_t getEncodedByteCount( uint32_t nResolution ) noexcept;
 	static bool isValidDescriptor( const sirTerrainRegionDescriptor_t& descriptor ) noexcept;
 
-	static sirTerrainCodecResult_t encode( const sirTerrainRegionDescriptor_t& descriptor, sirTerrainConstHeightSpan_t heights,
+	static SIRTerrainCodecResult encode( const sirTerrainRegionDescriptor_t& descriptor, sirTerrainConstHeightSpan_t heights,
 	                                       sirTerrainMutableByteSpan_t output ) noexcept;
-	static sirTerrainCodecResult_t inspect( sirTerrainConstByteSpan_t input, sirTerrainRegionDescriptor_t& descriptor,
+	static SIRTerrainCodecResult inspect( sirTerrainConstByteSpan_t input, sirTerrainRegionDescriptor_t& descriptor,
 	                                        uint64_t nMinimumRevision = 0 ) noexcept;
-	static sirTerrainCodecResult_t decode( sirTerrainConstByteSpan_t input, sirTerrainRegionDescriptor_t& descriptor,
+	static SIRTerrainCodecResult decode( sirTerrainConstByteSpan_t input, sirTerrainRegionDescriptor_t& descriptor,
 	                                       sirTerrainMutableHeightSpan_t output, uint64_t nMinimumRevision = 0 ) noexcept;
 
 protected:
 private:
 };
 
-#endif // __SIRENGINE_SIRTERRAINHEIGHTFIELDCODEC_H__
+#endif // __SIR_TERRAINHEIGHTFIELDCODEC_H__

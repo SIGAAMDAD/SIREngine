@@ -698,15 +698,15 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 // ===========================================================================
 // Attributes, optimization, ABI and diagnostics. Forcible function inlining
-// must use SIRENGINE_FORCEINLINE; there is no ordinary inline macro.
+// must use __SIR_FORCEINLI_H__; there is no ordinary inline macro.
 // ===========================================================================
 #if SIR_COMPILER_MSVC_ABI
-#define SIRENGINE_FORCEINLINE __forceinline
+#define __SIR_FORCEINLI_H__ __forceinline
 #define SIR_NOINLINE __declspec( noinline )
 #define SIR_RESTRICT __restrict
 #define SIR_ALIGN_DECL( nAlignment ) __declspec( align( nAlignment ) )
 #else
-#define SIRENGINE_FORCEINLINE inline __attribute__( ( always_inline ) )
+#define __SIR_FORCEINLI_H__ inline __attribute__( ( always_inline ) )
 #define SIR_NOINLINE __attribute__( ( noinline ) )
 #define SIR_RESTRICT __restrict__
 #define SIR_ALIGN_DECL( nAlignment ) __attribute__( ( aligned( nAlignment ) ) )

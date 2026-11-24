@@ -47,7 +47,7 @@ inline bool t3d_vt_single_writer_params( const t3dVTFeedbackGridLayout_t& rLayou
 	            nViewportWidth,
 	            nViewportHeight,
 	            nSlot,
-	            ( uint32_t )( rLayout.m_nSlotBytes / sizeof( uint32_t ) ),
+	            static_cast<uint32_t>(  rLayout.m_nSlotBytes / sizeof( uint32_t )  ),
 	            nPageCount,
 	            0u };
 	return true;

@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRWINDOWSRAWBACKEND_H__
-#define __SIRENGINE_SIRWINDOWSRAWBACKEND_H__
+#ifndef __SIR_WINDOWSRAWBACKEND_H__
+#define __SIR_WINDOWSRAWBACKEND_H__
 
 #include <Core/SIRPCH.h>
 
@@ -34,7 +34,7 @@ class SIRWindowsRawBackend final : public SIRInputBackend
 {
 public:
 	SIRWindowsRawBackend( void ) noexcept;
-	sirInputBackendId_t id( void ) const noexcept override;
+	SIRInputBackendId id( void ) const noexcept override;
 	void sample( SIRInputService& service ) noexcept override;
 	void resynchronize( SIRInputService& service ) noexcept override;
 	bool vibrate( sirInputDeviceId_t hDevice, uint16_t nLeft, uint16_t nRight ) noexcept override;
@@ -49,4 +49,4 @@ private:
 	void *m_pWindow;
 };
 
-#endif // __SIRENGINE_SIRWINDOWSRAWBACKEND_H__
+#endif // __SIR_WINDOWSRAWBACKEND_H__

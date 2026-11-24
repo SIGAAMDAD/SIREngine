@@ -71,45 +71,45 @@ static void sirSampleFromKeys( const sirAnimationCookKey_t& a, const sirAnimatio
 }
 
 uint32_t SIRAnimationSampler::normalizeTick( int64_t iTick, int64_t iStartTick, uint32_t nDuration,
-                                             sirAnimationPlaybackMode_t ePlayback ) noexcept
+                                             SIRAnimationPlaybackMode ePlayback ) noexcept
 {
 	if ( !nDuration ) {
 		return 0;
 	}
 	// Subtraction through the unsigned domain is defined for INT64_MIN/MAX.
-	const uint64_t nDelta = ( uint64_t )iTick - ( uint64_t )iStartTick;
+	const uint64_t nDelta = static_cast<uint64_t>(iTick) - static_cast<uint64_t>(iStartTick);
 	const bool bNegative = iTick < iStartTick;
-	const uint64_t nMagnitude = bNegative ? ( uint64_t )( 0 - nDelta ) : nDelta;
-	if ( ePlayback == SIR_ANIMATION_PLAY_CLAMP ) {
-		return bNegative ? 0 : ( uint32_t )( nMagnitude >= nDuration ? nDuration : nMagnitude );
+	const uint64_t nMagnitude = bNegative ? static_cast<uint64_t>( 0 - nDelta ) : nDelta;
+	if ( ePlayback == SIRAnimationPlaybackMode::SIR_ANIMATION_PLAY_CLAMP ) {
+		return bNegative ? 0 : static_cast<uint32_t>( nMagnitude >= nDuration ? nDuration : nMagnitude );
 	}
-	if ( ePlayback == SIR_ANIMATION_PLAY_LOOP ) {
+	if ( ePlayback == SIRAnimationPlaybackMode::SIR_ANIMATION_PLAY_LOOP ) {
 		const uint64_t nPeriod = nDuration;
 		const uint64_t nPhase = nMagnitude % nPeriod;
-		return ( uint32_t )( bNegative && nPhase ? nPeriod - nPhase : nPhase );
+		return static_cast<uint32_t>( bNegative && nPhase ? nPeriod - nPhase : nPhase );
 	}
-	const uint64_t nPeriod = ( uint64_t )nDuration * 2;
+	const uint64_t nPeriod = static_cast<uint64_t>(nDuration) * 2;
 	const uint64_t nPhase = nMagnitude % nPeriod;
 	const uint64_t nMirrored = bNegative && nPhase ? nPeriod - nPhase : nPhase;
-	return ( uint32_t )( nMirrored > nDuration ? nPeriod - nMirrored : nMirrored );
+	return static_cast<uint32_t>( nMirrored > nDuration ? nPeriod - nMirrored : nMirrored );
 }
 
-sirAnimationCookResult_t SIRAnimationSampler::sampleBone( sirAnimationCookSpan_t clip, uint32_t nBoneIndex, uint32_t nTime,
+SIRAnimationCookResult SIRAnimationSampler::sampleBone( sirAnimationCookSpan_t clip, uint32_t nBoneIndex, uint32_t nTime,
                                                           sirAnimationSampleScratch_t *pScratch,
                                                           sirAnimationTransform_t *pTransform ) noexcept
 {
 	if ( !pScratch || !pTransform || !pScratch->pKeys || !pScratch->nKeyCapacity ) {
-		return SIR_ANIM_COOK_INVALID;
+		return SIRAnimationCookResult::SIR_ANIM_COOK_INVALID;
 	}
 	SIRAnimationCookedClipReader reader;
-	sirAnimationCookAssetInfo_t info = {};
-	const sirAnimationCookResult_t eInit = reader.initialize( clip, &info );
-	if ( eInit != SIR_ANIM_COOK_OK ) {
+	sirAnimationCookAssetInfo_t info {};
+	const SIRAnimationCookResult eInit = reader.initialize( clip, &info );
+	if ( eInit != SIRAnimationCookResult::SIR_ANIM_COOK_OK ) {
 		return eInit;
 	}
 	sirAnimationCookTrackOutput_t output = { pScratch->pKeys, pScratch->nKeyCapacity, 0, false, 0 };
-	const sirAnimationCookResult_t eRead = reader.readTrack( nBoneIndex, true, &output );
-	if ( eRead != SIR_ANIM_COOK_OK ) {
+	const SIRAnimationCookResult eRead = reader.readTrack( nBoneIndex, true, &output );
+	if ( eRead != SIRAnimationCookResult::SIR_ANIM_COOK_OK ) {
 		return eRead;
 	}
 	uint32_t nCursor = 0;
@@ -127,33 +127,33 @@ sirAnimationCookResult_t SIRAnimationSampler::sampleBone( sirAnimationCookSpan_t
 	const uint32_t nLowTime = pScratch->pKeys[nCursor].nTime;
 	const uint32_t nHighTime = pScratch->pKeys[nNext].nTime;
 	const float fAlpha =
-	    nLowTime == nHighTime || nTime <= nLowTime ? 0.0f : ( float )( nTime - nLowTime ) / ( float )( nHighTime - nLowTime );
+	    nLowTime == nHighTime || nTime <= nLowTime ? 0.0f : static_cast<float>( nTime - nLowTime ) / static_cast<float>( nHighTime - nLowTime );
 	sirSampleFromKeys( pScratch->pKeys[nCursor], pScratch->pKeys[nNext], fAlpha, pTransform );
 	if ( pScratch->pCursorByBone && nBoneIndex < pScratch->nCursorCapacity ) {
 		pScratch->pCursorByBone[nBoneIndex] = nCursor;
 	}
 	pScratch->nLastSampleTime = nTime;
 	pScratch->bCursorValid = true;
-	return SIR_ANIM_COOK_OK;
+	return SIRAnimationCookResult::SIR_ANIM_COOK_OK;
 }
 
-sirAnimationCookResult_t SIRAnimationSampler::sample( sirAnimationCookSpan_t clip, const sirAnimationSampleOptions_t& options,
+SIRAnimationCookResult SIRAnimationSampler::sample( sirAnimationCookSpan_t clip, const sirAnimationSampleOptions_t& options,
                                                       sirAnimationSampleScratch_t *pScratch, sirAnimationMutablePose_t *pPose ) noexcept
 {
 	if ( !pPose || !pPose->pLocalTransforms || !pScratch || !pScratch->pKeys || !options.nBoneCount ||
 	     options.nBoneCount > SIR_ANIM_COOK_MAX_BONES || pPose->nTransformCapacity < options.nBoneCount ||
-	     options.ePlayback > SIR_ANIMATION_PLAY_PINGPONG || options.eInterpolation > SIR_ANIMATION_INTERPOLATION_LINEAR ||
+	     options.ePlayback > SIRAnimationPlaybackMode::SIR_ANIMATION_PLAY_PINGPONG || options.eInterpolation > SIRAnimationInterpolation::SIR_ANIMATION_INTERPOLATION_LINEAR ||
 	     ( pScratch->pCursorByBone && pScratch->nCursorCapacity < options.nBoneCount ) ) {
-		return SIR_ANIM_COOK_INVALID;
+		return SIRAnimationCookResult::SIR_ANIM_COOK_INVALID;
 	}
 	SIRAnimationCookedClipReader reader;
-	sirAnimationCookAssetInfo_t info = {};
-	const sirAnimationCookResult_t eInspect = reader.initialize( clip, &info );
-	if ( eInspect != SIR_ANIM_COOK_OK ) {
+	sirAnimationCookAssetInfo_t info {};
+	const SIRAnimationCookResult eInspect = reader.initialize( clip, &info );
+	if ( eInspect != SIRAnimationCookResult::SIR_ANIM_COOK_OK ) {
 		return eInspect;
 	}
-	if ( info.eKind != SIR_ANIM_COOK_CLIP || !info.nDuration || info.nRootBoneIndex >= options.nBoneCount ) {
-		return SIR_ANIM_COOK_INVALID;
+	if ( info.eKind != SIRAnimationCookKind::SIR_ANIM_COOK_CLIP || !info.nDuration || info.nRootBoneIndex >= options.nBoneCount ) {
+		return SIRAnimationCookResult::SIR_ANIM_COOK_INVALID;
 	}
 	uint32_t nTime = normalizeTick( options.iTick, options.iStartTick, info.nDuration, options.ePlayback );
 	if ( options.bReverse ) {
@@ -166,39 +166,39 @@ sirAnimationCookResult_t SIRAnimationSampler::sample( sirAnimationCookSpan_t cli
 			for ( uint32_t c = 0; c < 3; ++c ) {
 				if ( !sirSampleFinite( options.pDefaultTransforms[b].fTranslation[c] ) ||
 				     !sirSampleFinite( options.pDefaultTransforms[b].fScale[c] ) ) {
-					return SIR_ANIM_COOK_INVALID;
+					return SIRAnimationCookResult::SIR_ANIM_COOK_INVALID;
 				}
 			}
 			for ( uint32_t c = 0; c < 4; ++c ) {
 				if ( !sirSampleFinite( options.pDefaultTransforms[b].fRotation[c] ) ) {
-					return SIR_ANIM_COOK_INVALID;
+					return SIRAnimationCookResult::SIR_ANIM_COOK_INVALID;
 				}
 			}
 		}
 	}
 	for ( uint32_t b = 0; b < options.nBoneCount; ++b ) {
 		uint32_t nCount = 0;
-		const sirAnimationCookResult_t eRead = reader.getTrackCount( b, options.bPreferFine, &nCount );
-		if ( eRead != SIR_ANIM_COOK_OK && eRead != SIR_ANIM_COOK_MISSING ) {
+		const SIRAnimationCookResult eRead = reader.getTrackCount( b, options.bPreferFine, &nCount );
+		if ( eRead != SIRAnimationCookResult::SIR_ANIM_COOK_OK && eRead != SIRAnimationCookResult::SIR_ANIM_COOK_MISSING ) {
 			return eRead;
 		}
-		if ( eRead == SIR_ANIM_COOK_OK && nCount > pScratch->nKeyCapacity ) {
-			return SIR_ANIM_COOK_CAPACITY;
+		if ( eRead == SIRAnimationCookResult::SIR_ANIM_COOK_OK && nCount > pScratch->nKeyCapacity ) {
+			return SIRAnimationCookResult::SIR_ANIM_COOK_CAPACITY;
 		}
 	}
 	for ( uint32_t b = 0; b < options.nBoneCount; ++b ) {
-		sirAnimationTransform_t value = {};
+		sirAnimationTransform_t value {};
 		if ( options.pDefaultTransforms ) {
 			value = options.pDefaultTransforms[b];
 		} else {
 			sirSampleIdentity( &value );
 		}
 		sirAnimationCookTrackOutput_t output = { pScratch->pKeys, pScratch->nKeyCapacity, 0, false, 0 };
-		const sirAnimationCookResult_t eRead = reader.readTrack( b, options.bPreferFine, &output );
-		if ( eRead != SIR_ANIM_COOK_OK && eRead != SIR_ANIM_COOK_MISSING ) {
+		const SIRAnimationCookResult eRead = reader.readTrack( b, options.bPreferFine, &output );
+		if ( eRead != SIRAnimationCookResult::SIR_ANIM_COOK_OK && eRead != SIRAnimationCookResult::SIR_ANIM_COOK_MISSING ) {
 			return eRead;
 		}
-		if ( eRead == SIR_ANIM_COOK_OK ) {
+		if ( eRead == SIRAnimationCookResult::SIR_ANIM_COOK_OK ) {
 			uint32_t nCursor = 0;
 			if ( pScratch->pCursorByBone && pScratch->bCursorValid && nTime >= pScratch->nLastSampleTime ) {
 				nCursor = pScratch->pCursorByBone[b];
@@ -212,9 +212,9 @@ sirAnimationCookResult_t SIRAnimationSampler::sample( sirAnimationCookSpan_t cli
 			const uint32_t nNext = nCursor + 1 < output.nWritten ? nCursor + 1 : nCursor;
 			const uint32_t nLow = pScratch->pKeys[nCursor].nTime;
 			const uint32_t nHigh = pScratch->pKeys[nNext].nTime;
-			const float fAlpha = options.eInterpolation == SIR_ANIMATION_INTERPOLATION_STEP || nHigh == nLow || nTime <= nLow
+			const float fAlpha = options.eInterpolation == SIRAnimationInterpolation::SIR_ANIMATION_INTERPOLATION_STEP || nHigh == nLow || nTime <= nLow
 			                         ? 0.0f
-			                         : ( float )( nTime - nLow ) / ( float )( nHigh - nLow );
+			                         : static_cast<float>( nTime - nLow ) / static_cast<float>( nHigh - nLow );
 			sirSampleFromKeys( pScratch->pKeys[nCursor], pScratch->pKeys[nNext], fAlpha, &value );
 			if ( pScratch->pCursorByBone ) {
 				pScratch->pCursorByBone[b] = nCursor;
@@ -227,15 +227,15 @@ sirAnimationCookResult_t SIRAnimationSampler::sample( sirAnimationCookSpan_t cli
 	pPose->nTransformCount = options.nBoneCount;
 	pScratch->nLastSampleTime = nTime;
 	pScratch->bCursorValid = true;
-	return SIR_ANIM_COOK_OK;
+	return SIRAnimationCookResult::SIR_ANIM_COOK_OK;
 }
 
-sirAnimationCookResult_t SIRAnimationSampler::blend( sirAnimationMutablePose_t *pDestination,
+SIRAnimationCookResult SIRAnimationSampler::blend( sirAnimationMutablePose_t *pDestination,
                                                      const sirAnimationBlendOptions_t& options ) noexcept
 {
 	if ( !pDestination || !pDestination->pLocalTransforms || !options.pSource || !sirSampleFinite( options.fWeight ) ||
 	     options.fWeight < 0.0f || options.fWeight > 1.0f || options.nBoneCount > pDestination->nTransformCount ) {
-		return SIR_ANIM_COOK_INVALID;
+		return SIRAnimationCookResult::SIR_ANIM_COOK_INVALID;
 	}
 	for ( uint32_t b = 0; b < options.nBoneCount; ++b ) {
 		if ( options.pMask && !options.pMask[b] ) {
@@ -245,13 +245,13 @@ sirAnimationCookResult_t SIRAnimationSampler::blend( sirAnimationMutablePose_t *
 			if ( !sirSampleFinite( options.pSource[b].fTranslation[c] ) || !sirSampleFinite( options.pSource[b].fScale[c] ) ||
 			     !sirSampleFinite( pDestination->pLocalTransforms[b].fTranslation[c] ) ||
 			     !sirSampleFinite( pDestination->pLocalTransforms[b].fScale[c] ) ) {
-				return SIR_ANIM_COOK_INVALID;
+				return SIRAnimationCookResult::SIR_ANIM_COOK_INVALID;
 			}
 		}
 		for ( uint32_t c = 0; c < 4; ++c ) {
 			if ( !sirSampleFinite( options.pSource[b].fRotation[c] ) ||
 			     !sirSampleFinite( pDestination->pLocalTransforms[b].fRotation[c] ) ) {
-				return SIR_ANIM_COOK_INVALID;
+				return SIRAnimationCookResult::SIR_ANIM_COOK_INVALID;
 			}
 		}
 	}
@@ -263,7 +263,7 @@ sirAnimationCookResult_t SIRAnimationSampler::blend( sirAnimationMutablePose_t *
 		const sirAnimationTransform_t& source = options.pSource[b];
 		for ( uint32_t c = 0; c < 3; ++c ) {
 			if ( !sirSampleFinite( source.fTranslation[c] ) || !sirSampleFinite( source.fScale[c] ) ) {
-				return SIR_ANIM_COOK_INVALID;
+				return SIRAnimationCookResult::SIR_ANIM_COOK_INVALID;
 			}
 			dest.fTranslation[c] = options.bAdditive
 			                           ? dest.fTranslation[c] + source.fTranslation[c] * options.fWeight
@@ -271,15 +271,17 @@ sirAnimationCookResult_t SIRAnimationSampler::blend( sirAnimationMutablePose_t *
 			dest.fScale[c] = options.bAdditive ? dest.fScale[c] * ( 1.0f + ( source.fScale[c] - 1.0f ) * options.fWeight )
 			                                   : dest.fScale[c] + ( source.fScale[c] - dest.fScale[c] ) * options.fWeight;
 		}
-		float quaternion[4] = {};
+		float quaternion[4];
+		memset( quaternion, 0, sizeof( quaternion ) );
 		for ( uint32_t c = 0; c < 4; ++c ) {
 			if ( !sirSampleFinite( source.fRotation[c] ) ) {
-				return SIR_ANIM_COOK_INVALID;
+				return SIRAnimationCookResult::SIR_ANIM_COOK_INVALID;
 			}
 		}
 		if ( options.bAdditive ) {
 			const float identity[4] = { 0, 0, 0, 1 };
-			float delta[4] = {};
+			float delta[4];
+			memset( delta, 0, sizeof( delta ) );
 			sirSampleNlerp( identity, source.fRotation, options.fWeight, delta );
 			quaternion[0] =
 			    dest.fRotation[3] * delta[0] + dest.fRotation[0] * delta[3] + dest.fRotation[1] * delta[2] - dest.fRotation[2] * delta[1];
@@ -295,7 +297,7 @@ sirAnimationCookResult_t SIRAnimationSampler::blend( sirAnimationMutablePose_t *
 		}
 		memcpy( dest.fRotation, quaternion, sizeof( quaternion ) );
 	}
-	return SIR_ANIM_COOK_OK;
+	return SIRAnimationCookResult::SIR_ANIM_COOK_OK;
 }
 
 static void sirSampleRotate( const float *pQ, const float *pV, float *pOut ) noexcept
@@ -312,32 +314,32 @@ static void sirSampleRotate( const float *pQ, const float *pV, float *pOut ) noe
 	pOut[2] = pV[2] + 2.0f * ( w * uvz + uuvz );
 }
 
-sirAnimationCookResult_t SIRAnimationSampler::evaluateHierarchy( const sirAnimationHierarchyOptions_t& options ) noexcept
+SIRAnimationCookResult SIRAnimationSampler::evaluateHierarchy( const sirAnimationHierarchyOptions_t& options ) noexcept
 {
 	if ( !options.pParents || !options.pLocal || !options.pModel || !options.nBoneCount || options.nBoneCount > SIR_ANIM_COOK_MAX_BONES ) {
-		return SIR_ANIM_COOK_INVALID;
+		return SIRAnimationCookResult::SIR_ANIM_COOK_INVALID;
 	}
 	for ( uint32_t b = 0; b < options.nBoneCount; ++b ) {
 		const int32_t iParent = options.pParents[b];
-		if ( iParent < -1 || ( iParent >= 0 && ( uint32_t )iParent >= b ) ) {
-			return SIR_ANIM_COOK_INVALID;
+		if ( iParent < -1 || ( iParent >= 0 && static_cast<uint32_t>(iParent) >= b ) ) {
+			return SIRAnimationCookResult::SIR_ANIM_COOK_INVALID;
 		}
 		for ( uint32_t c = 0; c < 3; ++c ) {
 			if ( !sirSampleFinite( options.pLocal[b].fTranslation[c] ) || !sirSampleFinite( options.pLocal[b].fScale[c] ) ||
 			     options.pLocal[b].fScale[c] == 0.0f ) {
-				return SIR_ANIM_COOK_INVALID;
+				return SIRAnimationCookResult::SIR_ANIM_COOK_INVALID;
 			}
 		}
 		float fRotationLength2 = 0.0f;
 		for ( uint32_t c = 0; c < 4; ++c ) {
 			const float fComponent = options.pLocal[b].fRotation[c];
 			if ( !sirSampleFinite( fComponent ) ) {
-				return SIR_ANIM_COOK_INVALID;
+				return SIRAnimationCookResult::SIR_ANIM_COOK_INVALID;
 			}
 			fRotationLength2 += fComponent * fComponent;
 		}
 		if ( !sirSampleFinite( fRotationLength2 ) || fRotationLength2 <= 1e-20f ) {
-			return SIR_ANIM_COOK_INVALID;
+			return SIRAnimationCookResult::SIR_ANIM_COOK_INVALID;
 		}
 	}
 	for ( uint32_t b = 0; b < options.nBoneCount; ++b ) {
@@ -352,7 +354,8 @@ sirAnimationCookResult_t SIRAnimationSampler::evaluateHierarchy( const sirAnimat
 		sirAnimationTransform_t& out = options.pModel[b];
 		const float scaled[3] = { local.fTranslation[0] * parent.fScale[0], local.fTranslation[1] * parent.fScale[1],
 		                          local.fTranslation[2] * parent.fScale[2] };
-		float rotated[3] = {};
+		float rotated[3];
+		memset( rotated, 0, sizeof( rotated ) );
 		sirSampleRotate( parent.fRotation, scaled, rotated );
 		for ( uint32_t c = 0; c < 3; ++c ) {
 			out.fTranslation[c] = parent.fTranslation[c] + rotated[c];
@@ -368,5 +371,5 @@ sirAnimationCookResult_t SIRAnimationSampler::evaluateHierarchy( const sirAnimat
 		                   parent.fRotation[1] * local.fRotation[1] - parent.fRotation[2] * local.fRotation[2];
 		sirSampleNormalizeRotation( out.fRotation );
 	}
-	return SIR_ANIM_COOK_OK;
+	return SIRAnimationCookResult::SIR_ANIM_COOK_OK;
 }

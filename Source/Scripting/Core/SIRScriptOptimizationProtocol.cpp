@@ -26,14 +26,14 @@ static constexpr uint32_t s_nOptimizationReplyKind = 2;
 static void scriptProtocolWrite32( uint8_t *pBytes, uint32_t nValue ) noexcept
 {
 	for ( uint32_t iByte = 0; iByte < 4; ++iByte ) {
-		pBytes[iByte] = ( uint8_t )( nValue >> ( iByte * 8 ) );
+		pBytes[iByte] = static_cast<uint8_t>(  nValue >> ( iByte * 8 )  );
 	}
 }
 
 static void scriptProtocolWrite64( uint8_t *pBytes, uint64_t nValue ) noexcept
 {
 	for ( uint32_t iByte = 0; iByte < 8; ++iByte ) {
-		pBytes[iByte] = ( uint8_t )( nValue >> ( iByte * 8 ) );
+		pBytes[iByte] = static_cast<uint8_t>(  nValue >> ( iByte * 8 )  );
 	}
 }
 
@@ -41,7 +41,7 @@ static uint32_t scriptProtocolRead32( const uint8_t *pBytes ) noexcept
 {
 	uint32_t nValue = 0;
 	for ( uint32_t iByte = 0; iByte < 4; ++iByte ) {
-		nValue |= ( uint32_t )pBytes[iByte] << ( iByte * 8 );
+		nValue |= static_cast<uint32_t>(pBytes[iByte]) << ( iByte * 8 );
 	}
 	return nValue;
 }
@@ -50,7 +50,7 @@ static uint64_t scriptProtocolRead64( const uint8_t *pBytes ) noexcept
 {
 	uint64_t nValue = 0;
 	for ( uint32_t iByte = 0; iByte < 8; ++iByte ) {
-		nValue |= ( uint64_t )pBytes[iByte] << ( iByte * 8 );
+		nValue |= static_cast<uint64_t>(pBytes[iByte]) << ( iByte * 8 );
 	}
 	return nValue;
 }
@@ -107,7 +107,8 @@ static bool scriptProtocolVerify( const uint8_t *pBytes, uint32_t nLength, uint3
 	     scriptProtocolRead32( pBytes + 12 ) != nKind ) {
 		return false;
 	}
-	uint8_t szDigest[32] = {};
+	uint8_t szDigest[32];
+	memset( szDigest, 0, sizeof( szDigest ) );
 	SIRScriptSHA256::digest( pBytes, nLength - 32, szDigest );
 	return memcmp( szDigest, pBytes + nLength - 32, 32 ) == 0;
 }
@@ -115,15 +116,15 @@ static bool scriptProtocolVerify( const uint8_t *pBytes, uint32_t nLength, uint3
 bool SIRScriptOptimizationProtocol::validRequest( const sirScriptOptimizationRequest_t& request ) noexcept
 {
 	return request.nJobId != 0 && scriptProtocolValidArtifact( request.artifact ) && scriptProtocolNonzeroDigest( request.key.szDigest ) &&
-	       request.nInputBytes != 0 && request.eTier <= SIR_SCRIPT_OPT_PROFILE_GUIDED && request.nFlags == 0;
+	       request.nInputBytes != 0 && request.eTier <= SIRScriptOptimizationTier::SIR_SCRIPT_OPT_PROFILE_GUIDED && request.nFlags == 0;
 }
 
 bool SIRScriptOptimizationProtocol::validReply( const sirScriptOptimizationReply_t& reply ) noexcept
 {
-	if ( reply.nJobId == 0 || reply.eResult > SIR_SCRIPT_BACKEND_FAILURE ) {
+	if ( reply.nJobId == 0 || reply.eResult > SIRScriptResult::SIR_SCRIPT_BACKEND_FAILURE ) {
 		return false;
 	}
-	if ( reply.eResult != SIR_SCRIPT_OK ) {
+	if ( reply.eResult != SIRScriptResult::SIR_SCRIPT_OK ) {
 		return true;
 	}
 	const sirScriptCachedArtifact_t& entry = reply.cached;
@@ -132,11 +133,11 @@ bool SIRScriptOptimizationProtocol::validReply( const sirScriptOptimizationReply
 	       ( entry.nAlignment & ( entry.nAlignment - 1 ) ) == 0;
 }
 
-sirScriptResult_t SIRScriptOptimizationProtocol::encodeRequest( const sirScriptOptimizationRequest_t& request,
+SIRScriptResult SIRScriptOptimizationProtocol::encodeRequest( const sirScriptOptimizationRequest_t& request,
                                                                 uint8_t szOutput[REQUEST_BYTES] ) noexcept
 {
 	if ( szOutput == nullptr || !validRequest( request ) ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 	memset( szOutput, 0, REQUEST_BYTES );
 	scriptProtocolHeader( szOutput, s_nOptimizationRequestKind );
@@ -144,44 +145,44 @@ sirScriptResult_t SIRScriptOptimizationProtocol::encodeRequest( const sirScriptO
 	scriptProtocolEncodeArtifact( szOutput + 24, request.artifact );
 	memcpy( szOutput + 80, request.key.szDigest, 32 );
 	scriptProtocolWrite64( szOutput + 112, request.nInputBytes );
-	scriptProtocolWrite32( szOutput + 120, ( uint32_t )request.eTier );
+	scriptProtocolWrite32( szOutput + 120, static_cast<uint32_t>(request.eTier) );
 	scriptProtocolWrite32( szOutput + 124, request.nFlags );
 	SIRScriptSHA256::digest( szOutput, REQUEST_BYTES - 32, szOutput + REQUEST_BYTES - 32 );
-	return SIR_SCRIPT_OK;
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
-sirScriptResult_t SIRScriptOptimizationProtocol::decodeRequest( const uint8_t *pInput, uint32_t nBytes,
+SIRScriptResult SIRScriptOptimizationProtocol::decodeRequest( const uint8_t *pInput, uint32_t nBytes,
                                                                 sirScriptOptimizationRequest_t *pRequest ) noexcept
 {
 	if ( pInput == nullptr || pRequest == nullptr || nBytes != REQUEST_BYTES ||
 	     !scriptProtocolVerify( pInput, REQUEST_BYTES, s_nOptimizationRequestKind ) ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
-	sirScriptOptimizationRequest_t decoded = {};
+	sirScriptOptimizationRequest_t decoded {};
 	decoded.nJobId = scriptProtocolRead64( pInput + 16 );
 	scriptProtocolDecodeArtifact( pInput + 24, &decoded.artifact );
 	memcpy( decoded.key.szDigest, pInput + 80, 32 );
 	decoded.nInputBytes = scriptProtocolRead64( pInput + 112 );
-	decoded.eTier = ( sirScriptOptimizationTier_t )scriptProtocolRead32( pInput + 120 );
+	decoded.eTier = static_cast<SIRScriptOptimizationTier>(scriptProtocolRead32( pInput + 120 ));
 	decoded.nFlags = scriptProtocolRead32( pInput + 124 );
 	if ( !validRequest( decoded ) ) {
-		return SIR_SCRIPT_TYPE_MISMATCH;
+		return SIRScriptResult::SIR_SCRIPT_TYPE_MISMATCH;
 	}
 	*pRequest = decoded;
-	return SIR_SCRIPT_OK;
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
-sirScriptResult_t SIRScriptOptimizationProtocol::encodeReply( const sirScriptOptimizationReply_t& reply,
+SIRScriptResult SIRScriptOptimizationProtocol::encodeReply( const sirScriptOptimizationReply_t& reply,
                                                               uint8_t szOutput[REPLY_BYTES] ) noexcept
 {
 	if ( szOutput == nullptr || !validReply( reply ) ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 	memset( szOutput, 0, REPLY_BYTES );
 	scriptProtocolHeader( szOutput, s_nOptimizationReplyKind );
 	scriptProtocolWrite64( szOutput + 16, reply.nJobId );
 	scriptProtocolWrite32( szOutput + 24, reply.eResult );
-	if ( reply.eResult == SIR_SCRIPT_OK ) {
+	if ( reply.eResult == SIRScriptResult::SIR_SCRIPT_OK ) {
 		const sirScriptCachedArtifact_t& entry = reply.cached;
 		scriptProtocolEncodeArtifact( szOutput + 32, entry.artifact );
 		memcpy( szOutput + 88, entry.key.szDigest, 32 );
@@ -190,25 +191,25 @@ sirScriptResult_t SIRScriptOptimizationProtocol::encodeReply( const sirScriptOpt
 		scriptProtocolWrite32( szOutput + 160, entry.nAlignment );
 	}
 	SIRScriptSHA256::digest( szOutput, REPLY_BYTES - 32, szOutput + REPLY_BYTES - 32 );
-	return SIR_SCRIPT_OK;
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
-sirScriptResult_t SIRScriptOptimizationProtocol::decodeReply( const uint8_t *pInput, uint32_t nBytes,
+SIRScriptResult SIRScriptOptimizationProtocol::decodeReply( const uint8_t *pInput, uint32_t nBytes,
                                                               sirScriptOptimizationReply_t *pReply ) noexcept
 {
 	if ( pInput == nullptr || pReply == nullptr || nBytes != REPLY_BYTES ||
 	     !scriptProtocolVerify( pInput, REPLY_BYTES, s_nOptimizationReplyKind ) || scriptProtocolRead32( pInput + 28 ) != 0 ||
 	     scriptProtocolRead32( pInput + 164 ) != 0 ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
-	sirScriptOptimizationReply_t decoded = {};
+	sirScriptOptimizationReply_t decoded {};
 	decoded.nJobId = scriptProtocolRead64( pInput + 16 );
 	const uint32_t nStatus = scriptProtocolRead32( pInput + 24 );
-	if ( nStatus > SIR_SCRIPT_BACKEND_FAILURE ) {
-		return SIR_SCRIPT_TYPE_MISMATCH;
+	if ( nStatus > SIRScriptResult::SIR_SCRIPT_BACKEND_FAILURE ) {
+		return SIRScriptResult::SIR_SCRIPT_TYPE_MISMATCH;
 	}
-	decoded.eResult = ( sirScriptResult_t )nStatus;
-	if ( decoded.eResult == SIR_SCRIPT_OK ) {
+	decoded.eResult = static_cast<SIRScriptResult>(nStatus);
+	if ( decoded.eResult == SIRScriptResult::SIR_SCRIPT_OK ) {
 		sirScriptCachedArtifact_t& entry = decoded.cached;
 		scriptProtocolDecodeArtifact( pInput + 32, &entry.artifact );
 		memcpy( entry.key.szDigest, pInput + 88, 32 );
@@ -218,28 +219,28 @@ sirScriptResult_t SIRScriptOptimizationProtocol::decodeReply( const uint8_t *pIn
 	} else {
 		for ( uint32_t iByte = 32; iByte < REPLY_BYTES - 32; ++iByte ) {
 			if ( pInput[iByte] != 0 ) {
-				return SIR_SCRIPT_TYPE_MISMATCH;
+				return SIRScriptResult::SIR_SCRIPT_TYPE_MISMATCH;
 			}
 		}
 	}
 	if ( !validReply( decoded ) ) {
-		return SIR_SCRIPT_TYPE_MISMATCH;
+		return SIRScriptResult::SIR_SCRIPT_TYPE_MISMATCH;
 	}
 	*pReply = decoded;
-	return SIR_SCRIPT_OK;
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
-sirScriptResult_t SIRScriptOptimizationProtocol::validateCompletion( const sirScriptOptimizationRequest_t& request,
+SIRScriptResult SIRScriptOptimizationProtocol::validateCompletion( const sirScriptOptimizationRequest_t& request,
                                                                      const sirScriptOptimizationReply_t& reply ) noexcept
 {
 	if ( !validRequest( request ) || !validReply( reply ) || request.nJobId != reply.nJobId ) {
-		return SIR_SCRIPT_TYPE_MISMATCH;
+		return SIRScriptResult::SIR_SCRIPT_TYPE_MISMATCH;
 	}
-	if ( reply.eResult != SIR_SCRIPT_OK ) {
+	if ( reply.eResult != SIRScriptResult::SIR_SCRIPT_OK ) {
 		return reply.eResult;
 	}
 	return scriptProtocolSameArtifact( request.artifact, reply.cached.artifact ) &&
 	               memcmp( request.key.szDigest, reply.cached.key.szDigest, 32 ) == 0
-	           ? SIR_SCRIPT_OK
-			   : SIR_SCRIPT_TYPE_MISMATCH;
+	           ? SIRScriptResult::SIR_SCRIPT_OK
+			   : SIRScriptResult::SIR_SCRIPT_TYPE_MISMATCH;
 }

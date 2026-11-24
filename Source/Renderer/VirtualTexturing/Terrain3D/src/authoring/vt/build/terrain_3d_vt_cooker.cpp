@@ -37,9 +37,9 @@ static bool t3d_vt_cooker_validate_quality_views( const t3dVTCookedSparsePackage
 	uint32_t nViewCursor = 0u;
 	for ( uint32_t iAllocation = 0u; iAllocation < rPackage.m_nAllocationCount; ++iAllocation ) {
 		const t3dVTPackAllocationRecord_t& rAllocation = rPackage.m_pAllocations[iAllocation];
-		const t3dVTFixedProfile_t HighestProfile = ( t3dVTFixedProfile_t )rAllocation.m_nHighestAvailableProfile;
+		const t3dVTFixedProfile_t HighestProfile = static_cast<t3dVTFixedProfile_t>(rAllocation.m_nHighestAvailableProfile);
 		for ( uint32_t iProfile = 0u; iProfile <= rAllocation.m_nHighestAvailableProfile; ++iProfile ) {
-			const t3dVTFixedProfile_t ViewProfile = ( t3dVTFixedProfile_t )iProfile;
+			const t3dVTFixedProfile_t ViewProfile = static_cast<t3dVTFixedProfile_t>(iProfile);
 			const t3dVTPackQualityView_t& rView = rPackage.m_pQualityViews[nViewCursor++];
 			if ( rView.m_nAllocationId != iAllocation || rView.m_nProfile != iProfile ||
 			     ( rAllocation.m_nAvailableProfileMask & ( 1u << iProfile ) ) == 0u ) {
@@ -48,13 +48,13 @@ static bool t3d_vt_cooker_validate_quality_views( const t3dVTCookedSparsePackage
 			uint32_t nExpectedChannelMask = 0u;
 			for ( uint32_t iChannel = 0u; iChannel < T3D_VT_LOGICAL_CHANNEL_COUNT; ++iChannel ) {
 				const uint32_t nBit = T3D_VT_LOGICAL_CHANNEL_BIT( iChannel );
-				const uint32_t nTargetExtent = t3d_vt_fixed_profile_channel_extent( ViewProfile, ( t3dVTLogicalChannel_t )iChannel );
+				const uint32_t nTargetExtent = t3d_vt_fixed_profile_channel_extent( ViewProfile, static_cast<t3dVTLogicalChannel_t>(iChannel) );
 				if ( ( rAllocation.m_nChannelMask & nBit ) != 0u && nTargetExtent != 0u ) {
 					nExpectedChannelMask |= nBit;
 					const t3dVTChannelAllocation_t& rChannelAllocation =
 					    rPackage.m_pChannelAllocations[iAllocation * T3D_VT_LOGICAL_CHANNEL_COUNT + iChannel];
 					uint8_t nExpectedBaseMip = T3D_VT_PACK_INVALID_MIP;
-					if ( !t3d_vt_fixed_profile_quality_base_mip( HighestProfile, ViewProfile, ( t3dVTLogicalChannel_t )iChannel,
+					if ( !t3d_vt_fixed_profile_quality_base_mip( HighestProfile, ViewProfile, static_cast<t3dVTLogicalChannel_t>(iChannel),
 					                                             rChannelAllocation.m_nMipCount, nExpectedBaseMip ) ||
 					     rView.m_nBaseMip[iChannel] != nExpectedBaseMip ||
 					     rView.m_nMaxMip[iChannel] != rChannelAllocation.m_nMipCount - 1u ) {
@@ -91,7 +91,7 @@ static uint32_t t3d_vt_cooker_next_power_of_two( uint32_t nValue )
 
 static uint32_t t3d_vt_cooker_fold_signature( const uint64_t nSignature )
 {
-	const uint32_t nFolded = t3dHashAvalanche32( ( uint32_t )nSignature ^ ( uint32_t )( nSignature >> 32u ) );
+	const uint32_t nFolded = t3dHashAvalanche32( static_cast<uint32_t>(nSignature) ^ static_cast<uint32_t>( nSignature >> 32u ) );
 	return nFolded == T3D_VT_INVALID_PAGE ? nFolded - 1u : nFolded;
 }
 
@@ -107,7 +107,7 @@ static void *t3d_vt_cooker_allocate_zero( const t3dVTCookAllocator_t& rAllocator
 {
 	void *pMemory = t3d_vt_cooker_allocate( rAllocator, nBytes );
 	if ( pMemory != NULL ) {
-		memset( pMemory, 0, ( size_t )nBytes );
+		memset( pMemory, 0, static_cast<size_t>(nBytes) );
 	}
 	return pMemory;
 }
@@ -134,7 +134,7 @@ bool t3d_vt_cooker_normalize_channel_to_profile( const t3dVTChannelNormalization
 	     rSource.m_nHeight < nTargetExtent ) {
 		return false;
 	}
-	const uint64_t nTargetBytes = ( uint64_t )nTargetExtent * nTargetExtent * nComponents;
+	const uint64_t nTargetBytes = static_cast<uint64_t>(nTargetExtent) * nTargetExtent * nComponents;
 	if ( nDestinationBytes < nTargetBytes ) {
 		return false;
 	}
@@ -150,8 +150,8 @@ bool t3d_vt_cooker_normalize_channel_to_profile( const t3dVTChannelNormalization
 		                                                        nTargetExtent, nTargetExtent, pDestination, nDestinationBytes );
 	}
 
-	const uint64_t nCappedBytes = ( uint64_t )nCappedWidth * nCappedHeight * nComponents;
-	uint8_t *const pCapped = ( uint8_t * )t3d_vt_cooker_allocate( rAllocator, nCappedBytes );
+	const uint64_t nCappedBytes = static_cast<uint64_t>(nCappedWidth) * nCappedHeight * nComponents;
+	uint8_t *const pCapped = static_cast<uint8_t *>(t3d_vt_cooker_allocate( rAllocator, nCappedBytes ));
 	if ( pCapped == NULL ) {
 		return false;
 	}
@@ -161,7 +161,7 @@ bool t3d_vt_cooker_normalize_channel_to_profile( const t3dVTChannelNormalization
 		return false;
 	}
 	if ( nCappedWidth == nTargetExtent && nCappedHeight == nTargetExtent ) {
-		memcpy( pDestination, pCapped, ( size_t )nTargetBytes );
+		memcpy( pDestination, pCapped, static_cast<size_t>(nTargetBytes) );
 		t3d_vt_cooker_free( rAllocator, pCapped );
 		return true;
 	}
@@ -220,14 +220,14 @@ static bool t3d_vt_cooker_add_payload( t3dVTCookPayloadTable_t& rTable, const t3
 		return false;
 	}
 	const uint64_t nSignature = t3d_vt_cooker_payload_signature( nFormat, pBytes, nBytes );
-	uint32_t nSlot = ( uint32_t )( nSignature ^ ( nSignature >> 32u ) ) & ( nHashCapacity - 1u );
+	uint32_t nSlot = static_cast<uint32_t>(  nSignature ^ ( nSignature >> 32u )  ) & ( nHashCapacity - 1u );
 	for ( uint32_t iProbe = 0u; iProbe < nHashCapacity; ++iProbe ) {
 		const uint32_t nEntry = pHashTable[nSlot];
 		if ( nEntry == 0u ) {
 			if ( rPayloadCount >= nPayloadCapacity ) {
 				return false;
 			}
-			uint8_t *pOwnedBytes = ( uint8_t * )t3d_vt_cooker_allocate( rAllocator, nBytes );
+			uint8_t *pOwnedBytes = static_cast<uint8_t *>(t3d_vt_cooker_allocate( rAllocator, nBytes ));
 			if ( pOwnedBytes == NULL ) {
 				return false;
 			}
@@ -299,13 +299,13 @@ bool t3d_vt_cooker_encode_tile( const t3dVTEncoderInterface_t& rEncoder, const t
 	if ( rRequest.m_nChannel >= T3D_VT_LOGICAL_CHANNEL_COUNT ) {
 		return false;
 	}
-	const t3dVTLogicalChannel_t Channel = ( t3dVTLogicalChannel_t )rRequest.m_nChannel;
+	const t3dVTLogicalChannel_t Channel = static_cast<t3dVTLogicalChannel_t>(rRequest.m_nChannel);
 	const uint32_t nExpectedFamily = rRequest.m_nFormat;
 	const uint32_t nExpectedBytes = t3d_vt_pack_expected_physical_tile_bytes( nExpectedFamily );
 	const uint32_t nExpectedComponents = t3d_vt_page_builder_logical_channel_components( Channel );
 	if ( rEncoder.m_pEncodeTile == NULL || rRequest.m_pSourcePixels == NULL || rRequest.m_pDestination == NULL ||
 	     rRequest.m_nContractVersion != T3D_VT_FILE_FORMAT_VERSION ||
-	     ( nExpectedFamily != ( uint32_t )t3d_vt_logical_channel_physical_family( Channel ) &&
+	     ( nExpectedFamily != static_cast<uint32_t>(t3d_vt_logical_channel_physical_family( Channel )) &&
 	       !( Channel == T3D_VT_LOGICAL_CHANNEL_ALBEDO && nExpectedFamily == T3D_VT_PHYSICAL_FORMAT_BC7_UNORM ) ) ||
 	     rRequest.m_nWidth != T3D_VT_PHYSICAL_TILE || rRequest.m_nHeight != T3D_VT_PHYSICAL_TILE ||
 	     rRequest.m_nComponents != nExpectedComponents || nExpectedComponents == 0u ||
@@ -421,10 +421,10 @@ static bool t3d_vt_cooker_encode_and_add_payload( t3dVTCookTileTable_t& rTable, 
 	const uint8_t *const pTileBytes = rRequest.m_pTileBytes;
 	const uint32_t nComponents = t3d_vt_page_builder_logical_channel_components( Channel );
 	const uint32_t nRawBytes = T3D_VT_PHYSICAL_TILE * T3D_VT_PHYSICAL_TILE * nComponents;
-	const uint32_t nFamily = ( uint32_t )t3d_vt_logical_channel_physical_family( Channel, rRequest.m_nAllocationFlags );
-	const uint32_t nChannel = ( uint32_t )Channel;
+	const uint32_t nFamily = static_cast<uint32_t>(t3d_vt_logical_channel_physical_family( Channel, rRequest.m_nAllocationFlags ));
+	const uint32_t nChannel = static_cast<uint32_t>(Channel);
 	// Compressed output also depends on alpha cutoff and encoder quality.
-	const uint64_t nEncoderIdentity = ( ( uint64_t )rRequest.m_nAlphaThreshold << 32u ) | nCompressionQuality;
+	const uint64_t nEncoderIdentity = ( static_cast<uint64_t>(rRequest.m_nAlphaThreshold) << 32u ) | nCompressionQuality;
 	const uint64_t nHashA = t3d_vt_cooker_raw_hash( pTileBytes, nRawBytes, nFamily, nChannel,
 	                                                t3dHashFnv1a64LittleU64( 1469598103934665603ull, nEncoderIdentity ) );
 	const uint64_t nHashB = t3d_vt_cooker_raw_hash( pTileBytes, nRawBytes, nFamily, nChannel,
@@ -442,7 +442,7 @@ static bool t3d_vt_cooker_encode_and_add_payload( t3dVTCookTileTable_t& rTable, 
 	t3dClearTrivialObjectBytes( Request );
 	Request.m_pSourcePixels = pTileBytes;
 	Request.m_nSourceBytes = nRawBytes;
-	Request.m_nChannel = ( uint32_t )Channel;
+	Request.m_nChannel = static_cast<uint32_t>(Channel);
 	Request.m_nFormat = nFamily;
 	Request.m_nWidth = T3D_VT_PHYSICAL_TILE;
 	Request.m_nHeight = T3D_VT_PHYSICAL_TILE;
@@ -487,7 +487,7 @@ static uint32_t t3d_vt_cooker_sparse_enabled_mask( const t3dVTCookSparseSource_t
 	uint32_t nMask = 0u;
 	for ( uint32_t iChannel = 0u; iChannel < T3D_VT_LOGICAL_CHANNEL_COUNT; ++iChannel ) {
 		if ( ( rSource.m_nAuthoredChannelMask & T3D_VT_LOGICAL_CHANNEL_BIT( iChannel ) ) != 0u &&
-		     t3d_vt_fixed_profile_channel_extent( Profile, ( t3dVTLogicalChannel_t )iChannel ) != 0u ) {
+		     t3d_vt_fixed_profile_channel_extent( Profile, static_cast<t3dVTLogicalChannel_t>(iChannel) ) != 0u ) {
 			nMask |= T3D_VT_LOGICAL_CHANNEL_BIT( iChannel );
 		}
 	}
@@ -500,11 +500,11 @@ static uint32_t t3d_vt_cooker_regular_page_count( const uint32_t nExtent, const 
 	uint32_t nHeight = nExtent;
 	uint64_t nPages = 0u;
 	for ( uint32_t iMip = 0u; iMip < nTailFirstMip; ++iMip ) {
-		nPages += ( uint64_t )t3d_vt_page_builder_pages_wide( nWidth ) * t3d_vt_page_builder_pages_high( nHeight );
+		nPages += static_cast<uint64_t>(t3d_vt_page_builder_pages_wide( nWidth ) * t3d_vt_page_builder_pages_high( nHeight ));
 		nWidth = nWidth > 1u ? nWidth >> 1u : 1u;
 		nHeight = nHeight > 1u ? nHeight >> 1u : 1u;
 	}
-	return nPages > UINT32_MAX ? 0u : ( uint32_t )nPages;
+	return nPages > UINT32_MAX ? 0u : static_cast<uint32_t>(nPages);
 }
 
 static bool t3d_vt_cooker_validate_sparse_source( const t3dVTCookSparseSource_t& rSource, t3dVTFixedProfile_t& rProfile,
@@ -528,12 +528,12 @@ static bool t3d_vt_cooker_validate_sparse_source( const t3dVTCookSparseSource_t&
 		SourceExtent[iChannel] = t3d_vt_cooker_source_extent( rView );
 	}
 	rProfile =
-	    t3d_vt_fixed_profile_highest_supported( ( t3dVTConsumer_t )rSource.m_nConsumer, rSource.m_nAuthoredChannelMask, SourceExtent );
+	    t3d_vt_fixed_profile_highest_supported( static_cast<t3dVTConsumer_t>(rSource.m_nConsumer), rSource.m_nAuthoredChannelMask, SourceExtent );
 	if ( rProfile == T3D_VT_FIXED_PROFILE_INVALID ) {
 		return false;
 	}
 	rEnabledMask = t3d_vt_cooker_sparse_enabled_mask( rSource, rProfile );
-	const uint32_t nRequiredMask = t3d_vt_consumer_required_mask( ( t3dVTConsumer_t )rSource.m_nConsumer );
+	const uint32_t nRequiredMask = t3d_vt_consumer_required_maskstatic_cast<t3dVTConsumer_t>(rSource.m_nConsumer);
 	return ( rEnabledMask & nRequiredMask ) == nRequiredMask;
 }
 
@@ -548,7 +548,7 @@ bool t3d_vt_cooker_build_channel_pyramid( const t3dVTCookAllocator_t& rAllocator
 	if ( nExtent == 0u || nComponents == 0u || !t3d_vt_page_builder_layout_mips( nExtent, nExtent, nComponents, rLayout ) ) {
 		return false;
 	}
-	const t3dVTCookPreparedChannel_t& rPrepared = rSource.m_PreparedChannels[( uint32_t )Channel];
+	const t3dVTCookPreparedChannel_t& rPrepared = rSource.m_PreparedChannels[static_cast<uint32_t>(Channel)];
 	if ( rPrepared.m_pMipBytes != NULL && rPrepared.m_nTargetExtent == nExtent && rPrepared.m_Layout.m_nMipCount == rLayout.m_nMipCount &&
 	     rPrepared.m_Layout.m_nComponents == rLayout.m_nComponents && rPrepared.m_Layout.m_nTotalBytes == rLayout.m_nTotalBytes ) {
 		for ( uint32_t iMip = 0u; iMip < rLayout.m_nMipCount; ++iMip ) {
@@ -558,20 +558,20 @@ bool t3d_vt_cooker_build_channel_pyramid( const t3dVTCookAllocator_t& rAllocator
 				return false;
 			}
 		}
-		rpMipBytes = ( uint8_t * )t3d_vt_cooker_allocate( rAllocator, rLayout.m_nTotalBytes );
+		rpMipBytes = static_cast<uint8_t *>(t3d_vt_cooker_allocate( rAllocator, rLayout.m_nTotalBytes ));
 		if ( rpMipBytes == NULL ) {
 			return false;
 		}
-		memcpy( rpMipBytes, rPrepared.m_pMipBytes, ( size_t )rLayout.m_nTotalBytes );
+		memcpy( rpMipBytes, rPrepared.m_pMipBytes, static_cast<size_t>(rLayout.m_nTotalBytes) );
 		return true;
 	}
-	rpMipBytes = ( uint8_t * )t3d_vt_cooker_allocate( rAllocator, rLayout.m_nTotalBytes );
+	rpMipBytes = static_cast<uint8_t *>(t3d_vt_cooker_allocate( rAllocator, rLayout.m_nTotalBytes ));
 	if ( rpMipBytes == NULL ) {
 		return false;
 	}
 	const bool bAlphaScissor = Channel == T3D_VT_LOGICAL_CHANNEL_ALBEDO && rSource.m_bAlphaScissor != 0u;
 	t3dVTChannelNormalization_t Normalization;
-	Normalization.m_source = rSource.m_Channels[( uint32_t )Channel];
+	Normalization.m_source = rSource.m_Channels[static_cast<uint32_t>(Channel)];
 	Normalization.m_channel = Channel;
 	Normalization.m_nSourceLayout = rSource.m_nOrmSourceLayout;
 	Normalization.m_nTargetExtent = nExtent;
@@ -602,11 +602,11 @@ static bool t3d_vt_cooker_finalize_sparse_payloads( const t3dVTCookerSettings_t&
 			return false;
 		}
 	}
-	const uint32_t nDecodedBytes = ( uint32_t )nDecodedBytes64;
-	rPackage.m_pPayloads = ( t3dVTPackPayloadRecord_t * )t3d_vt_cooker_allocate_zero( rAllocator, ( uint64_t )nPayloadCount *
+	const uint32_t nDecodedBytes = static_cast<uint32_t>(nDecodedBytes64);
+	rPackage.m_pPayloads = static_cast<t3dVTPackPayloadRecord_t *>(t3d_vt_cooker_allocate_zero( rAllocator, static_cast<uint64_t>(nPayloadCount)) *
 	                                                                                                  sizeof( t3dVTPackPayloadRecord_t ) );
-	rPackage.m_pClusters = ( t3dVTPackClusterRecord_t * )t3d_vt_cooker_allocate_zero( rAllocator, sizeof( t3dVTPackClusterRecord_t ) );
-	uint8_t *pDecoded = ( uint8_t * )t3d_vt_cooker_allocate( rAllocator, nDecodedBytes );
+	rPackage.m_pClusters = static_cast<t3dVTPackClusterRecord_t *>(t3d_vt_cooker_allocate_zero( rAllocator, sizeof( t3dVTPackClusterRecord_t ) ));
+	uint8_t *pDecoded = static_cast<uint8_t *>(t3d_vt_cooker_allocate( rAllocator, nDecodedBytes ));
 	if ( rPackage.m_pPayloads == NULL || rPackage.m_pClusters == NULL || pDecoded == NULL ) {
 		t3d_vt_cooker_free( rAllocator, pDecoded );
 		return false;
@@ -644,7 +644,7 @@ static bool t3d_vt_cooker_finalize_sparse_payloads( const t3dVTCookerSettings_t&
 			return false;
 		}
 	}
-	rPackage.m_pPayloadData = ( uint8_t * )t3d_vt_cooker_allocate( rAllocator, nCapacity );
+	rPackage.m_pPayloadData = static_cast<uint8_t *>(t3d_vt_cooker_allocate( rAllocator, nCapacity ));
 	if ( rPackage.m_pPayloadData == NULL ) {
 		t3d_vt_cooker_free( rAllocator, pDecoded );
 		return false;
@@ -654,7 +654,7 @@ static bool t3d_vt_cooker_finalize_sparse_payloads( const t3dVTCookerSettings_t&
 	if ( rSettings.m_nOuterCompression == T3D_VT_OUTER_COMPRESSION_ZSTD ) {
 		nCodec = T3D_VT_PACK_CODEC_ZSTD;
 		if ( !pClusterCodec->m_pEncode( pClusterCodec->m_pUser, nCodec, pDecoded, nDecodedBytes, rPackage.m_pPayloadData,
-		                                ( uint32_t )nCapacity, nStoredBytes ) ||
+		                                static_cast<uint32_t>(nCapacity), nStoredBytes ) ||
 		     nStoredBytes == 0u || nStoredBytes > nCapacity ) {
 			t3d_vt_cooker_free( rAllocator, pDecoded );
 			return false;
@@ -697,11 +697,11 @@ static bool t3d_vt_cooker_build_quality_views( const t3dVTCookSparseSource_t *pS
 		const t3dVTFixedProfile_t HighestProfile = pProfiles[iSource];
 		const t3dVTPackAllocationRecord_t& rAllocation = rPackage.m_pAllocations[iAllocation];
 		nFullySupportedMask &= rAllocation.m_nAvailableProfileMask;
-		for ( uint32_t iProfile = 0u; iProfile <= ( uint32_t )HighestProfile; ++iProfile ) {
+		for ( uint32_t iProfile = 0u; iProfile <= static_cast<uint32_t>(HighestProfile); ++iProfile ) {
 			if ( nViewCursor >= rPackage.m_nQualityViewCount ) {
 				return false;
 			}
-			const t3dVTFixedProfile_t ViewProfile = ( t3dVTFixedProfile_t )iProfile;
+			const t3dVTFixedProfile_t ViewProfile = static_cast<t3dVTFixedProfile_t>(iProfile);
 			uint32_t SourceExtent[T3D_VT_LOGICAL_CHANNEL_COUNT];
 			memset( SourceExtent, 0, sizeof( SourceExtent ) );
 			for ( uint32_t iChannel = 0u; iChannel < T3D_VT_LOGICAL_CHANNEL_COUNT; ++iChannel ) {
@@ -709,15 +709,15 @@ static bool t3d_vt_cooker_build_quality_views( const t3dVTCookSparseSource_t *pS
 					SourceExtent[iChannel] = t3d_vt_cooker_source_extent( rSource.m_Channels[iChannel] );
 				}
 			}
-			if ( !t3d_vt_fixed_profile_source_supports( ViewProfile, ( t3dVTConsumer_t )rSource.m_nConsumer, rSource.m_nAuthoredChannelMask,
+			if ( !t3d_vt_fixed_profile_source_supports( ViewProfile, static_cast<t3dVTConsumer_t>(rSource.m_nConsumer), rSource.m_nAuthoredChannelMask,
 			                                            SourceExtent ) ) {
 				return false;
 			}
 			t3dVTPackQualityView_t& rView = rPackage.m_pQualityViews[nViewCursor++];
 			memset( &rView, 0xff, sizeof( rView ) );
 			rView.m_nAllocationId = iAllocation;
-			rView.m_nProfile = ( uint8_t )ViewProfile;
-			rView.m_nChannelMask = ( uint8_t )t3d_vt_cooker_sparse_enabled_mask( rSource, ViewProfile );
+			rView.m_nProfile = static_cast<uint8_t>(ViewProfile);
+			rView.m_nChannelMask = static_cast<uint8_t>(t3d_vt_cooker_sparse_enabled_mask( rSource, ViewProfile ));
 			if ( ( rView.m_nChannelMask & ~rAllocation.m_nChannelMask ) != 0u ) {
 				return false;
 			}
@@ -730,12 +730,12 @@ static bool t3d_vt_cooker_build_quality_views( const t3dVTCookSparseSource_t *pS
 				const t3dVTChannelAllocation_t& rChannelAllocation =
 				    rPackage.m_pChannelAllocations[iAllocation * T3D_VT_LOGICAL_CHANNEL_COUNT + iChannel];
 				uint8_t nBaseMip = T3D_VT_PACK_INVALID_MIP;
-				if ( !t3d_vt_fixed_profile_quality_base_mip( HighestProfile, ViewProfile, ( t3dVTLogicalChannel_t )iChannel,
+				if ( !t3d_vt_fixed_profile_quality_base_mip( HighestProfile, ViewProfile, static_cast<t3dVTLogicalChannel_t>(iChannel),
 				                                             rChannelAllocation.m_nMipCount, nBaseMip ) ) {
 					return false;
 				}
 				rView.m_nBaseMip[iChannel] = nBaseMip;
-				rView.m_nMaxMip[iChannel] = ( uint8_t )( rChannelAllocation.m_nMipCount - 1u );
+				rView.m_nMaxMip[iChannel] = static_cast<uint8_t>( rChannelAllocation.m_nMipCount - 1u );
 			}
 		}
 	}
@@ -788,9 +788,9 @@ public:
 	bool prepare( const t3dVTCookSparseSource_t *pSources, const uint32_t nSourceCount )
 	{
 		const t3dVTCookAllocator_t& rAllocator = m_allocator;
-		pOrder = ( uint32_t * )t3d_vt_cooker_allocate( rAllocator, ( uint64_t )nSourceCount * sizeof( uint32_t ) );
-		pProfiles = ( t3dVTFixedProfile_t * )t3d_vt_cooker_allocate( rAllocator, ( uint64_t )nSourceCount * sizeof( t3dVTFixedProfile_t ) );
-		pEnabledMask = ( uint32_t * )t3d_vt_cooker_allocate( rAllocator, ( uint64_t )nSourceCount * sizeof( uint32_t ) );
+		pOrder = static_cast<uint32_t *>(t3d_vt_cooker_allocate( rAllocator, static_cast<uint64_t>(nSourceCount * sizeof(  uint32_t  )) ));
+		pProfiles = static_cast<t3dVTFixedProfile_t *>(t3d_vt_cooker_allocate( rAllocator, static_cast<uint64_t>(nSourceCount * sizeof(  t3dVTFixedProfile_t  )) ));
+		pEnabledMask = static_cast<uint32_t *>(t3d_vt_cooker_allocate( rAllocator, static_cast<uint64_t>(nSourceCount * sizeof(  uint32_t  )) ));
 		if ( pOrder == NULL || pProfiles == NULL || pEnabledMask == NULL ) {
 			return false;
 		}
@@ -820,7 +820,7 @@ public:
 		uint64_t nTotalQualityViews64 = 0u;
 		for ( uint32_t iOutput = 0u; iOutput < nSourceCount; ++iOutput ) {
 			const uint32_t iSource = pOrder[iOutput];
-			nTotalQualityViews64 += ( uint32_t )pProfiles[iSource] + 1u;
+			nTotalQualityViews64 += static_cast<uint32_t>(pProfiles[iSource]) + 1u;
 			if ( nTotalQualityViews64 > UINT32_MAX ) {
 				return false;
 			}
@@ -828,10 +828,10 @@ public:
 				if ( ( pEnabledMask[iSource] & T3D_VT_LOGICAL_CHANNEL_BIT( iChannel ) ) == 0u ) {
 					continue;
 				}
-				const uint32_t nExtent = t3d_vt_fixed_profile_channel_extent( pProfiles[iSource], ( t3dVTLogicalChannel_t )iChannel );
+				const uint32_t nExtent = t3d_vt_fixed_profile_channel_extent( pProfiles[iSource], static_cast<t3dVTLogicalChannel_t>(iChannel) );
 				const uint32_t nMipCount = t3d_vt_page_builder_mip_count( nExtent, nExtent );
 				const uint32_t nTailFirstMip =
-				    t3d_vt_cooker_tail_first_mip( nExtent, nExtent, nMipCount, ( t3dVTConsumer_t )pSources[iSource].m_nConsumer );
+				    t3d_vt_cooker_tail_first_mip( nExtent, nExtent, nMipCount, static_cast<t3dVTConsumer_t>(pSources)[iSource].m_nConsumer );
 				const uint32_t nPages = t3d_vt_cooker_regular_page_count( nExtent, nTailFirstMip );
 				nTotalPages64 += nPages;
 				++nTotalTails64;
@@ -840,9 +840,9 @@ public:
 				}
 			}
 		}
-		nTotalPages = ( uint32_t )nTotalPages64;
-		nTotalTails = ( uint32_t )nTotalTails64;
-		nTotalQualityViews = ( uint32_t )nTotalQualityViews64;
+		nTotalPages = static_cast<uint32_t>(nTotalPages64);
+		nTotalTails = static_cast<uint32_t>(nTotalTails64);
+		nTotalQualityViews = static_cast<uint32_t>(nTotalQualityViews64);
 		if ( nTotalPages64 + nTotalTails64 > UINT32_MAX ) {
 			return false;
 		}
@@ -886,26 +886,26 @@ bool t3d_vt_cooker_cook_sparse_pages( const t3dVTCookerSettings_t& rSettings, co
 	const uint32_t nPayloadCapacity = Plan.nPayloadCapacity;
 	const uint32_t nHashCapacity = Plan.nHashCapacity;
 
-	rPackage.m_pAllocations = ( t3dVTPackAllocationRecord_t * )t3d_vt_cooker_allocate_zero(
-	    rAllocator, ( uint64_t )nSourceCount * sizeof( t3dVTPackAllocationRecord_t ) );
-	rPackage.m_pAllocationKeys = ( t3dVTPackAllocationKeyRecord_t * )t3d_vt_cooker_allocate_zero(
-	    rAllocator, ( uint64_t )nSourceCount * sizeof( t3dVTPackAllocationKeyRecord_t ) );
-	rPackage.m_pChannelAllocations = ( t3dVTChannelAllocation_t * )t3d_vt_cooker_allocate_zero(
-	    rAllocator, ( uint64_t )nSourceCount * T3D_VT_LOGICAL_CHANNEL_COUNT * sizeof( t3dVTChannelAllocation_t ) );
+	rPackage.m_pAllocations = static_cast<t3dVTPackAllocationRecord_t *>(t3d_vt_cooker_allocate_zero)(
+	    rAllocator, static_cast<uint64_t>(nSourceCount * sizeof(  t3dVTPackAllocationRecord_t  )) );
+	rPackage.m_pAllocationKeys = static_cast<t3dVTPackAllocationKeyRecord_t *>(t3d_vt_cooker_allocate_zero)(
+	    rAllocator, static_cast<uint64_t>(nSourceCount * sizeof(  t3dVTPackAllocationKeyRecord_t  )) );
+	rPackage.m_pChannelAllocations = static_cast<t3dVTChannelAllocation_t *>(t3d_vt_cooker_allocate_zero)(
+	    rAllocator, static_cast<uint64_t>(nSourceCount) * T3D_VT_LOGICAL_CHANNEL_COUNT * sizeof( t3dVTChannelAllocation_t ) );
 	rPackage.m_pPages = nTotalPages == 0u ? NULL
-	                                      : ( t3dVTPackPageRecord_t * )t3d_vt_cooker_allocate_zero(
-	                                            rAllocator, ( uint64_t )nTotalPages * sizeof( t3dVTPackPageRecord_t ) );
+	                                      : static_cast<t3dVTPackPageRecord_t *>(t3d_vt_cooker_allocate_zero)(
+	                                            rAllocator, static_cast<uint64_t>(nTotalPages * sizeof(  t3dVTPackPageRecord_t  )) );
 	rPackage.m_pTails =
-	    ( t3dVTPackTailRecord_t * )t3d_vt_cooker_allocate_zero( rAllocator, ( uint64_t )nTotalTails * sizeof( t3dVTPackTailRecord_t ) );
-	rPackage.m_pQualityViews = ( t3dVTPackQualityView_t * )t3d_vt_cooker_allocate_zero( rAllocator, ( uint64_t )nTotalQualityViews *
+	    static_cast<t3dVTPackTailRecord_t *>(t3d_vt_cooker_allocate_zero( rAllocator, static_cast<uint64_t>(nTotalTails * sizeof(  t3dVTPackTailRecord_t  )) ));
+	rPackage.m_pQualityViews = static_cast<t3dVTPackQualityView_t *>(t3d_vt_cooker_allocate_zero( rAllocator, static_cast<uint64_t>(nTotalQualityViews)) *
 	                                                                                                    sizeof( t3dVTPackQualityView_t ) );
-	t3dVTCookStagedPayload_t *pStaged = ( t3dVTCookStagedPayload_t * )t3d_vt_cooker_allocate_zero(
-	    rAllocator, ( uint64_t )nPayloadCapacity * sizeof( t3dVTCookStagedPayload_t ) );
-	uint32_t *pEncodedHash = ( uint32_t * )t3d_vt_cooker_allocate_zero( rAllocator, ( uint64_t )nHashCapacity * sizeof( uint32_t ) );
-	t3dVTCookRawTileCacheEntry_t *pRawCache = ( t3dVTCookRawTileCacheEntry_t * )t3d_vt_cooker_allocate_zero(
-	    rAllocator, ( uint64_t )nPayloadCapacity * sizeof( t3dVTCookRawTileCacheEntry_t ) );
-	uint8_t *pTileBytes = ( uint8_t * )t3d_vt_cooker_allocate( rAllocator, T3D_VT_COOK_MAX_RAW_TILE_BYTES );
-	uint8_t *pEncodedBytes = ( uint8_t * )t3d_vt_cooker_allocate( rAllocator, T3D_VT_COOK_MAX_ENCODED_TILE_BYTES );
+	t3dVTCookStagedPayload_t *pStaged = static_cast<t3dVTCookStagedPayload_t *>(t3d_vt_cooker_allocate_zero)(
+	    rAllocator, static_cast<uint64_t>(nPayloadCapacity * sizeof(  t3dVTCookStagedPayload_t  )) );
+	uint32_t *pEncodedHash = static_cast<uint32_t *>(t3d_vt_cooker_allocate_zero( rAllocator, static_cast<uint64_t>(nHashCapacity * sizeof(  uint32_t  )) ));
+	t3dVTCookRawTileCacheEntry_t *pRawCache = static_cast<t3dVTCookRawTileCacheEntry_t *>(t3d_vt_cooker_allocate_zero)(
+	    rAllocator, static_cast<uint64_t>(nPayloadCapacity * sizeof(  t3dVTCookRawTileCacheEntry_t  )) );
+	uint8_t *pTileBytes = static_cast<uint8_t *>(t3d_vt_cooker_allocate( rAllocator, T3D_VT_COOK_MAX_RAW_TILE_BYTES ));
+	uint8_t *pEncodedBytes = static_cast<uint8_t *>(t3d_vt_cooker_allocate( rAllocator, T3D_VT_COOK_MAX_ENCODED_TILE_BYTES ));
 	if ( rPackage.m_pAllocations == NULL || rPackage.m_pAllocationKeys == NULL || rPackage.m_pChannelAllocations == NULL ||
 	     ( nTotalPages != 0u && rPackage.m_pPages == NULL ) || rPackage.m_pTails == NULL || rPackage.m_pQualityViews == NULL ||
 	     pStaged == NULL || pEncodedHash == NULL || pRawCache == NULL || pTileBytes == NULL || pEncodedBytes == NULL ||
@@ -950,10 +950,10 @@ bool t3d_vt_cooker_cook_sparse_pages( const t3dVTCookerSettings_t& rSettings, co
 		t3dVTPackAllocationRecord_t& rAllocation = rPackage.m_pAllocations[iAllocation];
 		memset( &rAllocation, 0, sizeof( rAllocation ) );
 		rAllocation.m_nFlags = rSource.m_nAllocationFlags;
-		rAllocation.m_nChannelMask = ( uint16_t )nChannelMask;
-		rAllocation.m_nHighestAvailableProfile = ( uint8_t )Profile;
-		rAllocation.m_nAvailableProfileMask = ( uint8_t )( ( 1u << ( ( uint32_t )Profile + 1u ) ) - 1u );
-		rAllocation.m_nConsumer = ( uint8_t )rSource.m_nConsumer;
+		rAllocation.m_nChannelMask = static_cast<uint16_t>(nChannelMask);
+		rAllocation.m_nHighestAvailableProfile = static_cast<uint8_t>(Profile);
+		rAllocation.m_nAvailableProfileMask = ( uint8_t )( ( 1u << ( static_cast<uint32_t>(Profile) + 1u ) ) - 1u );
+		rAllocation.m_nConsumer = static_cast<uint8_t>(rSource.m_nConsumer);
 		rPackage.m_pAllocationKeys[iAllocation].m_nStableKey = rSource.m_nStableKey;
 		rPackage.m_pAllocationKeys[iAllocation].m_nAllocationId = iAllocation;
 		uint64_t nAllocationSignature = t3dHashFnv1a64LittleU64( 1469598103934665603ull, rSource.m_nStableKey );
@@ -966,7 +966,7 @@ bool t3d_vt_cooker_cook_sparse_pages( const t3dVTCookerSettings_t& rSettings, co
 			if ( ( nChannelMask & T3D_VT_LOGICAL_CHANNEL_BIT( iChannel ) ) == 0u ) {
 				continue;
 			}
-			const t3dVTLogicalChannel_t Channel = ( t3dVTLogicalChannel_t )iChannel;
+			const t3dVTLogicalChannel_t Channel = static_cast<t3dVTLogicalChannel_t>(iChannel);
 			const uint32_t nExtent = t3d_vt_fixed_profile_channel_extent( Profile, Channel );
 			uint8_t *pMipBytes = NULL;
 			t3dVTMipChainLayout_t Layout;
@@ -976,14 +976,14 @@ bool t3d_vt_cooker_cook_sparse_pages( const t3dVTCookerSettings_t& rSettings, co
 				break;
 			}
 			const uint32_t nTailFirstMip =
-			    t3d_vt_cooker_tail_first_mip( nExtent, nExtent, Layout.m_nMipCount, ( t3dVTConsumer_t )rSource.m_nConsumer );
+			    t3d_vt_cooker_tail_first_mip( nExtent, nExtent, Layout.m_nMipCount, static_cast<t3dVTConsumer_t>(rSource.m_nConsumer) );
 			const uint32_t nRegularPages = t3d_vt_cooker_regular_page_count( nExtent, nTailFirstMip );
 			rChannelAllocation.m_nBaseVirtualPage = nPageCursor;
 			rChannelAllocation.m_nPageCount = nRegularPages;
 			rChannelAllocation.m_nTailIndex = nTailCursor;
-			rChannelAllocation.m_nMip0WidthPages = ( uint16_t )t3d_vt_page_builder_pages_wide( nExtent );
-			rChannelAllocation.m_nMip0HeightPages = ( uint16_t )t3d_vt_page_builder_pages_high( nExtent );
-			rChannelAllocation.m_nMipCount = ( uint16_t )Layout.m_nMipCount;
+			rChannelAllocation.m_nMip0WidthPages = static_cast<uint16_t>(t3d_vt_page_builder_pages_wide( nExtent ));
+			rChannelAllocation.m_nMip0HeightPages = static_cast<uint16_t>(t3d_vt_page_builder_pages_high( nExtent ));
+			rChannelAllocation.m_nMipCount = static_cast<uint16_t>(Layout.m_nMipCount);
 			rChannelAllocation.m_nFlags = rSource.m_nAllocationFlags;
 
 			uint32_t MipBase[T3D_VT_MAX_MIPS];
@@ -1009,7 +1009,7 @@ bool t3d_vt_cooker_cook_sparse_pages( const t3dVTCookerSettings_t& rSettings, co
 				for ( uint32_t y = 0u; y < nPagesHigh && bOk; ++y ) {
 					for ( uint32_t x = 0u; x < nPagesWide; ++x ) {
 						if ( !t3d_vt_page_builder_build_tile_u8( pMipBytes + rMip.m_nOffset, rMip.m_nWidth, rMip.m_nHeight,
-						                                         Layout.m_nComponents, x, y, ( t3dVTCookWrapMode_t )rSource.m_nWrapMode,
+						                                         Layout.m_nComponents, x, y, static_cast<t3dVTCookWrapMode_t>(rSource.m_nWrapMode),
 						                                         pTileBytes, T3D_VT_COOK_MAX_RAW_TILE_BYTES ) ) {
 							bOk = false;
 							break;
@@ -1032,11 +1032,11 @@ bool t3d_vt_cooker_cook_sparse_pages( const t3dVTCookerSettings_t& rSettings, co
 						rPage.m_nVirtualPage = nPage;
 						rPage.m_nAllocationId = iAllocation;
 						rPage.m_nPayloadId = nPayloadId;
-						rPage.m_nMip = ( uint16_t )iMip;
+						rPage.m_nMip = static_cast<uint16_t>(iMip);
 						rPage.m_nFlags = T3D_VT_PAGE_VALID;
-						rPage.m_nPageX = ( uint16_t )x;
-						rPage.m_nPageY = ( uint16_t )y;
-						rPage.m_nChannel = ( uint16_t )iChannel;
+						rPage.m_nPageX = static_cast<uint16_t>(x);
+						rPage.m_nPageY = static_cast<uint16_t>(y);
+						rPage.m_nChannel = static_cast<uint16_t>(iChannel);
 						if ( iMip + 1u < nTailFirstMip ) {
 							rPage.m_nParentPage = nPageCursor + MipBase[iMip + 1u] + ( y >> 1u ) * nNextPagesWide + ( x >> 1u );
 						} else {
@@ -1067,9 +1067,9 @@ bool t3d_vt_cooker_cook_sparse_pages( const t3dVTCookerSettings_t& rSettings, co
 						for ( uint32_t y = 0u; y < rMip.m_nHeight; ++y ) {
 							uint8_t *pDestination =
 							    pTileBytes +
-							    ( ( uint64_t )( T3D_VT_PAGE_GUTTER + y ) * T3D_VT_PHYSICAL_TILE + nAtlasX ) * Layout.m_nComponents;
-							const uint8_t *pSource = pMipBytes + rMip.m_nOffset + ( uint64_t )y * rMip.m_nWidth * Layout.m_nComponents;
-							memcpy( pDestination, pSource, ( size_t )rMip.m_nWidth * Layout.m_nComponents );
+							    ( static_cast<uint64_t>( T3D_VT_PAGE_GUTTER + y ) * T3D_VT_PHYSICAL_TILE + nAtlasX ) * Layout.m_nComponents;
+							const uint8_t *pSource = pMipBytes + rMip.m_nOffset + static_cast<uint64_t>(y) * rMip.m_nWidth * Layout.m_nComponents;
+							memcpy( pDestination, pSource, static_cast<size_t>(rMip.m_nWidth) * Layout.m_nComponents );
 						}
 						nAtlasX += rMip.m_nWidth;
 						nAtlasWidth += rMip.m_nWidth;
@@ -1091,16 +1091,16 @@ bool t3d_vt_cooker_cook_sparse_pages( const t3dVTCookerSettings_t& rSettings, co
 							memset( &rTail, 0, sizeof( rTail ) );
 							rTail.m_nCanonicalAllocationId = iAllocation;
 							rTail.m_nPayloadId = nTailPayload;
-							rTail.m_nFirstMip = ( uint16_t )nTailFirstMip;
-							rTail.m_nMipCount = ( uint16_t )( Layout.m_nMipCount - nTailFirstMip );
-							rTail.m_nFirstMipWidth = ( uint16_t )Layout.m_Levels[nTailFirstMip].m_nWidth;
-							rTail.m_nFirstMipHeight = ( uint16_t )Layout.m_Levels[nTailFirstMip].m_nHeight;
-							rTail.m_nAtlasInteriorWidth = ( uint16_t )nAtlasWidth;
-							rTail.m_nAtlasInteriorHeight = ( uint16_t )nAtlasHeight;
-							rTail.m_nChannel = ( uint16_t )iChannel;
+							rTail.m_nFirstMip = static_cast<uint16_t>(nTailFirstMip);
+							rTail.m_nMipCount = static_cast<uint16_t>( Layout.m_nMipCount - nTailFirstMip );
+							rTail.m_nFirstMipWidth = static_cast<uint16_t>(Layout.m_Levels[nTailFirstMip].m_nWidth);
+							rTail.m_nFirstMipHeight = static_cast<uint16_t>(Layout.m_Levels[nTailFirstMip].m_nHeight);
+							rTail.m_nAtlasInteriorWidth = static_cast<uint16_t>(nAtlasWidth);
+							rTail.m_nAtlasInteriorHeight = static_cast<uint16_t>(nAtlasHeight);
+							rTail.m_nChannel = static_cast<uint16_t>(iChannel);
 							rTail.m_nLayout = T3D_VT_PACK_TAIL_LAYOUT_HORIZONTAL;
 							rTail.m_nContentSignature =
-							    t3dHashFnv1a64LittleU64( pStaged[nTailPayload].m_nContentSignature, ( uint64_t )iChannel );
+							    t3dHashFnv1a64LittleU64( pStaged[nTailPayload].m_nContentSignature, static_cast<uint64_t>(iChannel) );
 							nAllocationSignature = t3dHashFnv1a64LittleU64( nAllocationSignature, rTail.m_nContentSignature );
 							++nTailCursor;
 						}

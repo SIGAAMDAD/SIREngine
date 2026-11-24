@@ -28,7 +28,7 @@ public:
 
 	Terrain3DHalfBufferReference& operator=( const Terrain3DHalfBufferReference& rOther )
 	{
-		return operator=( ( float )( rOther ) );
+		return operator=static_cast<float>( rOther );
 	}
 
 	EA_FORCE_INLINE operator float( void ) const

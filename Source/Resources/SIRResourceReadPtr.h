@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef SIRENGINE_SIRRESOURCEREADPTR_H
-#define SIRENGINE_SIRRESOURCEREADPTR_H
+#ifndef __SIR_RESOURCEREADPTR_H__
+#define __SIR_RESOURCEREADPTR_H__
 
 #include <Core/SIRPCH.h>
 
@@ -58,18 +58,18 @@ public:
 		reset();
 		SIRResourceView view;
 		const SIRResourceResult eResult = rGraph.resolve( rScope, hResource, &view );
-		if ( eResult != SIR_RESOURCE_RESULT_SUCCESS ) {
+		if ( eResult != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ) {
 			return eResult;
 		}
 		if ( view.getKind() != T::RESOURCE_KIND ) {
-			return SIR_RESOURCE_RESULT_TYPE_MISMATCH;
+			return SIRResourceResult::SIR_RESOURCE_RESULT_TYPE_MISMATCH;
 		}
 		m_View = view;
-		return SIR_RESOURCE_RESULT_SUCCESS;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS;
 	}
 
 private:
 	SIRResourceView m_View;
 };
 
-#endif // SIRENGINE_SIRRESOURCEREADPTR_H
+#endif // __SIR_RESOURCEREADPTR_H__

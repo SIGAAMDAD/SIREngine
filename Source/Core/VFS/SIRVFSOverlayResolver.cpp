@@ -23,36 +23,36 @@ SIRVFSOverlayResolver::~SIRVFSOverlayResolver( void ) noexcept
 {
 }
 
-sirVFSResult_t SIRVFSOverlayResolver::resolveRead( const sirVFSPath_t& path, sirVFSProbeCallback_t pfnProbe, void *pContext,
+SIRVFSResult SIRVFSOverlayResolver::resolveRead( const sirVFSPath_t& path, sirVFSProbeCallback_t pfnProbe, void *pContext,
                                                    sirVFSMountCandidate_t *pWinner ) noexcept
 {
 	if ( pfnProbe == nullptr || pWinner == nullptr ) {
-		return SIR_VFS_INVALID_ARGUMENT;
+		return SIRVFSResult::SIR_VFS_INVALID_ARGUMENT;
 	}
 
 	// Acquire a generation-pinned mount view under one lock. Backend metadata
 	// callbacks run outside that lock, including reentrant mount operations.
-	sirVFSCandidateList_t candidates = {};
-	const sirVFSResult_t eAcquire = m_Table.acquireCandidates( path, SIR_VFS_ACCESS_READ, &candidates );
-	if ( eAcquire != SIR_VFS_OK ) {
+	sirVFSCandidateList_t candidates {};
+	const SIRVFSResult eAcquire = m_Table.acquireCandidates( path, SIRVFSAccess::SIR_VFS_ACCESS_READ, &candidates );
+	if ( eAcquire != SIRVFSResult::SIR_VFS_OK ) {
 		return eAcquire;
 	}
 
 	uint32_t nWinner = candidates.nCount;
-	sirVFSResult_t eResult = SIR_VFS_NOT_FOUND;
+	SIRVFSResult eResult = SIRVFSResult::SIR_VFS_NOT_FOUND;
 	for ( uint32_t i = 0; i < candidates.nCount; ++i ) {
 		const sirVFSMountCandidate_t& candidate = candidates.szCandidates[i];
-		const sirVFSProbeResult_t eProbe = pfnProbe( &candidate.descriptor, &path, pContext );
-		if ( eProbe == SIR_VFS_PROBE_MISSING ) {
+		const SIRVFSProbeResult eProbe = pfnProbe( &candidate.descriptor, &path, pContext );
+		if ( eProbe == SIRVFSProbeResult::SIR_VFS_PROBE_MISSING ) {
 			continue;
 		}
-		if ( eProbe == SIR_VFS_PROBE_PRESENT ) {
+		if ( eProbe == SIRVFSProbeResult::SIR_VFS_PROBE_PRESENT ) {
 			nWinner = i;
-			eResult = SIR_VFS_OK;
-		} else if ( eProbe == SIR_VFS_PROBE_FORBIDDEN ) {
-			eResult = SIR_VFS_FORBIDDEN;
+			eResult = SIRVFSResult::SIR_VFS_OK;
+		} else if ( eProbe == SIRVFSProbeResult::SIR_VFS_PROBE_FORBIDDEN ) {
+			eResult = SIRVFSResult::SIR_VFS_FORBIDDEN;
 		} else {
-			eResult = SIR_VFS_IO_ERROR;
+			eResult = SIRVFSResult::SIR_VFS_IO_ERROR;
 		}
 		break;
 	}
@@ -61,10 +61,10 @@ sirVFSResult_t SIRVFSOverlayResolver::resolveRead( const sirVFSPath_t& path, sir
 	// callback before resolution returns. All other leases are released here.
 	for ( uint32_t i = 0; i < candidates.nCount; ++i ) {
 		if ( i != nWinner ) {
-			( void )m_Table.release( candidates.szCandidates[i].lease );
+			static_cast<void>(m_Table.release( candidates.szCandidates[i].lease ));
 		}
 	}
-	if ( eResult == SIR_VFS_OK ) {
+	if ( eResult == SIRVFSResult::SIR_VFS_OK ) {
 		*pWinner = candidates.szCandidates[nWinner];
 	}
 	return eResult;

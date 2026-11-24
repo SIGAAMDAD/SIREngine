@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRVFSFILEHANDLETABLE_H__
-#define __SIRENGINE_SIRVFSFILEHANDLETABLE_H__
+#ifndef __SIR_VFSFILEHANDLETABLE_H__
+#define __SIR_VFSFILEHANDLETABLE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -82,12 +82,12 @@ public:
 
 	bool usesMountTable( const SIRVFSMountTable& table ) const noexcept;
 
-	sirVFSResult_t openResolved( const sirVFSPath_t& path, sirVFSMountLease_t sourceLease, sirVFSFileHandle_t *pHandle ) noexcept;
-	sirVFSResult_t borrow( sirVFSFileHandle_t handle, sirVFSFileView_t *pView ) noexcept;
-	sirVFSResult_t retainBorrow( sirVFSFileBorrow_t borrow, sirVFSFileView_t *pView ) noexcept;
-	sirVFSResult_t releaseBorrow( sirVFSFileBorrow_t borrow ) noexcept;
-	sirVFSResult_t close( sirVFSFileHandle_t handle ) noexcept;
-	sirVFSResult_t shutdown( void ) noexcept;
+	SIRVFSResult openResolved( const sirVFSPath_t& path, sirVFSMountLease_t sourceLease, sirVFSFileHandle_t *pHandle ) noexcept;
+	SIRVFSResult borrow( sirVFSFileHandle_t handle, sirVFSFileView_t *pView ) noexcept;
+	SIRVFSResult retainBorrow( sirVFSFileBorrow_t borrow, sirVFSFileView_t *pView ) noexcept;
+	SIRVFSResult releaseBorrow( sirVFSFileBorrow_t borrow ) noexcept;
+	SIRVFSResult close( sirVFSFileHandle_t handle ) noexcept;
+	SIRVFSResult shutdown( void ) noexcept;
 
 protected:
 private:
@@ -105,4 +105,4 @@ private:
 	bool m_bStopped;
 };
 
-#endif // __SIRENGINE_SIRVFSFILEHANDLETABLE_H__
+#endif // __SIR_VFSFILEHANDLETABLE_H__

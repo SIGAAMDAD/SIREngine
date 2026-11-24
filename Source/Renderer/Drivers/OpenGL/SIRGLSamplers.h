@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRGLSAMPLERS_H__
-#define __SIRENGINE_SIRGLSAMPLERS_H__
+#ifndef __SIR_GLSAMPLERS_H__
+#define __SIR_GLSAMPLERS_H__
 
 #include <Core/SIRPCH.h>
 
@@ -36,9 +36,9 @@ typedef struct sirGLSamplerDispatch_s
 	uint32_t ( *pGetError )( void );
 } sirGLSamplerDispatch_t;
 
-sirGraphicsResult_t sirGLLoadSamplerDispatch( sirGLProcedureLookup_t pLookup, void *pContext, sirGLSamplerDispatch_t *pAPI ) noexcept;
-sirGraphicsResult_t sirGLCreateNativeSampler( const sirGLSamplerDispatch_t *pAPI, const sirGraphicsSamplerDesc_t *pDesc,
+SIRGraphicsResult sirGLLoadSamplerDispatch( sirGLProcedureLookup_t pLookup, void *pContext, sirGLSamplerDispatch_t *pAPI ) noexcept;
+SIRGraphicsResult sirGLCreateNativeSampler( const sirGLSamplerDispatch_t *pAPI, const sirGraphicsSamplerDesc_t *pDesc,
                                               uint32_t *pName ) noexcept;
-sirGraphicsResult_t sirGLDeleteNativeSampler( const sirGLSamplerDispatch_t *pAPI, uint32_t nName ) noexcept;
+SIRGraphicsResult sirGLDeleteNativeSampler( const sirGLSamplerDispatch_t *pAPI, uint32_t nName ) noexcept;
 
-#endif // __SIRENGINE_SIRGLSAMPLERS_H__
+#endif // __SIR_GLSAMPLERS_H__

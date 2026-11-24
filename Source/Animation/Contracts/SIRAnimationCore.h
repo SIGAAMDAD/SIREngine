@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRANIMATIONCORE_H__
-#define __SIRENGINE_SIRANIMATIONCORE_H__
+#ifndef __SIR_ANIMATIONCORE_H__
+#define __SIR_ANIMATIONCORE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -38,7 +38,7 @@ public:
 	SIRAnimationAssetResolver( void ) noexcept = default;
 	virtual ~SIRAnimationAssetResolver( void ) noexcept = default;
 
-	virtual sirAnimationResult_t openAsset( const SIRResourceGraph& graph, const SIRResourceReadScope& scope,
+	virtual SIRAnimationResult openAsset( const SIRResourceGraph& graph, const SIRResourceReadScope& scope,
 	                                        const sirAnimationAssetRef_t& asset, SIRResourceView *pView ) const noexcept = 0;
 
 protected:
@@ -53,11 +53,11 @@ public:
 	SIRAnimationInstanceRegistry( void ) noexcept = default;
 	virtual ~SIRAnimationInstanceRegistry( void ) noexcept = default;
 
-	virtual sirAnimationResult_t getState( sirAnimationInstance_t instance, sirAnimationStateSnapshot_t *pState ) const noexcept = 0;
+	virtual SIRAnimationResult getState( sirAnimationInstance_t instance, sirAnimationStateSnapshot_t *pState ) const noexcept = 0;
 
-	virtual sirAnimationResult_t createInstance( const sirAnimationInstanceDesc_t& desc, sirAnimationInstance_t *pInstance ) noexcept = 0;
-	virtual sirAnimationResult_t updateState( const sirAnimationStateSnapshot_t& nextState, uint64_t nExpectedRevision ) noexcept = 0;
-	virtual sirAnimationResult_t retireInstance( sirAnimationInstance_t instance, const sirAnimationTick_t& tick ) noexcept = 0;
+	virtual SIRAnimationResult createInstance( const sirAnimationInstanceDesc_t& desc, sirAnimationInstance_t *pInstance ) noexcept = 0;
+	virtual SIRAnimationResult updateState( const sirAnimationStateSnapshot_t& nextState, uint64_t nExpectedRevision ) noexcept = 0;
+	virtual SIRAnimationResult retireInstance( sirAnimationInstance_t instance, const sirAnimationTick_t& tick ) noexcept = 0;
 
 protected:
 private:
@@ -71,7 +71,7 @@ public:
 	SIRAnimationGraphEvaluator( void ) noexcept = default;
 	virtual ~SIRAnimationGraphEvaluator( void ) noexcept = default;
 
-	virtual sirAnimationResult_t evaluate( const sirAnimationGraphRequest_t& request, sirAnimationGraphScratch_t& scratch,
+	virtual SIRAnimationResult evaluate( const sirAnimationGraphRequest_t& request, sirAnimationGraphScratch_t& scratch,
 	                                       sirAnimationGraphOutput_t *pOutput ) noexcept = 0;
 
 protected:
@@ -86,7 +86,7 @@ public:
 	SIRAnimationClipSampler( void ) noexcept = default;
 	virtual ~SIRAnimationClipSampler( void ) noexcept = default;
 
-	virtual sirAnimationResult_t sample( const SIRAnimationClipView& clip, const sirAnimationClipSampleRequest_t& request,
+	virtual SIRAnimationResult sample( const SIRAnimationClipView& clip, const sirAnimationClipSampleRequest_t& request,
 	                                     sirAnimationMutablePose_t *pPose ) noexcept = 0;
 
 protected:
@@ -101,11 +101,11 @@ public:
 	SIRAnimationRetargetSolver( void ) noexcept = default;
 	virtual ~SIRAnimationRetargetSolver( void ) noexcept = default;
 
-	virtual sirAnimationResult_t retarget( const sirAnimationRetargetRequest_t& request, const sirAnimationMutablePose_t& sourcePose,
+	virtual SIRAnimationResult retarget( const sirAnimationRetargetRequest_t& request, const sirAnimationMutablePose_t& sourcePose,
 	                                       sirAnimationMutablePose_t *pTargetPose ) noexcept = 0;
 
 protected:
 private:
 };
 
-#endif // __SIRENGINE_SIRANIMATIONCORE_H__
+#endif // __SIR_ANIMATIONCORE_H__

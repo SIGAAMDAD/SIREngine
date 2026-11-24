@@ -12,8 +12,8 @@ express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIRWINDOWDRIVERX11_H__
-#define __SIRENGINE_SIRWINDOWDRIVERX11_H__
+#ifndef __SIR_WINDOWDRIVERX11_H__
+#define __SIR_WINDOWDRIVERX11_H__
 #include <Core/SIRPCH.h>
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -33,24 +33,24 @@ public:
 	SIRWindowDriverX11( void ) noexcept = default;
 	~SIRWindowDriverX11( void ) noexcept override;
 
-	sirWindowResult_t initialize( void ) noexcept override;
-	sirWindowResult_t createWindow( const sirWindowCreateDesc_t& desc, uint32_t nSlot, sirWindowNativeView_t *pView ) noexcept override;
-	sirWindowResult_t destroyWindow( uint32_t nSlot ) noexcept override;
-	sirWindowResult_t mutateWindow( uint32_t nSlot, const sirWindowMutation_t& mutation ) noexcept override;
-	sirWindowResult_t pumpEvents( uint32_t nBudget, sirWindowDriverEventFn_t pCallback, void *pContext ) noexcept override;
+	SIRWindowResult initialize( void ) noexcept override;
+	SIRWindowResult createWindow( const sirWindowCreateDesc_t& desc, uint32_t nSlot, sirWindowNativeView_t *pView ) noexcept override;
+	SIRWindowResult destroyWindow( uint32_t nSlot ) noexcept override;
+	SIRWindowResult mutateWindow( uint32_t nSlot, const sirWindowMutation_t& mutation ) noexcept override;
+	SIRWindowResult pumpEvents( uint32_t nBudget, sirWindowDriverEventFn_t pCallback, void *pContext ) noexcept override;
 	void shutdown( void ) noexcept override;
 	bool setEventSink( sirWindowX11EventSink_t pSink, void *pContext ) noexcept;
 
 protected:
 private:
-	sirWindowResult_t createWindowNative( const sirWindowCreateDesc_t& desc, uint32_t nSlot, sirWindowNativeView_t *pView ) noexcept;
-	sirWindowResult_t destroyWindowNative( uint32_t nSlot ) noexcept;
-	sirWindowResult_t mutateWindowNative( uint32_t nSlot, const sirWindowMutation_t& mutation ) noexcept;
-	sirWindowResult_t pumpEventsNative( uint32_t nBudget, sirWindowDriverEventFn_t pCallback, void *pContext ) noexcept;
+	SIRWindowResult createWindowNative( const sirWindowCreateDesc_t& desc, uint32_t nSlot, sirWindowNativeView_t *pView ) noexcept;
+	SIRWindowResult destroyWindowNative( uint32_t nSlot ) noexcept;
+	SIRWindowResult mutateWindowNative( uint32_t nSlot, const sirWindowMutation_t& mutation ) noexcept;
+	SIRWindowResult pumpEventsNative( uint32_t nBudget, sirWindowDriverEventFn_t pCallback, void *pContext ) noexcept;
 	void shutdownNative( void ) noexcept;
 	void markServerLost( void ) noexcept;
 	bool transportAlive( void ) noexcept;
-	sirWindowResult_t emitServerLoss( uint32_t nBudget, sirWindowDriverEventFn_t pCallback, void *pContext ) noexcept;
+	SIRWindowResult emitServerLoss( uint32_t nBudget, sirWindowDriverEventFn_t pCallback, void *pContext ) noexcept;
 	void *m_pDisplay = nullptr;
 	sirWindowX11EventSink_t m_pSink = nullptr;
 	void *m_pSinkContext = nullptr;
@@ -68,4 +68,4 @@ private:
 	uint32_t m_nServerHeight = 0;
 	int32_t m_nRandrEventBase = -1;
 };
-#endif // __SIRENGINE_SIRWINDOWDRIVERX11_H__
+#endif // __SIR_WINDOWDRIVERX11_H__

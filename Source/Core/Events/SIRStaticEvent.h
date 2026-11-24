@@ -15,8 +15,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSTATICEVENT_H__
-#define __SIRENGINE_SIRSTATICEVENT_H__
+#ifndef __SIR_STATICEVENT_H__
+#define __SIR_STATICEVENT_H__
 
 #include <Core/SIRPCH.h>
 
@@ -58,14 +58,14 @@ public:
 	bool subscribe( TObject *pObject ) noexcept
 	{
 		return subscribe( pObject,
-		                  []( void *pContext, const TPayload& payload ) noexcept { ( ( ( TObject * )pContext )->*Method )( payload ); } );
+		                  []( void *pContext, const TPayload& payload ) noexcept { ( static_cast<TObject *>(pContext)->*Method )( payload ); } );
 	}
 
 	template <typename TObject, void ( TObject::*Method )( const TPayload& ) const noexcept>
 	bool subscribe( const TObject *pObject ) noexcept
 	{
-		return subscribe( ( void * )pObject, []( void *pContext, const TPayload& payload ) noexcept {
-			( ( ( const TObject * )pContext )->*Method )( payload );
+		return subscribe( static_cast<void *>(pObject), []( void *pContext, const TPayload& payload ) noexcept {
+			( static_cast<const TObject *>(pContext)->*Method )( payload );
 		} );
 	}
 
@@ -100,4 +100,4 @@ private:
 	bool m_bSealed;
 };
 
-#endif // __SIRENGINE_SIRSTATICEVENT_H__
+#endif // __SIR_STATICEVENT_H__

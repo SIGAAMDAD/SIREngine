@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSYNCADVANCED_H__
-#define __SIRENGINE_SIRSYNCADVANCED_H__
+#ifndef __SIR_SYNCADVANCED_H__
+#define __SIR_SYNCADVANCED_H__
 
 #include <Core/SIRPCH.h>
 
@@ -24,7 +24,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-#include <Core/Platform/SIRAtomic.h>
+#include <atomic>
 #include <Core/Platform/SIRSync.h>
 
 // FIFO spinlock for short, nonblocking critical sections. A ticket owner
@@ -41,8 +41,8 @@ public:
 	void unlock( void ) noexcept;
 
 private:
-	SIRAtomic<uint32_t> m_nNextTicket;
-	SIRAtomic<uint32_t> m_nServing;
+	std::atomic<uint32_t> m_nNextTicket;
+	std::atomic<uint32_t> m_nServing;
 };
 
 // Caller-owned queue node: one distinct node per concurrent acquisition.
@@ -50,8 +50,8 @@ private:
 // Queue nodes must not be moved while enqueued or holding the lock.
 typedef struct sirMCSNode_s
 {
-	SIRAtomic<sirMCSNode_s *> pNext;
-	SIRAtomic<bool> bWaiting;
+	std::atomic<sirMCSNode_s *> pNext;
+	std::atomic<bool> bWaiting;
 } sirMCSNode_t;
 
 // Scalable queued spinlock: each waiter spins on its own node, and the
@@ -67,7 +67,7 @@ public:
 	void unlock( sirMCSNode_t& node ) noexcept;
 
 private:
-	SIRAtomic<sirMCSNode_t *> m_pTail;
+	std::atomic<sirMCSNode_t *> m_pTail;
 };
 
 // Bounded spin followed by a condition-variable wait. The fast path has
@@ -83,8 +83,8 @@ public:
 	void unlock( void ) noexcept;
 
 private:
-	SIRAtomic<uint32_t> m_nLocked;
-	SIRAtomic<uint32_t> m_nWaiters;
+	std::atomic<uint32_t> m_nLocked;
+	std::atomic<uint32_t> m_nWaiters;
 	SIRMutex m_WaitMutex;
 	SIRConditionVariable m_WaitCondition;
 };
@@ -128,7 +128,7 @@ public:
 private:
 	static constexpr uint32_t WRITER_PENDING = UINT32_C( 0x80000000 );
 	static constexpr uint32_t READER_MASK = UINT32_C( 0x7fffffff );
-	SIRAtomic<uint32_t> m_nState;
+	std::atomic<uint32_t> m_nState;
 	SIRMutex m_WaitMutex;
 	SIRConditionVariable m_ReadersReady;
 	SIRConditionVariable m_WritersReady;
@@ -183,7 +183,7 @@ private:
 
 	// Readers use one atomic fast path. The wait mutex serializes admission
 	// of pending writers and the sleep / wakeup protocol.
-	SIRAtomic<uint32_t> m_nState;
+	std::atomic<uint32_t> m_nState;
 	SIRMutex m_Mutex;
 	SIRConditionVariable m_ReadersReady;
 	SIRConditionVariable m_WritersReady;
@@ -231,7 +231,7 @@ public:
 private:
 	SIRMutex m_Mutex;
 	SIRConditionVariable m_Completed;
-	SIRAtomic<uint32_t> m_nRemaining;
+	std::atomic<uint32_t> m_nRemaining;
 };
 
 // Reusable rendezvous for dedicated threads. Exactly nParticipants threads
@@ -254,4 +254,4 @@ private:
 	uint32_t m_nArrived;
 };
 
-#endif // __SIRENGINE_SIRSYNCADVANCED_H__
+#endif // __SIR_SYNCADVANCED_H__

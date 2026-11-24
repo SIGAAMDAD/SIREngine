@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRTHREAD_H__
-#define __SIRENGINE_SIRTHREAD_H__
+#ifndef __SIR_THREAD_H__
+#define __SIR_THREAD_H__
 
 #include <Core/SIRPCH.h>
 
@@ -77,4 +77,4 @@ private:
 	bool m_bJoinable;
 };
 
-#endif // __SIRENGINE_SIRTHREAD_H__
+#endif // __SIR_THREAD_H__

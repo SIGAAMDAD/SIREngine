@@ -14,7 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#include <Core/Platform/SIRAtomic.h>
+#include <atomic>
 #include <Core/Memory/Allocators/SIRJobScratchAllocator.h>
 #include <Core/Memory/SIRMemoryManager.h>
 #include <Core/Memory/SIRMemorySegment.h>
@@ -47,7 +47,7 @@ bool SIRJobScratchAllocator::init( SIRMemorySegment *const *ppSegments, uint32_t
 		}
 	}
 	sirJobSlot_t *pSlots = ( (
-	    sirJobSlot_t * )( pManager->allocateMetadata( ( ( uint64_t )( nSlots ) ) * sizeof( sirJobSlot_t ), alignof( sirJobSlot_t ) ) ) );
+	    sirJobSlot_t * )( pManager->allocateMetadata( static_cast<uint64_t>( nSlots ) * sizeof( sirJobSlot_t ), alignof( sirJobSlot_t ) ) ) );
 	if ( pSlots == nullptr ) {
 		return false;
 	}
@@ -69,16 +69,16 @@ sirJobScratchToken_t SIRJobScratchAllocator::beginJob( uint32_t nSlot )
 	}
 	sirJobSlot_t& slot = m_pSlots[nSlot];
 	uint32_t nExpected = 0;
-	if ( !slot.nState.compareExchangeStrong( nExpected, 1, SIR_MEMORY_ORDER_ACQUIRE_RELEASE ) ) {
+	if ( !slot.nState.compare_exchange_strong( nExpected, 1, std::memory_order_acq_rel ) ) {
 		return { UINT32_MAX, 0 };
 	}
-	slot.nPeakUsage.store( 0, SIR_MEMORY_ORDER_RELAXED );
+	slot.nPeakUsage.store( 0, std::memory_order_relaxed );
 	return { nSlot, slot.nGeneration };
 }
 
 bool SIRJobScratchAllocator::isActive( sirJobScratchToken_t token ) const
 {
-	return m_pSlots != nullptr && token.nSlot < m_nSlotCount && m_pSlots[token.nSlot].nState.load( SIR_MEMORY_ORDER_ACQUIRE ) == 1 &&
+	return m_pSlots != nullptr && token.nSlot < m_nSlotCount && m_pSlots[token.nSlot].nState.load( std::memory_order_acquire ) == 1 &&
 	       m_pSlots[token.nSlot].nGeneration == token.nGeneration;
 }
 
@@ -91,9 +91,9 @@ void *SIRJobScratchAllocator::alloc( sirJobScratchToken_t token, uint64_t nBytes
 	void *pMemory = slot.Linear.alloc( nBytes, nAlignment );
 	if ( pMemory != nullptr ) {
 		const uint64_t nUsed = slot.Linear.getUsedBytes();
-		if ( nUsed > slot.nPeakUsage.load( SIR_MEMORY_ORDER_RELAXED ) ) {
+		if ( nUsed > slot.nPeakUsage.load( std::memory_order_relaxed ) ) {
 			// Only the job owner writes its slot peak.
-			slot.nPeakUsage.store( nUsed, SIR_MEMORY_ORDER_RELAXED );
+			slot.nPeakUsage.store( nUsed, std::memory_order_relaxed );
 		}
 	}
 	return pMemory;
@@ -139,12 +139,12 @@ bool SIRJobScratchAllocator::finishJob( sirJobScratchToken_t token, uint64_t nWa
 			return false;
 		}
 	}
-	const uint64_t nCompletedPeak = slot.nPeakUsage.load( SIR_MEMORY_ORDER_RELAXED );
-	uint64_t nOld = m_nPeakUsage.load( SIR_MEMORY_ORDER_RELAXED );
-	while ( nCompletedPeak > nOld && !m_nPeakUsage.compareExchangeWeak( nOld, nCompletedPeak, SIR_MEMORY_ORDER_RELAXED ) ) {
+	const uint64_t nCompletedPeak = slot.nPeakUsage.load( std::memory_order_relaxed );
+	uint64_t nOld = m_nPeakUsage.load( std::memory_order_relaxed );
+	while ( nCompletedPeak > nOld && !m_nPeakUsage.compare_exchange_weak( nOld, nCompletedPeak, std::memory_order_relaxed ) ) {
 	}
 	++slot.nGeneration;
-	slot.nState.store( 0, SIR_MEMORY_ORDER_RELEASE );
+	slot.nState.store( 0, std::memory_order_release );
 	return true;
 }
 
@@ -154,7 +154,7 @@ bool SIRJobScratchAllocator::shutdown( void )
 		return false;
 	}
 	for ( uint32_t i = 0; i < m_nSlotCount; ++i ) {
-		if ( m_pSlots[i].nState.load( SIR_MEMORY_ORDER_ACQUIRE ) != 0 ) {
+		if ( m_pSlots[i].nState.load( std::memory_order_acquire ) != 0 ) {
 			return false;
 		}
 	}
@@ -171,10 +171,10 @@ bool SIRJobScratchAllocator::shutdown( void )
 
 uint64_t SIRJobScratchAllocator::getPeakUsageBytes( void ) const
 {
-	uint64_t nPeak = m_nPeakUsage.load( SIR_MEMORY_ORDER_ACQUIRE );
+	uint64_t nPeak = m_nPeakUsage.load( std::memory_order_acquire );
 	for ( uint32_t i = 0; i < m_nSlotCount; ++i ) {
-		if ( m_pSlots[i].nState.load( SIR_MEMORY_ORDER_ACQUIRE ) == 1 ) {
-			const uint64_t nActive = m_pSlots[i].nPeakUsage.load( SIR_MEMORY_ORDER_RELAXED );
+		if ( m_pSlots[i].nState.load( std::memory_order_acquire ) == 1 ) {
+			const uint64_t nActive = m_pSlots[i].nPeakUsage.load( std::memory_order_relaxed );
 			if ( nActive > nPeak ) {
 				nPeak = nActive;
 			}

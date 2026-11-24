@@ -47,7 +47,7 @@ bool SIRInputUIDispatch::dispatch( const SIRInputService& input, const sirInputU
 
 	if ( consumer.pOnAction != nullptr ) {
 		for ( uint32_t i = 0; i < consumer.nActionCount; ++i ) {
-			sirInputActionState_t state = {};
+			sirInputActionState_t state {};
 			if ( input.queryAction( consumer.pActionIds[i], consumer.nUser, &state ) ) {
 				consumer.pOnAction( consumer.pContext, &state );
 			}
@@ -57,7 +57,7 @@ bool SIRInputUIDispatch::dispatch( const SIRInputService& input, const sirInputU
 	if ( consumer.pOnPointer != nullptr ) {
 		for ( uint32_t i = 0; i < pFrame->nCount; ++i ) {
 			const sirInputEvent_t& event = pFrame->events[i];
-			if ( event.eClass == SIR_INPUT_POINTER ) {
+			if ( event.eClass == SIRInputDeviceClass::SIR_INPUT_POINTER ) {
 				consumer.pOnPointer( consumer.pContext, &event );
 			}
 		}

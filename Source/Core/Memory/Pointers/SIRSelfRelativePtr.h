@@ -13,10 +13,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSELFRELATIVEPTR_H__
-#define __SIRENGINE_SIRSELFRELATIVEPTR_H__
+#ifndef __SIR_SELFRELATIVEPTR_H__
+#define __SIR_SELFRELATIVEPTR_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -44,14 +44,14 @@ public:
 			m_nOffset = INT32_MIN;
 			return true;
 		}
-		const uintptr_t nBase = ( uintptr_t )this;
-		const uintptr_t nTarget = ( uintptr_t )pTarget;
+		const uintptr_t nBase = reinterpret_cast<uintptr_t>(this);
+		const uintptr_t nTarget = reinterpret_cast<uintptr_t>(pTarget);
 		if ( nTarget >= nBase ) {
 			const uintptr_t nDistance = nTarget - nBase;
 			if ( nDistance > INT32_MAX ) {
 				return false;
 			}
-			m_nOffset = ( int32_t )nDistance;
+			m_nOffset = static_cast<int32_t>(nDistance);
 			return true;
 		}
 
@@ -59,7 +59,7 @@ public:
 		if ( nDistance > INT32_MAX ) {
 			return false;
 		}
-		m_nOffset = -( ( int32_t )nDistance );
+		m_nOffset = -static_cast<int32_t>(nDistance);
 		return true;
 	}
 
@@ -68,11 +68,11 @@ public:
 		if ( m_nOffset == INT32_MIN ) {
 			return nullptr;
 		}
-		const uintptr_t nBase = ( uintptr_t )this;
+		const uintptr_t nBase = reinterpret_cast<uintptr_t>(this);
 		if ( m_nOffset >= 0 ) {
-			return ( T * )( nBase + ( uintptr_t )m_nOffset );
+			return ( T * )( nBase + static_cast<uintptr_t>(m_nOffset) );
 		}
-		return ( T * )( nBase - ( uintptr_t )( -( int64_t )m_nOffset ) );
+		return ( T * )( nBase - ( uintptr_t )( -static_cast<int64_t>(m_nOffset) ) );
 	}
 	T *operator->( void ) const noexcept
 	{
@@ -98,4 +98,4 @@ private:
 static_assert( sizeof( SIRSelfRelativePtr<uint8_t> ) == sizeof( int32_t ), "Self-relative pointers must be 32-bit" );
 static_assert( std::is_trivially_copyable<SIRSelfRelativePtr<uint8_t>>::value, "Self-relative representation must be trivially copyable" );
 
-#endif // __SIRENGINE_SIRSELFRELATIVEPTR_H__
+#endif // __SIR_SELFRELATIVEPTR_H__

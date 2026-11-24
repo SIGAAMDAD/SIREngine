@@ -27,8 +27,7 @@ struct t3dComposedSurfaceEditorCookRequest_t
 	void *m_pCommitUser;
 };
 
-enum t3dComposedSurfaceEditorCookStatus_t
-{
+enum class SIRComposedSurfaceEditorCookStatus : int32_t {
 	T3D_COMPOSED_SURFACE_EDITOR_COOK_SUCCESS = 0,
 	T3D_COMPOSED_SURFACE_EDITOR_COOK_INVALID_INPUT,
 	T3D_COMPOSED_SURFACE_EDITOR_COOK_NOT_DIRTY,
@@ -39,7 +38,7 @@ enum t3dComposedSurfaceEditorCookStatus_t
 
 struct t3dComposedSurfaceEditorCookResult_t
 {
-	t3dComposedSurfaceEditorCookStatus_t m_status;
+	SIRComposedSurfaceEditorCookStatus m_status;
 	t3dComposedSurfaceColdCookResult_t m_cook;
 	uint64_t m_nClaimRevision;
 };

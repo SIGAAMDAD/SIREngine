@@ -13,7 +13,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 bool SIRApplication::attachTimeline( SIRTimelineCoordinator& timeline ) noexcept
 {
-	if ( m_eState != SIR_APP_UNINITIALIZED || m_pTimeline != nullptr ) {
+	if ( m_eState != SIRAppState::SIR_APP_UNINITIALIZED || m_pTimeline != nullptr ) {
 		return false;
 	}
 	m_pTimeline = &timeline;
@@ -22,21 +22,21 @@ bool SIRApplication::attachTimeline( SIRTimelineCoordinator& timeline ) noexcept
 
 bool SIRApplication::attachTaskSchedule( SIRSimulationSchedule& schedule ) noexcept
 {
-	if ( m_eState != SIR_APP_UNINITIALIZED || m_pSchedule != nullptr ) {
+	if ( m_eState != SIRAppState::SIR_APP_UNINITIALIZED || m_pSchedule != nullptr ) {
 		return false;
 	}
 	m_pSchedule = &schedule;
 	return true;
 }
 
-bool SIRApplication::configureScheduledSystem( uint32_t iSystem, sirTaskExecutor_t eExecutor, const sirTaskGraphAccess_t *pAccesses,
+bool SIRApplication::configureScheduledSystem( uint32_t iSystem, SIRTaskExecutor eExecutor, const sirTaskGraphAccess_t *pAccesses,
                                                uint32_t nAccesses ) noexcept
 {
-	if ( m_eState != SIR_APP_UNINITIALIZED || iSystem >= m_nSystemCount || eExecutor >= SIR_TASK_EXEC_COUNT ||
+	if ( m_eState != SIRAppState::SIR_APP_UNINITIALIZED || iSystem >= m_nSystemCount || eExecutor >= SIRTaskExecutor::SIR_TASK_EXEC_COUNT ||
 	     nAccesses > SIR_APPLICATION_MAX_SYSTEM_ACCESSES || ( nAccesses != 0 && pAccesses == nullptr ) ) {
 		return false;
 	}
-	if ( eExecutor == SIR_TASK_EXEC_AUDIO ) {
+	if ( eExecutor == SIRTaskExecutor::SIR_TASK_EXEC_AUDIO ) {
 		// The audio callback must not execute arbitrary gameplay system code.
 		return false;
 	}
@@ -50,9 +50,9 @@ bool SIRApplication::configureScheduledSystem( uint32_t iSystem, sirTaskExecutor
 	return true;
 }
 
-bool SIRApplication::configureScheduledPriority( uint32_t iSystem, sirTaskPriority_t ePriority ) noexcept
+bool SIRApplication::configureScheduledPriority( uint32_t iSystem, SIRTaskPriority ePriority ) noexcept
 {
-	if ( m_eState != SIR_APP_UNINITIALIZED || iSystem >= m_nSystemCount || ePriority > SIR_TASK_PRIORITY_BACKGROUND ) {
+	if ( m_eState != SIRAppState::SIR_APP_UNINITIALIZED || iSystem >= m_nSystemCount || ePriority > SIRTaskPriority::SIR_TASK_PRIORITY_BACKGROUND ) {
 		return false;
 	}
 	m_szSystemPriorities[iSystem] = ePriority;
@@ -61,11 +61,11 @@ bool SIRApplication::configureScheduledPriority( uint32_t iSystem, sirTaskPriori
 
 bool SIRApplication::addScheduledDependency( uint32_t iBefore, uint32_t iAfter ) noexcept
 {
-	if ( m_eState != SIR_APP_UNINITIALIZED || iBefore >= m_nSystemCount || iAfter >= m_nSystemCount || iBefore == iAfter ||
+	if ( m_eState != SIRAppState::SIR_APP_UNINITIALIZED || iBefore >= m_nSystemCount || iAfter >= m_nSystemCount || iBefore == iAfter ||
 	     m_ExplicitEdges.getSize() == m_ExplicitEdges.getCapacity() ) {
 		return false;
 	}
-	return m_ExplicitEdges.tryEmplaceBack( sirTaskGraphEdge_t{ iBefore, iAfter } ) == SIR_CONTAINER_OK;
+	return m_ExplicitEdges.tryEmplaceBack( sirTaskGraphEdge_t{ iBefore, iAfter } ) == SIRContainerResult::SIR_CONTAINER_OK;
 }
 
 bool SIRApplication::publishScheduledInput( uint64_t nNextTick, bool *pbPumped ) noexcept
@@ -74,14 +74,14 @@ bool SIRApplication::publishScheduledInput( uint64_t nNextTick, bool *pbPumped )
 		return false;
 	}
 	const bool bInputBegun = m_pInput == nullptr || m_pInput->begin( nNextTick );
-	m_eWindowPumpResult = SIR_APP_WINDOW_CONTINUE;
+	m_eWindowPumpResult = SIRAppWindowPumpResult::SIR_APP_WINDOW_CONTINUE;
 	if ( m_pWindowPump != nullptr ) {
 		m_eWindowPumpResult = m_pWindowPump( m_pWindowPumpContext );
 	} else if ( m_pInput != nullptr && m_pInputPump != nullptr && !m_pInputPump( *m_pInput, m_pInputPumpContext ) ) {
-		m_eWindowPumpResult = SIR_APP_WINDOW_STOP;
+		m_eWindowPumpResult = SIRAppWindowPumpResult::SIR_APP_WINDOW_STOP;
 	}
-	*pbPumped = m_eWindowPumpResult == SIR_APP_WINDOW_CONTINUE;
-	if ( m_eState != SIR_APP_READY || !bInputBegun ) {
+	*pbPumped = m_eWindowPumpResult == SIRAppWindowPumpResult::SIR_APP_WINDOW_CONTINUE;
+	if ( m_eState != SIRAppState::SIR_APP_READY || !bInputBegun ) {
 		return false;
 	}
 	if ( m_pInput != nullptr ) {
@@ -102,7 +102,7 @@ bool SIRApplication::openTimelineFrame( float fDeltaSeconds ) noexcept
 		return false;
 	}
 	const uint64_t nNowNs = SIRPlatformTime::getMonotonicNanoseconds();
-	const uint64_t nDeltaNs = ( uint64_t )( ( double )fDeltaSeconds * 1000000000.0 );
+	const uint64_t nDeltaNs = ( uint64_t )( static_cast<double>(fDeltaSeconds) * 1000000000.0 );
 	return m_pTimeline->beginFrame( nNowNs, nDeltaNs );
 }
 
@@ -111,23 +111,23 @@ bool SIRApplication::finishTimelineFrame( void ) noexcept
 	return m_pTimeline == nullptr || m_pTimeline->publishFrame();
 }
 
-sirTaskResult_t SIRApplication::scheduledUpdateEntry( void *pContext, sirTaskHandle_t ) noexcept
+SIRTaskResult SIRApplication::scheduledUpdateEntry( void *pContext, sirTaskHandle_t ) noexcept
 {
-	sirAppScheduledContext_t *pUpdate = ( sirAppScheduledContext_t * )pContext;
+	sirAppScheduledContext_t *pUpdate = static_cast<sirAppScheduledContext_t *>(pContext);
 	if ( pUpdate == nullptr || pUpdate->pSystem == nullptr ) {
-		return SIR_TASK_RESULT_FAILURE;
+		return SIRTaskResult::SIR_TASK_RESULT_FAILURE;
 	}
 	if ( pUpdate->bFixed ) {
 		pUpdate->pSystem->fixedUpdate( pUpdate->fDeltaSeconds );
 	} else {
 		pUpdate->pSystem->update( pUpdate->fDeltaSeconds );
 	}
-	return SIR_TASK_RESULT_SUCCESS;
+	return SIRTaskResult::SIR_TASK_RESULT_SUCCESS;
 }
 
 bool SIRApplication::beginScheduledTick( float fDeltaSeconds, bool bFixed ) noexcept
 {
-	if ( m_eState != SIR_APP_READY || m_bFrameDispatchInProgress || m_pSchedule == nullptr || m_bScheduledActive ||
+	if ( m_eState != SIRAppState::SIR_APP_READY || m_bFrameDispatchInProgress || m_pSchedule == nullptr || m_bScheduledActive ||
 	     m_nInitializedSystems == 0 ) {
 		return false;
 	}
@@ -151,7 +151,8 @@ bool SIRApplication::beginScheduledTick( float fDeltaSeconds, bool bFixed ) noex
 	// Pass IDs use canonical dependency initialization order; configuration
 	// methods still accept registration IDs. This avoids reversing a declared
 	// dependency when systems were registered in the opposite order.
-	uint32_t szPassForSystem[SIR_APPLICATION_MAX_SYSTEMS] = {};
+	uint32_t szPassForSystem[SIR_APPLICATION_MAX_SYSTEMS];
+	memset( szPassForSystem, 0, sizeof( szPassForSystem ) );
 	for ( uint32_t iPass = 0; iPass < m_nInitializedSystems; ++iPass ) {
 		szPassForSystem[m_szInitializationOrder[iPass]] = iPass;
 	}
@@ -166,7 +167,7 @@ bool SIRApplication::beginScheduledTick( float fDeltaSeconds, bool bFixed ) noex
 
 		sirSimulationPassDesc_t& desc = m_szScheduledPasses[iPass];
 		desc.pass = { scheduledUpdateEntry, &context, m_szSystemPriorities[iRegistered],
-		              m_szSystemConfigured[iRegistered] ? m_szSystemExecutors[iRegistered] : SIR_TASK_EXEC_MAIN };
+		              m_szSystemConfigured[iRegistered] ? m_szSystemExecutors[iRegistered] : SIRTaskExecutor::SIR_TASK_EXEC_MAIN };
 		desc.pAccesses = m_szSystemAccesses[iRegistered];
 		desc.nAccesses = m_szSystemConfigured[iRegistered] ? m_szSystemAccessCounts[iRegistered] : 0;
 
@@ -207,26 +208,26 @@ bool SIRApplication::beginScheduledTick( float fDeltaSeconds, bool bFixed ) noex
 	return true;
 }
 
-sirAppScheduledState_t SIRApplication::pollScheduledTick( void ) noexcept
+SIRAppScheduledState SIRApplication::pollScheduledTick( void ) noexcept
 {
 	if ( !m_bScheduledActive || m_pSchedule == nullptr ) {
-		return SIR_APP_SCHEDULE_IDLE;
+		return SIRAppScheduledState::SIR_APP_SCHEDULE_IDLE;
 	}
-	( void )m_pSchedule->pumpMain( SIR_APPLICATION_MAX_SYSTEMS );
-	( void )m_pSchedule->pumpCPU( SIR_APPLICATION_MAX_SYSTEMS );
+	static_cast<void>(m_pSchedule->pumpMain( SIR_APPLICATION_MAX_SYSTEMS ));
+	static_cast<void>(m_pSchedule->pumpCPU( SIR_APPLICATION_MAX_SYSTEMS ));
 
-	sirTaskGraphExecutionSummary_t summary = {};
+	sirTaskGraphExecutionSummary_t summary {};
 	if ( !m_pSchedule->poll( &summary ) ) {
-		return SIR_APP_SCHEDULE_PENDING;
+		return SIRAppScheduledState::SIR_APP_SCHEDULE_PENDING;
 	}
-	if ( summary.eState == SIR_TASK_GRAPH_EXEC_PENDING ) {
-		return SIR_APP_SCHEDULE_PENDING;
+	if ( summary.eState == SIRTaskGraphExecutionState::SIR_TASK_GRAPH_EXEC_PENDING ) {
+		return SIRAppScheduledState::SIR_APP_SCHEDULE_PENDING;
 	}
 	if ( !m_pSchedule->finish() ) {
-		return SIR_APP_SCHEDULE_PENDING;
+		return SIRAppScheduledState::SIR_APP_SCHEDULE_PENDING;
 	}
 
-	bool bSucceeded = summary.eState == SIR_TASK_GRAPH_EXEC_SUCCEEDED;
+	bool bSucceeded = summary.eState == SIRTaskGraphExecutionState::SIR_TASK_GRAPH_EXEC_SUCCEEDED;
 	if ( bSucceeded && m_bScheduledFixed && m_pTimeline != nullptr ) {
 		bSucceeded = m_pTimeline->completeFixedStep();
 	}
@@ -235,14 +236,14 @@ sirAppScheduledState_t SIRApplication::pollScheduledTick( void ) noexcept
 		if ( bSucceeded ) {
 			++m_nTicks;
 			m_fFrameDeltaSeconds = m_fScheduledDeltaSeconds;
-			m_dElapsedSeconds += ( double )m_fScheduledDeltaSeconds;
+			m_dElapsedSeconds += static_cast<double>(m_fScheduledDeltaSeconds);
 		}
 	}
 	if ( !bSucceeded && !m_bScheduledFixed && m_pTimeline != nullptr ) {
 		m_pTimeline->cancelFrame();
 	}
 	m_bScheduledActive = false;
-	return bSucceeded ? SIR_APP_SCHEDULE_SUCCEEDED : SIR_APP_SCHEDULE_FAILED;
+	return bSucceeded ? SIRAppScheduledState::SIR_APP_SCHEDULE_SUCCEEDED : SIRAppScheduledState::SIR_APP_SCHEDULE_FAILED;
 }
 
 bool SIRApplication::cancelScheduledTick( void ) noexcept

@@ -12,8 +12,8 @@ express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIRD3D9FIXEDPIPELINES_H__
-#define __SIRENGINE_SIRD3D9FIXEDPIPELINES_H__
+#ifndef __SIR_D3_D9_FIXEDPIPELINES_H__
+#define __SIR_D3_D9_FIXEDPIPELINES_H__
 #include <Core/SIRPCH.h>
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
 #pragma once
@@ -55,10 +55,10 @@ typedef struct sirD3D9FixedPipelines_s
 
 void sirD3D9FixedPipelinesInitialize( sirD3D9FixedPipelines_t *pPool, uint32_t nDeviceGeneration, uint32_t nTextureStages,
                                       uint32_t nTextures ) noexcept;
-sirGraphicsResult_t sirD3D9FixedPipelineCreate( sirD3D9FixedPipelines_t *pPool, const sirGraphicsABIPipeline_t *pDesc,
+SIRGraphicsResult sirD3D9FixedPipelineCreate( sirD3D9FixedPipelines_t *pPool, const sirGraphicsABIPipeline_t *pDesc,
                                                 sirGraphicsHandle_t *pHandle ) noexcept;
-sirGraphicsResult_t sirD3D9FixedPipelineLookup( const sirD3D9FixedPipelines_t *pPool, sirGraphicsHandle_t hHandle,
+SIRGraphicsResult sirD3D9FixedPipelineLookup( const sirD3D9FixedPipelines_t *pPool, sirGraphicsHandle_t hHandle,
                                                 const sirD3D9FixedPipeline_t **ppPipeline ) noexcept;
-sirGraphicsResult_t sirD3D9FixedPipelineRetire( sirD3D9FixedPipelines_t *pPool, sirGraphicsHandle_t hHandle ) noexcept;
+SIRGraphicsResult sirD3D9FixedPipelineRetire( sirD3D9FixedPipelines_t *pPool, sirGraphicsHandle_t hHandle ) noexcept;
 void sirD3D9FixedPipelinesInvalidate( sirD3D9FixedPipelines_t *pPool, uint32_t nDeviceGeneration ) noexcept;
-#endif // __SIRENGINE_SIRD3D9FIXEDPIPELINES_H__
+#endif // __SIR_D3_D9_FIXEDPIPELINES_H__

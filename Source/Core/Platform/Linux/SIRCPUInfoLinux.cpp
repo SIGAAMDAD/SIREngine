@@ -26,7 +26,7 @@ static bool readTopologyNumber( uint32_t nCPU, const char *szField, uint32_t *pV
 {
 	char szPath[160];
 	const int nPathLength = snprintf( szPath, sizeof( szPath ), "/sys/devices/system/cpu/cpu%u/topology/%s", nCPU, szField );
-	if ( nPathLength <= 0 || ( size_t )nPathLength >= sizeof( szPath ) ) {
+	if ( nPathLength <= 0 || static_cast<size_t>(nPathLength) >= sizeof( szPath ) ) {
 		return false;
 	}
 	FILE *pFile = fopen( szPath, "r" );
@@ -39,7 +39,7 @@ static bool readTopologyNumber( uint32_t nCPU, const char *szField, uint32_t *pV
 	if ( nResult != 1 ) {
 		return false;
 	}
-	*pValue = ( uint32_t )nParsed;
+	*pValue = static_cast<uint32_t>(nParsed);
 	return true;
 }
 
@@ -49,15 +49,16 @@ bool SIRCPUInfo::queryTopology( sirCPUInfo_t *pInfo ) noexcept
 	CPU_ZERO( &allowed );
 	if ( sched_getaffinity( 0, sizeof( allowed ), &allowed ) != 0 ) {
 		const long nOnline = sysconf( _SC_NPROCESSORS_ONLN );
-		pInfo->nLogicalProcessorCount = nOnline > 0 ? ( uint32_t )nOnline : 1;
+		pInfo->nLogicalProcessorCount = nOnline > 0 ? static_cast<uint32_t>(nOnline) : 1;
 		return true;
 	}
-	uint64_t szCoreKeys[CPU_SETSIZE] = {};
+	uint64_t szCoreKeys[CPU_SETSIZE];
+	memset( szCoreKeys, 0, sizeof( szCoreKeys ) );
 	uint32_t nCores = 0;
 	uint32_t nLogical = 0;
 	bool bTopologyComplete = true;
 	for ( uint32_t iCPU = 0; iCPU < CPU_SETSIZE; ++iCPU ) {
-		if ( !CPU_ISSET( ( int )iCPU, &allowed ) ) {
+		if ( !CPU_ISSET( static_cast<int>(iCPU), &allowed ) ) {
 			continue;
 		}
 		++nLogical;
@@ -67,7 +68,7 @@ bool SIRCPUInfo::queryTopology( sirCPUInfo_t *pInfo ) noexcept
 			bTopologyComplete = false;
 			continue;
 		}
-		const uint64_t nKey = ( ( uint64_t )nPackage << 32 ) | nCore;
+		const uint64_t nKey = ( static_cast<uint64_t>(nPackage) << 32 ) | nCore;
 		bool bSeen = false;
 		for ( uint32_t iCore = 0; iCore < nCores; ++iCore ) {
 			if ( szCoreKeys[iCore] == nKey ) {

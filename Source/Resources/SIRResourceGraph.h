@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRRESOURCEGRAPH_H__
-#define __SIRENGINE_SIRRESOURCEGRAPH_H__
+#ifndef __SIR_RESOURCEGRAPH_H__
+#define __SIR_RESOURCEGRAPH_H__
 
 #include <Core/SIRPCH.h>
 #include <Resources/SIRProviderCompletion.h>
@@ -51,9 +51,9 @@ public:
 	size_t operator()( const SIRResourceKey& rKey ) const noexcept
 	{
 		uint64_t nHash = rKey.m_nAssetId;
-		nHash ^= ( uint64_t )rKey.m_nTypeId * UINT64_C( 0x9e3779b97f4a7c15 );
-		nHash ^= ( uint64_t )rKey.m_nVariantId * UINT64_C( 0xc2b2ae3d27d4eb4f );
-		return ( size_t )nHash;
+		nHash ^= static_cast<uint64_t>(rKey.m_nTypeId) * UINT64_C( 0x9e3779b97f4a7c15 );
+		nHash ^= static_cast<uint64_t>(rKey.m_nVariantId) * UINT64_C( 0xc2b2ae3d27d4eb4f );
+		return static_cast<size_t>(nHash);
 	}
 };
 
@@ -463,4 +463,4 @@ public:
 	SIRResourceResult getStats( SIRResourceDerivedStats *pStats ) const noexcept;
 };
 
-#endif // __SIRENGINE_SIRRESOURCEGRAPH_H__
+#endif // __SIR_RESOURCEGRAPH_H__

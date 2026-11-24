@@ -27,48 +27,48 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <sys/syscall.h>
 #include <unistd.h>
 
-static sirThreadControlResult_t sirThreadResultFromErrno( int nError ) noexcept
+static SIRThreadControlResult sirThreadResultFromErrno( int nError ) noexcept
 {
 	if ( nError == 0 ) {
-		return SIR_THREAD_CONTROL_OK;
+		return SIRThreadControlResult::SIR_THREAD_CONTROL_OK;
 	}
 	if ( nError == EPERM || nError == EACCES ) {
-		return SIR_THREAD_CONTROL_ACCESS_DENIED;
+		return SIRThreadControlResult::SIR_THREAD_CONTROL_ACCESS_DENIED;
 	}
-	return nError == EINVAL ? SIR_THREAD_CONTROL_INVALID_ARGUMENT : SIR_THREAD_CONTROL_OS_ERROR;
+	return nError == EINVAL ? SIRThreadControlResult::SIR_THREAD_CONTROL_INVALID_ARGUMENT : SIRThreadControlResult::SIR_THREAD_CONTROL_OS_ERROR;
 }
 
 uint64_t SIRPlatformThreadControl::getCurrentThreadId( void ) noexcept
 {
-	return ( uint64_t )syscall( SYS_gettid );
+	return static_cast<uint64_t>(syscall( SYS_gettid ));
 }
 
-sirThreadControlResult_t SIRPlatformThreadControl::setCurrentName( const char *pszName ) noexcept
+SIRThreadControlResult SIRPlatformThreadControl::setCurrentName( const char *pszName ) noexcept
 {
 	if ( pszName == nullptr || pszName[0] == '\0' ) {
-		return SIR_THREAD_CONTROL_INVALID_ARGUMENT;
+		return SIRThreadControlResult::SIR_THREAD_CONTROL_INVALID_ARGUMENT;
 	}
 	if ( strlen( pszName ) > 15 ) {
-		return SIR_THREAD_CONTROL_UNSUPPORTED;
+		return SIRThreadControlResult::SIR_THREAD_CONTROL_UNSUPPORTED;
 	}
 	return sirThreadResultFromErrno( pthread_setname_np( pthread_self(), pszName ) );
 }
 
-sirThreadControlResult_t SIRPlatformThreadControl::getCurrentName( char *pszName, uint32_t nCapacity ) noexcept
+SIRThreadControlResult SIRPlatformThreadControl::getCurrentName( char *pszName, uint32_t nCapacity ) noexcept
 {
 	if ( pszName == nullptr || nCapacity < 16 ) {
-		return SIR_THREAD_CONTROL_INVALID_ARGUMENT;
+		return SIRThreadControlResult::SIR_THREAD_CONTROL_INVALID_ARGUMENT;
 	}
 	return sirThreadResultFromErrno( pthread_getname_np( pthread_self(), pszName, nCapacity ) );
 }
 
-sirThreadControlResult_t SIRPlatformThreadControl::setCurrentAffinity( const sirThreadAffinity_t& rAffinity ) noexcept
+SIRThreadControlResult SIRPlatformThreadControl::setCurrentAffinity( const sirThreadAffinity_t& rAffinity ) noexcept
 {
 	if ( rAffinity.nMask == 0 ) {
-		return SIR_THREAD_CONTROL_INVALID_ARGUMENT;
+		return SIRThreadControlResult::SIR_THREAD_CONTROL_INVALID_ARGUMENT;
 	}
 	if ( rAffinity.nGroup != 0 ) {
-		return SIR_THREAD_CONTROL_UNSUPPORTED;
+		return SIRThreadControlResult::SIR_THREAD_CONTROL_UNSUPPORTED;
 	}
 	cpu_set_t cpus;
 	CPU_ZERO( &cpus );
@@ -80,10 +80,10 @@ sirThreadControlResult_t SIRPlatformThreadControl::setCurrentAffinity( const sir
 	return sirThreadResultFromErrno( pthread_setaffinity_np( pthread_self(), sizeof( cpus ), &cpus ) );
 }
 
-sirThreadControlResult_t SIRPlatformThreadControl::getCurrentAffinity( sirThreadAffinity_t *pAffinity ) noexcept
+SIRThreadControlResult SIRPlatformThreadControl::getCurrentAffinity( sirThreadAffinity_t *pAffinity ) noexcept
 {
 	if ( pAffinity == nullptr ) {
-		return SIR_THREAD_CONTROL_INVALID_ARGUMENT;
+		return SIRThreadControlResult::SIR_THREAD_CONTROL_INVALID_ARGUMENT;
 	}
 	cpu_set_t cpus;
 	CPU_ZERO( &cpus );
@@ -91,9 +91,9 @@ sirThreadControlResult_t SIRPlatformThreadControl::getCurrentAffinity( sirThread
 	if ( nResult != 0 ) {
 		return sirThreadResultFromErrno( nResult );
 	}
-	for ( uint32_t i = 64; i < ( uint32_t )CPU_SETSIZE; ++i ) {
+	for ( uint32_t i = 64; i < static_cast<uint32_t>(CPU_SETSIZE); ++i ) {
 		if ( CPU_ISSET( i, &cpus ) ) {
-			return SIR_THREAD_CONTROL_UNSUPPORTED;
+			return SIRThreadControlResult::SIR_THREAD_CONTROL_UNSUPPORTED;
 		}
 	}
 	sirThreadAffinity_t affinity{};
@@ -104,25 +104,25 @@ sirThreadControlResult_t SIRPlatformThreadControl::getCurrentAffinity( sirThread
 	}
 	affinity.nGroup = 0;
 	*pAffinity = affinity;
-	return SIR_THREAD_CONTROL_OK;
+	return SIRThreadControlResult::SIR_THREAD_CONTROL_OK;
 }
 
-sirThreadControlResult_t SIRPlatformThreadControl::setCurrentPriority( sirThreadPriority_t ePriority ) noexcept
+SIRThreadControlResult SIRPlatformThreadControl::setCurrentPriority( SIRThreadPriority ePriority ) noexcept
 {
 	int nNice = 0;
 	switch ( ePriority ) {
-	case SIR_THREAD_PRIORITY_BACKGROUND:
+	case SIRThreadPriority::SIR_THREAD_PRIORITY_BACKGROUND:
 		nNice = 10;
 		break;
-	case SIR_THREAD_PRIORITY_NORMAL:
+	case SIRThreadPriority::SIR_THREAD_PRIORITY_NORMAL:
 		nNice = 0;
 		break;
-	case SIR_THREAD_PRIORITY_HIGH:
+	case SIRThreadPriority::SIR_THREAD_PRIORITY_HIGH:
 		nNice = -5;
 		break;
 	default:
-		return SIR_THREAD_CONTROL_INVALID_ARGUMENT;
+		return SIRThreadControlResult::SIR_THREAD_CONTROL_INVALID_ARGUMENT;
 	}
-	const id_t nThreadId = ( id_t )syscall( SYS_gettid );
-	return setpriority( PRIO_PROCESS, nThreadId, nNice ) == 0 ? SIR_THREAD_CONTROL_OK : sirThreadResultFromErrno( errno );
+	const id_t nThreadId = static_cast<id_t>(syscall( SYS_gettid ));
+	return setpriority( PRIO_PROCESS, nThreadId, nNice ) == 0 ? SIRThreadControlResult::SIR_THREAD_CONTROL_OK : sirThreadResultFromErrno( errno );
 }

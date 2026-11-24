@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSCRIPTARTIFACTCACHE_H__
-#define __SIRENGINE_SIRSCRIPTARTIFACTCACHE_H__
+#ifndef __SIR_SCRIPTARTIFACTCACHE_H__
+#define __SIR_SCRIPTARTIFACTCACHE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -56,12 +56,12 @@ public:
 	SIRScriptArtifactCache& operator=( const SIRScriptArtifactCache& ) = delete;
 
 	// Bound the size of each accepted cache entry (caller-selected budget).
-	sirScriptResult_t configure( const char *szRoot, uint64_t nMaximumArtifactBytes ) noexcept;
-	static sirScriptResult_t makeKey( const void *pCanonicalRecipe, uint64_t nRecipeBytes, sirScriptCacheKey_t *pKey ) noexcept;
-	sirScriptResult_t store( const sirScriptCodeArtifact_t& artifact, sirScriptCacheKey_t key, const void *pBytes, uint64_t nBytes,
+	SIRScriptResult configure( const char *szRoot, uint64_t nMaximumArtifactBytes ) noexcept;
+	static SIRScriptResult makeKey( const void *pCanonicalRecipe, uint64_t nRecipeBytes, sirScriptCacheKey_t *pKey ) noexcept;
+	SIRScriptResult store( const sirScriptCodeArtifact_t& artifact, sirScriptCacheKey_t key, const void *pBytes, uint64_t nBytes,
 	                         uint32_t nAlignment, sirScriptCachedArtifact_t *pDescriptor ) noexcept;
-	sirScriptResult_t fetch( const sirScriptCachedArtifact_t& descriptor, void *pOutput, uint64_t nCapacity ) const noexcept;
-	sirScriptResult_t erase( sirScriptCacheKey_t key ) noexcept;
+	SIRScriptResult fetch( const sirScriptCachedArtifact_t& descriptor, void *pOutput, uint64_t nCapacity ) const noexcept;
+	SIRScriptResult erase( sirScriptCacheKey_t key ) noexcept;
 
 private:
 	static constexpr uint32_t MAX_PATH_BYTES = 1024;
@@ -80,4 +80,4 @@ private:
 	const sirThreadId_t m_OwnerThread;
 };
 
-#endif // __SIRENGINE_SIRSCRIPTARTIFACTCACHE_H__
+#endif // __SIR_SCRIPTARTIFACTCACHE_H__

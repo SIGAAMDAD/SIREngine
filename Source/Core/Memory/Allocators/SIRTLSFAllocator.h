@@ -14,8 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRTLSFALLOCATOR_H__
-#define __SIRENGINE_SIRTLSFALLOCATOR_H__
+#ifndef __SIR_TLSFALLOCATOR_H__
+#define __SIR_TLSFALLOCATOR_H__
 
 #include <Core/SIRPCH.h>
 
@@ -77,4 +77,4 @@ private:
 	uint32_t m_nFreeHeads[32][16];
 };
 
-#endif // __SIRENGINE_SIRTLSFALLOCATOR_H__
+#endif // __SIR_TLSFALLOCATOR_H__

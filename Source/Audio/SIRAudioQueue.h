@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRAUDIOQUEUE_H__
-#define __SIRENGINE_SIRAUDIOQUEUE_H__
+#ifndef __SIR_AUDIOQUEUE_H__
+#define __SIR_AUDIOQUEUE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -24,7 +24,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-#include <Core/Platform/SIRAtomic.h>
+#include <atomic>
 #include <Core/Containers/SIRRawStorage.h>
 #include <new>
 #include <type_traits>
@@ -38,7 +38,7 @@ class SIRAudioQueue
 private:
 	typedef struct sirSlot_s
 	{
-		SIRAtomic<uint64_t> nSequence;
+		std::atomic<uint64_t> nSequence;
 		T value;
 	} sirSlot_t;
 
@@ -48,8 +48,8 @@ private:
 	sirSlot_t *m_pSlots = nullptr;
 	const sirContainerAllocator_t *m_pAllocator = nullptr;
 	uint32_t m_nCapacity = 0;
-	SIRAtomic<uint64_t> m_nEnqueue = SIRAtomic<uint64_t>( 0 );
-	SIRAtomic<uint64_t> m_nDequeue = SIRAtomic<uint64_t>( 0 );
+	std::atomic<uint64_t> m_nEnqueue = std::atomic<uint64_t>( 0 );
+	std::atomic<uint64_t> m_nDequeue = std::atomic<uint64_t>( 0 );
 
 public:
 	SIRAudioQueue( void ) noexcept = default;
@@ -81,18 +81,18 @@ bool SIRAudioQueue<T>::initialize( const sirContainerAllocator_t *pAllocator, ui
 		return false;
 	}
 	void *pMemory = nullptr;
-	if ( SIRRawStorage::tryAllocate( pAllocator, nBytes, alignof( sirSlot_t ), &pMemory ) != SIR_CONTAINER_OK ) {
+	if ( SIRRawStorage::tryAllocate( pAllocator, nBytes, alignof( sirSlot_t ), &pMemory ) != SIRContainerResult::SIR_CONTAINER_OK ) {
 		return false;
 	}
-	m_pSlots = ( sirSlot_t * )pMemory;
+	m_pSlots = static_cast<sirSlot_t *>(pMemory);
 	m_pAllocator = pAllocator;
 	m_nCapacity = nCapacity;
 	for ( uint32_t iSlot = 0; iSlot < nCapacity; ++iSlot ) {
 		new ( m_pSlots + iSlot ) sirSlot_t();
-		m_pSlots[iSlot].nSequence.store( iSlot, SIR_MEMORY_ORDER_RELAXED );
+		m_pSlots[iSlot].nSequence.store( iSlot, std::memory_order_relaxed );
 	}
-	m_nEnqueue.store( 0, SIR_MEMORY_ORDER_RELAXED );
-	m_nDequeue.store( 0, SIR_MEMORY_ORDER_RELAXED );
+	m_nEnqueue.store( 0, std::memory_order_relaxed );
+	m_nDequeue.store( 0, std::memory_order_relaxed );
 	return true;
 }
 
@@ -105,7 +105,7 @@ void SIRAudioQueue<T>::shutdown( void ) noexcept
 	for ( uint32_t iSlot = 0; iSlot < m_nCapacity; ++iSlot ) {
 		m_pSlots[iSlot].~sirSlot_t();
 	}
-	SIRRawStorage::deallocate( m_pAllocator, m_pSlots, ( size_t )m_nCapacity * sizeof( sirSlot_t ), alignof( sirSlot_t ) );
+	SIRRawStorage::deallocate( m_pAllocator, m_pSlots, static_cast<size_t>(m_nCapacity * sizeof(  sirSlot_t  )), alignof( sirSlot_t ) );
 	m_pSlots = nullptr;
 	m_pAllocator = nullptr;
 	m_nCapacity = 0;
@@ -117,21 +117,21 @@ bool SIRAudioQueue<T>::tryPush( const T& value ) noexcept
 	if ( m_pSlots == nullptr ) {
 		return false;
 	}
-	uint64_t nPosition = m_nEnqueue.load( SIR_MEMORY_ORDER_RELAXED );
+	uint64_t nPosition = m_nEnqueue.load( std::memory_order_relaxed );
 	for ( ;; ) {
-		sirSlot_t& slot = m_pSlots[( uint32_t )nPosition & ( m_nCapacity - 1 )];
-		const uint64_t nSequence = slot.nSequence.load( SIR_MEMORY_ORDER_ACQUIRE );
-		const int64_t nDelta = ( int64_t )( nSequence - nPosition );
+		sirSlot_t& slot = m_pSlots[static_cast<uint32_t>(nPosition) & ( m_nCapacity - 1 )];
+		const uint64_t nSequence = slot.nSequence.load( std::memory_order_acquire );
+		const int64_t nDelta = static_cast<int64_t>( nSequence - nPosition );
 		if ( nDelta == 0 ) {
-			if ( m_nEnqueue.compareExchangeWeak( nPosition, nPosition + 1, SIR_MEMORY_ORDER_RELAXED ) ) {
+			if ( m_nEnqueue.compare_exchange_weak( nPosition, nPosition + 1, std::memory_order_relaxed ) ) {
 				slot.value = value;
-				slot.nSequence.store( nPosition + 1, SIR_MEMORY_ORDER_RELEASE );
+				slot.nSequence.store( nPosition + 1, std::memory_order_release );
 				return true;
 			}
 		} else if ( nDelta < 0 ) {
 			return false;
 		} else {
-			nPosition = m_nEnqueue.load( SIR_MEMORY_ORDER_RELAXED );
+			nPosition = m_nEnqueue.load( std::memory_order_relaxed );
 		}
 	}
 }
@@ -142,21 +142,21 @@ bool SIRAudioQueue<T>::tryPop( T& value ) noexcept
 	if ( m_pSlots == nullptr ) {
 		return false;
 	}
-	uint64_t nPosition = m_nDequeue.load( SIR_MEMORY_ORDER_RELAXED );
+	uint64_t nPosition = m_nDequeue.load( std::memory_order_relaxed );
 	for ( ;; ) {
-		sirSlot_t& slot = m_pSlots[( uint32_t )nPosition & ( m_nCapacity - 1 )];
-		const uint64_t nSequence = slot.nSequence.load( SIR_MEMORY_ORDER_ACQUIRE );
-		const int64_t nDelta = ( int64_t )( nSequence - ( nPosition + 1 ) );
+		sirSlot_t& slot = m_pSlots[static_cast<uint32_t>(nPosition) & ( m_nCapacity - 1 )];
+		const uint64_t nSequence = slot.nSequence.load( std::memory_order_acquire );
+		const int64_t nDelta = static_cast<int64_t>(  nSequence - ( nPosition + 1 )  );
 		if ( nDelta == 0 ) {
-			if ( m_nDequeue.compareExchangeWeak( nPosition, nPosition + 1, SIR_MEMORY_ORDER_RELAXED ) ) {
+			if ( m_nDequeue.compare_exchange_weak( nPosition, nPosition + 1, std::memory_order_relaxed ) ) {
 				value = slot.value;
-				slot.nSequence.store( nPosition + m_nCapacity, SIR_MEMORY_ORDER_RELEASE );
+				slot.nSequence.store( nPosition + m_nCapacity, std::memory_order_release );
 				return true;
 			}
 		} else if ( nDelta < 0 ) {
 			return false;
 		} else {
-			nPosition = m_nDequeue.load( SIR_MEMORY_ORDER_RELAXED );
+			nPosition = m_nDequeue.load( std::memory_order_relaxed );
 		}
 	}
 }
@@ -167,4 +167,4 @@ uint32_t SIRAudioQueue<T>::getCapacity( void ) const noexcept
 	return m_nCapacity;
 }
 
-#endif // __SIRENGINE_SIRAUDIOQUEUE_H__
+#endif // __SIR_AUDIOQUEUE_H__

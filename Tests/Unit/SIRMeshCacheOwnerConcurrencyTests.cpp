@@ -14,7 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Mesh/SIRMeshCache.h>
-#include <Core/Platform/SIRAtomic.h>
+#include <atomic>
 #include <Core/Platform/SIRThread.h>
 
 #include <stdint.h>
@@ -29,8 +29,8 @@ typedef enum sirMeshOwnerFixtureLimit_e : uint32_t
 
 typedef struct sirMeshOwnerWorker_s
 {
-	SIRAtomic<uint32_t> *pReady;
-	SIRAtomic<bool> *pStart;
+	std::atomic<uint32_t> *pReady;
+	std::atomic<bool> *pStart;
 	uint64_t szOwnerIds[SIR_MESH_OWNER_ITERATIONS];
 	uint32_t nReleases;
 	bool bPassed;
@@ -62,8 +62,8 @@ static void runOwnerWorker( void *pContext ) noexcept
 {
 	sirMeshOwnerWorker_t *pWorker = ( sirMeshOwnerWorker_t * )pContext;
 	pWorker->bPassed = true;
-	pWorker->pReady->fetchAdd( 1, SIR_MEMORY_ORDER_RELEASE );
-	while ( !pWorker->pStart->load( SIR_MEMORY_ORDER_ACQUIRE ) ) {
+	pWorker->pReady->fetch_add( 1, std::memory_order_release );
+	while ( !pWorker->pStart->load( std::memory_order_acquire ) ) {
 		// A bounded thread-count fixture; each worker starts together.
 	}
 
@@ -151,8 +151,8 @@ static void runOwnerWorker( void *pContext ) noexcept
 
 int main( void )
 {
-	SIRAtomic<uint32_t> ready( 0 );
-	SIRAtomic<bool> start( false );
+	std::atomic<uint32_t> ready( 0 );
+	std::atomic<bool> start( false );
 	SIRThread szThreads[SIR_MESH_OWNER_WORKERS];
 	sirMeshOwnerWorker_t szWorkers[SIR_MESH_OWNER_WORKERS] = {};
 	uint32_t nStarted = 0;
@@ -165,9 +165,9 @@ int main( void )
 		++nStarted;
 	}
 
-	while ( ready.load( SIR_MEMORY_ORDER_ACQUIRE ) != nStarted ) {
+	while ( ready.load( std::memory_order_acquire ) != nStarted ) {
 	}
-	start.store( true, SIR_MEMORY_ORDER_RELEASE );
+	start.store( true, std::memory_order_release );
 	for ( uint32_t i = 0; i < nStarted; ++i ) {
 		if ( !szThreads[i].join() ) {
 			fputs( "mesh owner worker join failed\n", stderr );

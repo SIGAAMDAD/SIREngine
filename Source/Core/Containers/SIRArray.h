@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRARRAY_H__
-#define __SIRENGINE_SIRARRAY_H__
+#ifndef __SIR_ARRAY_H__
+#define __SIR_ARRAY_H__
 
 #include <Core/SIRPCH.h>
 
@@ -134,4 +134,4 @@ public:
 	}
 };
 
-#endif // __SIRENGINE_SIRARRAY_H__
+#endif // __SIR_ARRAY_H__

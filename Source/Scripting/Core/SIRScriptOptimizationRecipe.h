@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSCRIPTOPTIMIZATIONRECIPE_H__
-#define __SIRENGINE_SIRSCRIPTOPTIMIZATIONRECIPE_H__
+#ifndef __SIR_SCRIPTOPTIMIZATIONRECIPE_H__
+#define __SIR_SCRIPTOPTIMIZATIONRECIPE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -48,9 +48,9 @@ class SIRScriptOptimizationRecipe
 public:
 	static constexpr uint32_t RECIPE_BYTES = 248;
 
-	static sirScriptResult_t build( const sirScriptOptimizationRequest_t& request, const sirScriptOptimizerRecipeIngredients_t& ingredients,
+	static SIRScriptResult build( const sirScriptOptimizationRequest_t& request, const sirScriptOptimizerRecipeIngredients_t& ingredients,
 	                                const void *pInput, sirScriptOptimizerRecipe_t *pRecipe ) noexcept;
-	static sirScriptResult_t verify( const sirScriptOptimizationRequest_t& request, const void *pInput, const void *pRecipe,
+	static SIRScriptResult verify( const sirScriptOptimizationRequest_t& request, const void *pInput, const void *pRecipe,
 	                                 uint64_t nRecipeBytes ) noexcept;
 
 protected:
@@ -60,4 +60,4 @@ private:
 	static bool validRequest( const sirScriptOptimizationRequest_t& request ) noexcept;
 };
 
-#endif // __SIRENGINE_SIRSCRIPTOPTIMIZATIONRECIPE_H__
+#endif // __SIR_SCRIPTOPTIMIZATIONRECIPE_H__

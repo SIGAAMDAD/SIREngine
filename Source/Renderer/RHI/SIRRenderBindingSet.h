@@ -13,10 +13,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRRENDERBINDINGSET_H__
-#define __SIRENGINE_SIRRENDERBINDINGSET_H__
+#ifndef __SIR_RENDER_BINDING_SET_H__
+#define __SIR_RENDER_BINDING_SET_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -28,13 +28,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 // Shader-visible bindings referencing resource handles and views.
 // Nonowning, zero-allocation typed façade; the device owns resource lifetime.
-class SIRRenderBindingSet final
+class SIRRenderBindingSet
 {
 public:
-	SIRRenderBindingSet( void ) noexcept = default;
-	explicit SIRRenderBindingSet( sirGraphicsHandle_t hHandle ) noexcept : m_hHandle( hHandle )
-	{
-	}
+	constexpr explicit SIRRenderBindingSet( void ) noexcept = default;
 
 	sirGraphicsHandle_t getHandle( void ) const noexcept
 	{
@@ -42,11 +39,11 @@ public:
 	}
 	bool isValid( void ) const noexcept
 	{
-		return m_hHandle.nGeneration != 0 && m_hHandle.nDeviceGeneration != 0 && m_hHandle.eType == SIR_GRAPHICS_HANDLE_BINDING_SET;
+		return m_hHandle.nGeneration != 0 && m_hHandle.nDeviceGeneration != 0 && m_hHandle.eType == SIRGraphicsHandleType::SIR_GRAPHICS_HANDLE_BINDING_SET;
 	}
 
 private:
-	sirGraphicsHandle_t m_hHandle = {};
+	sirGraphicsHandle_t m_hHandle {};
 };
 
-#endif // __SIRENGINE_SIRRENDERBINDINGSET_H__
+#endif // __SIR_RENDER_BINDING_SET_H__

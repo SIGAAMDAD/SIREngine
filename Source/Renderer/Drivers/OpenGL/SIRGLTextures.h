@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRGLTEXTURES_H__
-#define __SIRENGINE_SIRGLTEXTURES_H__
+#ifndef __SIR_GLTEXTURES_H__
+#define __SIR_GLTEXTURES_H__
 
 #include <Core/SIRPCH.h>
 
@@ -53,13 +53,13 @@ typedef struct sirGLTextureViewCreateInfo_s
 	uint32_t nMipLevels;
 } sirGLTextureViewCreateInfo_t;
 
-sirGraphicsResult_t sirGLLoadTextureDispatch( sirGLProcedureLookup_t pLookup, void *pContext, sirGLTextureDispatch_t *pAPI ) noexcept;
-sirGraphicsResult_t sirGLDescribeTexture2D( const sirGraphicsTextureDesc_t *pDesc, uint32_t nMaximumSize,
+SIRGraphicsResult sirGLLoadTextureDispatch( sirGLProcedureLookup_t pLookup, void *pContext, sirGLTextureDispatch_t *pAPI ) noexcept;
+SIRGraphicsResult sirGLDescribeTexture2D( const sirGraphicsTextureDesc_t *pDesc, uint32_t nMaximumSize,
                                             sirGLNativeTexture_t *pTexture ) noexcept;
-sirGraphicsResult_t sirGLCreateNativeTexture2D( const sirGLTextureDispatch_t *pAPI, const sirGraphicsTextureDesc_t *pDesc,
+SIRGraphicsResult sirGLCreateNativeTexture2D( const sirGLTextureDispatch_t *pAPI, const sirGraphicsTextureDesc_t *pDesc,
                                                 sirGLNativeTexture_t *pTexture ) noexcept;
-sirGraphicsResult_t sirGLCreateNativeTextureView( const sirGLTextureDispatch_t *pAPI, const sirGLTextureViewCreateInfo_t *pInfo,
+SIRGraphicsResult sirGLCreateNativeTextureView( const sirGLTextureDispatch_t *pAPI, const sirGLTextureViewCreateInfo_t *pInfo,
                                                   uint32_t *pName ) noexcept;
-sirGraphicsResult_t sirGLDeleteNativeTexture( const sirGLTextureDispatch_t *pAPI, uint32_t nName ) noexcept;
+SIRGraphicsResult sirGLDeleteNativeTexture( const sirGLTextureDispatch_t *pAPI, uint32_t nName ) noexcept;
 
-#endif // __SIRENGINE_SIRGLTEXTURES_H__
+#endif // __SIR_GLTEXTURES_H__

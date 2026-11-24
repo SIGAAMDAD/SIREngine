@@ -16,9 +16,9 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/CVars/SIRCVarRegistry.h>
 #include <string.h>
 
-static bool sirCVarNarrow( sirCVarType_t eType ) noexcept
+static bool sirCVarNarrow( SIRCVarType eType ) noexcept
 {
-	return eType == SIR_CVAR_BOOL || eType == SIR_CVAR_I32 || eType == SIR_CVAR_U32 || eType == SIR_CVAR_F32 || eType == SIR_CVAR_ENUM_U32;
+	return eType == SIRCVarType::SIR_CVAR_BOOL || eType == SIRCVarType::SIR_CVAR_I32 || eType == SIRCVarType::SIR_CVAR_U32 || eType == SIRCVarType::SIR_CVAR_F32 || eType == SIRCVarType::SIR_CVAR_ENUM_U32;
 }
 
 static bool sirCVarTextValid( const char *pszText, uint32_t nBytes ) noexcept
@@ -27,7 +27,7 @@ static bool sirCVarTextValid( const char *pszText, uint32_t nBytes ) noexcept
 		return nBytes == 0;
 	}
 	for ( uint32_t iByte = 0; iByte < nBytes; ) {
-		const uint8_t nFirst = ( uint8_t )pszText[iByte];
+		const uint8_t nFirst = static_cast<uint8_t>(pszText[iByte]);
 		if ( nFirst == 0 ) {
 			return false;
 		}
@@ -53,7 +53,7 @@ static bool sirCVarTextValid( const char *pszText, uint32_t nBytes ) noexcept
 			return false;
 		}
 		for ( uint32_t iPart = 0; iPart < nMore; ++iPart ) {
-			const uint8_t nPart = ( uint8_t )pszText[iByte + iPart + 1];
+			const uint8_t nPart = static_cast<uint8_t>(pszText[iByte + iPart + 1]);
 			if ( ( nPart & 0xc0 ) != 0x80 ) {
 				return false;
 			}
@@ -70,18 +70,18 @@ static bool sirCVarTextValid( const char *pszText, uint32_t nBytes ) noexcept
 	return true;
 }
 
-static bool sirCVarValidValue( sirCVarType_t eType, const sirCVarValue_t& value, uint32_t nStride ) noexcept
+static bool sirCVarValidValue( SIRCVarType eType, const sirCVarValue_t& value, uint32_t nStride ) noexcept
 {
-	if ( eType == SIR_CVAR_UTF8_STRING ) {
+	if ( eType == SIRCVarType::SIR_CVAR_UTF8_STRING ) {
 		return value.nTextBytes < nStride && sirCVarTextValid( value.pszText, value.nTextBytes );
 	}
-	if ( eType == SIR_CVAR_BOOL ) {
+	if ( eType == SIRCVarType::SIR_CVAR_BOOL ) {
 		return value.nBits <= 1 && value.pszText == nullptr && value.nTextBytes == 0;
 	}
 	if ( sirCVarNarrow( eType ) ) {
 		return ( value.nBits >> 32 ) == 0 && value.pszText == nullptr && value.nTextBytes == 0;
 	}
-	return eType < SIR_CVAR_TYPE_COUNT && value.pszText == nullptr && value.nTextBytes == 0;
+	return eType < SIRCVarType::SIR_CVAR_TYPE_COUNT && value.pszText == nullptr && value.nTextBytes == 0;
 }
 
 static uint32_t sirCVarNext( uint32_t iIndex, uint32_t nCapacity ) noexcept
@@ -114,60 +114,60 @@ static bool sirCVarValidStorage( const sirCVarStorage_t& storage ) noexcept
 	if ( storage.nEvents > SIZE_MAX / nStride / 2 ) {
 		return false;
 	}
-	const size_t nOverrideBytes = ( size_t )storage.nOverrides * nStride;
-	const size_t nStageBytes = ( size_t )storage.nStagedWrites * nStride;
-	const size_t nEventBytes = ( size_t )storage.nEvents * nStride * 2;
+	const size_t nOverrideBytes = static_cast<size_t>(storage.nOverrides) * nStride;
+	const size_t nStageBytes = static_cast<size_t>(storage.nStagedWrites) * nStride;
+	const size_t nEventBytes = static_cast<size_t>(storage.nEvents) * nStride * 2;
 	return storage.nActiveTextBytes >= nOverrideBytes && storage.nPendingTextBytes >= nOverrideBytes &&
 	       storage.nStagedTextBytes >= nStageBytes && storage.nEventTextBytes >= nEventBytes;
 }
 
 static uint32_t sirCVarRead32( const uint8_t *pBytes ) noexcept
 {
-	return ( uint32_t )pBytes[0] | ( ( uint32_t )pBytes[1] << 8 ) | ( ( uint32_t )pBytes[2] << 16 ) | ( ( uint32_t )pBytes[3] << 24 );
+	return static_cast<uint32_t>(pBytes[0]) | ( static_cast<uint32_t>(pBytes[1]) << 8 ) | ( static_cast<uint32_t>(pBytes[2]) << 16 ) | ( static_cast<uint32_t>(pBytes[3]) << 24 );
 }
 
-sirRegistrationResult_t sirCVarDefinitionFromCooked( const SIRRegistrationCatalog& registration, sirRegistrationHandle_t handle,
+SIRRegistrationResult sirCVarDefinitionFromCooked( const SIRRegistrationCatalog& registration, sirRegistrationHandle_t handle,
                                                      const sirCVarCookedSource_t& source, sirCVarDefinition_t *pOutput ) noexcept
 {
 	if ( pOutput == nullptr ) {
-		return SIR_REGISTRATION_INVALID_ARGUMENT;
+		return SIRRegistrationResult::SIR_REGISTRATION_INVALID_ARGUMENT;
 	}
 	*pOutput = {};
-	if ( source.pBytes == nullptr || source.nBytes < SIR_REGISTRATION_CATALOG_HEADER_BYTES || source.ePhase > SIR_CVAR_APPLY_RESTART ) {
-		return SIR_REGISTRATION_INVALID_ARGUMENT;
+	if ( source.pBytes == nullptr || source.nBytes < SIR_REGISTRATION_CATALOG_HEADER_BYTES || source.ePhase > SIRCVarApplyPhase::SIR_CVAR_APPLY_RESTART ) {
+		return SIRRegistrationResult::SIR_REGISTRATION_INVALID_ARGUMENT;
 	}
 	const sirRegistrationEntry_t *pEntry = nullptr;
-	const sirRegistrationResult_t eLookup = registration.getEntry( handle, &pEntry );
-	if ( eLookup != SIR_REGISTRATION_OK ) {
+	const SIRRegistrationResult eLookup = registration.getEntry( handle, &pEntry );
+	if ( eLookup != SIRRegistrationResult::SIR_REGISTRATION_OK ) {
 		return eLookup;
 	}
-	if ( pEntry->eKind != SIR_REGISTRATION_CVAR || !pEntry->bCooked || pEntry->nType >= SIR_CVAR_TYPE_COUNT ) {
-		return SIR_REGISTRATION_TYPE_MISMATCH;
+	if ( pEntry->eKind != SIRRegistrationKind::SIR_REGISTRATION_CVAR || !pEntry->bCooked || pEntry->nType >= static_cast<uint8_t>( SIRCVarType::SIR_CVAR_TYPE_COUNT ) ) {
+		return SIRRegistrationResult::SIR_REGISTRATION_TYPE_MISMATCH;
 	}
 	if ( sirCVarRead32( source.pBytes ) != SIR_REGISTRATION_CATALOG_MAGIC || source.pBytes[4] != SIR_REGISTRATION_CATALOG_VERSION ) {
-		return SIR_REGISTRATION_BAD_SCHEMA;
+		return SIRRegistrationResult::SIR_REGISTRATION_BAD_SCHEMA;
 	}
 	const size_t nOffset = pEntry->nDefaultOffset;
 	if ( nOffset < SIR_REGISTRATION_CATALOG_HEADER_BYTES || nOffset > source.nBytes || source.nBytes - nOffset < 8 ) {
-		return SIR_REGISTRATION_BAD_BOUNDS;
+		return SIRRegistrationResult::SIR_REGISTRATION_BAD_BOUNDS;
 	}
 	const uint8_t *pDefault = source.pBytes + nOffset;
-	sirCVarValue_t value = {};
-	if ( pEntry->nType == SIR_CVAR_UTF8_STRING ) {
+	sirCVarValue_t value {};
+	if ( pEntry->nType == static_cast<uint8_t>( SIRCVarType::SIR_CVAR_UTF8_STRING ) ) {
 		const uint32_t nTextBytes = sirCVarRead32( pDefault );
 		if ( nTextBytes > source.nBytes - nOffset - 4 ) {
-			return SIR_REGISTRATION_BAD_BOUNDS;
+			return SIRRegistrationResult::SIR_REGISTRATION_BAD_BOUNDS;
 		}
-		value.pszText = ( const char * )pDefault + 4;
+		value.pszText = reinterpret_cast<const char *>(pDefault) + 4;
 		value.nTextBytes = nTextBytes;
 	} else {
-		value.nBits = ( uint64_t )sirCVarRead32( pDefault ) | ( ( uint64_t )sirCVarRead32( pDefault + 4 ) << 32 );
+		value.nBits = static_cast<uint64_t>(sirCVarRead32( pDefault )) | ( static_cast<uint64_t>(sirCVarRead32( pDefault + 4 )) << 32 );
 	}
 	pOutput->registration = handle;
 	pOutput->defaultValue = value;
 	pOutput->nSinkGroup = source.nSinkGroup;
 	pOutput->ePhase = source.ePhase;
-	return SIR_REGISTRATION_OK;
+	return SIRRegistrationResult::SIR_REGISTRATION_OK;
 }
 
 SIRCVarRegistry::SIRCVarRegistry( void ) noexcept
@@ -207,10 +207,10 @@ uint64_t SIRCVarRegistry::getRevision( void ) const noexcept
 	return m_nRevision;
 }
 
-sirRegistrationResult_t SIRCVarRegistry::initialize( SIRRegistrationCatalog& registration, const sirCVarStorage_t& storage ) noexcept
+SIRRegistrationResult SIRCVarRegistry::initialize( SIRRegistrationCatalog& registration, const sirCVarStorage_t& storage ) noexcept
 {
 	if ( isInitialized() || !registration.isInitialized() || !sirCVarValidStorage( storage ) ) {
-		return SIR_REGISTRATION_INVALID_ARGUMENT;
+		return SIRRegistrationResult::SIR_REGISTRATION_INVALID_ARGUMENT;
 	}
 	m_Storage = storage;
 	for ( uint32_t iSlot = 0; iSlot < storage.nSlots; ++iSlot ) {
@@ -230,54 +230,54 @@ sirRegistrationResult_t SIRCVarRegistry::initialize( SIRRegistrationCatalog& reg
 	m_nActiveSlots = 0;
 	m_bPrepared = false;
 	m_bPumping = false;
-	return SIR_REGISTRATION_OK;
+	return SIRRegistrationResult::SIR_REGISTRATION_OK;
 }
 
-sirRegistrationResult_t SIRCVarRegistry::bind( const sirCVarDefinition_t& definition, sirCVarHandle_t *pHandle ) noexcept
+SIRRegistrationResult SIRCVarRegistry::bind( const sirCVarDefinition_t& definition, sirCVarHandle_t *pHandle ) noexcept
 {
 	if ( pHandle == nullptr ) {
-		return SIR_REGISTRATION_INVALID_ARGUMENT;
+		return SIRRegistrationResult::SIR_REGISTRATION_INVALID_ARGUMENT;
 	}
 	*pHandle = {};
 	if ( !isInitialized() ) {
-		return SIR_REGISTRATION_NOT_INITIALIZED;
+		return SIRRegistrationResult::SIR_REGISTRATION_NOT_INITIALIZED;
 	}
 	if ( !ownerThread() ) {
-		return SIR_REGISTRATION_WRONG_THREAD;
+		return SIRRegistrationResult::SIR_REGISTRATION_WRONG_THREAD;
 	}
 	if ( m_bPrepared || m_bPumping ) {
-		return SIR_REGISTRATION_DENIED;
+		return SIRRegistrationResult::SIR_REGISTRATION_DENIED;
 	}
 	const sirRegistrationEntry_t *pEntry = nullptr;
-	sirRegistrationResult_t eResult = m_pRegistration->getEntry( definition.registration, &pEntry );
-	if ( eResult != SIR_REGISTRATION_OK ) {
+	SIRRegistrationResult eResult = m_pRegistration->getEntry( definition.registration, &pEntry );
+	if ( eResult != SIRRegistrationResult::SIR_REGISTRATION_OK ) {
 		return eResult;
 	}
-	if ( pEntry->eKind != SIR_REGISTRATION_CVAR || pEntry->nType >= SIR_CVAR_TYPE_COUNT ) {
-		return SIR_REGISTRATION_TYPE_MISMATCH;
+	if ( pEntry->eKind != SIRRegistrationKind::SIR_REGISTRATION_CVAR || pEntry->nType >= static_cast<uint8_t>( SIRCVarType::SIR_CVAR_TYPE_COUNT ) ) {
+		return SIRRegistrationResult::SIR_REGISTRATION_TYPE_MISMATCH;
 	}
-	const sirCVarType_t eType = ( sirCVarType_t )pEntry->nType;
+	const SIRCVarType eType = static_cast<SIRCVarType>(pEntry->nType);
 	if ( !sirCVarValidValue( eType, definition.defaultValue, m_Storage.nStringStride ) ) {
-		return SIR_REGISTRATION_BAD_SCHEMA;
+		return SIRRegistrationResult::SIR_REGISTRATION_BAD_SCHEMA;
 	}
-	if ( definition.ePhase > SIR_CVAR_APPLY_RESTART || !sirValidateCVarFlags( pEntry->nFlags ) ) {
-		return SIR_REGISTRATION_BAD_SCHEMA;
+	if ( definition.ePhase > SIRCVarApplyPhase::SIR_CVAR_APPLY_RESTART || !sirValidateCVarFlags( pEntry->nFlags ) ) {
+		return SIRRegistrationResult::SIR_REGISTRATION_BAD_SCHEMA;
 	}
 	uint32_t iFree = m_Storage.nSlots;
 	for ( uint32_t iSlot = 0; iSlot < m_Storage.nSlots; ++iSlot ) {
 		const sirCVarSlot_t& slot = m_Storage.pSlots[iSlot];
 		if ( slot.bActive && slot.registration.nSlot == definition.registration.nSlot &&
 		     slot.registration.nGeneration == definition.registration.nGeneration ) {
-			return SIR_REGISTRATION_DUPLICATE_NAME;
+			return SIRRegistrationResult::SIR_REGISTRATION_DUPLICATE_NAME;
 		}
 		if ( !slot.bActive && iFree == m_Storage.nSlots ) {
 			iFree = iSlot;
 		}
 	}
 	if ( iFree == m_Storage.nSlots || m_nHandleSeed == UINT32_MAX ) {
-		return SIR_REGISTRATION_CAPACITY_EXCEEDED;
+		return SIRRegistrationResult::SIR_REGISTRATION_CAPACITY_EXCEEDED;
 	}
-	const bool bString = eType == SIR_CVAR_UTF8_STRING;
+	const bool bString = eType == SIRCVarType::SIR_CVAR_UTF8_STRING;
 	const bool bNarrow = sirCVarNarrow( eType );
 	const uint32_t nCapacity = bString ? 0 : ( bNarrow ? m_Storage.nBank32 : m_Storage.nBank64 );
 	uint32_t iBank = UINT32_MAX;
@@ -286,7 +286,7 @@ sirRegistrationResult_t SIRCVarRegistry::bind( const sirCVarDefinition_t& defini
 			bool bUsed = false;
 			for ( uint32_t iSlot = 0; iSlot < m_Storage.nSlots; ++iSlot ) {
 				const sirCVarSlot_t& slot = m_Storage.pSlots[iSlot];
-				if ( slot.bActive && slot.eType != SIR_CVAR_UTF8_STRING && sirCVarNarrow( slot.eType ) == bNarrow &&
+				if ( slot.bActive && slot.eType != SIRCVarType::SIR_CVAR_UTF8_STRING && sirCVarNarrow( slot.eType ) == bNarrow &&
 				     slot.nBankIndex == iCandidate ) {
 					bUsed = true;
 					break;
@@ -298,7 +298,7 @@ sirRegistrationResult_t SIRCVarRegistry::bind( const sirCVarDefinition_t& defini
 			}
 		}
 		if ( iBank == UINT32_MAX ) {
-			return SIR_REGISTRATION_CAPACITY_EXCEEDED;
+			return SIRRegistrationResult::SIR_REGISTRATION_CAPACITY_EXCEEDED;
 		}
 	}
 	sirCVarSlot_t& slot = m_Storage.pSlots[iFree];
@@ -316,80 +316,80 @@ sirRegistrationResult_t SIRCVarRegistry::bind( const sirCVarDefinition_t& defini
 	if ( bString ) {
 		// Strings reside only in the dedicated text arenas.
 	} else if ( bNarrow ) {
-		m_Storage.pBank32[iBank] = ( uint32_t )definition.defaultValue.nBits;
+		m_Storage.pBank32[iBank] = static_cast<uint32_t>(definition.defaultValue.nBits);
 	} else {
 		m_Storage.pBank64[iBank] = definition.defaultValue.nBits;
 	}
 	++m_nActiveSlots;
 	*pHandle = { iFree + 1, slot.nGeneration };
-	return SIR_REGISTRATION_OK;
+	return SIRRegistrationResult::SIR_REGISTRATION_OK;
 }
 
-sirRegistrationResult_t SIRCVarRegistry::validateHandle( sirCVarHandle_t handle, const sirCVarSlot_t **ppSlot ) const noexcept
+SIRRegistrationResult SIRCVarRegistry::validateHandle( sirCVarHandle_t handle, const sirCVarSlot_t **ppSlot ) const noexcept
 {
 	if ( !isInitialized() ) {
-		return SIR_REGISTRATION_NOT_INITIALIZED;
+		return SIRRegistrationResult::SIR_REGISTRATION_NOT_INITIALIZED;
 	}
 	if ( !ownerThread() ) {
-		return SIR_REGISTRATION_WRONG_THREAD;
+		return SIRRegistrationResult::SIR_REGISTRATION_WRONG_THREAD;
 	}
 	if ( handle.nSlot == 0 || handle.nSlot > m_Storage.nSlots ) {
-		return SIR_REGISTRATION_STALE_HANDLE;
+		return SIRRegistrationResult::SIR_REGISTRATION_STALE_HANDLE;
 	}
 	const sirCVarSlot_t& slot = m_Storage.pSlots[handle.nSlot - 1];
 	if ( !slot.bActive || slot.nGeneration != handle.nGeneration ) {
-		return SIR_REGISTRATION_STALE_HANDLE;
+		return SIRRegistrationResult::SIR_REGISTRATION_STALE_HANDLE;
 	}
 	const sirRegistrationEntry_t *pEntry = nullptr;
-	const sirRegistrationResult_t eResult = m_pRegistration->getEntry( slot.registration, &pEntry );
-	if ( eResult != SIR_REGISTRATION_OK || pEntry->eKind != SIR_REGISTRATION_CVAR || pEntry->nType != slot.eType ) {
-		return SIR_REGISTRATION_STALE_HANDLE;
+	const SIRRegistrationResult eResult = m_pRegistration->getEntry( slot.registration, &pEntry );
+	if ( eResult != SIRRegistrationResult::SIR_REGISTRATION_OK || pEntry->eKind != SIRRegistrationKind::SIR_REGISTRATION_CVAR || pEntry->nType != static_cast<uint8_t>( slot.eType ) ) {
+		return SIRRegistrationResult::SIR_REGISTRATION_STALE_HANDLE;
 	}
 	*ppSlot = &slot;
-	return SIR_REGISTRATION_OK;
+	return SIRRegistrationResult::SIR_REGISTRATION_OK;
 }
 
-sirRegistrationResult_t SIRCVarRegistry::getValue( sirCVarHandle_t handle, uint32_t nCapabilities, sirCVarValue_t *pValue ) const noexcept
+SIRRegistrationResult SIRCVarRegistry::getValue( sirCVarHandle_t handle, uint32_t nCapabilities, sirCVarValue_t *pValue ) const noexcept
 {
 	if ( pValue == nullptr ) {
-		return SIR_REGISTRATION_INVALID_ARGUMENT;
+		return SIRRegistrationResult::SIR_REGISTRATION_INVALID_ARGUMENT;
 	}
 	*pValue = {};
 	const sirCVarSlot_t *pSlot = nullptr;
-	const sirRegistrationResult_t eStatus = validateHandle( handle, &pSlot );
-	if ( eStatus != SIR_REGISTRATION_OK ) {
+	const SIRRegistrationResult eStatus = validateHandle( handle, &pSlot );
+	if ( eStatus != SIRRegistrationResult::SIR_REGISTRATION_OK ) {
 		return eStatus;
 	}
-	if ( ( nCapabilities & SIR_CONSOLE_CAP_READ ) == 0 ) {
-		return SIR_REGISTRATION_DENIED;
+	if ( ( nCapabilities & static_cast<uint32_t>( SIRConsoleCapability::SIR_CONSOLE_CAP_READ ) ) == 0 ) {
+		return SIRRegistrationResult::SIR_REGISTRATION_DENIED;
 	}
-	if ( ( pSlot->nFlags & SIR_CVAR_FLAG_SENSITIVE ) != 0 && ( nCapabilities & SIR_CONSOLE_CAP_SENSITIVE ) == 0 ) {
-		return SIR_REGISTRATION_DENIED;
+	if ( ( pSlot->nFlags & static_cast<uint32_t>( SIRCVarFlag::SIR_CVAR_FLAG_SENSITIVE ) ) != 0 && ( nCapabilities & static_cast<uint32_t>( SIRConsoleCapability::SIR_CONSOLE_CAP_SENSITIVE ) ) == 0 ) {
+		return SIRRegistrationResult::SIR_REGISTRATION_DENIED;
 	}
 	*pValue = pSlot->effective;
-	if ( pSlot->eType != SIR_CVAR_UTF8_STRING ) {
+	if ( pSlot->eType != SIRCVarType::SIR_CVAR_UTF8_STRING ) {
 		pValue->nBits = sirCVarNarrow( pSlot->eType ) ? m_Storage.pBank32[pSlot->nBankIndex] : m_Storage.pBank64[pSlot->nBankIndex];
 	}
-	return SIR_REGISTRATION_OK;
+	return SIRRegistrationResult::SIR_REGISTRATION_OK;
 }
 
-sirRegistrationResult_t SIRCVarRegistry::unbind( sirCVarHandle_t handle ) noexcept
+SIRRegistrationResult SIRCVarRegistry::unbind( sirCVarHandle_t handle ) noexcept
 {
 	if ( !isInitialized() ) {
-		return SIR_REGISTRATION_NOT_INITIALIZED;
+		return SIRRegistrationResult::SIR_REGISTRATION_NOT_INITIALIZED;
 	}
 	if ( !ownerThread() ) {
-		return SIR_REGISTRATION_WRONG_THREAD;
+		return SIRRegistrationResult::SIR_REGISTRATION_WRONG_THREAD;
 	}
 	if ( m_bPrepared || m_bPumping ) {
-		return SIR_REGISTRATION_DENIED;
+		return SIRRegistrationResult::SIR_REGISTRATION_DENIED;
 	}
 	if ( handle.nSlot == 0 || handle.nSlot > m_Storage.nSlots ) {
-		return SIR_REGISTRATION_STALE_HANDLE;
+		return SIRRegistrationResult::SIR_REGISTRATION_STALE_HANDLE;
 	}
 	sirCVarSlot_t& slot = m_Storage.pSlots[handle.nSlot - 1];
 	if ( !slot.bActive || slot.nGeneration != handle.nGeneration ) {
-		return SIR_REGISTRATION_STALE_HANDLE;
+		return SIRRegistrationResult::SIR_REGISTRATION_STALE_HANDLE;
 	}
 	for ( uint32_t iOverride = 0; iOverride < m_Storage.nOverrides; ++iOverride ) {
 		if ( m_Storage.pOverrides[iOverride].bActive && m_Storage.pOverrides[iOverride].nSlot == handle.nSlot ) {
@@ -398,46 +398,46 @@ sirRegistrationResult_t SIRCVarRegistry::unbind( sirCVarHandle_t handle ) noexce
 	}
 	slot = {};
 	--m_nActiveSlots;
-	return SIR_REGISTRATION_OK;
+	return SIRRegistrationResult::SIR_REGISTRATION_OK;
 }
 
-sirRegistrationResult_t SIRCVarRegistry::validateWrite( const sirCVarWrite_t& write, const sirCVarSlot_t **ppSlot ) const noexcept
+SIRRegistrationResult SIRCVarRegistry::validateWrite( const sirCVarWrite_t& write, const sirCVarSlot_t **ppSlot ) const noexcept
 {
-	sirRegistrationResult_t eResult = validateHandle( write.handle, ppSlot );
-	if ( eResult != SIR_REGISTRATION_OK ) {
+	SIRRegistrationResult eResult = validateHandle( write.handle, ppSlot );
+	if ( eResult != SIRRegistrationResult::SIR_REGISTRATION_OK ) {
 		return eResult;
 	}
 	const sirCVarSlot_t& slot = **ppSlot;
-	if ( write.origin.eSource >= SIR_CVAR_SOURCE_COUNT || ( write.origin.nCapabilities & SIR_CONSOLE_CAP_WRITE ) == 0 ) {
-		return SIR_REGISTRATION_DENIED;
+	if ( write.origin.eSource >= SIRCVarSource::SIR_CVAR_SOURCE_COUNT || ( write.origin.nCapabilities & static_cast<uint32_t>( SIRConsoleCapability::SIR_CONSOLE_CAP_WRITE ) ) == 0 ) {
+		return SIRRegistrationResult::SIR_REGISTRATION_DENIED;
 	}
-	if ( ( slot.nFlags & SIR_CVAR_FLAG_SENSITIVE ) != 0 && ( write.origin.nCapabilities & SIR_CONSOLE_CAP_SENSITIVE ) == 0 ) {
-		return SIR_REGISTRATION_DENIED;
+	if ( ( slot.nFlags & static_cast<uint32_t>( SIRCVarFlag::SIR_CVAR_FLAG_SENSITIVE ) ) != 0 && ( write.origin.nCapabilities & static_cast<uint32_t>( SIRConsoleCapability::SIR_CONSOLE_CAP_SENSITIVE ) ) == 0 ) {
+		return SIRRegistrationResult::SIR_REGISTRATION_DENIED;
 	}
-	if ( ( slot.nFlags & SIR_CVAR_FLAG_DEVELOPMENT ) != 0 &&
-	     ( !write.origin.bDevelopmentAllowed || ( write.origin.nCapabilities & SIR_CONSOLE_CAP_DEVELOPMENT ) == 0 ) ) {
-		return SIR_REGISTRATION_DENIED;
+	if ( ( slot.nFlags & static_cast<uint32_t>( SIRCVarFlag::SIR_CVAR_FLAG_DEVELOPMENT ) ) != 0 &&
+	     ( !write.origin.bDevelopmentAllowed || ( write.origin.nCapabilities & static_cast<uint32_t>( SIRConsoleCapability::SIR_CONSOLE_CAP_DEVELOPMENT ) ) == 0 ) ) {
+		return SIRRegistrationResult::SIR_REGISTRATION_DENIED;
 	}
-	if ( ( slot.nFlags & SIR_CVAR_FLAG_CHEAT ) != 0 &&
-	     ( !write.origin.bCheatsAllowed || ( write.origin.nCapabilities & SIR_CONSOLE_CAP_CHEAT ) == 0 ) ) {
-		return SIR_REGISTRATION_DENIED;
+	if ( ( slot.nFlags & static_cast<uint32_t>( SIRCVarFlag::SIR_CVAR_FLAG_CHEAT ) ) != 0 &&
+	     ( !write.origin.bCheatsAllowed || ( write.origin.nCapabilities & static_cast<uint32_t>( SIRConsoleCapability::SIR_CONSOLE_CAP_CHEAT ) ) == 0 ) ) {
+		return SIRRegistrationResult::SIR_REGISTRATION_DENIED;
 	}
-	if ( ( slot.nFlags & SIR_CVAR_FLAG_REPLICATED ) != 0 && ( write.origin.nCapabilities & SIR_CONSOLE_CAP_SERVER ) == 0 ) {
-		return SIR_REGISTRATION_DENIED;
+	if ( ( slot.nFlags & static_cast<uint32_t>( SIRCVarFlag::SIR_CVAR_FLAG_REPLICATED ) ) != 0 && ( write.origin.nCapabilities & static_cast<uint32_t>( SIRConsoleCapability::SIR_CONSOLE_CAP_SERVER ) ) == 0 ) {
+		return SIRRegistrationResult::SIR_REGISTRATION_DENIED;
 	}
-	if ( ( slot.nFlags & SIR_CVAR_FLAG_INIT_ONLY ) != 0 &&
-	     ( !write.origin.bInitializing || ( write.origin.nCapabilities & SIR_CONSOLE_CAP_INIT ) == 0 ) ) {
-		return SIR_REGISTRATION_DENIED;
+	if ( ( slot.nFlags & static_cast<uint32_t>( SIRCVarFlag::SIR_CVAR_FLAG_INIT_ONLY ) ) != 0 &&
+	     ( !write.origin.bInitializing || ( write.origin.nCapabilities & static_cast<uint32_t>( SIRConsoleCapability::SIR_CONSOLE_CAP_INIT ) ) == 0 ) ) {
+		return SIRRegistrationResult::SIR_REGISTRATION_DENIED;
 	}
-	if ( ( slot.nFlags & SIR_CVAR_FLAG_READ_ONLY ) != 0 &&
-	     ( !write.origin.bEngineInternal || !write.origin.bInitializing || ( write.origin.nCapabilities & SIR_CONSOLE_CAP_INIT ) == 0 ) ) {
-		return SIR_REGISTRATION_DENIED;
+	if ( ( slot.nFlags & static_cast<uint32_t>( SIRCVarFlag::SIR_CVAR_FLAG_READ_ONLY ) ) != 0 &&
+	     ( !write.origin.bEngineInternal || !write.origin.bInitializing || ( write.origin.nCapabilities & static_cast<uint32_t>( SIRConsoleCapability::SIR_CONSOLE_CAP_INIT ) ) == 0 ) ) {
+		return SIRRegistrationResult::SIR_REGISTRATION_DENIED;
 	}
-	return write.bRemove || sirCVarValidValue( slot.eType, write.value, m_Storage.nStringStride ) ? SIR_REGISTRATION_OK
-	                                                                                              : SIR_REGISTRATION_TYPE_MISMATCH;
+	return write.bRemove || sirCVarValidValue( slot.eType, write.value, m_Storage.nStringStride ) ? SIRRegistrationResult::SIR_REGISTRATION_OK
+	                                                                                              : SIRRegistrationResult::SIR_REGISTRATION_TYPE_MISMATCH;
 }
 
-sirRegistrationResult_t SIRCVarRegistry::applyStagedWrite( const sirCVarWrite_t& write, uint32_t iWrite ) noexcept
+SIRRegistrationResult SIRCVarRegistry::applyStagedWrite( const sirCVarWrite_t& write, uint32_t iWrite ) noexcept
 {
 	const uint32_t iSlot = write.handle.nSlot - 1;
 	uint32_t iTarget = m_Storage.nOverrides;
@@ -457,13 +457,13 @@ sirRegistrationResult_t SIRCVarRegistry::applyStagedWrite( const sirCVarWrite_t&
 		if ( iTarget != m_Storage.nOverrides ) {
 			m_Storage.pShadow[iTarget] = {};
 		}
-		return SIR_REGISTRATION_OK;
+		return SIRRegistrationResult::SIR_REGISTRATION_OK;
 	}
 	if ( iTarget == m_Storage.nOverrides ) {
 		iTarget = iFree;
 	}
 	if ( iTarget == m_Storage.nOverrides ) {
-		return SIR_REGISTRATION_CAPACITY_EXCEEDED;
+		return SIRRegistrationResult::SIR_REGISTRATION_CAPACITY_EXCEEDED;
 	}
 	sirCVarOverride_t& entry = m_Storage.pShadow[iTarget];
 	if ( !entry.bActive ) {
@@ -475,15 +475,15 @@ sirRegistrationResult_t SIRCVarRegistry::applyStagedWrite( const sirCVarWrite_t&
 	entry.eSource = write.origin.eSource;
 	const sirCVarSlot_t& slot = m_Storage.pSlots[iSlot];
 	sirCVarValue_t value = write.value;
-	if ( slot.eType == SIR_CVAR_UTF8_STRING ) {
-		char *pszDestination = m_Storage.pszStagedText + ( size_t )iWrite * m_Storage.nStringStride;
+	if ( slot.eType == SIRCVarType::SIR_CVAR_UTF8_STRING ) {
+		char *pszDestination = m_Storage.pszStagedText + static_cast<size_t>(iWrite) * m_Storage.nStringStride;
 		if ( value.nTextBytes != 0 ) {
 			memcpy( pszDestination, value.pszText, value.nTextBytes );
 		}
 		pszDestination[value.nTextBytes] = '\0';
 		value.pszText = pszDestination;
 	}
-	if ( ( slot.nFlags & SIR_CVAR_FLAG_LATCHED ) != 0 ) {
+	if ( ( slot.nFlags & static_cast<uint32_t>( SIRCVarFlag::SIR_CVAR_FLAG_LATCHED ) ) != 0 ) {
 		entry.pending = value;
 		entry.nPendingSerial = m_nSerial + iWrite + 1;
 		entry.bPending = true;
@@ -493,7 +493,7 @@ sirRegistrationResult_t SIRCVarRegistry::applyStagedWrite( const sirCVarWrite_t&
 		entry.bApplied = true;
 		entry.bPending = false;
 	}
-	return SIR_REGISTRATION_OK;
+	return SIRRegistrationResult::SIR_REGISTRATION_OK;
 }
 
 int32_t SIRCVarRegistry::selectWinner( uint32_t iSlot, const sirCVarOverride_t *pOverrides ) const noexcept
@@ -505,13 +505,13 @@ int32_t SIRCVarRegistry::selectWinner( uint32_t iSlot, const sirCVarOverride_t *
 			continue;
 		}
 		if ( iBest < 0 ) {
-			iBest = ( int32_t )iOverride;
+			iBest = static_cast<int32_t>(iOverride);
 			continue;
 		}
 		const sirCVarOverride_t& best = pOverrides[iBest];
 		if ( candidate.eSource > best.eSource || ( candidate.eSource == best.eSource && candidate.nIssuerId > best.nIssuerId ) ||
 		     ( candidate.eSource == best.eSource && candidate.nIssuerId == best.nIssuerId && candidate.nSerial > best.nSerial ) ) {
-			iBest = ( int32_t )iOverride;
+			iBest = static_cast<int32_t>(iOverride);
 		}
 	}
 	return iBest;
@@ -523,15 +523,15 @@ sirCVarValue_t SIRCVarRegistry::selectValue( uint32_t iSlot, const sirCVarOverri
 	return iWinner < 0 ? m_Storage.pSlots[iSlot].baseValue : pOverrides[iWinner].value;
 }
 
-bool SIRCVarRegistry::sameValue( const sirCVarValue_t& a, const sirCVarValue_t& b, sirCVarType_t eType ) const noexcept
+bool SIRCVarRegistry::sameValue( const sirCVarValue_t& a, const sirCVarValue_t& b, SIRCVarType eType ) const noexcept
 {
-	if ( eType != SIR_CVAR_UTF8_STRING ) {
+	if ( eType != SIRCVarType::SIR_CVAR_UTF8_STRING ) {
 		return a.nBits == b.nBits;
 	}
 	return a.nTextBytes == b.nTextBytes && ( a.nTextBytes == 0 || memcmp( a.pszText, b.pszText, a.nTextBytes ) == 0 );
 }
 
-sirRegistrationResult_t SIRCVarRegistry::reserveEvents( void ) noexcept
+SIRRegistrationResult SIRCVarRegistry::reserveEvents( void ) noexcept
 {
 	m_nPreparedEvents = 0;
 	for ( uint32_t iSlot = 0; iSlot < m_Storage.nSlots; ++iSlot ) {
@@ -544,7 +544,7 @@ sirRegistrationResult_t SIRCVarRegistry::reserveEvents( void ) noexcept
 			continue;
 		}
 		if ( m_nPreparedEvents == m_Storage.nEvents || m_nPreparedEvents >= m_Storage.nEvents - m_nEventCount ) {
-			return SIR_REGISTRATION_QUEUE_FULL;
+			return SIRRegistrationResult::SIR_REGISTRATION_QUEUE_FULL;
 		}
 		sirCVarEvent_t& event = m_Storage.pEventScratch[m_nPreparedEvents++];
 		event.handle = { iSlot + 1, slot.nGeneration };
@@ -553,49 +553,49 @@ sirRegistrationResult_t SIRCVarRegistry::reserveEvents( void ) noexcept
 		event.nRevision = m_nRevision + 1;
 		event.nSinkGroup = slot.nSinkGroup;
 	}
-	return SIR_REGISTRATION_OK;
+	return SIRRegistrationResult::SIR_REGISTRATION_OK;
 }
 
-sirRegistrationResult_t SIRCVarRegistry::prepareBatch( const sirCVarWrite_t *pWrites, uint32_t nCount, uint64_t *pToken ) noexcept
+SIRRegistrationResult SIRCVarRegistry::prepareBatch( const sirCVarWrite_t *pWrites, uint32_t nCount, uint64_t *pToken ) noexcept
 {
 	if ( pToken == nullptr || pWrites == nullptr || nCount == 0 ) {
-		return SIR_REGISTRATION_INVALID_ARGUMENT;
+		return SIRRegistrationResult::SIR_REGISTRATION_INVALID_ARGUMENT;
 	}
 	*pToken = 0;
 	if ( !isInitialized() ) {
-		return SIR_REGISTRATION_NOT_INITIALIZED;
+		return SIRRegistrationResult::SIR_REGISTRATION_NOT_INITIALIZED;
 	}
 	if ( !ownerThread() ) {
-		return SIR_REGISTRATION_WRONG_THREAD;
+		return SIRRegistrationResult::SIR_REGISTRATION_WRONG_THREAD;
 	}
 	if ( m_bPrepared || m_bPumping ) {
-		return SIR_REGISTRATION_DENIED;
+		return SIRRegistrationResult::SIR_REGISTRATION_DENIED;
 	}
 	if ( nCount > m_Storage.nStagedWrites || nCount > UINT64_MAX - m_nSerial || m_nRevision == UINT64_MAX || m_nTokenSeed == UINT64_MAX ) {
-		return SIR_REGISTRATION_CAPACITY_EXCEEDED;
+		return SIRRegistrationResult::SIR_REGISTRATION_CAPACITY_EXCEEDED;
 	}
-	memcpy( m_Storage.pShadow, m_Storage.pOverrides, ( size_t )m_Storage.nOverrides * sizeof( sirCVarOverride_t ) );
+	memcpy( m_Storage.pShadow, m_Storage.pOverrides, static_cast<size_t>(m_Storage.nOverrides) * sizeof( sirCVarOverride_t ) );
 	for ( uint32_t iWrite = 0; iWrite < nCount; ++iWrite ) {
 		const sirCVarSlot_t *pSlot = nullptr;
-		const sirRegistrationResult_t eResult = validateWrite( pWrites[iWrite], &pSlot );
-		if ( eResult != SIR_REGISTRATION_OK ) {
+		const SIRRegistrationResult eResult = validateWrite( pWrites[iWrite], &pSlot );
+		if ( eResult != SIRRegistrationResult::SIR_REGISTRATION_OK ) {
 			return eResult;
 		}
 		m_Storage.pStagedWrites[iWrite] = pWrites[iWrite];
-		const sirRegistrationResult_t eApply = applyStagedWrite( pWrites[iWrite], iWrite );
-		if ( eApply != SIR_REGISTRATION_OK ) {
+		const SIRRegistrationResult eApply = applyStagedWrite( pWrites[iWrite], iWrite );
+		if ( eApply != SIRRegistrationResult::SIR_REGISTRATION_OK ) {
 			return eApply;
 		}
 	}
-	const sirRegistrationResult_t eReserve = reserveEvents();
-	if ( eReserve != SIR_REGISTRATION_OK ) {
+	const SIRRegistrationResult eReserve = reserveEvents();
+	if ( eReserve != SIRRegistrationResult::SIR_REGISTRATION_OK ) {
 		return eReserve;
 	}
 	m_nPreparedWrites = nCount;
 	m_nPreparedToken = ++m_nTokenSeed;
 	m_bPrepared = true;
 	*pToken = m_nPreparedToken;
-	return SIR_REGISTRATION_OK;
+	return SIRRegistrationResult::SIR_REGISTRATION_OK;
 }
 
 void SIRCVarRegistry::copyEvents( void ) noexcept
@@ -604,8 +604,8 @@ void SIRCVarRegistry::copyEvents( void ) noexcept
 	for ( uint32_t iScratch = 0; iScratch < m_nPreparedEvents; ++iScratch ) {
 		sirCVarEvent_t event = m_Storage.pEventScratch[iScratch];
 		const sirCVarSlot_t& slot = m_Storage.pSlots[event.handle.nSlot - 1];
-		if ( slot.eType == SIR_CVAR_UTF8_STRING ) {
-			char *pszOld = m_Storage.pszEventText + ( ( size_t )iEvent * 2 ) * m_Storage.nStringStride;
+		if ( slot.eType == SIRCVarType::SIR_CVAR_UTF8_STRING ) {
+			char *pszOld = m_Storage.pszEventText + ( static_cast<size_t>(iEvent) * 2 ) * m_Storage.nStringStride;
 			char *pszNew = pszOld + m_Storage.nStringStride;
 			if ( event.oldValue.nTextBytes != 0 ) {
 				memcpy( pszOld, event.oldValue.pszText, event.oldValue.nTextBytes );
@@ -632,9 +632,9 @@ void SIRCVarRegistry::publishOverrides( void ) noexcept
 			continue;
 		}
 		const sirCVarSlot_t& slot = m_Storage.pSlots[entry.nSlot - 1];
-		if ( slot.eType == SIR_CVAR_UTF8_STRING ) {
+		if ( slot.eType == SIRCVarType::SIR_CVAR_UTF8_STRING ) {
 			if ( entry.bApplied ) {
-				char *pszTarget = m_Storage.pszActiveText + ( size_t )iOverride * m_Storage.nStringStride;
+				char *pszTarget = m_Storage.pszActiveText + static_cast<size_t>(iOverride) * m_Storage.nStringStride;
 				if ( entry.value.nTextBytes != 0 ) {
 					memmove( pszTarget, entry.value.pszText, entry.value.nTextBytes );
 				}
@@ -642,7 +642,7 @@ void SIRCVarRegistry::publishOverrides( void ) noexcept
 				entry.value.pszText = pszTarget;
 			}
 			if ( entry.bPending ) {
-				char *pszTarget = m_Storage.pszPendingText + ( size_t )iOverride * m_Storage.nStringStride;
+				char *pszTarget = m_Storage.pszPendingText + static_cast<size_t>(iOverride) * m_Storage.nStringStride;
 				if ( entry.pending.nTextBytes != 0 ) {
 					memmove( pszTarget, entry.pending.pszText, entry.pending.nTextBytes );
 				}
@@ -662,27 +662,27 @@ void SIRCVarRegistry::publishBanks( void ) noexcept
 			continue;
 		}
 		slot.effective = selectValue( iSlot, m_Storage.pOverrides );
-		if ( slot.eType == SIR_CVAR_UTF8_STRING ) {
+		if ( slot.eType == SIRCVarType::SIR_CVAR_UTF8_STRING ) {
 			continue;
 		}
 		if ( sirCVarNarrow( slot.eType ) ) {
-			m_Storage.pBank32[slot.nBankIndex] = ( uint32_t )slot.effective.nBits;
+			m_Storage.pBank32[slot.nBankIndex] = static_cast<uint32_t>(slot.effective.nBits);
 		} else {
 			m_Storage.pBank64[slot.nBankIndex] = slot.effective.nBits;
 		}
 	}
 }
 
-sirRegistrationResult_t SIRCVarRegistry::commitBatch( uint64_t nToken ) noexcept
+SIRRegistrationResult SIRCVarRegistry::commitBatch( uint64_t nToken ) noexcept
 {
 	if ( !isInitialized() ) {
-		return SIR_REGISTRATION_NOT_INITIALIZED;
+		return SIRRegistrationResult::SIR_REGISTRATION_NOT_INITIALIZED;
 	}
 	if ( !ownerThread() ) {
-		return SIR_REGISTRATION_WRONG_THREAD;
+		return SIRRegistrationResult::SIR_REGISTRATION_WRONG_THREAD;
 	}
 	if ( !m_bPrepared || nToken == 0 || nToken != m_nPreparedToken ) {
-		return SIR_REGISTRATION_STALE_HANDLE;
+		return SIRRegistrationResult::SIR_REGISTRATION_STALE_HANDLE;
 	}
 	copyEvents();
 	publishOverrides();
@@ -697,42 +697,42 @@ sirRegistrationResult_t SIRCVarRegistry::commitBatch( uint64_t nToken ) noexcept
 	m_nPreparedWrites = 0;
 	m_nPreparedEvents = 0;
 	m_bPrepared = false;
-	return SIR_REGISTRATION_OK;
+	return SIRRegistrationResult::SIR_REGISTRATION_OK;
 }
 
-sirRegistrationResult_t SIRCVarRegistry::cancelBatch( uint64_t nToken ) noexcept
+SIRRegistrationResult SIRCVarRegistry::cancelBatch( uint64_t nToken ) noexcept
 {
 	if ( !isInitialized() ) {
-		return SIR_REGISTRATION_NOT_INITIALIZED;
+		return SIRRegistrationResult::SIR_REGISTRATION_NOT_INITIALIZED;
 	}
 	if ( !ownerThread() ) {
-		return SIR_REGISTRATION_WRONG_THREAD;
+		return SIRRegistrationResult::SIR_REGISTRATION_WRONG_THREAD;
 	}
 	if ( !m_bPrepared || nToken == 0 || nToken != m_nPreparedToken ) {
-		return SIR_REGISTRATION_STALE_HANDLE;
+		return SIRRegistrationResult::SIR_REGISTRATION_STALE_HANDLE;
 	}
 	m_bPrepared = false;
 	m_nPreparedToken = 0;
 	m_nPreparedWrites = 0;
 	m_nPreparedEvents = 0;
-	return SIR_REGISTRATION_OK;
+	return SIRRegistrationResult::SIR_REGISTRATION_OK;
 }
 
-sirRegistrationResult_t SIRCVarRegistry::applyLatched( sirCVarApplyPhase_t ePhase ) noexcept
+SIRRegistrationResult SIRCVarRegistry::applyLatched( SIRCVarApplyPhase ePhase ) noexcept
 {
 	if ( !isInitialized() ) {
-		return SIR_REGISTRATION_NOT_INITIALIZED;
+		return SIRRegistrationResult::SIR_REGISTRATION_NOT_INITIALIZED;
 	}
 	if ( !ownerThread() ) {
-		return SIR_REGISTRATION_WRONG_THREAD;
+		return SIRRegistrationResult::SIR_REGISTRATION_WRONG_THREAD;
 	}
 	if ( m_bPrepared || m_bPumping ) {
-		return SIR_REGISTRATION_DENIED;
+		return SIRRegistrationResult::SIR_REGISTRATION_DENIED;
 	}
-	if ( ePhase > SIR_CVAR_APPLY_RESTART || m_nRevision == UINT64_MAX || m_nTokenSeed == UINT64_MAX ) {
-		return SIR_REGISTRATION_INVALID_ARGUMENT;
+	if ( ePhase > SIRCVarApplyPhase::SIR_CVAR_APPLY_RESTART || m_nRevision == UINT64_MAX || m_nTokenSeed == UINT64_MAX ) {
+		return SIRRegistrationResult::SIR_REGISTRATION_INVALID_ARGUMENT;
 	}
-	memcpy( m_Storage.pShadow, m_Storage.pOverrides, ( size_t )m_Storage.nOverrides * sizeof( sirCVarOverride_t ) );
+	memcpy( m_Storage.pShadow, m_Storage.pOverrides, static_cast<size_t>(m_Storage.nOverrides) * sizeof( sirCVarOverride_t ) );
 	uint32_t nApplied = 0;
 	for ( uint32_t iOverride = 0; iOverride < m_Storage.nOverrides; ++iOverride ) {
 		sirCVarOverride_t& entry = m_Storage.pShadow[iOverride];
@@ -750,10 +750,10 @@ sirRegistrationResult_t SIRCVarRegistry::applyLatched( sirCVarApplyPhase_t ePhas
 		++nApplied;
 	}
 	if ( nApplied == 0 ) {
-		return SIR_REGISTRATION_NO_CHANGE;
+		return SIRRegistrationResult::SIR_REGISTRATION_NO_CHANGE;
 	}
-	const sirRegistrationResult_t eResult = reserveEvents();
-	if ( eResult != SIR_REGISTRATION_OK ) {
+	const SIRRegistrationResult eResult = reserveEvents();
+	if ( eResult != SIRRegistrationResult::SIR_REGISTRATION_OK ) {
 		return eResult;
 	}
 	m_nPreparedToken = ++m_nTokenSeed;
@@ -762,42 +762,42 @@ sirRegistrationResult_t SIRCVarRegistry::applyLatched( sirCVarApplyPhase_t ePhas
 	return commitBatch( m_nPreparedToken );
 }
 
-sirRegistrationResult_t SIRCVarRegistry::peekEvent( const sirCVarEvent_t **ppEvent ) const noexcept
+SIRRegistrationResult SIRCVarRegistry::peekEvent( const sirCVarEvent_t **ppEvent ) const noexcept
 {
 	if ( ppEvent == nullptr ) {
-		return SIR_REGISTRATION_INVALID_ARGUMENT;
+		return SIRRegistrationResult::SIR_REGISTRATION_INVALID_ARGUMENT;
 	}
 	*ppEvent = nullptr;
 	if ( !isInitialized() ) {
-		return SIR_REGISTRATION_NOT_INITIALIZED;
+		return SIRRegistrationResult::SIR_REGISTRATION_NOT_INITIALIZED;
 	}
 	if ( !ownerThread() ) {
-		return SIR_REGISTRATION_WRONG_THREAD;
+		return SIRRegistrationResult::SIR_REGISTRATION_WRONG_THREAD;
 	}
 	if ( m_nEventCount == 0 ) {
-		return SIR_REGISTRATION_NOT_FOUND;
+		return SIRRegistrationResult::SIR_REGISTRATION_NOT_FOUND;
 	}
 	*ppEvent = &m_Storage.pEvents[m_nEventHead];
-	return SIR_REGISTRATION_OK;
+	return SIRRegistrationResult::SIR_REGISTRATION_OK;
 }
 
-sirRegistrationResult_t SIRCVarRegistry::popEvent( void ) noexcept
+SIRRegistrationResult SIRCVarRegistry::popEvent( void ) noexcept
 {
 	if ( !isInitialized() ) {
-		return SIR_REGISTRATION_NOT_INITIALIZED;
+		return SIRRegistrationResult::SIR_REGISTRATION_NOT_INITIALIZED;
 	}
 	if ( !ownerThread() ) {
-		return SIR_REGISTRATION_WRONG_THREAD;
+		return SIRRegistrationResult::SIR_REGISTRATION_WRONG_THREAD;
 	}
 	if ( m_nEventCount == 0 ) {
-		return SIR_REGISTRATION_NOT_FOUND;
+		return SIRRegistrationResult::SIR_REGISTRATION_NOT_FOUND;
 	}
 	if ( m_bPrepared || m_bPumping ) {
-		return SIR_REGISTRATION_DENIED;
+		return SIRRegistrationResult::SIR_REGISTRATION_DENIED;
 	}
 	m_nEventHead = sirCVarNext( m_nEventHead, m_Storage.nEvents );
 	--m_nEventCount;
-	return SIR_REGISTRATION_OK;
+	return SIRRegistrationResult::SIR_REGISTRATION_OK;
 }
 
 uint32_t SIRCVarRegistry::pumpGroups( sirCVarGroupSink_t pfnSink, void *pContext ) noexcept

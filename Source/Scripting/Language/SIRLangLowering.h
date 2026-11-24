@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRLANGLOWERING_H__
-#define __SIRENGINE_SIRLANGLOWERING_H__
+#ifndef __SIR_LANGLOWERING_H__
+#define __SIR_LANGLOWERING_H__
 
 #include <Core/SIRPCH.h>
 
@@ -24,8 +24,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Scripting/Language/SIRLangGraphVM.h>
 
-typedef enum sirLangLowerError_e : uint8_t
-{
+enum class SIRLangLowerError : uint8_t {
 	SIR_LANG_LOWER_OK = 0,
 	SIR_LANG_LOWER_INVALID_INPUT,
 	SIR_LANG_LOWER_UNRESOLVED,
@@ -36,7 +35,7 @@ typedef enum sirLangLowerError_e : uint8_t
 	SIR_LANG_LOWER_MISSING_RETURN,
 	SIR_LANG_LOWER_UNVERIFIABLE,
 	SIR_LANG_LOWER_DEPTH
-} sirLangLowerError_t;
+};
 
 typedef struct sirLangHIRNode_s
 {
@@ -45,8 +44,8 @@ typedef struct sirLangHIRNode_s
 	uint64_t nResolvedFunctionId;
 	uint64_t nSignatureId;
 	uint32_t nEffects;
-	sirLangValueKind_t eType;
-	sirLangSyntaxKind_t eSyntax;
+	SIRLangValueKind eType;
+	SIRLangSyntaxKind eSyntax;
 } sirLangHIRNode_t;
 
 typedef struct sirLangHIRProgram_s
@@ -64,7 +63,7 @@ typedef struct sirLangCIRStorage_s
 	uint32_t nFunctionCapacity;
 	sirLangCIRInstruction_t *pInstructions;
 	uint32_t nInstructionCapacity;
-	sirLangValueKind_t *pParameterTypes;
+	SIRLangValueKind *pParameterTypes;
 	uint32_t nParameterTypeCapacity;
 	uint32_t *pCallArguments;
 	uint32_t nCallArgumentCapacity;
@@ -75,18 +74,18 @@ typedef struct sirLangCIRStorage_s
 	uint64_t nLayoutDigest;
 	uint64_t nBindingDigest;
 	sirLangCIRProgram_t program;
-	sirLangLowerError_t eError;
+	SIRLangLowerError eError;
 	uint32_t iErrorNode;
 } sirLangCIRStorage_t;
 
 // HIR records are node-index aligned with the lossless syntax tree and retain
 // resolved bindings. Unknown executable types fail closed, not 'dynamic any'.
-sirLangLowerError_t SIRLangBuildHIR( const sirLangSyntaxTree_t *pTree, const sirLangSemanticOutput_t *pSemantic,
+SIRLangLowerError SIRLangBuildHIR( const sirLangSyntaxTree_t *pTree, const sirLangSemanticOutput_t *pSemantic,
                                      const sirLangSignatureOutput_t *pSignatures, sirLangHIRProgram_t *pOutput ) noexcept;
 
 // Compiles statically typed scalar functions; unsupported effects and types
 // produce an explicit error. The caller owns all CIR storage and identifiers.
-sirLangLowerError_t SIRLangBuildCIR( const sirLangSyntaxTree_t *pTree, const sirLangSignatureOutput_t *pSignatures,
+SIRLangLowerError SIRLangBuildCIR( const sirLangSyntaxTree_t *pTree, const sirLangSignatureOutput_t *pSignatures,
                                      const sirLangHIRProgram_t *pHIR, sirLangCIRStorage_t *pOutput ) noexcept;
 
-#endif // __SIRENGINE_SIRLANGLOWERING_H__
+#endif // __SIR_LANGLOWERING_H__

@@ -15,7 +15,7 @@ static bool lookup( void *pData, uint32_t nPage, uint32_t& rParent, uint16_t& rM
 {
 	if ( nPage >= 16u )
 		return false;
-	const Page_t *const pages = ( const Page_t * )pData;
+	const Page_t *const pages = static_cast<const Page_t *>(pData);
 	rParent = pages[nPage].parent;
 	rMip = pages[nPage].mip;
 	return true;
@@ -69,12 +69,12 @@ int main()
 	policy.m_nMaxCandidates = 16u;
 	t3dVTFeedbackReductionStats_t reductions{};
 	const uint32_t legacy[2] = { 2u, 2u };
-	assert( reducer.reduce( ( const uint8_t * )legacy, 2u, 16u, lookup, pages, policy, reductions ) );
+	assert( reducer.reduce( reinterpret_cast<const uint8_t *>(legacy), 2u, 16u, lookup, pages, policy, reductions ) );
 	assert( reducer.getSelectedCount() == 1u );
 	// The runtime consumes/stages V2 results before doing diagnostics-only V1.
 	const uint32_t productionStagedPage = reducer.getSelected( 0u ).m_nPage;
 	uint32_t productionStagedCount = 1u;
-	assert( t3d_vt_feedback_multi_reduce_capture( ( const uint8_t * )words.data(), words.size() * sizeof( uint32_t ), params, 100u, 44u, 5u,
+	assert( t3d_vt_feedback_multi_reduce_capture( reinterpret_cast<const uint8_t *>(words.data()), words.size() * sizeof( uint32_t ), params, 100u, 44u, 5u,
 	                                              17u, viewport, reducer, lookup, pages, policy, reductions ) );
 	t3dVTFeedbackMultiShadowStats_t stats{};
 	t3d_vt_feedback_multi_shadow_accept( stats, reductions.m_nSamples, reductions.m_nValidSamples, reductions.m_nDirectUniquePages,

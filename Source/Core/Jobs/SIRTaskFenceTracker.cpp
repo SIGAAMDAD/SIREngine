@@ -31,7 +31,7 @@ typedef struct sirTaskFenceRecord_s
 } sirTaskFenceRecord_t;
 
 SIRTaskFenceTracker::SIRTaskFenceTracker( void ) noexcept
-    : m_pScheduler( nullptr ), m_pRecords( nullptr ), m_OwnerThread(), m_eProvider( SIR_TASK_EXEC_RENDER ), m_nLastTrackedFence( 0 ),
+    : m_pScheduler( nullptr ), m_pRecords( nullptr ), m_OwnerThread(), m_eProvider( SIRTaskExecutor::SIR_TASK_EXEC_RENDER ), m_nLastTrackedFence( 0 ),
       m_nCompletedFence( 0 ), m_nCapacity( 0 ), m_nHead( 0 ), m_nPending( 0 ), m_bDraining( false ), m_bInitialized( false ),
       m_bEverInitialized( false )
 {
@@ -44,25 +44,25 @@ SIRTaskFenceTracker::~SIRTaskFenceTracker()
 	}
 }
 
-bool SIRTaskFenceTracker::init( SIRMemoryManager *pMemory, SIRTaskScheduler *pScheduler, sirTaskExecutor_t eProvider,
+bool SIRTaskFenceTracker::init( SIRMemoryManager *pMemory, SIRTaskScheduler *pScheduler, SIRTaskExecutor eProvider,
                                 uint32_t nCapacity ) noexcept
 {
 	if ( m_bEverInitialized || pMemory == nullptr || !pMemory->isInitialized() || pScheduler == nullptr || nCapacity == 0 ||
-	     eProvider < SIR_TASK_EXEC_RENDER || eProvider >= SIR_TASK_EXEC_COUNT || !pScheduler->bindProviderOwner( eProvider ) ) {
+	     eProvider < SIRTaskExecutor::SIR_TASK_EXEC_RENDER || eProvider >= SIRTaskExecutor::SIR_TASK_EXEC_COUNT || !pScheduler->bindProviderOwner( eProvider ) ) {
 		return false;
 	}
-	sirMemoryDomain_t eDomain = SIR_MEMORY_DOMAIN_RENDERING_CPU;
-	if ( eProvider == SIR_TASK_EXEC_PHYSICS ) {
-		eDomain = SIR_MEMORY_DOMAIN_PHYSICS;
-	} else if ( eProvider == SIR_TASK_EXEC_AUDIO ) {
-		eDomain = SIR_MEMORY_DOMAIN_AUDIO;
+	SIRMemoryDomain eDomain = SIRMemoryDomain::SIR_MEMORY_DOMAIN_RENDERING_CPU;
+	if ( eProvider == SIRTaskExecutor::SIR_TASK_EXEC_PHYSICS ) {
+		eDomain = SIRMemoryDomain::SIR_MEMORY_DOMAIN_PHYSICS;
+	} else if ( eProvider == SIRTaskExecutor::SIR_TASK_EXEC_AUDIO ) {
+		eDomain = SIRMemoryDomain::SIR_MEMORY_DOMAIN_AUDIO;
 	}
 	void *pRecords =
-	    pMemory->allocateMetadata( ( uint64_t )nCapacity * sizeof( sirTaskFenceRecord_t ), alignof( sirTaskFenceRecord_t ), eDomain );
+	    pMemory->allocateMetadata( static_cast<uint64_t>(nCapacity * sizeof(  sirTaskFenceRecord_t  )), alignof( sirTaskFenceRecord_t ), eDomain );
 	if ( pRecords == nullptr ) {
 		return false;
 	}
-	m_pRecords = ( sirTaskFenceRecord_t * )pRecords;
+	m_pRecords = static_cast<sirTaskFenceRecord_t *>(pRecords);
 	m_pScheduler = pScheduler;
 	m_OwnerThread = std::this_thread::get_id();
 	m_eProvider = eProvider;
@@ -107,10 +107,10 @@ bool SIRTaskFenceTracker::track( sirTaskHandle_t task, uint64_t nFenceValue, sir
 	if ( !hasCapacity() || nFenceValue <= m_nCompletedFence || nFenceValue < m_nLastTrackedFence ) {
 		return false;
 	}
-	sirTaskState_t eState = SIR_TASK_INVALID;
-	sirTaskExecutor_t eExecutor = SIR_TASK_EXEC_CPU;
+	SIRTaskState eState = SIRTaskState::SIR_TASK_INVALID;
+	SIRTaskExecutor eExecutor = SIRTaskExecutor::SIR_TASK_EXEC_CPU;
 	if ( !m_pScheduler->queryTask( task, &eState, &eExecutor ) || eExecutor != m_eProvider ||
-	     ( eState != SIR_TASK_RUNNING && eState != SIR_TASK_AWAITING_PROVIDER ) ) {
+	     ( eState != SIRTaskState::SIR_TASK_RUNNING && eState != SIRTaskState::SIR_TASK_AWAITING_PROVIDER ) ) {
 		return false;
 	}
 	for ( uint32_t i = 0; i < m_nPending; ++i ) {
@@ -134,7 +134,7 @@ bool SIRTaskFenceTracker::untrackLast( sirTaskHandle_t task ) noexcept
 	const uint32_t nLast = ( m_nHead + m_nPending - 1 ) % m_nCapacity;
 	const sirTaskFenceRecord_t& record = m_pRecords[nLast];
 	if ( record.hTask.nSlot != task.nSlot || record.hTask.nGeneration != task.nGeneration || record.bFinalized ||
-	     m_pScheduler->getState( task ) != SIR_TASK_RUNNING ) {
+	     m_pScheduler->getState( task ) != SIRTaskState::SIR_TASK_RUNNING ) {
 		return false;
 	}
 	--m_nPending;
@@ -142,13 +142,13 @@ bool SIRTaskFenceTracker::untrackLast( sirTaskHandle_t task ) noexcept
 	return true;
 }
 
-bool SIRTaskFenceTracker::drain( uint64_t nCompletedFence, sirTaskResult_t eResult, uint32_t *pnAcknowledged ) noexcept
+bool SIRTaskFenceTracker::drain( uint64_t nCompletedFence, SIRTaskResult eResult, uint32_t *pnAcknowledged ) noexcept
 {
 	if ( pnAcknowledged == nullptr ) {
 		return false;
 	}
 	*pnAcknowledged = 0;
-	if ( !isOwner() || ( eResult != SIR_TASK_RESULT_SUCCESS && eResult != SIR_TASK_RESULT_FAILURE ) ||
+	if ( !isOwner() || ( eResult != SIRTaskResult::SIR_TASK_RESULT_SUCCESS && eResult != SIRTaskResult::SIR_TASK_RESULT_FAILURE ) ||
 	     nCompletedFence < m_nCompletedFence || m_bDraining ) {
 		return false;
 	}
@@ -178,7 +178,7 @@ bool SIRTaskFenceTracker::drain( uint64_t nCompletedFence, sirTaskResult_t eResu
 	return true;
 }
 
-bool SIRTaskFenceTracker::advanceCompleted( uint64_t nCompletedFence, sirTaskResult_t eResult, uint32_t *pnAcknowledged ) noexcept
+bool SIRTaskFenceTracker::advanceCompleted( uint64_t nCompletedFence, SIRTaskResult eResult, uint32_t *pnAcknowledged ) noexcept
 {
 	return drain( nCompletedFence, eResult, pnAcknowledged );
 }
@@ -186,5 +186,5 @@ bool SIRTaskFenceTracker::advanceCompleted( uint64_t nCompletedFence, sirTaskRes
 bool SIRTaskFenceTracker::failQuiesced( uint32_t *pnAcknowledged ) noexcept
 {
 	const uint64_t nFence = m_nLastTrackedFence > m_nCompletedFence ? m_nLastTrackedFence : m_nCompletedFence;
-	return drain( nFence, SIR_TASK_RESULT_FAILURE, pnAcknowledged );
+	return drain( nFence, SIRTaskResult::SIR_TASK_RESULT_FAILURE, pnAcknowledged );
 }

@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRANIMATIONCONTRACTLEASEPOOL_H__
-#define __SIRENGINE_SIRANIMATIONCONTRACTLEASEPOOL_H__
+#ifndef __SIR_ANIMATIONCONTRACTLEASEPOOL_H__
+#define __SIR_ANIMATIONCONTRACTLEASEPOOL_H__
 
 #include <Core/SIRPCH.h>
 
@@ -58,15 +58,15 @@ public:
 
 	uint32_t getOutstandingReaders( void ) const noexcept;
 
-	sirAnimationResult_t initialize( sirAnimationContractPoseSlot_t *pPoses, uint32_t nPoseCapacity,
+	SIRAnimationResult initialize( sirAnimationContractPoseSlot_t *pPoses, uint32_t nPoseCapacity,
 	                                 sirAnimationContractReaderSlot_t *pReaders, uint32_t nReaderCapacity ) noexcept;
-	sirAnimationResult_t registerPose( sirAnimationPoseHandle_t pose, const sirAnimationInstance_t& instance,
+	SIRAnimationResult registerPose( sirAnimationPoseHandle_t pose, const sirAnimationInstance_t& instance,
 	                                   const sirAnimationTick_t& tick ) noexcept;
-	sirAnimationResult_t acquire( sirAnimationPoseHandle_t pose, sirAnimationPoseLease_t *pLease ) noexcept;
-	sirAnimationResult_t release( const sirAnimationPoseLease_t& lease ) noexcept;
-	sirAnimationResult_t cancelEpoch( uint64_t nWorldEpoch, uint32_t nCancellationGeneration ) noexcept;
-	sirAnimationResult_t retirePose( sirAnimationPoseHandle_t pose ) noexcept;
-	sirAnimationResult_t shutdown( void ) noexcept;
+	SIRAnimationResult acquire( sirAnimationPoseHandle_t pose, sirAnimationPoseLease_t *pLease ) noexcept;
+	SIRAnimationResult release( const sirAnimationPoseLease_t& lease ) noexcept;
+	SIRAnimationResult cancelEpoch( uint64_t nWorldEpoch, uint32_t nCancellationGeneration ) noexcept;
+	SIRAnimationResult retirePose( sirAnimationPoseHandle_t pose ) noexcept;
+	SIRAnimationResult shutdown( void ) noexcept;
 
 protected:
 private:
@@ -80,4 +80,4 @@ private:
 	uint8_t m_bHasCancellation;
 };
 
-#endif // __SIRENGINE_SIRANIMATIONCONTRACTLEASEPOOL_H__
+#endif // __SIR_ANIMATIONCONTRACTLEASEPOOL_H__

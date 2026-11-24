@@ -38,72 +38,72 @@ static uint32_t sirShaderCountBits( uint64_t nValue ) noexcept
 
 static uint64_t sirShaderStageRequirements( uint32_t nStage ) noexcept
 {
-	if ( nStage == SIR_GRAPHICS_STAGE_COMPUTE ) {
-		return SIR_GRAPHICS_FEATURE_COMPUTE;
+	if ( nStage == SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_COMPUTE ) {
+		return SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_COMPUTE;
 	}
-	uint64_t nRequired = SIR_GRAPHICS_FEATURE_GRAPHICS;
-	if ( nStage == SIR_GRAPHICS_STAGE_GEOMETRY ) {
-		nRequired |= SIR_GRAPHICS_FEATURE_GEOMETRY_SHADER;
+	uint64_t nRequired = SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_GRAPHICS;
+	if ( nStage == SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_GEOMETRY ) {
+		nRequired |= SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_GEOMETRY_SHADER;
 	}
-	if ( nStage == SIR_GRAPHICS_STAGE_TESS_CONTROL || nStage == SIR_GRAPHICS_STAGE_TESS_EVALUATION ) {
-		nRequired |= SIR_GRAPHICS_FEATURE_TESSELLATION;
+	if ( nStage == SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_TESS_CONTROL || nStage == SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_TESS_EVALUATION ) {
+		nRequired |= SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_TESSELLATION;
 	}
-	if ( nStage == SIR_GRAPHICS_STAGE_MESH || nStage == SIR_GRAPHICS_STAGE_TASK ) {
-		nRequired |= SIR_GRAPHICS_FEATURE_MESH_SHADER;
+	if ( nStage == SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_MESH || nStage == SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_TASK ) {
+		nRequired |= SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_MESH_SHADER;
 	}
 	return nRequired;
 }
 
 bool sirShaderIsStageValid( uint32_t nStage ) noexcept
 {
-	constexpr uint32_t VALID_STAGES = ( SIR_GRAPHICS_STAGE_TASK << 1 ) - 1U;
+	constexpr uint32_t VALID_STAGES = ( SIRGraphicsShaderStage::SIR_GRAPHICS_STAGE_TASK << 1 ) - 1U;
 	return nStage != 0 && ( nStage & ( nStage - 1U ) ) == 0 && ( nStage & ~VALID_STAGES ) == 0;
 }
 
-sirGraphicsResult_t sirShaderGetBackendFormat( sirGraphicsBackend_t eBackend, sirGraphicsShaderFormat_t *pFormat ) noexcept
+SIRGraphicsResult sirShaderGetBackendFormat( SIRGraphicsBackend eBackend, SIRGraphicsShaderFormat *pFormat ) noexcept
 {
 	if ( pFormat == nullptr ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	switch ( eBackend ) {
-	case SIR_GRAPHICS_BACKEND_D3D12:
-		*pFormat = SIR_GRAPHICS_SHADER_DXIL;
-		return SIR_GRAPHICS_SUCCESS;
-	case SIR_GRAPHICS_BACKEND_VULKAN:
-		*pFormat = SIR_GRAPHICS_SHADER_SPIRV;
-		return SIR_GRAPHICS_SUCCESS;
-	case SIR_GRAPHICS_BACKEND_OPENGL:
-		*pFormat = SIR_GRAPHICS_SHADER_GLSL;
-		return SIR_GRAPHICS_SUCCESS;
+	case SIRGraphicsBackend::SIR_GRAPHICS_BACKEND_D3D12:
+		*pFormat = SIRGraphicsShaderFormat::SIR_GRAPHICS_SHADER_DXIL;
+		return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
+	case SIRGraphicsBackend::SIR_GRAPHICS_BACKEND_VULKAN:
+		*pFormat = SIRGraphicsShaderFormat::SIR_GRAPHICS_SHADER_SPIRV;
+		return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
+	case SIRGraphicsBackend::SIR_GRAPHICS_BACKEND_OPENGL:
+		*pFormat = SIRGraphicsShaderFormat::SIR_GRAPHICS_SHADER_GLSL;
+		return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 	default:
-		return SIR_GRAPHICS_UNSUPPORTED;
+		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
 }
 
-sirGraphicsResult_t sirShaderBuildCacheKey( const sirShaderCacheDescriptor_t& desc, sirShaderCacheKey_t *pKey ) noexcept
+SIRGraphicsResult sirShaderBuildCacheKey( const sirShaderCacheDescriptor_t& desc, sirShaderCacheKey_t *pKey ) noexcept
 {
 	if ( pKey == nullptr ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	*pKey = {};
-	sirGraphicsShaderFormat_t eExpected = SIR_GRAPHICS_SHADER_DXIL;
-	if ( sirShaderGetBackendFormat( desc.eBackend, &eExpected ) != SIR_GRAPHICS_SUCCESS ) {
-		return SIR_GRAPHICS_UNSUPPORTED;
+	SIRGraphicsShaderFormat eExpected = SIRGraphicsShaderFormat::SIR_GRAPHICS_SHADER_DXIL;
+	if ( sirShaderGetBackendFormat( desc.eBackend, &eExpected ) != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
+		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
 	if ( desc.eFormat != eExpected || !sirShaderIsStageValid( desc.nStage ) ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	constexpr uint64_t VALID_FEATURES = ( SIR_GRAPHICS_FEATURE_PRESENT << 1 ) - 1ULL;
+	constexpr uint64_t VALID_FEATURES = ( SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_PRESENT << 1 ) - 1ULL;
 	if ( ( desc.nRequiredFeatures & ~VALID_FEATURES ) != 0 ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( desc.nSchemaVersion == 0 || desc.nCompilerVersion == 0 || desc.nSourceHash == 0 || desc.nEntryPointHash == 0 ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 
 	// Hash explicit scalar values in fixed little-endian order, never padding.
 	const uint64_t szValues[] = { desc.nSchemaVersion,       desc.nCompilerVersion,    desc.nOptimizationFlags, desc.nStage,
-	                              ( uint64_t )desc.eBackend, ( uint64_t )desc.eFormat, desc.nSourceHash,        desc.nIncludesHash,
+	                              static_cast<uint64_t>(desc.eBackend), static_cast<uint64_t>(desc.eFormat), desc.nSourceHash,        desc.nIncludesHash,
 	                              desc.nEntryPointHash,      desc.nDefinitionsHash,    desc.nPermutationKey,    desc.nRequiredFeatures,
 	                              desc.nTargetFingerprint };
 	uint64_t nLow = 14695981039346656037ULL;
@@ -114,61 +114,61 @@ sirGraphicsResult_t sirShaderBuildCacheKey( const sirShaderCacheDescriptor_t& de
 	}
 	pKey->nLow = nLow;
 	pKey->nHigh = nHigh;
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t sirShaderValidateVariant( const sirShaderVariant_t& variant ) noexcept
+SIRGraphicsResult sirShaderValidateVariant( const sirShaderVariant_t& variant ) noexcept
 {
-	sirGraphicsShaderFormat_t eExpected = SIR_GRAPHICS_SHADER_DXIL;
-	if ( sirShaderGetBackendFormat( variant.eBackend, &eExpected ) != SIR_GRAPHICS_SUCCESS ) {
-		return SIR_GRAPHICS_UNSUPPORTED;
+	SIRGraphicsShaderFormat eExpected = SIRGraphicsShaderFormat::SIR_GRAPHICS_SHADER_DXIL;
+	if ( sirShaderGetBackendFormat( variant.eBackend, &eExpected ) != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
+		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
 	if ( variant.eFormat != eExpected || !sirShaderIsStageValid( variant.nStage ) ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( variant.pBytes == nullptr || variant.nByteCount < 4 || variant.nContentHash == 0 ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( variant.pszEntryPoint == nullptr || variant.pszEntryPoint[0] == '\0' ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( variant.nDeviceId != 0 && variant.nVendorId == 0 ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	constexpr uint64_t VALID_FEATURES = ( SIR_GRAPHICS_FEATURE_PRESENT << 1 ) - 1ULL;
+	constexpr uint64_t VALID_FEATURES = ( SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_PRESENT << 1 ) - 1ULL;
 	if ( ( variant.nRequiredFeatures & ~VALID_FEATURES ) != 0 ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( variant.bUber && variant.nPermutationKey != 0 ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t sirShaderSelectVariant( const sirShaderVariant_t *pVariants, uint32_t nVariantCount,
+SIRGraphicsResult sirShaderSelectVariant( const sirShaderVariant_t *pVariants, uint32_t nVariantCount,
                                             const sirShaderSelection_t& selection, const sirShaderVariant_t **ppVariant ) noexcept
 {
 	if ( ppVariant == nullptr ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	*ppVariant = nullptr;
 	if ( pVariants == nullptr || nVariantCount == 0 || nVariantCount > 4096 || !sirShaderIsStageValid( selection.nStage ) ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	sirGraphicsShaderFormat_t eExpected = SIR_GRAPHICS_SHADER_DXIL;
-	if ( sirShaderGetBackendFormat( selection.eBackend, &eExpected ) != SIR_GRAPHICS_SUCCESS ) {
-		return SIR_GRAPHICS_UNSUPPORTED;
+	SIRGraphicsShaderFormat eExpected = SIRGraphicsShaderFormat::SIR_GRAPHICS_SHADER_DXIL;
+	if ( sirShaderGetBackendFormat( selection.eBackend, &eExpected ) != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
+		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
 	if ( ( selection.nAvailableFeatures & sirShaderStageRequirements( selection.nStage ) ) !=
 	     sirShaderStageRequirements( selection.nStage ) ) {
-		return SIR_GRAPHICS_UNSUPPORTED;
+		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
 
 	uint32_t nBestScore = 0;
 	for ( uint32_t iVariant = 0; iVariant < nVariantCount; ++iVariant ) {
 		const sirShaderVariant_t& variant = pVariants[iVariant];
-		const sirGraphicsResult_t eValidation = sirShaderValidateVariant( variant );
-		if ( eValidation != SIR_GRAPHICS_SUCCESS ) {
+		const SIRGraphicsResult eValidation = sirShaderValidateVariant( variant );
+		if ( eValidation != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 			return eValidation;
 		}
 		if ( variant.eBackend != selection.eBackend || variant.nStage != selection.nStage ) {
@@ -198,17 +198,17 @@ sirGraphicsResult_t sirShaderSelectVariant( const sirShaderVariant_t *pVariants,
 			*ppVariant = &variant;
 		}
 	}
-	return *ppVariant != nullptr ? SIR_GRAPHICS_SUCCESS : SIR_GRAPHICS_UNSUPPORTED;
+	return *ppVariant != nullptr ? SIRGraphicsResult::SIR_GRAPHICS_SUCCESS : SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 }
 
-sirGraphicsResult_t sirShaderToGraphicsCode( const sirShaderVariant_t& variant, sirGraphicsShaderCode_t *pCode ) noexcept
+SIRGraphicsResult sirShaderToGraphicsCode( const sirShaderVariant_t& variant, sirGraphicsShaderCode_t *pCode ) noexcept
 {
 	if ( pCode == nullptr ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	*pCode = {};
-	const sirGraphicsResult_t eValidation = sirShaderValidateVariant( variant );
-	if ( eValidation != SIR_GRAPHICS_SUCCESS ) {
+	const SIRGraphicsResult eValidation = sirShaderValidateVariant( variant );
+	if ( eValidation != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 		return eValidation;
 	}
 	pCode->eFormat = variant.eFormat;
@@ -216,7 +216,7 @@ sirGraphicsResult_t sirShaderToGraphicsCode( const sirShaderVariant_t& variant, 
 	pCode->nByteCount = variant.nByteCount;
 	pCode->nContentHash = variant.nContentHash;
 	pCode->pszEntryPoint = variant.pszEntryPoint;
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
 uint32_t SIRShaderWarmupQueue::getCount( void ) const noexcept
@@ -229,10 +229,10 @@ uint32_t SIRShaderWarmupQueue::getCapacity( void ) const noexcept
 	return s_nCapacity;
 }
 
-sirGraphicsResult_t SIRShaderWarmupQueue::push( const sirShaderCacheKey_t& key, uint32_t nPriority ) noexcept
+SIRGraphicsResult SIRShaderWarmupQueue::push( const sirShaderCacheKey_t& key, uint32_t nPriority ) noexcept
 {
 	if ( key.nLow == 0 && key.nHigh == 0 ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	for ( uint32_t iItem = 0; iItem < m_nCount; ++iItem ) {
 		sirShaderWarmupItem_t& item = m_szItems[iItem];
@@ -240,16 +240,16 @@ sirGraphicsResult_t SIRShaderWarmupQueue::push( const sirShaderCacheKey_t& key, 
 			if ( nPriority > item.nPriority ) {
 				item.nPriority = nPriority;
 			}
-			return SIR_GRAPHICS_SUCCESS;
+			return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 		}
 	}
 	if ( m_nCount == s_nCapacity ) {
-		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+		return SIRGraphicsResult::SIR_GRAPHICS_CAPACITY_EXCEEDED;
 	}
 	m_szItems[m_nCount].key = key;
 	m_szItems[m_nCount].nPriority = nPriority;
 	++m_nCount;
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
 bool SIRShaderWarmupQueue::tryPop( sirShaderWarmupItem_t *pItem ) noexcept

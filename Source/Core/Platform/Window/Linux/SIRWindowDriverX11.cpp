@@ -36,21 +36,21 @@ static void sirX11ClearRecovery( void ) noexcept
 }
 
 // Set the ICCCM name and UTF-8 EWMH name for window managers and IME users.
-static sirWindowResult_t sirSetX11Title( Display *pDisplay, Window hWindow, const char *pszTitle ) noexcept
+static SIRWindowResult sirSetX11Title( Display *pDisplay, Window hWindow, const char *pszTitle ) noexcept
 {
 	if ( pszTitle == nullptr || strlen( pszTitle ) > 0x7fffffffU ) {
-		return SIR_WINDOW_INVALID_ARGUMENT;
+		return SIRWindowResult::SIR_WINDOW_INVALID_ARGUMENT;
 	}
 	if ( XStoreName( pDisplay, hWindow, pszTitle ) == 0 ) {
-		return SIR_WINDOW_NATIVE_FAILURE;
+		return SIRWindowResult::SIR_WINDOW_NATIVE_FAILURE;
 	}
 	const Atom hName = XInternAtom( pDisplay, "_NET_WM_NAME", False );
 	const Atom hUtf8 = XInternAtom( pDisplay, "UTF8_STRING", False );
 	if ( hName != None && hUtf8 != None ) {
-		XChangeProperty( pDisplay, hWindow, hName, hUtf8, 8, PropModeReplace, ( const unsigned char * )pszTitle,
-		                 ( int )strlen( pszTitle ) );
+		XChangeProperty( pDisplay, hWindow, hName, hUtf8, 8, PropModeReplace, static_cast<const unsigned char *>(pszTitle),
+		                 static_cast<int>(strlen( pszTitle ) ));
 	}
-	return SIR_WINDOW_OK;
+	return SIRWindowResult::SIR_WINDOW_OK;
 }
 
 bool SIRWindowDriverX11::setEventSink( sirWindowX11EventSink_t pSink, void *pContext ) noexcept
@@ -68,10 +68,10 @@ SIRWindowDriverX11::~SIRWindowDriverX11( void ) noexcept
 	shutdown();
 }
 
-sirWindowResult_t SIRWindowDriverX11::initialize( void ) noexcept
+SIRWindowResult SIRWindowDriverX11::initialize( void ) noexcept
 {
 	if ( m_pDisplay != nullptr ) {
-		return SIR_WINDOW_BUSY;
+		return SIRWindowResult::SIR_WINDOW_BUSY;
 	}
 	Display *pDisplay = nullptr;
 	for ( uint32_t nAttempt = 0; nAttempt < 10; ++nAttempt ) {
@@ -82,11 +82,11 @@ sirWindowResult_t SIRWindowDriverX11::initialize( void ) noexcept
 			break;
 		}
 		if ( nAttempt != 9 ) {
-			( void )poll( nullptr, 0, 5 );
+			static_cast<void>(poll( nullptr, 0, 5 ));
 		}
 	}
 	if ( pDisplay == nullptr ) {
-		return SIR_WINDOW_NOT_READY;
+		return SIRWindowResult::SIR_WINDOW_NOT_READY;
 	}
 	m_pDisplay = pDisplay;
 	m_bServerLost = false;
@@ -103,27 +103,27 @@ sirWindowResult_t SIRWindowDriverX11::initialize( void ) noexcept
 	if ( sigsetjmp( recovery, 1 ) != 0 ) {
 		sirX11ClearRecovery();
 		markServerLost();
-		return SIR_WINDOW_NATIVE_FAILURE;
+		return SIRWindowResult::SIR_WINDOW_NATIVE_FAILURE;
 	}
 	s_pX11RecoveryDisplay = pDisplay;
 	s_pX11RecoveryPoint = &recovery;
-	m_nDeleteWindow = ( uintptr_t )XInternAtom( pDisplay, "WM_DELETE_WINDOW", False );
-	m_nProtocols = ( uintptr_t )XInternAtom( pDisplay, "WM_PROTOCOLS", False );
+	m_nDeleteWindow = static_cast<uintptr_t>(XInternAtom( pDisplay, "WM_DELETE_WINDOW", False ));
+	m_nProtocols = static_cast<uintptr_t>(XInternAtom( pDisplay, "WM_PROTOCOLS", False ));
 	if ( m_nDeleteWindow == 0 || m_nProtocols == 0 ) {
 		sirX11ClearRecovery();
 		shutdown();
-		return SIR_WINDOW_NATIVE_FAILURE;
+		return SIRWindowResult::SIR_WINDOW_NATIVE_FAILURE;
 	}
-	m_nRootWindow = ( uintptr_t )DefaultRootWindow( pDisplay );
-	XWindowAttributes attributes = {};
-	if ( !XGetWindowAttributes( pDisplay, ( Window )m_nRootWindow, &attributes ) ) {
+	m_nRootWindow = static_cast<uintptr_t>(DefaultRootWindow( pDisplay ));
+	XWindowAttributes attributes {};
+	if ( !XGetWindowAttributes( pDisplay, static_cast<Window>(m_nRootWindow), &attributes ) ) {
 		sirX11ClearRecovery();
 		shutdown();
-		return SIR_WINDOW_NATIVE_FAILURE;
+		return SIRWindowResult::SIR_WINDOW_NATIVE_FAILURE;
 	}
-	m_nServerWidth = ( uint32_t )attributes.width;
-	m_nServerHeight = ( uint32_t )attributes.height;
-	XSelectInput( pDisplay, ( Window )m_nRootWindow, StructureNotifyMask );
+	m_nServerWidth = static_cast<uint32_t>(attributes.width);
+	m_nServerHeight = static_cast<uint32_t>(attributes.height);
+	XSelectInput( pDisplay, static_cast<Window>(m_nRootWindow), StructureNotifyMask );
 #ifdef SIR_WINDOW_XRANDR_AVAILABLE
 	int nRandrEvent = 0, nRandrError = 0;
 	if ( XRRQueryExtension( pDisplay, &nRandrEvent, &nRandrError ) ) {
@@ -131,13 +131,13 @@ sirWindowResult_t SIRWindowDriverX11::initialize( void ) noexcept
 		if ( XRRQueryVersion( pDisplay, &nMajor, &nMinor ) ) {
 			const int nMask = RRScreenChangeNotifyMask |
 			                  ( nMajor > 1 || ( nMajor == 1 && nMinor >= 2 ) ? RROutputChangeNotifyMask | RRCrtcChangeNotifyMask : 0 );
-			XRRSelectInput( pDisplay, ( Window )m_nRootWindow, nMask );
+			XRRSelectInput( pDisplay, static_cast<Window>(m_nRootWindow), nMask );
 			m_nRandrEventBase = nRandrEvent;
 		}
 	}
 #endif
 	sirX11ClearRecovery();
-	return SIR_WINDOW_OK;
+	return SIRWindowResult::SIR_WINDOW_OK;
 }
 
 void SIRWindowDriverX11::markServerLost( void ) noexcept
@@ -162,12 +162,12 @@ bool SIRWindowDriverX11::transportAlive( void ) noexcept
 	if ( m_bServerLost || m_pDisplay == nullptr ) {
 		return false;
 	}
-	const int nSocket = ConnectionNumber( ( Display * )m_pDisplay );
+	const int nSocket = ConnectionNumber( static_cast<Display *>(m_pDisplay) );
 	if ( nSocket < 0 ) {
 		markServerLost();
 		return false;
 	}
-	pollfd descriptor = {};
+	pollfd descriptor {};
 	descriptor.fd = nSocket;
 	descriptor.events = POLLIN;
 	const int nPoll = poll( &descriptor, 1, 0 );
@@ -186,235 +186,235 @@ bool SIRWindowDriverX11::transportAlive( void ) noexcept
 	return true;
 }
 
-sirWindowResult_t SIRWindowDriverX11::emitServerLoss( uint32_t nBudget, sirWindowDriverEventFn_t pCallback, void *pContext ) noexcept
+SIRWindowResult SIRWindowDriverX11::emitServerLoss( uint32_t nBudget, sirWindowDriverEventFn_t pCallback, void *pContext ) noexcept
 {
 	if ( nBudget == 0 || pCallback == nullptr ) {
-		return SIR_WINDOW_INVALID_ARGUMENT;
+		return SIRWindowResult::SIR_WINDOW_INVALID_ARGUMENT;
 	}
 	for ( uint32_t i = 0; i < SIR_WINDOW_MAX_WINDOWS && nBudget != 0; ++i ) {
 		if ( ( m_nLossPendingMask & ( UINT32_C( 1 ) << i ) ) == 0 ) {
 			continue;
 		}
 		m_nLossPendingMask &= ~( UINT32_C( 1 ) << i );
-		const sirWindowBackendEvent_t lost = { i, m_nLostNative[i], SIR_WINDOW_EVENT_LOST, 0, 0 };
+		const sirWindowBackendEvent_t lost = { i, m_nLostNative[i], SIRWindowEventKind::SIR_WINDOW_EVENT_LOST, 0, 0 };
 		pCallback( pContext, lost );
 		--nBudget;
 	}
-	return SIR_WINDOW_NATIVE_FAILURE;
+	return SIRWindowResult::SIR_WINDOW_NATIVE_FAILURE;
 }
 
-sirWindowResult_t SIRWindowDriverX11::createWindow( const sirWindowCreateDesc_t& desc, uint32_t nSlot,
+SIRWindowResult SIRWindowDriverX11::createWindow( const sirWindowCreateDesc_t& desc, uint32_t nSlot,
                                                     sirWindowNativeView_t *pView ) noexcept
 {
 	if ( m_bServerLost ) {
-		return SIR_WINDOW_STOPPED;
+		return SIRWindowResult::SIR_WINDOW_STOPPED;
 	}
 	if ( !transportAlive() ) {
-		return SIR_WINDOW_NATIVE_FAILURE;
+		return SIRWindowResult::SIR_WINDOW_NATIVE_FAILURE;
 	}
 	sigjmp_buf recovery;
 	if ( sigsetjmp( recovery, 1 ) != 0 ) {
 		sirX11ClearRecovery();
 		markServerLost();
-		return SIR_WINDOW_NATIVE_FAILURE;
+		return SIRWindowResult::SIR_WINDOW_NATIVE_FAILURE;
 	}
-	s_pX11RecoveryDisplay = ( Display * )m_pDisplay;
+	s_pX11RecoveryDisplay = static_cast<Display *>(m_pDisplay);
 	s_pX11RecoveryPoint = &recovery;
-	const sirWindowResult_t eResult = createWindowNative( desc, nSlot, pView );
+	const SIRWindowResult eResult = createWindowNative( desc, nSlot, pView );
 	sirX11ClearRecovery();
 	return eResult;
 }
 
-sirWindowResult_t SIRWindowDriverX11::createWindowNative( const sirWindowCreateDesc_t& desc, uint32_t nSlot,
+SIRWindowResult SIRWindowDriverX11::createWindowNative( const sirWindowCreateDesc_t& desc, uint32_t nSlot,
                                                           sirWindowNativeView_t *pView ) noexcept
 {
 	if ( nSlot >= SIR_WINDOW_MAX_WINDOWS || pView == nullptr || desc.pszTitle == nullptr || desc.nWidth == 0 || desc.nHeight == 0 ) {
-		return SIR_WINDOW_INVALID_ARGUMENT;
+		return SIRWindowResult::SIR_WINDOW_INVALID_ARGUMENT;
 	}
-	Display *pDisplay = ( Display * )m_pDisplay;
+	Display *pDisplay = static_cast<Display *>(m_pDisplay);
 	if ( pDisplay == nullptr ) {
-		return SIR_WINDOW_STOPPED;
+		return SIRWindowResult::SIR_WINDOW_STOPPED;
 	}
 	if ( m_hWindows[nSlot] != 0 ) {
-		return SIR_WINDOW_BUSY;
+		return SIRWindowResult::SIR_WINDOW_BUSY;
 	}
 	const int nScreen = DefaultScreen( pDisplay );
 	Window hWindow = XCreateSimpleWindow( pDisplay, RootWindow( pDisplay, nScreen ), 0, 0, desc.nWidth, desc.nHeight, 0, 0, 0 );
 	if ( hWindow == 0 ) {
-		return SIR_WINDOW_NATIVE_FAILURE;
+		return SIRWindowResult::SIR_WINDOW_NATIVE_FAILURE;
 	}
 	XSelectInput( pDisplay, hWindow, StructureNotifyMask | FocusChangeMask );
-	Atom hDelete = ( Atom )m_nDeleteWindow;
-	if ( !XSetWMProtocols( pDisplay, hWindow, &hDelete, 1 ) || sirSetX11Title( pDisplay, hWindow, desc.pszTitle ) != SIR_WINDOW_OK ) {
-		( void )XDestroyWindow( pDisplay, hWindow );
-		return SIR_WINDOW_NATIVE_FAILURE;
+	Atom hDelete = static_cast<Atom>(m_nDeleteWindow);
+	if ( !XSetWMProtocols( pDisplay, hWindow, &hDelete, 1 ) || sirSetX11Title( pDisplay, hWindow, desc.pszTitle ) != SIRWindowResult::SIR_WINDOW_OK ) {
+		static_cast<void>(XDestroyWindow( pDisplay, hWindow ));
+		return SIRWindowResult::SIR_WINDOW_NATIVE_FAILURE;
 	}
-	( void )XMapWindow( pDisplay, hWindow );
-	( void )XFlush( pDisplay );
-	m_hWindows[nSlot] = ( uintptr_t )hWindow;
+	static_cast<void>(XMapWindow( pDisplay, hWindow ));
+	static_cast<void>(XFlush( pDisplay ));
+	m_hWindows[nSlot] = static_cast<uintptr_t>(hWindow);
 	m_bLost[nSlot] = false;
 	m_nDisplayChangePendingMask &= ~( UINT32_C( 1 ) << nSlot );
-	*pView = { SIR_WINDOW_PLATFORM_X11, ( uintptr_t )hWindow, ( uintptr_t )pDisplay, 0 };
-	return SIR_WINDOW_OK;
+	*pView = { SIRWindowPlatform::SIR_WINDOW_PLATFORM_X11, static_cast<uintptr_t>(hWindow), reinterpret_cast<uintptr_t>(pDisplay), 0 };
+	return SIRWindowResult::SIR_WINDOW_OK;
 }
 
-sirWindowResult_t SIRWindowDriverX11::destroyWindow( uint32_t nSlot ) noexcept
+SIRWindowResult SIRWindowDriverX11::destroyWindow( uint32_t nSlot ) noexcept
 {
 	if ( m_bServerLost ) {
 		if ( nSlot >= SIR_WINDOW_MAX_WINDOWS || !m_bLost[nSlot] ) {
-			return SIR_WINDOW_INVALID_HANDLE;
+			return SIRWindowResult::SIR_WINDOW_INVALID_HANDLE;
 		}
 		m_bLost[nSlot] = false;
 		m_nLossPendingMask &= ~( UINT32_C( 1 ) << nSlot );
 		m_nLostNative[nSlot] = 0;
-		return SIR_WINDOW_OK;
+		return SIRWindowResult::SIR_WINDOW_OK;
 	}
 	if ( !transportAlive() ) {
-		return SIR_WINDOW_NATIVE_FAILURE;
+		return SIRWindowResult::SIR_WINDOW_NATIVE_FAILURE;
 	}
 	sigjmp_buf recovery;
 	if ( sigsetjmp( recovery, 1 ) != 0 ) {
 		sirX11ClearRecovery();
 		markServerLost();
-		return SIR_WINDOW_NATIVE_FAILURE;
+		return SIRWindowResult::SIR_WINDOW_NATIVE_FAILURE;
 	}
-	s_pX11RecoveryDisplay = ( Display * )m_pDisplay;
+	s_pX11RecoveryDisplay = static_cast<Display *>(m_pDisplay);
 	s_pX11RecoveryPoint = &recovery;
-	const sirWindowResult_t eResult = destroyWindowNative( nSlot );
+	const SIRWindowResult eResult = destroyWindowNative( nSlot );
 	sirX11ClearRecovery();
 	return eResult;
 }
 
-sirWindowResult_t SIRWindowDriverX11::destroyWindowNative( uint32_t nSlot ) noexcept
+SIRWindowResult SIRWindowDriverX11::destroyWindowNative( uint32_t nSlot ) noexcept
 {
 	if ( m_pDisplay == nullptr ) {
-		return SIR_WINDOW_STOPPED;
+		return SIRWindowResult::SIR_WINDOW_STOPPED;
 	}
 	if ( nSlot >= SIR_WINDOW_MAX_WINDOWS || ( m_hWindows[nSlot] == 0 && !m_bLost[nSlot] ) ) {
-		return SIR_WINDOW_INVALID_HANDLE;
+		return SIRWindowResult::SIR_WINDOW_INVALID_HANDLE;
 	}
-	const Window hWindow = ( Window )m_hWindows[nSlot];
+	const Window hWindow = static_cast<Window>(m_hWindows)[nSlot];
 	m_hWindows[nSlot] = 0;
 	m_bLost[nSlot] = false;
 	m_nDisplayChangePendingMask &= ~( UINT32_C( 1 ) << nSlot );
 	if ( hWindow != 0 ) {
-		( void )XDestroyWindow( ( Display * )m_pDisplay, hWindow );
+		static_cast<void>(XDestroyWindow( static_cast<Display *>(m_pDisplay), hWindow ));
 	}
-	( void )XFlush( ( Display * )m_pDisplay );
-	return SIR_WINDOW_OK;
+	static_cast<void>(XFlush( static_cast<Display *>(m_pDisplay) ));
+	return SIRWindowResult::SIR_WINDOW_OK;
 }
 
-sirWindowResult_t SIRWindowDriverX11::mutateWindow( uint32_t nSlot, const sirWindowMutation_t& mutation ) noexcept
+SIRWindowResult SIRWindowDriverX11::mutateWindow( uint32_t nSlot, const sirWindowMutation_t& mutation ) noexcept
 {
 	if ( m_bServerLost ) {
-		return SIR_WINDOW_STOPPED;
+		return SIRWindowResult::SIR_WINDOW_STOPPED;
 	}
 	if ( !transportAlive() ) {
-		return SIR_WINDOW_NATIVE_FAILURE;
+		return SIRWindowResult::SIR_WINDOW_NATIVE_FAILURE;
 	}
 	sigjmp_buf recovery;
 	if ( sigsetjmp( recovery, 1 ) != 0 ) {
 		sirX11ClearRecovery();
 		markServerLost();
-		return SIR_WINDOW_NATIVE_FAILURE;
+		return SIRWindowResult::SIR_WINDOW_NATIVE_FAILURE;
 	}
-	s_pX11RecoveryDisplay = ( Display * )m_pDisplay;
+	s_pX11RecoveryDisplay = static_cast<Display *>(m_pDisplay);
 	s_pX11RecoveryPoint = &recovery;
-	const sirWindowResult_t eResult = mutateWindowNative( nSlot, mutation );
+	const SIRWindowResult eResult = mutateWindowNative( nSlot, mutation );
 	sirX11ClearRecovery();
 	return eResult;
 }
 
-sirWindowResult_t SIRWindowDriverX11::mutateWindowNative( uint32_t nSlot, const sirWindowMutation_t& mutation ) noexcept
+SIRWindowResult SIRWindowDriverX11::mutateWindowNative( uint32_t nSlot, const sirWindowMutation_t& mutation ) noexcept
 {
-	Display *pDisplay = ( Display * )m_pDisplay;
+	Display *pDisplay = static_cast<Display *>(m_pDisplay);
 	if ( pDisplay == nullptr ) {
-		return SIR_WINDOW_STOPPED;
+		return SIRWindowResult::SIR_WINDOW_STOPPED;
 	}
 	if ( nSlot >= SIR_WINDOW_MAX_WINDOWS || m_hWindows[nSlot] == 0 ) {
-		return SIR_WINDOW_INVALID_HANDLE;
+		return SIRWindowResult::SIR_WINDOW_INVALID_HANDLE;
 	}
-	const Window hWindow = ( Window )m_hWindows[nSlot];
+	const Window hWindow = static_cast<Window>(m_hWindows)[nSlot];
 	switch ( mutation.eKind ) {
-	case SIR_WINDOW_MUTATION_TITLE: {
+	case SIRWindowMutationKind::SIR_WINDOW_MUTATION_TITLE: {
 		if ( mutation.pszTitle == nullptr ) {
-			return SIR_WINDOW_INVALID_ARGUMENT;
+			return SIRWindowResult::SIR_WINDOW_INVALID_ARGUMENT;
 		}
-		const sirWindowResult_t eTitle = sirSetX11Title( pDisplay, hWindow, mutation.pszTitle );
-		if ( eTitle != SIR_WINDOW_OK ) {
+		const SIRWindowResult eTitle = sirSetX11Title( pDisplay, hWindow, mutation.pszTitle );
+		if ( eTitle != SIRWindowResult::SIR_WINDOW_OK ) {
 			return eTitle;
 		}
 		break;
 	}
-	case SIR_WINDOW_MUTATION_RESIZE:
+	case SIRWindowMutationKind::SIR_WINDOW_MUTATION_RESIZE:
 		if ( mutation.nWidth == 0 || mutation.nHeight == 0 ) {
-			return SIR_WINDOW_INVALID_ARGUMENT;
+			return SIRWindowResult::SIR_WINDOW_INVALID_ARGUMENT;
 		}
-		( void )XResizeWindow( pDisplay, hWindow, mutation.nWidth, mutation.nHeight );
+		static_cast<void>(XResizeWindow( pDisplay, hWindow, mutation.nWidth, mutation.nHeight ));
 		break;
-	case SIR_WINDOW_MUTATION_SHOW:
-	case SIR_WINDOW_MUTATION_RESTORE:
-		( void )XMapRaised( pDisplay, hWindow );
+	case SIRWindowMutationKind::SIR_WINDOW_MUTATION_SHOW:
+	case SIRWindowMutationKind::SIR_WINDOW_MUTATION_RESTORE:
+		static_cast<void>(XMapRaised( pDisplay, hWindow ));
 		break;
-	case SIR_WINDOW_MUTATION_HIDE:
-		( void )XUnmapWindow( pDisplay, hWindow );
+	case SIRWindowMutationKind::SIR_WINDOW_MUTATION_HIDE:
+		static_cast<void>(XUnmapWindow( pDisplay, hWindow ));
 		break;
-	case SIR_WINDOW_MUTATION_MINIMIZE:
+	case SIRWindowMutationKind::SIR_WINDOW_MUTATION_MINIMIZE:
 		if ( !XIconifyWindow( pDisplay, hWindow, DefaultScreen( pDisplay ) ) ) {
-			return SIR_WINDOW_UNSUPPORTED;
+			return SIRWindowResult::SIR_WINDOW_UNSUPPORTED;
 		}
 		break;
-	case SIR_WINDOW_MUTATION_FULLSCREEN_ENTER:
-	case SIR_WINDOW_MUTATION_FULLSCREEN_EXIT: {
+	case SIRWindowMutationKind::SIR_WINDOW_MUTATION_FULLSCREEN_ENTER:
+	case SIRWindowMutationKind::SIR_WINDOW_MUTATION_FULLSCREEN_EXIT: {
 		const Atom hState = XInternAtom( pDisplay, "_NET_WM_STATE", False );
 		const Atom hFullscreen = XInternAtom( pDisplay, "_NET_WM_STATE_FULLSCREEN", False );
 		if ( hState == None || hFullscreen == None ) {
-			return SIR_WINDOW_NATIVE_FAILURE;
+			return SIRWindowResult::SIR_WINDOW_NATIVE_FAILURE;
 		}
-		XEvent event = {};
+		XEvent event {};
 		event.xclient.type = ClientMessage;
 		event.xclient.display = pDisplay;
 		event.xclient.window = hWindow;
 		event.xclient.message_type = hState;
 		event.xclient.format = 32;
-		event.xclient.data.l[0] = mutation.eKind == SIR_WINDOW_MUTATION_FULLSCREEN_ENTER ? 1 : 0;
-		event.xclient.data.l[1] = ( long )hFullscreen;
+		event.xclient.data.l[0] = mutation.eKind == SIRWindowMutationKind::SIR_WINDOW_MUTATION_FULLSCREEN_ENTER ? 1 : 0;
+		event.xclient.data.l[1] = static_cast<long>(hFullscreen);
 		event.xclient.data.l[3] = 1;
 		if ( !XSendEvent( pDisplay, DefaultRootWindow( pDisplay ), False, SubstructureNotifyMask | SubstructureRedirectMask, &event ) ) {
-			return SIR_WINDOW_NATIVE_FAILURE;
+			return SIRWindowResult::SIR_WINDOW_NATIVE_FAILURE;
 		}
 		break;
 	}
-	case SIR_WINDOW_MUTATION_MAXIMIZE: {
+	case SIRWindowMutationKind::SIR_WINDOW_MUTATION_MAXIMIZE: {
 		const Atom hState = XInternAtom( pDisplay, "_NET_WM_STATE", False );
 		const Atom hVertical = XInternAtom( pDisplay, "_NET_WM_STATE_MAXIMIZED_VERT", False );
 		const Atom hHorizontal = XInternAtom( pDisplay, "_NET_WM_STATE_MAXIMIZED_HORZ", False );
 		if ( hState == None || hVertical == None || hHorizontal == None ) {
-			return SIR_WINDOW_NATIVE_FAILURE;
+			return SIRWindowResult::SIR_WINDOW_NATIVE_FAILURE;
 		}
-		XEvent message = {};
+		XEvent message {};
 		message.xclient.type = ClientMessage;
 		message.xclient.display = pDisplay;
 		message.xclient.window = hWindow;
 		message.xclient.message_type = hState;
 		message.xclient.format = 32;
 		message.xclient.data.l[0] = 1; // _NET_WM_STATE_ADD
-		message.xclient.data.l[1] = ( long )hVertical;
-		message.xclient.data.l[2] = ( long )hHorizontal;
+		message.xclient.data.l[1] = static_cast<long>(hVertical);
+		message.xclient.data.l[2] = static_cast<long>(hHorizontal);
 		message.xclient.data.l[3] = 1; // Client application initiated
 		if ( !XSendEvent( pDisplay, DefaultRootWindow( pDisplay ), False, SubstructureNotifyMask | SubstructureRedirectMask, &message ) ) {
-			return SIR_WINDOW_NATIVE_FAILURE;
+			return SIRWindowResult::SIR_WINDOW_NATIVE_FAILURE;
 		}
 		break;
 	}
 	default:
-		return SIR_WINDOW_UNSUPPORTED;
+		return SIRWindowResult::SIR_WINDOW_UNSUPPORTED;
 	}
 	XFlush( pDisplay );
-	return SIR_WINDOW_OK;
+	return SIRWindowResult::SIR_WINDOW_OK;
 }
 
-sirWindowResult_t SIRWindowDriverX11::pumpEvents( uint32_t nBudget, sirWindowDriverEventFn_t pCallback, void *pContext ) noexcept
+SIRWindowResult SIRWindowDriverX11::pumpEvents( uint32_t nBudget, sirWindowDriverEventFn_t pCallback, void *pContext ) noexcept
 {
 	if ( m_bServerLost ) {
 		return emitServerLoss( nBudget, pCallback, pContext );
@@ -428,25 +428,25 @@ sirWindowResult_t SIRWindowDriverX11::pumpEvents( uint32_t nBudget, sirWindowDri
 		markServerLost();
 		return emitServerLoss( nBudget, pCallback, pContext );
 	}
-	s_pX11RecoveryDisplay = ( Display * )m_pDisplay;
+	s_pX11RecoveryDisplay = static_cast<Display *>(m_pDisplay);
 	s_pX11RecoveryPoint = &recovery;
-	const sirWindowResult_t eResult = pumpEventsNative( nBudget, pCallback, pContext );
+	const SIRWindowResult eResult = pumpEventsNative( nBudget, pCallback, pContext );
 	sirX11ClearRecovery();
 	return eResult;
 }
 
-sirWindowResult_t SIRWindowDriverX11::pumpEventsNative( uint32_t nBudget, sirWindowDriverEventFn_t pCallback, void *pContext ) noexcept
+SIRWindowResult SIRWindowDriverX11::pumpEventsNative( uint32_t nBudget, sirWindowDriverEventFn_t pCallback, void *pContext ) noexcept
 {
-	Display *pDisplay = ( Display * )m_pDisplay;
+	Display *pDisplay = static_cast<Display *>(m_pDisplay);
 	if ( pDisplay == nullptr ) {
-		return SIR_WINDOW_STOPPED;
+		return SIRWindowResult::SIR_WINDOW_STOPPED;
 	}
 	if ( nBudget == 0 || pCallback == nullptr ) {
-		return SIR_WINDOW_INVALID_ARGUMENT;
+		return SIRWindowResult::SIR_WINDOW_INVALID_ARGUMENT;
 	}
 	uint32_t nEmitted = 0;
 	for ( uint32_t i = 0; i < nBudget && XPending( pDisplay ) > 0; ++i ) {
-		XEvent event = {};
+		XEvent event {};
 		XNextEvent( pDisplay, &event );
 		if ( m_pSink != nullptr ) {
 			m_pSink( event, m_pSinkContext );
@@ -455,7 +455,7 @@ sirWindowResult_t SIRWindowDriverX11::pumpEventsNative( uint32_t nBudget, sirWin
 		if ( m_nRandrEventBase >= 0 &&
 		     ( event.type == m_nRandrEventBase + RRScreenChangeNotify || event.type == m_nRandrEventBase + RRNotify ) ) {
 			if ( event.type == m_nRandrEventBase + RRScreenChangeNotify ) {
-				( void )XRRUpdateConfiguration( &event );
+				static_cast<void>(XRRUpdateConfiguration( &event ));
 			}
 			for ( uint32_t j = 0; j < SIR_WINDOW_MAX_WINDOWS; ++j ) {
 				if ( m_hWindows[j] != 0 ) {
@@ -465,11 +465,11 @@ sirWindowResult_t SIRWindowDriverX11::pumpEventsNative( uint32_t nBudget, sirWin
 			continue;
 		}
 #endif
-		if ( event.type == ConfigureNotify && ( uintptr_t )event.xconfigure.window == m_nRootWindow ) {
+		if ( event.type == ConfigureNotify && static_cast<uintptr_t>(event.xconfigure.window) == m_nRootWindow ) {
 			if ( event.xconfigure.width > 0 && event.xconfigure.height > 0 &&
-			     ( ( uint32_t )event.xconfigure.width != m_nServerWidth || ( uint32_t )event.xconfigure.height != m_nServerHeight ) ) {
-				m_nServerWidth = ( uint32_t )event.xconfigure.width;
-				m_nServerHeight = ( uint32_t )event.xconfigure.height;
+			     ( static_cast<uint32_t>(event.xconfigure.width) != m_nServerWidth || static_cast<uint32_t>(event.xconfigure.height) != m_nServerHeight ) ) {
+				m_nServerWidth = static_cast<uint32_t>(event.xconfigure.width);
+				m_nServerHeight = static_cast<uint32_t>(event.xconfigure.height);
 				for ( uint32_t j = 0; j < SIR_WINDOW_MAX_WINDOWS; ++j ) {
 					if ( m_hWindows[j] != 0 ) {
 						m_nDisplayChangePendingMask |= UINT32_C( 1 ) << j;
@@ -480,7 +480,7 @@ sirWindowResult_t SIRWindowDriverX11::pumpEventsNative( uint32_t nBudget, sirWin
 		}
 		uint32_t nSlot = SIR_WINDOW_MAX_WINDOWS;
 		for ( uint32_t j = 0; j < SIR_WINDOW_MAX_WINDOWS; ++j ) {
-			if ( m_hWindows[j] != 0 && m_hWindows[j] == ( uintptr_t )event.xany.window ) {
+			if ( m_hWindows[j] != 0 && m_hWindows[j] == static_cast<uintptr_t>(event.xany.window) ) {
 				nSlot = j;
 				break;
 			}
@@ -488,29 +488,29 @@ sirWindowResult_t SIRWindowDriverX11::pumpEventsNative( uint32_t nBudget, sirWin
 		if ( nSlot == SIR_WINDOW_MAX_WINDOWS ) {
 			continue;
 		}
-		sirWindowBackendEvent_t emitted = { nSlot, ( uintptr_t )event.xany.window, SIR_WINDOW_EVENT_READY, 0, 0 };
+		sirWindowBackendEvent_t emitted = { nSlot, static_cast<uintptr_t>(event.xany.window), SIRWindowEventKind::SIR_WINDOW_EVENT_READY, 0, 0 };
 		if ( event.type == ConfigureNotify ) {
-			emitted.eKind = SIR_WINDOW_EVENT_RESIZED;
-			emitted.nWidth = ( uint32_t )event.xconfigure.width;
-			emitted.nHeight = ( uint32_t )event.xconfigure.height;
+			emitted.eKind = SIRWindowEventKind::SIR_WINDOW_EVENT_RESIZED;
+			emitted.nWidth = static_cast<uint32_t>(event.xconfigure.width);
+			emitted.nHeight = static_cast<uint32_t>(event.xconfigure.height);
 		} else if ( event.type == MapNotify ) {
-			emitted.eKind = SIR_WINDOW_EVENT_SHOWN;
+			emitted.eKind = SIRWindowEventKind::SIR_WINDOW_EVENT_SHOWN;
 		} else if ( event.type == UnmapNotify ) {
-			emitted.eKind = SIR_WINDOW_EVENT_HIDDEN;
+			emitted.eKind = SIRWindowEventKind::SIR_WINDOW_EVENT_HIDDEN;
 		} else if ( event.type == FocusIn ) {
-			emitted.eKind = SIR_WINDOW_EVENT_FOCUS_GAINED;
+			emitted.eKind = SIRWindowEventKind::SIR_WINDOW_EVENT_FOCUS_GAINED;
 		} else if ( event.type == FocusOut ) {
-			emitted.eKind = SIR_WINDOW_EVENT_FOCUS_LOST;
+			emitted.eKind = SIRWindowEventKind::SIR_WINDOW_EVENT_FOCUS_LOST;
 		} else if ( event.type == DestroyNotify ) {
-			emitted.eKind = SIR_WINDOW_EVENT_LOST;
+			emitted.eKind = SIRWindowEventKind::SIR_WINDOW_EVENT_LOST;
 			m_hWindows[nSlot] = 0;
 			m_bLost[nSlot] = true;
 		} else if ( event.type == ClientMessage ) {
-			if ( event.xclient.format != 32 || event.xclient.message_type != ( Atom )m_nProtocols ||
-			     ( Atom )event.xclient.data.l[0] != ( Atom )m_nDeleteWindow ) {
+			if ( event.xclient.format != 32 || event.xclient.message_type != static_cast<Atom>(m_nProtocols) ||
+			     static_cast<Atom>(event.xclient.data.l)[0] != static_cast<Atom>(m_nDeleteWindow) ) {
 				continue;
 			}
-			emitted.eKind = SIR_WINDOW_EVENT_CLOSE_REQUESTED;
+			emitted.eKind = SIRWindowEventKind::SIR_WINDOW_EVENT_CLOSE_REQUESTED;
 		} else {
 			continue;
 		}
@@ -523,16 +523,16 @@ sirWindowResult_t SIRWindowDriverX11::pumpEventsNative( uint32_t nBudget, sirWin
 		}
 		m_nDisplayChangePendingMask &= ~( UINT32_C( 1 ) << j );
 		if ( m_hWindows[j] != 0 ) {
-			XWindowAttributes attrs = {};
-			if ( XGetWindowAttributes( pDisplay, ( Window )m_hWindows[j], &attrs ) && attrs.width > 0 && attrs.height > 0 ) {
-				const sirWindowBackendEvent_t changed = { j, m_hWindows[j], SIR_WINDOW_EVENT_DISPLAY_CHANGED, ( uint32_t )attrs.width,
-				                                          ( uint32_t )attrs.height };
+			XWindowAttributes attrs {};
+			if ( XGetWindowAttributes( pDisplay, static_cast<Window>(m_hWindows)[j], &attrs ) && attrs.width > 0 && attrs.height > 0 ) {
+				const sirWindowBackendEvent_t changed = { j, m_hWindows[j], SIRWindowEventKind::SIR_WINDOW_EVENT_DISPLAY_CHANGED, static_cast<uint32_t>(attrs.width),
+				                                          static_cast<uint32_t>(attrs.height) };
 				pCallback( pContext, changed );
 				++nEmitted;
 			}
 		}
 	}
-	return SIR_WINDOW_OK;
+	return SIRWindowResult::SIR_WINDOW_OK;
 }
 
 void SIRWindowDriverX11::shutdown( void ) noexcept
@@ -543,7 +543,7 @@ void SIRWindowDriverX11::shutdown( void ) noexcept
 	if ( !m_bServerLost && transportAlive() ) {
 		sigjmp_buf recovery;
 		if ( sigsetjmp( recovery, 1 ) == 0 ) {
-			s_pX11RecoveryDisplay = ( Display * )m_pDisplay;
+			s_pX11RecoveryDisplay = static_cast<Display *>(m_pDisplay);
 			s_pX11RecoveryPoint = &recovery;
 			shutdownNative();
 		} else {
@@ -570,7 +570,7 @@ void SIRWindowDriverX11::shutdown( void ) noexcept
 	if ( m_bHandlerRegistered ) {
 		SIRScopedLock<SIRMutex> lock( s_X11IOHandlerMutex );
 		if ( s_nX11HandlerUsers != 0 && --s_nX11HandlerUsers == 0 ) {
-			( void )XSetIOErrorHandler( s_pPreviousX11IOHandler );
+			static_cast<void>(XSetIOErrorHandler( s_pPreviousX11IOHandler ));
 			s_pPreviousX11IOHandler = nullptr;
 		}
 		m_bHandlerRegistered = false;
@@ -579,13 +579,13 @@ void SIRWindowDriverX11::shutdown( void ) noexcept
 
 void SIRWindowDriverX11::shutdownNative( void ) noexcept
 {
-	Display *pDisplay = ( Display * )m_pDisplay;
+	Display *pDisplay = static_cast<Display *>(m_pDisplay);
 	if ( pDisplay == nullptr ) {
 		return;
 	}
 	for ( uint32_t i = 0; i < SIR_WINDOW_MAX_WINDOWS; ++i ) {
 		if ( m_hWindows[i] != 0 ) {
-			( void )XDestroyWindow( pDisplay, ( Window )m_hWindows[i] );
+			static_cast<void>(XDestroyWindow( pDisplay, static_cast<Window>(m_hWindows)[i] ));
 			m_hWindows[i] = 0;
 			m_bLost[i] = false;
 		}

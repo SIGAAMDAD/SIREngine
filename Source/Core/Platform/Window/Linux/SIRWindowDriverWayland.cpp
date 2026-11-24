@@ -21,13 +21,13 @@ SIRWindowDriverWayland::~SIRWindowDriverWayland( void ) noexcept
 void SIRWindowDriverWayland::registryGlobal( void *pContext, wl_registry *pRegistry, uint32_t nName, const char *pszInterface,
                                              uint32_t nVersion ) noexcept
 {
-	SIRWindowDriverWayland *pDriver = ( SIRWindowDriverWayland * )pContext;
+	SIRWindowDriverWayland *pDriver = static_cast<SIRWindowDriverWayland *>(pContext);
 	if ( strcmp( pszInterface, wl_compositor_interface.name ) == 0 && pDriver->m_pCompositor == nullptr ) {
 		const uint32_t nBindVersion = nVersion < 4 ? nVersion : 4;
-		pDriver->m_pCompositor = ( wl_compositor * )wl_registry_bind( pRegistry, nName, &wl_compositor_interface, nBindVersion );
+		pDriver->m_pCompositor = static_cast<wl_compositor *>(wl_registry_bind( pRegistry, nName, &wl_compositor_interface, nBindVersion ));
 		pDriver->m_nCompositorGlobal = nName;
 	} else if ( strcmp( pszInterface, xdg_wm_base_interface.name ) == 0 && pDriver->m_pBase == nullptr ) {
-		pDriver->m_pBase = ( xdg_wm_base * )wl_registry_bind( pRegistry, nName, &xdg_wm_base_interface, 1 );
+		pDriver->m_pBase = static_cast<xdg_wm_base *>(wl_registry_bind( pRegistry, nName, &xdg_wm_base_interface, 1 ));
 		pDriver->m_nShellGlobal = nName;
 	} else if ( strcmp( pszInterface, wl_output_interface.name ) == 0 ) {
 		for ( uint32_t i = 0; i < SIR_WAYLAND_MAX_OUTPUTS; ++i ) {
@@ -36,7 +36,7 @@ void SIRWindowDriverWayland::registryGlobal( void *pContext, wl_registry *pRegis
 				continue;
 			}
 			const uint32_t nBindVersion = nVersion < 2 ? nVersion : 2;
-			output.pOutput = ( wl_output * )wl_registry_bind( pRegistry, nName, &wl_output_interface, nBindVersion );
+			output.pOutput = static_cast<wl_output *>(wl_registry_bind( pRegistry, nName, &wl_output_interface, nBindVersion ));
 			if ( output.pOutput == nullptr ) {
 				break;
 			}
@@ -54,27 +54,27 @@ void SIRWindowDriverWayland::registryGlobal( void *pContext, wl_registry *pRegis
 #ifdef SIR_WAYLAND_FRACTIONAL_SCALE_AVAILABLE
 	else if ( strcmp( pszInterface, wp_fractional_scale_manager_v1_interface.name ) == 0 && pDriver->m_pFractionalManager == nullptr ) {
 		pDriver->m_pFractionalManager =
-		    ( wp_fractional_scale_manager_v1 * )wl_registry_bind( pRegistry, nName, &wp_fractional_scale_manager_v1_interface, 1 );
+		    static_cast<wp_fractional_scale_manager_v1 *>(wl_registry_bind( pRegistry, nName, &wp_fractional_scale_manager_v1_interface, 1 ));
 		pDriver->m_nFractionalGlobal = nName;
 	} else if ( strcmp( pszInterface, wp_viewporter_interface.name ) == 0 && pDriver->m_pViewporter == nullptr ) {
-		pDriver->m_pViewporter = ( wp_viewporter * )wl_registry_bind( pRegistry, nName, &wp_viewporter_interface, 1 );
+		pDriver->m_pViewporter = static_cast<wp_viewporter *>(wl_registry_bind( pRegistry, nName, &wp_viewporter_interface, 1 ));
 		pDriver->m_nViewporterGlobal = nName;
 	}
 #endif
 	else if ( strcmp( pszInterface, wl_seat_interface.name ) == 0 && pDriver->m_pSeat == nullptr ) {
 		const uint32_t nBindVersion = nVersion < 7 ? nVersion : 7;
-		pDriver->m_pSeat = ( wl_seat * )wl_registry_bind( pRegistry, nName, &wl_seat_interface, nBindVersion );
+		pDriver->m_pSeat = static_cast<wl_seat *>(wl_registry_bind( pRegistry, nName, &wl_seat_interface, nBindVersion ));
 		pDriver->m_nSeatGlobal = nName;
 	}
 #ifdef SIR_WAYLAND_POINTER_PROTOCOLS_AVAILABLE
 	else if ( strcmp( pszInterface, zwp_pointer_constraints_v1_interface.name ) == 0 && pDriver->m_pPointerConstraints == nullptr ) {
 		pDriver->m_pPointerConstraints =
-		    ( zwp_pointer_constraints_v1 * )wl_registry_bind( pRegistry, nName, &zwp_pointer_constraints_v1_interface, 1 );
+		    static_cast<zwp_pointer_constraints_v1 *>(wl_registry_bind( pRegistry, nName, &zwp_pointer_constraints_v1_interface, 1 ));
 		pDriver->m_nConstraintsGlobal = nName;
 	} else if ( strcmp( pszInterface, zwp_relative_pointer_manager_v1_interface.name ) == 0 &&
 	            pDriver->m_pRelativePointerManager == nullptr ) {
 		pDriver->m_pRelativePointerManager =
-		    ( zwp_relative_pointer_manager_v1 * )wl_registry_bind( pRegistry, nName, &zwp_relative_pointer_manager_v1_interface, 1 );
+		    static_cast<zwp_relative_pointer_manager_v1 *>(wl_registry_bind( pRegistry, nName, &zwp_relative_pointer_manager_v1_interface, 1 ));
 		pDriver->m_nRelativePointerGlobal = nName;
 	}
 #endif
@@ -82,13 +82,13 @@ void SIRWindowDriverWayland::registryGlobal( void *pContext, wl_registry *pRegis
 
 void SIRWindowDriverWayland::registryRemove( void *pContext, wl_registry *pRegistry, uint32_t nName ) noexcept
 {
-	( void )pRegistry;
-	SIRWindowDriverWayland *pDriver = ( SIRWindowDriverWayland * )pContext;
+	static_cast<void>(pRegistry);
+	SIRWindowDriverWayland *pDriver = static_cast<SIRWindowDriverWayland *>(pContext);
 	if ( nName == pDriver->m_nSeatGlobal && pDriver->m_pSeat != nullptr ) {
 		if ( pDriver->m_pSeatLostSink != nullptr ) {
 			pDriver->m_pSeatLostSink( pDriver->m_pSeatLostContext );
 		}
-		if ( wl_proxy_get_version( ( wl_proxy * )pDriver->m_pSeat ) >= 5 ) {
+		if ( wl_proxy_get_version( reinterpret_cast<wl_proxy *>(pDriver->m_pSeat) ) >= 5 ) {
 			wl_seat_release( pDriver->m_pSeat );
 		} else {
 			wl_seat_destroy( pDriver->m_pSeat );
@@ -150,32 +150,32 @@ void SIRWindowDriverWayland::registryRemove( void *pContext, wl_registry *pRegis
 
 void SIRWindowDriverWayland::wmBasePing( void *pContext, xdg_wm_base *pBase, uint32_t nSerial ) noexcept
 {
-	( void )pContext;
+	static_cast<void>(pContext);
 	xdg_wm_base_pong( pBase, nSerial );
 }
 
 void SIRWindowDriverWayland::topConfigure( void *pContext, xdg_toplevel *pTop, int32_t nWidth, int32_t nHeight, wl_array *pStates ) noexcept
 {
-	( void )pTop;
-	( void )pStates;
-	sirWaylandWindowSlot_t *pSlot = ( sirWaylandWindowSlot_t * )pContext;
+	static_cast<void>(pTop);
+	static_cast<void>(pStates);
+	sirWaylandWindowSlot_t *pSlot = static_cast<sirWaylandWindowSlot_t *>(pContext);
 	if ( nWidth > 0 ) {
-		pSlot->nPendingWidth = ( uint32_t )nWidth;
+		pSlot->nPendingWidth = static_cast<uint32_t>(nWidth);
 	}
 	if ( nHeight > 0 ) {
-		pSlot->nPendingHeight = ( uint32_t )nHeight;
+		pSlot->nPendingHeight = static_cast<uint32_t>(nHeight);
 	}
 }
 
 void SIRWindowDriverWayland::surfaceConfigure( void *pContext, xdg_surface *pSurface, uint32_t nSerial ) noexcept
 {
-	sirWaylandWindowSlot_t *pSlot = ( sirWaylandWindowSlot_t * )pContext;
+	sirWaylandWindowSlot_t *pSlot = static_cast<sirWaylandWindowSlot_t *>(pContext);
 	if ( pSlot->pXdgSurface != pSurface || pSlot->pDriver == nullptr || pSlot->bLostPending || pSlot->pDriver->m_bLost ) {
 		return;
 	}
 	// Ignore duplicate or older xdg configure notifications. Serial arithmetic
 	// intentionally handles the Wayland protocol's uint32 wraparound.
-	if ( pSlot->bConfigured && ( int32_t )( nSerial - pSlot->nLastConfigureSerial ) <= 0 ) {
+	if ( pSlot->bConfigured && static_cast<int32_t>( nSerial - pSlot->nLastConfigureSerial ) <= 0 ) {
 		pSlot->nPendingWidth = pSlot->nWidth;
 		pSlot->nPendingHeight = pSlot->nHeight;
 		return;
@@ -191,62 +191,62 @@ void SIRWindowDriverWayland::surfaceConfigure( void *pContext, xdg_surface *pSur
 		const uint32_t nScale120 = pSlot->nFractionalScale120 != 0 && pSlot->pViewport != nullptr
 		                               ? pSlot->nFractionalScale120
 		                               : ( pSlot->nBufferScale == 0 ? 120 : pSlot->nBufferScale * 120 );
-		const uint64_t nWidth64 = ( ( uint64_t )pSlot->nWidth * nScale120 + 60 ) / 120;
-		const uint64_t nHeight64 = ( ( uint64_t )pSlot->nHeight * nScale120 + 60 ) / 120;
+		const uint64_t nWidth64 = ( static_cast<uint64_t>(pSlot->nWidth) * nScale120 + 60 ) / 120;
+		const uint64_t nHeight64 = ( static_cast<uint64_t>(pSlot->nHeight) * nScale120 + 60 ) / 120;
 		if ( nWidth64 == 0 || nHeight64 == 0 || nWidth64 > UINT32_MAX || nHeight64 > UINT32_MAX ) {
 			pSlot->bLostPending = true;
 			return;
 		}
 		pSlot->pDriver->refreshSurfaceExtent( *pSlot, false );
-		pSlot->pDriver->queueEvent( pSlot->nIndex, bFirst ? SIR_WINDOW_EVENT_READY : SIR_WINDOW_EVENT_RESIZED, ( uint32_t )nWidth64,
-		                            ( uint32_t )nHeight64 );
+		pSlot->pDriver->queueEvent( pSlot->nIndex, bFirst ? SIRWindowEventKind::SIR_WINDOW_EVENT_READY : SIRWindowEventKind::SIR_WINDOW_EVENT_RESIZED, static_cast<uint32_t>(nWidth64),
+		                            static_cast<uint32_t>(nHeight64) );
 	}
 }
 
 void SIRWindowDriverWayland::outputGeometry( void *pContext, wl_output *pOutput, int32_t nX, int32_t nY, int32_t nWidth, int32_t nHeight,
                                              int32_t nSubpixel, const char *pszMake, const char *pszModel, int32_t nTransform ) noexcept
 {
-	( void )pContext;
-	( void )pOutput;
-	( void )nX;
-	( void )nY;
-	( void )nWidth;
-	( void )nHeight;
-	( void )nSubpixel;
-	( void )pszMake;
-	( void )pszModel;
-	( void )nTransform;
+	static_cast<void>(pContext);
+	static_cast<void>(pOutput);
+	static_cast<void>(nX);
+	static_cast<void>(nY);
+	static_cast<void>(nWidth);
+	static_cast<void>(nHeight);
+	static_cast<void>(nSubpixel);
+	static_cast<void>(pszMake);
+	static_cast<void>(pszModel);
+	static_cast<void>(nTransform);
 }
 
 void SIRWindowDriverWayland::outputMode( void *pContext, wl_output *pOutput, uint32_t nFlags, int32_t nWidth, int32_t nHeight,
                                          int32_t nRefresh ) noexcept
 {
-	( void )pContext;
-	( void )pOutput;
-	( void )nFlags;
-	( void )nWidth;
-	( void )nHeight;
-	( void )nRefresh;
+	static_cast<void>(pContext);
+	static_cast<void>(pOutput);
+	static_cast<void>(nFlags);
+	static_cast<void>(nWidth);
+	static_cast<void>(nHeight);
+	static_cast<void>(nRefresh);
 }
 
 void SIRWindowDriverWayland::outputDone( void *pContext, wl_output *pOutput ) noexcept
 {
-	( void )pContext;
-	( void )pOutput;
+	static_cast<void>(pContext);
+	static_cast<void>(pOutput);
 }
 
 void SIRWindowDriverWayland::outputScale( void *pContext, wl_output *pOutput, int32_t nScale ) noexcept
 {
-	sirWaylandOutput_t *pEntry = ( sirWaylandOutput_t * )pContext;
+	sirWaylandOutput_t *pEntry = static_cast<sirWaylandOutput_t *>(pContext);
 	if ( pEntry->pOutput != pOutput || pEntry->pDriver == nullptr || pEntry->pDriver->m_bLost || nScale < 1 ) {
 		return;
 	}
-	const uint32_t nAccepted = nScale > 16 ? 16 : ( uint32_t )nScale;
+	const uint32_t nAccepted = nScale > 16 ? 16 : static_cast<uint32_t>(nScale);
 	if ( nAccepted == pEntry->nScale ) {
 		return;
 	}
 	pEntry->nScale = nAccepted;
-	const uint32_t nIndex = ( uint32_t )( pEntry - pEntry->pDriver->m_Outputs );
+	const uint32_t nIndex = static_cast<uint32_t>( pEntry - pEntry->pDriver->m_Outputs );
 	for ( uint32_t i = 0; i < SIR_WINDOW_MAX_WINDOWS; ++i ) {
 		sirWaylandWindowSlot_t& slot = pEntry->pDriver->m_Slots[i];
 		if ( ( slot.nOutputMask & ( UINT32_C( 1 ) << nIndex ) ) != 0 ) {
@@ -257,7 +257,7 @@ void SIRWindowDriverWayland::outputScale( void *pContext, wl_output *pOutput, in
 
 void SIRWindowDriverWayland::surfaceEnter( void *pContext, wl_surface *pSurface, wl_output *pOutput ) noexcept
 {
-	sirWaylandWindowSlot_t *pSlot = ( sirWaylandWindowSlot_t * )pContext;
+	sirWaylandWindowSlot_t *pSlot = static_cast<sirWaylandWindowSlot_t *>(pContext);
 	if ( pSlot->pDriver == nullptr || pSlot->pSurface != pSurface || pSlot->pDriver->m_bLost ) {
 		return;
 	}
@@ -272,7 +272,7 @@ void SIRWindowDriverWayland::surfaceEnter( void *pContext, wl_surface *pSurface,
 
 void SIRWindowDriverWayland::surfaceLeave( void *pContext, wl_surface *pSurface, wl_output *pOutput ) noexcept
 {
-	sirWaylandWindowSlot_t *pSlot = ( sirWaylandWindowSlot_t * )pContext;
+	sirWaylandWindowSlot_t *pSlot = static_cast<sirWaylandWindowSlot_t *>(pContext);
 	if ( pSlot->pDriver == nullptr || pSlot->pSurface != pSurface || pSlot->pDriver->m_bLost ) {
 		return;
 	}
@@ -295,18 +295,18 @@ void SIRWindowDriverWayland::refreshSurfaceExtent( sirWaylandWindowSlot_t& slot,
 	                               : ( slot.nBufferScale == 0 ? 120 : slot.nBufferScale * 120 );
 #ifdef SIR_WAYLAND_FRACTIONAL_SCALE_AVAILABLE
 	if ( slot.pViewport != nullptr && slot.nWidth <= INT32_MAX && slot.nHeight <= INT32_MAX ) {
-		wp_viewport_set_destination( slot.pViewport, ( int32_t )slot.nWidth, ( int32_t )slot.nHeight );
+		wp_viewport_set_destination( slot.pViewport, static_cast<int32_t>(slot.nWidth), static_cast<int32_t>(slot.nHeight) );
 	}
 #endif
 	if ( bEmit ) {
 		const uint32_t nDpi = ( 96 * nScale120 + 60 ) / 120;
-		const uint64_t nPixelsX = ( ( uint64_t )slot.nWidth * nScale120 + 60 ) / 120;
-		const uint64_t nPixelsY = ( ( uint64_t )slot.nHeight * nScale120 + 60 ) / 120;
+		const uint64_t nPixelsX = ( static_cast<uint64_t>(slot.nWidth) * nScale120 + 60 ) / 120;
+		const uint64_t nPixelsY = ( static_cast<uint64_t>(slot.nHeight) * nScale120 + 60 ) / 120;
 		if ( nPixelsX == 0 || nPixelsY == 0 || nPixelsX > UINT32_MAX || nPixelsY > UINT32_MAX ) {
 			return;
 		}
-		queueEvent( slot.nIndex, SIR_WINDOW_EVENT_DPI_CHANGED, nDpi, 0 );
-		queueEvent( slot.nIndex, SIR_WINDOW_EVENT_RESIZED, ( uint32_t )nPixelsX, ( uint32_t )nPixelsY );
+		queueEvent( slot.nIndex, SIRWindowEventKind::SIR_WINDOW_EVENT_DPI_CHANGED, nDpi, 0 );
+		queueEvent( slot.nIndex, SIRWindowEventKind::SIR_WINDOW_EVENT_RESIZED, static_cast<uint32_t>(nPixelsX), static_cast<uint32_t>(nPixelsY) );
 	}
 }
 
@@ -316,7 +316,7 @@ void SIRWindowDriverWayland::refreshOutputScale( sirWaylandWindowSlot_t& slot ) 
 		return;
 	}
 	uint32_t nScale = 1;
-	if ( wl_proxy_get_version( ( wl_proxy * )slot.pSurface ) >= 3 ) {
+	if ( wl_proxy_get_version( reinterpret_cast<wl_proxy *>(slot.pSurface) ) >= 3 ) {
 		for ( uint32_t i = 0; i < SIR_WAYLAND_MAX_OUTPUTS; ++i ) {
 			if ( ( slot.nOutputMask & ( UINT32_C( 1 ) << i ) ) != 0 && m_Outputs[i].pOutput != nullptr && m_Outputs[i].nScale > nScale ) {
 				nScale = m_Outputs[i].nScale;
@@ -330,8 +330,8 @@ void SIRWindowDriverWayland::refreshOutputScale( sirWaylandWindowSlot_t& slot ) 
 		return;
 	}
 	slot.nBufferScale = nScale;
-	if ( wl_proxy_get_version( ( wl_proxy * )slot.pSurface ) >= 3 ) {
-		wl_surface_set_buffer_scale( slot.pSurface, ( int32_t )nScale );
+	if ( wl_proxy_get_version( reinterpret_cast<wl_proxy *>(slot.pSurface) ) >= 3 ) {
+		wl_surface_set_buffer_scale( slot.pSurface, static_cast<int32_t>(nScale) );
 	}
 	if ( slot.bConfigured && !slot.bClosePending ) {
 		refreshSurfaceExtent( slot, true );
@@ -341,7 +341,7 @@ void SIRWindowDriverWayland::refreshOutputScale( sirWaylandWindowSlot_t& slot ) 
 #ifdef SIR_WAYLAND_FRACTIONAL_SCALE_AVAILABLE
 void SIRWindowDriverWayland::fractionalPreferredScale( void *pContext, wp_fractional_scale_v1 *pScale, uint32_t nScale120 ) noexcept
 {
-	sirWaylandWindowSlot_t *pSlot = ( sirWaylandWindowSlot_t * )pContext;
+	sirWaylandWindowSlot_t *pSlot = static_cast<sirWaylandWindowSlot_t *>(pContext);
 	if ( pSlot->pDriver == nullptr || pSlot->pFractionalScale != pScale || pSlot->pViewport == nullptr || pSlot->pDriver->m_bLost ||
 	     nScale120 == 0 || nScale120 > 1920 || pSlot->nFractionalScale120 == nScale120 ) {
 		return;
@@ -353,18 +353,18 @@ void SIRWindowDriverWayland::fractionalPreferredScale( void *pContext, wp_fracti
 
 void SIRWindowDriverWayland::topClose( void *pContext, xdg_toplevel *pTop ) noexcept
 {
-	sirWaylandWindowSlot_t *pSlot = ( sirWaylandWindowSlot_t * )pContext;
+	sirWaylandWindowSlot_t *pSlot = static_cast<sirWaylandWindowSlot_t *>(pContext);
 	if ( pSlot->pToplevel == pTop ) {
 		pSlot->bClosePending = true;
 	}
 }
 
-void SIRWindowDriverWayland::queueEvent( uint32_t nSlot, sirWindowEventKind_t eKind, uint32_t nWidth, uint32_t nHeight ) noexcept
+void SIRWindowDriverWayland::queueEvent( uint32_t nSlot, SIRWindowEventKind eKind, uint32_t nWidth, uint32_t nHeight ) noexcept
 {
-	if ( m_nEventCount != 0 && eKind == SIR_WINDOW_EVENT_RESIZED ) {
+	if ( m_nEventCount != 0 && eKind == SIRWindowEventKind::SIR_WINDOW_EVENT_RESIZED ) {
 		const uint32_t nPrevious = ( m_nEventWrite + SIR_WINDOW_EVENT_CAPACITY - 1 ) % SIR_WINDOW_EVENT_CAPACITY;
 		sirWindowBackendEvent_t& previous = m_Events[nPrevious];
-		if ( previous.nSlot == nSlot && previous.eKind == SIR_WINDOW_EVENT_RESIZED ) {
+		if ( previous.nSlot == nSlot && previous.eKind == SIRWindowEventKind::SIR_WINDOW_EVENT_RESIZED ) {
 			previous.nWidth = nWidth;
 			previous.nHeight = nHeight;
 			return;
@@ -374,7 +374,7 @@ void SIRWindowDriverWayland::queueEvent( uint32_t nSlot, sirWindowEventKind_t eK
 		m_bOverflow = true;
 		return;
 	}
-	m_Events[m_nEventWrite] = { nSlot, ( uintptr_t )m_Slots[nSlot].pSurface, eKind, nWidth, nHeight };
+	m_Events[m_nEventWrite] = { nSlot, reinterpret_cast<uintptr_t>(m_Slots[nSlot].pSurface), eKind, nWidth, nHeight };
 	m_nEventWrite = ( m_nEventWrite + 1 ) % SIR_WINDOW_EVENT_CAPACITY;
 	++m_nEventCount;
 }
@@ -400,14 +400,14 @@ void SIRWindowDriverWayland::loseDisplay( void ) noexcept
 	}
 }
 
-sirWindowResult_t SIRWindowDriverWayland::initialize( void ) noexcept
+SIRWindowResult SIRWindowDriverWayland::initialize( void ) noexcept
 {
 	if ( m_pDisplay != nullptr ) {
-		return SIR_WINDOW_BUSY;
+		return SIRWindowResult::SIR_WINDOW_BUSY;
 	}
 	m_pDisplay = wl_display_connect( nullptr );
 	if ( m_pDisplay == nullptr ) {
-		return SIR_WINDOW_NOT_READY;
+		return SIRWindowResult::SIR_WINDOW_NOT_READY;
 	}
 	m_pRegistry = wl_display_get_registry( m_pDisplay );
 	static const wl_registry_listener s_RegistryListener = { registryGlobal, registryRemove };
@@ -416,29 +416,29 @@ sirWindowResult_t SIRWindowDriverWayland::initialize( void ) noexcept
 	     wl_display_roundtrip( m_pDisplay ) < 0 || m_bLost || m_pCompositor == nullptr || m_pBase == nullptr ||
 	     xdg_wm_base_add_listener( m_pBase, &s_WmListener, this ) != 0 ) {
 		shutdown();
-		return SIR_WINDOW_NATIVE_FAILURE;
+		return SIRWindowResult::SIR_WINDOW_NATIVE_FAILURE;
 	}
-	return SIR_WINDOW_OK;
+	return SIRWindowResult::SIR_WINDOW_OK;
 }
 
-sirWindowResult_t SIRWindowDriverWayland::createWindow( const sirWindowCreateDesc_t& desc, uint32_t nSlot,
+SIRWindowResult SIRWindowDriverWayland::createWindow( const sirWindowCreateDesc_t& desc, uint32_t nSlot,
                                                         sirWindowNativeView_t *pView ) noexcept
 {
 	if ( pView == nullptr || desc.pszTitle == nullptr || desc.nWidth == 0 || desc.nHeight == 0 || nSlot >= SIR_WINDOW_MAX_WINDOWS ) {
-		return SIR_WINDOW_INVALID_ARGUMENT;
+		return SIRWindowResult::SIR_WINDOW_INVALID_ARGUMENT;
 	}
 	if ( m_pDisplay == nullptr || m_bLost ) {
-		return SIR_WINDOW_STOPPED;
+		return SIRWindowResult::SIR_WINDOW_STOPPED;
 	}
 	sirWaylandWindowSlot_t& slot = m_Slots[nSlot];
 	if ( slot.pSurface != nullptr ) {
-		return SIR_WINDOW_BUSY;
+		return SIRWindowResult::SIR_WINDOW_BUSY;
 	}
 	static const xdg_surface_listener s_SurfaceListener = { surfaceConfigure };
 	static const xdg_toplevel_listener s_ToplevelListener = { topConfigure, topClose, nullptr, nullptr };
 	slot.pSurface = wl_compositor_create_surface( m_pCompositor );
 	if ( slot.pSurface == nullptr ) {
-		return SIR_WINDOW_NATIVE_FAILURE;
+		return SIRWindowResult::SIR_WINDOW_NATIVE_FAILURE;
 	}
 	slot.pDriver = this;
 	slot.nIndex = nSlot;
@@ -447,20 +447,20 @@ sirWindowResult_t SIRWindowDriverWayland::createWindow( const sirWindowCreateDes
 	if ( wl_surface_add_listener( slot.pSurface, &s_SurfaceOutputListener, &slot ) != 0 ) {
 		wl_surface_destroy( slot.pSurface );
 		slot = {};
-		return SIR_WINDOW_NATIVE_FAILURE;
+		return SIRWindowResult::SIR_WINDOW_NATIVE_FAILURE;
 	}
 	slot.pXdgSurface = xdg_wm_base_get_xdg_surface( m_pBase, slot.pSurface );
 	if ( slot.pXdgSurface == nullptr ) {
 		wl_surface_destroy( slot.pSurface );
 		slot = {};
-		return SIR_WINDOW_NATIVE_FAILURE;
+		return SIRWindowResult::SIR_WINDOW_NATIVE_FAILURE;
 	}
 	slot.pToplevel = xdg_surface_get_toplevel( slot.pXdgSurface );
 	if ( slot.pToplevel == nullptr ) {
 		xdg_surface_destroy( slot.pXdgSurface );
 		wl_surface_destroy( slot.pSurface );
 		slot = {};
-		return SIR_WINDOW_NATIVE_FAILURE;
+		return SIRWindowResult::SIR_WINDOW_NATIVE_FAILURE;
 	}
 	slot.pDriver = this;
 	slot.nIndex = nSlot;
@@ -470,8 +470,8 @@ sirWindowResult_t SIRWindowDriverWayland::createWindow( const sirWindowCreateDes
 	slot.nPendingHeight = desc.nHeight;
 	if ( xdg_surface_add_listener( slot.pXdgSurface, &s_SurfaceListener, &slot ) != 0 ||
 	     xdg_toplevel_add_listener( slot.pToplevel, &s_ToplevelListener, &slot ) != 0 ) {
-		( void )destroyWindow( nSlot );
-		return SIR_WINDOW_NATIVE_FAILURE;
+		static_cast<void>(destroyWindow( nSlot ));
+		return SIRWindowResult::SIR_WINDOW_NATIVE_FAILURE;
 	}
 #ifdef SIR_WAYLAND_FRACTIONAL_SCALE_AVAILABLE
 	if ( m_pFractionalManager != nullptr && m_pViewporter != nullptr ) {
@@ -496,14 +496,14 @@ sirWindowResult_t SIRWindowDriverWayland::createWindow( const sirWindowCreateDes
 #endif
 	xdg_toplevel_set_title( slot.pToplevel, desc.pszTitle );
 	wl_surface_commit( slot.pSurface ); // Empty initial commit: renderer may not attach a buffer yet.
-	*pView = { SIR_WINDOW_PLATFORM_WAYLAND, ( uintptr_t )slot.pSurface, ( uintptr_t )m_pDisplay, 0 };
-	return SIR_WINDOW_OK;
+	*pView = { SIRWindowPlatform::SIR_WINDOW_PLATFORM_WAYLAND, reinterpret_cast<uintptr_t>(slot.pSurface), reinterpret_cast<uintptr_t>(m_pDisplay), 0 };
+	return SIRWindowResult::SIR_WINDOW_OK;
 }
 
-sirWindowResult_t SIRWindowDriverWayland::destroyWindow( uint32_t nSlot ) noexcept
+SIRWindowResult SIRWindowDriverWayland::destroyWindow( uint32_t nSlot ) noexcept
 {
 	if ( nSlot >= SIR_WINDOW_MAX_WINDOWS || m_Slots[nSlot].pSurface == nullptr ) {
-		return SIR_WINDOW_INVALID_HANDLE;
+		return SIRWindowResult::SIR_WINDOW_INVALID_HANDLE;
 	}
 	sirWaylandWindowSlot_t& slot = m_Slots[nSlot];
 	if ( !m_bLost ) {
@@ -520,14 +520,14 @@ sirWindowResult_t SIRWindowDriverWayland::destroyWindow( uint32_t nSlot ) noexce
 		wl_surface_destroy( slot.pSurface );
 	} else {
 		if ( slot.pFractionalScale != nullptr ) {
-			wl_proxy_destroy( ( wl_proxy * )slot.pFractionalScale );
+			wl_proxy_destroy( reinterpret_cast<wl_proxy *>(slot.pFractionalScale) );
 		}
 		if ( slot.pViewport != nullptr ) {
-			wl_proxy_destroy( ( wl_proxy * )slot.pViewport );
+			wl_proxy_destroy( reinterpret_cast<wl_proxy *>(slot.pViewport) );
 		}
-		wl_proxy_destroy( ( wl_proxy * )slot.pToplevel );
-		wl_proxy_destroy( ( wl_proxy * )slot.pXdgSurface );
-		wl_proxy_destroy( ( wl_proxy * )slot.pSurface );
+		wl_proxy_destroy( reinterpret_cast<wl_proxy *>(slot.pToplevel) );
+		wl_proxy_destroy( reinterpret_cast<wl_proxy *>(slot.pXdgSurface) );
+		wl_proxy_destroy( reinterpret_cast<wl_proxy *>(slot.pSurface) );
 	}
 	// Drop all queued events for this retired native surface. A newly created
 	// window in the same slot must not observe stale configure/resize events.
@@ -543,49 +543,49 @@ sirWindowResult_t SIRWindowDriverWayland::destroyWindow( uint32_t nSlot ) noexce
 	m_nEventCount = nRetained;
 	m_nEventWrite = ( m_nEventRead + nRetained ) % SIR_WINDOW_EVENT_CAPACITY;
 	slot = {};
-	return SIR_WINDOW_OK;
+	return SIRWindowResult::SIR_WINDOW_OK;
 }
 
-sirWindowResult_t SIRWindowDriverWayland::mutateWindow( uint32_t nSlot, const sirWindowMutation_t& mutation ) noexcept
+SIRWindowResult SIRWindowDriverWayland::mutateWindow( uint32_t nSlot, const sirWindowMutation_t& mutation ) noexcept
 {
 	if ( m_pDisplay == nullptr || m_bLost ) {
-		return SIR_WINDOW_STOPPED;
+		return SIRWindowResult::SIR_WINDOW_STOPPED;
 	}
 	if ( nSlot >= SIR_WINDOW_MAX_WINDOWS || m_Slots[nSlot].pToplevel == nullptr ) {
-		return SIR_WINDOW_INVALID_HANDLE;
+		return SIRWindowResult::SIR_WINDOW_INVALID_HANDLE;
 	}
 	xdg_toplevel *pTop = m_Slots[nSlot].pToplevel;
 	switch ( mutation.eKind ) {
-	case SIR_WINDOW_MUTATION_TITLE:
+	case SIRWindowMutationKind::SIR_WINDOW_MUTATION_TITLE:
 		if ( mutation.pszTitle == nullptr ) {
-			return SIR_WINDOW_INVALID_ARGUMENT;
+			return SIRWindowResult::SIR_WINDOW_INVALID_ARGUMENT;
 		}
 		xdg_toplevel_set_title( pTop, mutation.pszTitle );
-		return SIR_WINDOW_OK;
-	case SIR_WINDOW_MUTATION_MINIMIZE:
+		return SIRWindowResult::SIR_WINDOW_OK;
+	case SIRWindowMutationKind::SIR_WINDOW_MUTATION_MINIMIZE:
 		xdg_toplevel_set_minimized( pTop );
-		return SIR_WINDOW_OK;
-	case SIR_WINDOW_MUTATION_MAXIMIZE:
+		return SIRWindowResult::SIR_WINDOW_OK;
+	case SIRWindowMutationKind::SIR_WINDOW_MUTATION_MAXIMIZE:
 		xdg_toplevel_set_maximized( pTop );
-		return SIR_WINDOW_OK;
-	case SIR_WINDOW_MUTATION_FULLSCREEN_ENTER:
+		return SIRWindowResult::SIR_WINDOW_OK;
+	case SIRWindowMutationKind::SIR_WINDOW_MUTATION_FULLSCREEN_ENTER:
 		xdg_toplevel_set_fullscreen( pTop, nullptr );
-		return SIR_WINDOW_OK;
-	case SIR_WINDOW_MUTATION_FULLSCREEN_EXIT:
+		return SIRWindowResult::SIR_WINDOW_OK;
+	case SIRWindowMutationKind::SIR_WINDOW_MUTATION_FULLSCREEN_EXIT:
 		xdg_toplevel_unset_fullscreen( pTop );
-		return SIR_WINDOW_OK;
+		return SIRWindowResult::SIR_WINDOW_OK;
 	default:
-		return SIR_WINDOW_UNSUPPORTED;
+		return SIRWindowResult::SIR_WINDOW_UNSUPPORTED;
 	}
 }
 
-sirWindowResult_t SIRWindowDriverWayland::pumpEvents( uint32_t nBudget, sirWindowDriverEventFn_t pCallback, void *pContext ) noexcept
+SIRWindowResult SIRWindowDriverWayland::pumpEvents( uint32_t nBudget, sirWindowDriverEventFn_t pCallback, void *pContext ) noexcept
 {
 	if ( m_pDisplay == nullptr ) {
-		return SIR_WINDOW_STOPPED;
+		return SIRWindowResult::SIR_WINDOW_STOPPED;
 	}
 	if ( nBudget == 0 || pCallback == nullptr ) {
-		return SIR_WINDOW_INVALID_ARGUMENT;
+		return SIRWindowResult::SIR_WINDOW_INVALID_ARGUMENT;
 	}
 	if ( !m_bLost ) {
 		while ( wl_display_prepare_read( m_pDisplay ) != 0 ) {
@@ -632,20 +632,20 @@ sirWindowResult_t SIRWindowDriverWayland::pumpEvents( uint32_t nBudget, sirWindo
 		sirWaylandWindowSlot_t& slot = m_Slots[i];
 		if ( slot.bLostPending && nDelivered < nBudget ) {
 			slot.bLostPending = false;
-			const sirWindowBackendEvent_t event = { i, ( uintptr_t )slot.pSurface, SIR_WINDOW_EVENT_LOST, 0, 0 };
+			const sirWindowBackendEvent_t event = { i, reinterpret_cast<uintptr_t>(slot.pSurface), SIRWindowEventKind::SIR_WINDOW_EVENT_LOST, 0, 0 };
 			pCallback( pContext, event );
 			++nDelivered;
 		}
 		if ( slot.bClosePending && nDelivered < nBudget ) {
 			slot.bClosePending = false;
-			const sirWindowBackendEvent_t event = { i, ( uintptr_t )slot.pSurface, SIR_WINDOW_EVENT_CLOSE_REQUESTED, 0, 0 };
+			const sirWindowBackendEvent_t event = { i, reinterpret_cast<uintptr_t>(slot.pSurface), SIRWindowEventKind::SIR_WINDOW_EVENT_CLOSE_REQUESTED, 0, 0 };
 			pCallback( pContext, event );
 			++nDelivered;
 		}
 	}
 	const bool bOverflow = m_bOverflow;
 	m_bOverflow = false;
-	return m_bLost ? SIR_WINDOW_NATIVE_FAILURE : bOverflow ? SIR_WINDOW_EVENTS_LOST : SIR_WINDOW_OK;
+	return m_bLost ? SIRWindowResult::SIR_WINDOW_NATIVE_FAILURE : bOverflow ? SIRWindowResult::SIR_WINDOW_EVENTS_LOST : SIRWindowResult::SIR_WINDOW_OK;
 }
 
 void SIRWindowDriverWayland::shutdown( void ) noexcept
@@ -665,7 +665,7 @@ void SIRWindowDriverWayland::shutdown( void ) noexcept
 	m_pSeatLostContext = nullptr;
 	for ( uint32_t i = 0; i < SIR_WINDOW_MAX_WINDOWS; ++i ) {
 		if ( m_Slots[i].pSurface != nullptr ) {
-			( void )destroyWindow( i );
+			static_cast<void>(destroyWindow( i ));
 		}
 	}
 	for ( uint32_t i = 0; i < SIR_WAYLAND_MAX_OUTPUTS; ++i ) {
@@ -677,21 +677,21 @@ void SIRWindowDriverWayland::shutdown( void ) noexcept
 #ifdef SIR_WAYLAND_FRACTIONAL_SCALE_AVAILABLE
 	if ( m_pFractionalManager != nullptr ) {
 		if ( m_bLost ) {
-			wl_proxy_destroy( ( wl_proxy * )m_pFractionalManager );
+			wl_proxy_destroy( reinterpret_cast<wl_proxy *>(m_pFractionalManager) );
 		} else {
 			wp_fractional_scale_manager_v1_destroy( m_pFractionalManager );
 		}
 	}
 	if ( m_pViewporter != nullptr ) {
 		if ( m_bLost ) {
-			wl_proxy_destroy( ( wl_proxy * )m_pViewporter );
+			wl_proxy_destroy( reinterpret_cast<wl_proxy *>(m_pViewporter) );
 		} else {
 			wp_viewporter_destroy( m_pViewporter );
 		}
 	}
 #endif
 	if ( m_pSeat != nullptr ) {
-		if ( !m_bLost && wl_proxy_get_version( ( wl_proxy * )m_pSeat ) >= 5 ) {
+		if ( !m_bLost && wl_proxy_get_version( reinterpret_cast<wl_proxy *>(m_pSeat) ) >= 5 ) {
 			wl_seat_release( m_pSeat );
 		} else {
 			wl_seat_destroy( m_pSeat );
@@ -709,7 +709,7 @@ void SIRWindowDriverWayland::shutdown( void ) noexcept
 		if ( !m_bLost ) {
 			xdg_wm_base_destroy( m_pBase );
 		} else {
-			wl_proxy_destroy( ( wl_proxy * )m_pBase );
+			wl_proxy_destroy( reinterpret_cast<wl_proxy *>(m_pBase) );
 		}
 	}
 	if ( m_pCompositor != nullptr ) {

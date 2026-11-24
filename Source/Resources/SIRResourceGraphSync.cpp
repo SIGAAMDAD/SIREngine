@@ -9,6 +9,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 ===========================================================================
 */
 #include "SIRResourceGraphSync.h"
+#include <atomic>
 #include <stdlib.h>
 
 SIRResourceGraphSync::SIRResourceGraphSync( void ) noexcept
@@ -129,7 +130,7 @@ uint64_t SIRResourceGraphSync::registerLane( void ) const noexcept
 	for ( uint32_t iReader = 0; iReader < m_nMaxReaders; ++iReader ) {
 		uint64_t nExpected = 0;
 		if ( m_pReaderEpochs[iReader].compare_exchange_strong( nExpected, UINT64_MAX - 1, std::memory_order_seq_cst ) ) {
-			return ( uint64_t )iReader + 1;
+			return static_cast<uint64_t>(iReader) + 1;
 		}
 	}
 	return 0;
@@ -141,7 +142,7 @@ void SIRResourceGraphSync::releaseLane( uint64_t nReaderToken ) const noexcept
 		abort();
 	}
 
-	const uint32_t iReader = ( uint32_t )( nReaderToken - 1 );
+	const uint32_t iReader = static_cast<uint32_t>( nReaderToken - 1 );
 	uint64_t nExpected = UINT64_MAX - 1;
 	if ( !m_pReaderEpochs[iReader].compare_exchange_strong( nExpected, 0, std::memory_order_seq_cst ) ) {
 		abort();
@@ -154,7 +155,7 @@ uint64_t SIRResourceGraphSync::enterRegisteredLane( uint64_t nReaderToken ) cons
 		return 0;
 	}
 
-	const uint32_t iReader = ( uint32_t )( nReaderToken - 1 );
+	const uint32_t iReader = static_cast<uint32_t>( nReaderToken - 1 );
 	uint64_t nExpected = UINT64_MAX - 1;
 	if ( !m_pReaderEpochs[iReader].compare_exchange_strong( nExpected, UINT64_MAX, std::memory_order_seq_cst ) ) {
 		return 0;
@@ -173,7 +174,7 @@ uint64_t SIRResourceGraphSync::enterRead( void ) const noexcept
 		}
 
 		announceEpoch( iReader );
-		return ( uint64_t )iReader + 1;
+		return static_cast<uint64_t>(iReader) + 1;
 	}
 	return 0;
 }
@@ -185,7 +186,7 @@ void SIRResourceGraphSync::leaveRead( uint64_t nReaderToken ) const noexcept
 		abort();
 	}
 
-	const uint32_t iReader = ( uint32_t )( nLaneToken - 1 );
+	const uint32_t iReader = static_cast<uint32_t>( nLaneToken - 1 );
 	const bool bRegistered = ( nReaderToken & ( UINT64_C( 1 ) << 63 ) ) != 0;
 	m_pReaderEpochs[iReader].store( bRegistered ? UINT64_MAX - 1 : 0, std::memory_order_seq_cst );
 }

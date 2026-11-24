@@ -12,8 +12,8 @@ express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIRWINDOWTYPES_H__
-#define __SIRENGINE_SIRWINDOWTYPES_H__
+#ifndef __SIR_WINDOWTYPES_H__
+#define __SIR_WINDOWTYPES_H__
 #include <Core/SIRPCH.h>
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -21,16 +21,14 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-typedef enum sirWindowPlatform_e : uint8_t
-{
+enum class SIRWindowPlatform : uint8_t {
 	SIR_WINDOW_PLATFORM_WIN32 = 1,
 	SIR_WINDOW_PLATFORM_X11 = 2,
 	SIR_WINDOW_PLATFORM_WAYLAND = 3,
 	SIR_WINDOW_PLATFORM_HEADLESS = 4
-} sirWindowPlatform_t;
+};
 
-typedef enum sirWindowResult_e : uint8_t
-{
+enum class SIRWindowResult : uint8_t {
 	SIR_WINDOW_OK = 0,
 	SIR_WINDOW_INVALID_ARGUMENT,
 	SIR_WINDOW_INVALID_HANDLE,
@@ -42,10 +40,9 @@ typedef enum sirWindowResult_e : uint8_t
 	SIR_WINDOW_BUSY,
 	SIR_WINDOW_NATIVE_FAILURE,
 	SIR_WINDOW_STOPPED
-} sirWindowResult_t;
+};
 
-typedef enum sirWindowEventKind_e : uint8_t
-{
+enum class SIRWindowEventKind : uint8_t {
 	SIR_WINDOW_EVENT_CREATED = 1,
 	SIR_WINDOW_EVENT_READY,
 	SIR_WINDOW_EVENT_CLOSE_REQUESTED,
@@ -60,7 +57,7 @@ typedef enum sirWindowEventKind_e : uint8_t
 	SIR_WINDOW_EVENT_RESTORED,
 	SIR_WINDOW_EVENT_LOST,
 	SIR_WINDOW_EVENT_DISPLAY_CHANGED
-} sirWindowEventKind_t;
+};
 
 typedef struct sirWindowHandle_s
 {
@@ -71,14 +68,13 @@ typedef struct sirWindowHandle_s
 
 typedef struct sirWindowNativeView_s
 {
-	sirWindowPlatform_t ePlatform;
+	SIRWindowPlatform ePlatform;
 	uintptr_t nNativeWindow;
 	uintptr_t nDisplayOrInstance;
 	uint64_t nWindowGeneration;
 } sirWindowNativeView_t;
 
-typedef enum sirWindowMutationKind_e : uint8_t
-{
+enum class SIRWindowMutationKind : uint8_t {
 	SIR_WINDOW_MUTATION_TITLE = 1,
 	SIR_WINDOW_MUTATION_RESIZE,
 	SIR_WINDOW_MUTATION_SHOW,
@@ -88,11 +84,11 @@ typedef enum sirWindowMutationKind_e : uint8_t
 	SIR_WINDOW_MUTATION_MAXIMIZE,
 	SIR_WINDOW_MUTATION_FULLSCREEN_ENTER,
 	SIR_WINDOW_MUTATION_FULLSCREEN_EXIT
-} sirWindowMutationKind_t;
+};
 
 typedef struct sirWindowMutation_s
 {
-	sirWindowMutationKind_t eKind;
+	SIRWindowMutationKind eKind;
 	const char *pszTitle;
 	uint32_t nWidth;
 	uint32_t nHeight;
@@ -130,7 +126,7 @@ typedef struct sirWindowBackendEvent_s
 {
 	uint32_t nSlot;
 	uintptr_t nNativeWindow;
-	sirWindowEventKind_t eKind;
+	SIRWindowEventKind eKind;
 	uint32_t nWidth;
 	uint32_t nHeight;
 } sirWindowBackendEvent_t;
@@ -138,7 +134,7 @@ typedef struct sirWindowBackendEvent_s
 typedef struct sirWindowEvent_s
 {
 	sirWindowHandle_t hWindow;
-	sirWindowEventKind_t eKind;
+	SIRWindowEventKind eKind;
 	uint32_t nWidth;
 	uint32_t nHeight;
 	uint64_t nSequence;
@@ -165,4 +161,4 @@ constexpr uint32_t SIR_WINDOW_MAX_WINDOWS = 8;
 constexpr uint32_t SIR_WINDOW_MAX_LEASES = 32;
 constexpr uint32_t SIR_WINDOW_EVENT_CAPACITY = 64;
 
-#endif // __SIRENGINE_SIRWINDOWTYPES_H__
+#endif // __SIR_WINDOWTYPES_H__

@@ -17,7 +17,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Memory/Allocators/SIRMediumPageAllocator.h>
 #include <Core/Memory/SIRMemorySegment.h>
 #include <Core/Memory/SIRMemoryManager.h>
-#include <Core/Memory/SIRMemoryUtils.h>
+#include <Core/SIRMath.h>
 #include <cstring>
 #include <new>
 
@@ -44,18 +44,18 @@ bool SIRMediumPageAllocator::init( SIRMemorySegment *pSegment, uint32_t nExtentB
 	     pSegment->getReservedBytes() % nExtentBytes != 0 || pSegment->getReservedBytes() / nExtentBytes > UINT32_MAX ) {
 		return false;
 	}
-	const uint32_t nCount = ( ( uint32_t )( pSegment->getReservedBytes() / nExtentBytes ) );
+	const uint32_t nCount = static_cast<uint32_t>(  pSegment->getReservedBytes() / nExtentBytes  );
 	const uint64_t nUnits = pSegment->getReservedBytes() / 16;
-	const uint64_t nDescriptorBytes = ( ( uint64_t )( nCount ) ) * sizeof( sirMediumPageExtent_t );
+	const uint64_t nDescriptorBytes = static_cast<uint64_t>( nCount ) * sizeof( sirMediumPageExtent_t );
 	const uint64_t nBitBytes = ( SIR_ROUND_UP_MULTIPLE( nUnits, 64ull ) / 64 ) * sizeof( uint64_t );
 	void *pMetadata = pSegment->getManager()->allocateMetadata( nDescriptorBytes + nBitBytes, alignof( uint64_t ) );
 	if ( pMetadata == nullptr ) {
 		return false;
 	}
-	m_pLiveStarts = ( ( uint64_t * )( ( ( uint8_t * )( pMetadata ) ) + nDescriptorBytes ) );
+	m_pLiveStarts = ( ( uint64_t * )( static_cast<uint8_t *>( pMetadata ) + nDescriptorBytes ) );
 	m_pSegment = pSegment;
-	m_pBase = ( ( uint8_t * )( pSegment->getBase() ) );
-	m_pExtents = ( ( sirMediumPageExtent_t * )( pMetadata ) );
+	m_pBase = static_cast<uint8_t *>(  pSegment->getBase()  );
+	m_pExtents = static_cast<sirMediumPageExtent_t *>( pMetadata );
 	m_nExtentCount = nCount;
 	m_nExtentBytes = nExtentBytes;
 	for ( uint32_t i = 0; i < nCount; ++i ) {
@@ -66,7 +66,7 @@ bool SIRMediumPageAllocator::init( SIRMemorySegment *pSegment, uint32_t nExtentB
 
 sirBlock_t *SIRMediumPageAllocator::block( uint32_t nExtent, uint32_t nOffset ) const
 {
-	return ( ( sirBlock_t * )( m_pBase + ( ( uint64_t )( nExtent ) ) * m_nExtentBytes + nOffset ) );
+	return ( ( sirBlock_t * )( m_pBase + static_cast<uint64_t>( nExtent ) * m_nExtentBytes + nOffset ) );
 }
 
 bool SIRMediumPageAllocator::ensureExtent( uint32_t nExtent )
@@ -75,7 +75,7 @@ bool SIRMediumPageAllocator::ensureExtent( uint32_t nExtent )
 	if ( extent.bCommitted ) {
 		return true;
 	}
-	if ( !m_pSegment->commit( ( ( uint64_t )( nExtent ) ) * m_nExtentBytes, m_nExtentBytes ) ) {
+	if ( !m_pSegment->commit( static_cast<uint64_t>( nExtent ) * m_nExtentBytes, m_nExtentBytes ) ) {
 		return false;
 	}
 	extent = { 0, m_nExtentBytes, 0, true };
@@ -125,7 +125,7 @@ void SIRMediumPageAllocator::recomputeLargest( uint32_t nExtent )
 void *SIRMediumPageAllocator::alloc( uint32_t nBytes, uint32_t nAlignment )
 {
 	if ( m_pSegment == nullptr || nBytes == 0 || !SIR_IS_POWER_OF_TWO( nAlignment ) || nAlignment > m_nExtentBytes ||
-	     ( ( uint64_t )( nBytes ) ) + nAlignment + 32 > m_nExtentBytes ) {
+	     static_cast<uint64_t>( nBytes ) + nAlignment + 32 > m_nExtentBytes ) {
 		return nullptr;
 	}
 	// Search already-committed extents before activating a new one.
@@ -147,8 +147,8 @@ void *SIRMediumPageAllocator::alloc( uint32_t nBytes, uint32_t nAlignment )
 			for ( uint32_t n = extent.nFreeHead; n != SIR_NONE; ) {
 				sirBlock_t *pBlock = block( i, n );
 				const uint32_t nNext = pBlock->nNextFree;
-				const uintptr_t nStart = ( ( uintptr_t )( pBlock ) );
-				const uintptr_t nUser = SIR_ALIGN_UP( nStart + 16, ( ( uintptr_t )( nAlignment ) ) );
+				const uintptr_t nStart = reinterpret_cast<uintptr_t>(pBlock);
+				const uintptr_t nUser = SIR_ALIGN_UP( nStart + 16, static_cast<uintptr_t>( nAlignment ) );
 				const uint64_t nUsed = SIR_ALIGN_UP( nUser - nStart + nBytes, 16ull );
 				const uint32_t nSize = blockBytes( pBlock );
 				if ( nUsed <= nSize ) {
@@ -156,12 +156,12 @@ void *SIRMediumPageAllocator::alloc( uint32_t nBytes, uint32_t nAlignment )
 					removeFree( i, n );
 					uint32_t nFinal = nSize;
 					if ( nSize - nUsed >= 32 ) {
-						nFinal = ( ( uint32_t )( nUsed ) );
+						nFinal = static_cast<uint32_t>( nUsed );
 						const uint32_t nTail = n + nFinal;
 						*block( i, nTail ) = { nFinal, nSize - nFinal | SIR_FREE, SIR_NONE, SIR_NONE };
 						insertFree( i, nTail );
 					}
-					*pBlock = { nPrev, nFinal, ( ( uint32_t )( nUser - nStart ) ), 0 };
+					*pBlock = { nPrev, nFinal, ( static_cast<uint32_t>( nUser - nStart ) ), 0 };
 					if ( n + nSize < m_nExtentBytes ) {
 						block( i, n + nSize )->nPrevBytes = nSize == nFinal ? nFinal : nSize - nFinal;
 					}
@@ -169,13 +169,13 @@ void *SIRMediumPageAllocator::alloc( uint32_t nBytes, uint32_t nAlignment )
 						// The trailing free block terminates this extent.
 					}
 					const uint32_t nOffset = n;
-					std::memcpy( ( ( void * )( nUser - 4 ) ), &nOffset, 4 );
-					const uint64_t nIndex = ( ( ( uint64_t )( i ) ) * m_nExtentBytes + n ) / 16;
+					std::memcpy( ( reinterpret_cast<void *>( nUser - 4 ) ), &nOffset, 4 );
+					const uint64_t nIndex = ( static_cast<uint64_t>( i ) * m_nExtentBytes + n ) / 16;
 					m_pLiveStarts[nIndex >> 6] |= uint64_t( 1 ) << ( nIndex & 63 );
 					++extent.nLive;
 					++m_nLive;
 					recomputeLargest( i );
-					return ( ( void * )( nUser ) );
+					return reinterpret_cast<void *>( nUser );
 				}
 				n = nNext;
 			}
@@ -188,23 +188,23 @@ bool SIRMediumPageAllocator::resolve( const void *pMemory, uint32_t *pExtent, ui
 	if ( m_pSegment == nullptr || pMemory == nullptr ) {
 		return false;
 	}
-	const uintptr_t nBase = ( ( uintptr_t )( m_pBase ) );
-	const uintptr_t nUser = ( ( uintptr_t )( pMemory ) );
+	const uintptr_t nBase = reinterpret_cast<uintptr_t>(m_pBase);
+	const uintptr_t nUser = reinterpret_cast<uintptr_t>(pMemory);
 	if ( nUser < nBase + 16 || nUser - nBase >= m_pSegment->getReservedBytes() ) {
 		return false;
 	}
 	const uint64_t nGlobal = nUser - nBase;
-	const uint32_t nExtent = ( ( uint32_t )( nGlobal / m_nExtentBytes ) );
-	const uint32_t nInner = ( ( uint32_t )( nGlobal % m_nExtentBytes ) );
+	const uint32_t nExtent = static_cast<uint32_t>( nGlobal / m_nExtentBytes );
+	const uint32_t nInner = static_cast<uint32_t>( nGlobal % m_nExtentBytes );
 	if ( !m_pExtents[nExtent].bCommitted || nInner < 16 || m_pExtents[nExtent].nLive == 0 ) {
 		return false;
 	}
 	uint32_t nOffset = SIR_NONE;
-	std::memcpy( &nOffset, ( ( const void * )( nUser - 4 ) ), 4 );
+	std::memcpy( &nOffset, ( reinterpret_cast<const void *>( nUser - 4 ) ), 4 );
 	if ( nOffset % 16 != 0 || nOffset > m_nExtentBytes - 32 || nOffset >= nInner ) {
 		return false;
 	}
-	const uint64_t nIndex = ( ( ( uint64_t )( nExtent ) ) * m_nExtentBytes + nOffset ) / 16;
+	const uint64_t nIndex = ( static_cast<uint64_t>( nExtent ) * m_nExtentBytes + nOffset ) / 16;
 	if ( ( m_pLiveStarts[nIndex >> 6] & ( uint64_t( 1 ) << ( nIndex & 63 ) ) ) == 0 ) {
 		return false;
 	}
@@ -239,7 +239,7 @@ bool SIRMediumPageAllocator::free( void *pMemory )
 		return false;
 	}
 	sirMediumPageExtent_t& extent = m_pExtents[nExtent];
-	const uint64_t nIndex = ( ( ( uint64_t )( nExtent ) ) * m_nExtentBytes + nOffset ) / 16;
+	const uint64_t nIndex = ( static_cast<uint64_t>( nExtent ) * m_nExtentBytes + nOffset ) / 16;
 	m_pLiveStarts[nIndex >> 6] &= ~( uint64_t( 1 ) << ( nIndex & 63 ) );
 	sirBlock_t *pBlock = block( nExtent, nOffset );
 	uint32_t nSize = blockBytes( pBlock );
@@ -282,7 +282,7 @@ uint64_t SIRMediumPageAllocator::trimEmptyPages( uint32_t nMaximumWarmPages )
 		if ( ++nWarm <= nMaximumWarmPages ) {
 			continue;
 		}
-		if ( m_pSegment->decommit( ( ( uint64_t )( i ) ) * m_nExtentBytes, m_nExtentBytes ) ) {
+		if ( m_pSegment->decommit( static_cast<uint64_t>( i ) * m_nExtentBytes, m_nExtentBytes ) ) {
 			extent = { SIR_NONE, 0, 0, false };
 			nReleased += m_nExtentBytes;
 		}

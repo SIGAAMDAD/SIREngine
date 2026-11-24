@@ -16,7 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/Memory/Allocators/SIRRingAllocator.h>
 #include <Core/Memory/SIRMemoryManager.h>
-#include <Core/Memory/SIRMemoryUtils.h>
+#include <Core/SIRMath.h>
 #include <Core/Memory/SIRMemorySegment.h>
 
 #include <limits>
@@ -30,7 +30,7 @@ SIRRingAllocator::SIRRingAllocator( void )
 
 uint64_t SIRRingAllocator::getRequiredMetadataBytes( uint32_t nMaxAllocations )
 {
-	return ( ( uint64_t )( nMaxAllocations ) ) * sizeof( sirRingEntry_t );
+	return static_cast<uint64_t>( nMaxAllocations ) * sizeof( sirRingEntry_t );
 }
 
 bool SIRRingAllocator::init( SIRMemorySegment *pSegment, uint32_t nMaxAllocations )
@@ -45,7 +45,7 @@ bool SIRRingAllocator::init( SIRMemorySegment *pSegment, uint32_t nMaxAllocation
 	}
 	m_pSegment = pSegment;
 	m_pEntries = pEntries;
-	m_pBase = ( ( uint8_t * )( pSegment->getBase() ) );
+	m_pBase = static_cast<uint8_t *>(  pSegment->getBase()  );
 	m_nCapacity = pSegment->getReservedBytes();
 	m_nCapacityMask = SIR_IS_POWER_OF_TWO( m_nCapacity ) ? m_nCapacity - 1 : 0;
 	m_nEntryCapacity = nMaxAllocations;
@@ -66,8 +66,8 @@ bool SIRRingAllocator::commitThrough( uint64_t nEnd )
 		return true;
 	}
 	uint64_t nTarget = 0;
-	if ( !SIR_IS_POWER_OF_TWO( m_pSegment->getPageSize() ) || ( uint64_t )( m_pSegment->getPageSize() ) > UINTPTR_MAX ||
-	     ( uint64_t )( nEnd ) > UINTPTR_MAX - ( ( uint64_t )( m_pSegment->getPageSize() ) - 1 ) ) {
+	if ( !SIR_IS_POWER_OF_TWO( m_pSegment->getPageSize() ) || static_cast<uint64_t>(  m_pSegment->getPageSize()  ) > UINTPTR_MAX ||
+	     static_cast<uint64_t>( nEnd ) > UINTPTR_MAX - ( ( uint64_t )( m_pSegment->getPageSize() ) - 1 ) ) {
 		return false;
 	}
 	nTarget = SIR_ALIGN_UP( nEnd, m_pSegment->getPageSize() );
@@ -130,13 +130,13 @@ bool SIRRingAllocator::retireThrough( uint64_t nSequence )
 	if ( m_nCount != 0 ) {
 		const uint64_t nOldest = m_nNextSequence - m_nCount;
 		if ( nSequence >= nOldest ) {
-			const uint32_t nToRetire = ( ( uint32_t )( ( nSequence - nOldest + 1 ) > m_nCount ? m_nCount : nSequence - nOldest + 1 ) );
-			const uint64_t nLastUnwrapped = ( ( uint64_t )( m_nEntryHead ) ) + nToRetire - 1;
+			const uint32_t nToRetire = static_cast<uint32_t>(  ( nSequence - nOldest + 1 ) > m_nCount ? m_nCount : nSequence - nOldest + 1  );
+			const uint64_t nLastUnwrapped = static_cast<uint64_t>( m_nEntryHead ) + nToRetire - 1;
 			const uint32_t nLast =
-			    ( ( uint32_t )( nLastUnwrapped >= m_nEntryCapacity ? nLastUnwrapped - m_nEntryCapacity : nLastUnwrapped ) );
+			    ( static_cast<uint32_t>( nLastUnwrapped >= m_nEntryCapacity ? nLastUnwrapped - m_nEntryCapacity : nLastUnwrapped ) );
 			m_nTail = m_pEntries[nLast].nEnd;
-			const uint64_t nNext = ( ( uint64_t )( m_nEntryHead ) ) + nToRetire;
-			m_nEntryHead = ( ( uint32_t )( nNext >= m_nEntryCapacity ? nNext - m_nEntryCapacity : nNext ) );
+			const uint64_t nNext = static_cast<uint64_t>( m_nEntryHead ) + nToRetire;
+			m_nEntryHead = static_cast<uint32_t>( nNext >= m_nEntryCapacity ? nNext - m_nEntryCapacity : nNext );
 			m_nCount -= nToRetire;
 		}
 	}

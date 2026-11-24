@@ -61,38 +61,38 @@ bool SIRPlatformFileSystem::validPaths( const char *pszDestination, const char *
 
 		return true;
 	}
-	const size_t nDestinationParent = ( size_t )( pszDestinationEnd - pszDestination );
-	const size_t nTemporaryParent = ( size_t )( pszTemporaryEnd - pszTemporary );
+	const size_t nDestinationParent = static_cast<size_t>( pszDestinationEnd - pszDestination );
+	const size_t nTemporaryParent = static_cast<size_t>( pszTemporaryEnd - pszTemporary );
 	return nDestinationParent == nTemporaryParent && memcmp( pszDestination, pszTemporary, nDestinationParent ) == 0 &&
 	       pszDestinationEnd[1] != '\0' && pszTemporaryEnd[1] != '\0';
 }
 
-sirFileSystemResult_t SIRPlatformFileSystem::readFile( const char *pszPath, char *pszOutput, size_t nCapacity, size_t *pOutBytes ) noexcept
+SIRFileSystemResult SIRPlatformFileSystem::readFile( const char *pszPath, char *pszOutput, size_t nCapacity, size_t *pOutBytes ) noexcept
 {
 	if ( pOutBytes == nullptr ) {
-		return SIR_FILESYSTEM_INVALID_ARGUMENT;
+		return SIRFileSystemResult::SIR_FILESYSTEM_INVALID_ARGUMENT;
 	}
 	*pOutBytes = 0;
 	if ( ( pszOutput == nullptr ) != ( nCapacity == 0 ) ) {
-		return SIR_FILESYSTEM_INVALID_ARGUMENT;
+		return SIRFileSystemResult::SIR_FILESYSTEM_INVALID_ARGUMENT;
 	}
 	if ( pszPath == nullptr ) {
-		return SIR_FILESYSTEM_INVALID_PATH;
+		return SIRFileSystemResult::SIR_FILESYSTEM_INVALID_PATH;
 	}
 	const size_t nPathBytes = sirFileSystemBoundedLength( pszPath );
 	if ( nPathBytes == 0 || nPathBytes == SIR_FILESYSTEM_MAX_PATH_BYTES ) {
-		return SIR_FILESYSTEM_INVALID_PATH;
+		return SIRFileSystemResult::SIR_FILESYSTEM_INVALID_PATH;
 	}
 	return readFilePlatform( pszPath, pszOutput, nCapacity, pOutBytes );
 }
 
-sirPlatformAtomicResult_t SIRPlatformFileSystem::writeAtomically( const sirFileSystemAtomicWriteRequest_t& request ) noexcept
+SIRPlatformAtomicResult SIRPlatformFileSystem::writeAtomically( const sirFileSystemAtomicWriteRequest_t& request ) noexcept
 {
 	if ( request.pBytes == nullptr || request.nBytes == 0 || ( request.pExpectedBytes == nullptr && request.nExpectedBytes != 0 ) ) {
-		return SIR_ATOMIC_SAVE_INVALID_ARGUMENT;
+		return SIRPlatformAtomicResult::SIR_ATOMIC_SAVE_INVALID_ARGUMENT;
 	}
 	if ( !validPaths( request.pszDestination, request.pszTemporary ) ) {
-		return SIR_ATOMIC_SAVE_INVALID_PATH;
+		return SIRPlatformAtomicResult::SIR_ATOMIC_SAVE_INVALID_PATH;
 	}
 	return writeAtomicallyPlatform( request );
 }

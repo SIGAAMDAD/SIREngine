@@ -12,8 +12,8 @@ express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIRWIN32INPUTBRIDGE_H__
-#define __SIRENGINE_SIRWIN32INPUTBRIDGE_H__
+#ifndef __SIR_WIN32_INPUTBRIDGE_H__
+#define __SIR_WIN32_INPUTBRIDGE_H__
 #include <Core/SIRPCH.h>
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -36,8 +36,8 @@ public:
 	bool registerWindow( const sirWindowNativeView_t& view ) noexcept;
 	bool unregisterWindow( uintptr_t nNativeWindow ) noexcept;
 	bool acceptsWindow( uintptr_t nWindow ) const noexcept;
-	bool setCursorMode( sirInputCursorMode_t eMode ) noexcept;
-	sirInputCursorMode_t cursorMode( void ) const noexcept;
+	bool setCursorMode( SIRInputCursorMode eMode ) noexcept;
+	SIRInputCursorMode cursorMode( void ) const noexcept;
 	void setTextEnabled( bool bEnabled ) noexcept;
 	void finishPump( void ) noexcept;
 	intptr_t processWindowMessage( const sirWindowWin32Message_t& message, bool *pHandled ) noexcept;
@@ -55,6 +55,6 @@ private:
 	bool m_bFocused = false;
 	bool m_bFocusLost = false;
 	bool m_bCursorCaptured = false;
-	sirInputCursorMode_t m_eCursorMode = SIR_INPUT_CURSOR_FREE;
+	SIRInputCursorMode m_eCursorMode = SIRInputCursorMode::SIR_INPUT_CURSOR_FREE;
 };
-#endif // __SIRENGINE_SIRWIN32INPUTBRIDGE_H__
+#endif // __SIR_WIN32_INPUTBRIDGE_H__

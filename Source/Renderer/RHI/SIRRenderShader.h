@@ -13,10 +13,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRRENDERSHADER_H__
-#define __SIRENGINE_SIRRENDERSHADER_H__
+#ifndef __SIR_RENDERSHADER_H__
+#define __SIR_RENDERSHADER_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -47,7 +47,7 @@ public:
 	}
 
 private:
-	sirRenderShaderDesc_t m_Desc = {};
+	sirRenderShaderDesc_t m_Desc {};
 };
 
-#endif // __SIRENGINE_SIRRENDERSHADER_H__
+#endif // __SIR_RENDERSHADER_H__

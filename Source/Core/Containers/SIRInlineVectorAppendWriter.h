@@ -1,6 +1,6 @@
 /* SIREngine MPLv2 - transactional constructed-tail append for inline vectors. */
-#ifndef __SIRENGINE_SIRINLINEVECTORAPPENDWRITER_H__
-#define __SIRENGINE_SIRINLINEVECTORAPPENDWRITER_H__
+#ifndef __SIR_INLINEVECTORAPPENDWRITER_H__
+#define __SIR_INLINEVECTORAPPENDWRITER_H__
 #include <Core/SIRPCH.h>
 #include <Core/Containers/SIRInlineVector.h>
 #include <new>
@@ -27,43 +27,43 @@ public:
 	SIRInlineVectorAppendWriter( const SIRInlineVectorAppendWriter& ) = delete;
 	SIRInlineVectorAppendWriter& operator=( const SIRInlineVectorAppendWriter& ) = delete;
 
-	sirContainerResult_t tryBeginAppend( uint32_t nCount )
+	SIRContainerResult tryBeginAppend( uint32_t nCount )
 	{
 		if ( m_bActive ) {
-			return SIR_CONTAINER_BUSY;
+			return SIRContainerResult::SIR_CONTAINER_BUSY;
 		}
 		m_nBase = m_pVector->m_nSize;
 		if ( nCount > UINT32_MAX - m_nBase ) {
-			return SIR_CONTAINER_SIZE_OVERFLOW;
+			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
-		const sirContainerResult_t eResult = m_pVector->tryReserve( m_nBase + nCount );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		const SIRContainerResult eResult = m_pVector->tryReserve( m_nBase + nCount );
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		m_nReserved = nCount;
 		m_nConstructed = 0;
 		m_bActive = true;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
 	template <typename... Args>
-	sirContainerResult_t tryEmplaceNext( Args&&...args )
+	SIRContainerResult tryEmplaceNext( Args&&...args )
 	{
 		if ( !m_bActive || m_nConstructed >= m_nReserved ) {
-			return SIR_CONTAINER_CAPACITY_EXCEEDED;
+			return SIRContainerResult::SIR_CONTAINER_CAPACITY_EXCEEDED;
 		}
 		new ( m_pVector->m_pData + m_nBase + m_nConstructed ) T( std::forward<Args>( args )... );
 		++m_nConstructed;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
-	sirContainerResult_t commit( void ) noexcept
+	SIRContainerResult commit( void ) noexcept
 	{
 		if ( !m_bActive || m_nConstructed != m_nReserved ) {
-			return SIR_CONTAINER_BUSY;
+			return SIRContainerResult::SIR_CONTAINER_BUSY;
 		}
 		m_pVector->m_nSize = m_nBase + m_nConstructed;
 		m_bActive = false;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 	void rollback( void ) noexcept
 	{
@@ -75,4 +75,4 @@ public:
 	}
 };
 
-#endif // __SIRENGINE_SIRINLINEVECTORAPPENDWRITER_H__
+#endif // __SIR_INLINEVECTORAPPENDWRITER_H__

@@ -58,30 +58,30 @@ static HRESULT sirD3D11CreateNative( IDXGIAdapter *pAdapter, bool bSoftware, ID3
 	return hResult;
 }
 
-static sirGraphicsResult_t sirD3D11MapHRESULT( HRESULT hResult ) noexcept
+static SIRGraphicsResult sirD3D11MapHRESULT( HRESULT hResult ) noexcept
 {
 	if ( SUCCEEDED( hResult ) ) {
-		return SIR_GRAPHICS_SUCCESS;
+		return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 	}
 	if ( hResult == E_OUTOFMEMORY ) {
-		return SIR_GRAPHICS_OUT_OF_MEMORY;
+		return SIRGraphicsResult::SIR_GRAPHICS_OUT_OF_MEMORY;
 	}
 	if ( hResult == DXGI_ERROR_DEVICE_REMOVED || hResult == DXGI_ERROR_DEVICE_RESET ) {
-		return SIR_GRAPHICS_DEVICE_LOST;
+		return SIRGraphicsResult::SIR_GRAPHICS_DEVICE_LOST;
 	}
-	return SIR_GRAPHICS_UNSUPPORTED;
+	return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 }
 
 // Enumerate only native DXGI hardware adapters. Software selection is a
 // single explicit WARP index immediately after the hardware adapter range.
-static sirGraphicsResult_t sirD3D11ResolveHardware( uint32_t nRequestedIndex, IDXGIAdapter1 **ppAdapter, uint32_t *pHardwareCount ) noexcept
+static SIRGraphicsResult sirD3D11ResolveHardware( uint32_t nRequestedIndex, IDXGIAdapter1 **ppAdapter, uint32_t *pHardwareCount ) noexcept
 {
 	*ppAdapter = nullptr;
 	*pHardwareCount = 0;
 	IDXGIFactory1 *pFactory = nullptr;
 	const HRESULT hFactory = CreateDXGIFactory1( __uuidof( IDXGIFactory1 ), ( void ** )&pFactory );
 	if ( FAILED( hFactory ) || pFactory == nullptr ) {
-		return SIR_GRAPHICS_DRIVER_ERROR;
+		return SIRGraphicsResult::SIR_GRAPHICS_DRIVER_ERROR;
 	}
 
 	for ( UINT iDxgi = 0; iDxgi < SIR_D3D11_MAX_ADAPTERS; ++iDxgi ) {
@@ -96,9 +96,9 @@ static sirGraphicsResult_t sirD3D11ResolveHardware( uint32_t nRequestedIndex, ID
 				*ppAdapter = nullptr;
 			}
 			pFactory->Release();
-			return SIR_GRAPHICS_DRIVER_ERROR;
+			return SIRGraphicsResult::SIR_GRAPHICS_DRIVER_ERROR;
 		}
-		DXGI_ADAPTER_DESC1 desc = {};
+		DXGI_ADAPTER_DESC1 desc {};
 		const HRESULT hDesc = pCurrent->GetDesc1( &desc );
 		if ( FAILED( hDesc ) ) {
 			pCurrent->Release();
@@ -107,7 +107,7 @@ static sirGraphicsResult_t sirD3D11ResolveHardware( uint32_t nRequestedIndex, ID
 				*ppAdapter = nullptr;
 			}
 			pFactory->Release();
-			return SIR_GRAPHICS_DRIVER_ERROR;
+			return SIRGraphicsResult::SIR_GRAPHICS_DRIVER_ERROR;
 		}
 		const bool bBasicRenderDriver = desc.VendorId == 0x1414 && desc.DeviceId == 0x008C;
 		if ( ( desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE ) == 0 && !bBasicRenderDriver ) {
@@ -122,15 +122,15 @@ static sirGraphicsResult_t sirD3D11ResolveHardware( uint32_t nRequestedIndex, ID
 		}
 	}
 	pFactory->Release();
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
-static sirGraphicsResult_t sirD3D11GetProfile( ID3D11Device *pDevice, D3D_FEATURE_LEVEL eLevel,
+static SIRGraphicsResult sirD3D11GetProfile( ID3D11Device *pDevice, D3D_FEATURE_LEVEL eLevel,
                                                sirD3D11FeatureProfile_t *pProfile ) noexcept
 {
-	sirD3D11FeatureProbe_t probe = {};
+	sirD3D11FeatureProbe_t probe {};
 	probe.nSize = sizeof( probe );
-	probe.nFeatureLevel = ( uint32_t )eLevel;
+	probe.nFeatureLevel = static_cast<uint32_t>(eLevel);
 
 	ID3D11Device1 *pDevice1 = nullptr;
 	if ( SUCCEEDED( pDevice->QueryInterface( __uuidof( ID3D11Device1 ), ( void ** )&pDevice1 ) ) && pDevice1 != nullptr ) {
@@ -138,7 +138,7 @@ static sirGraphicsResult_t sirD3D11GetProfile( ID3D11Device *pDevice, D3D_FEATUR
 		pDevice1->Release();
 	}
 	if ( eLevel == D3D_FEATURE_LEVEL_10_0 || eLevel == D3D_FEATURE_LEVEL_10_1 ) {
-		D3D11_FEATURE_DATA_D3D10_X_HARDWARE_OPTIONS options = {};
+		D3D11_FEATURE_DATA_D3D10_X_HARDWARE_OPTIONS options {};
 		if ( SUCCEEDED( pDevice->CheckFeatureSupport( D3D11_FEATURE_D3D10_X_HARDWARE_OPTIONS, &options, sizeof( options ) ) ) ) {
 			probe.nComputeShader4xAvailable = options.ComputeShaders_Plus_RawAndStructuredBuffers_Via_Shader_4_x != FALSE ? 1U : 0U;
 		}
@@ -154,48 +154,48 @@ static sirGraphicsResult_t sirD3D11GetProfile( ID3D11Device *pDevice, D3D_FEATUR
 	return sirD3D11BuildFeatureProfile( &probe, pProfile );
 }
 
-static sirGraphicsResult_t sirD3D11GetAdapterDesc( IDXGIAdapter1 *pSelected, ID3D11Device *pDevice, DXGI_ADAPTER_DESC *pDesc ) noexcept
+static SIRGraphicsResult sirD3D11GetAdapterDesc( IDXGIAdapter1 *pSelected, ID3D11Device *pDevice, DXGI_ADAPTER_DESC *pDesc ) noexcept
 {
 	if ( pSelected != nullptr ) {
-		return SUCCEEDED( pSelected->GetDesc( pDesc ) ) ? SIR_GRAPHICS_SUCCESS : SIR_GRAPHICS_DRIVER_ERROR;
+		return SUCCEEDED( pSelected->GetDesc( pDesc ) ) ? SIRGraphicsResult::SIR_GRAPHICS_SUCCESS : SIRGraphicsResult::SIR_GRAPHICS_DRIVER_ERROR;
 	}
 	IDXGIDevice *pDxgiDevice = nullptr;
 	if ( FAILED( pDevice->QueryInterface( __uuidof( IDXGIDevice ), ( void ** )&pDxgiDevice ) ) || pDxgiDevice == nullptr ) {
-		return SIR_GRAPHICS_DRIVER_ERROR;
+		return SIRGraphicsResult::SIR_GRAPHICS_DRIVER_ERROR;
 	}
 	IDXGIAdapter *pWarp = nullptr;
 	const HRESULT hAdapter = pDxgiDevice->GetAdapter( &pWarp );
 	pDxgiDevice->Release();
 	if ( FAILED( hAdapter ) || pWarp == nullptr ) {
-		return SIR_GRAPHICS_DRIVER_ERROR;
+		return SIRGraphicsResult::SIR_GRAPHICS_DRIVER_ERROR;
 	}
 	const HRESULT hDesc = pWarp->GetDesc( pDesc );
 	pWarp->Release();
-	return SUCCEEDED( hDesc ) ? SIR_GRAPHICS_SUCCESS : SIR_GRAPHICS_DRIVER_ERROR;
+	return SUCCEEDED( hDesc ) ? SIRGraphicsResult::SIR_GRAPHICS_SUCCESS : SIRGraphicsResult::SIR_GRAPHICS_DRIVER_ERROR;
 }
 
 SIRD3D11Driver::~SIRD3D11Driver( void ) noexcept
 {
 	if ( m_pActiveDevice != nullptr ) {
-		( void )destroyDevice( m_pActiveDevice );
+		static_cast<void>(destroyDevice( m_pActiveDevice ));
 	}
 }
 
-sirGraphicsBackend_t SIRD3D11Driver::getBackend( void ) const noexcept
+SIRGraphicsBackend SIRD3D11Driver::getBackend( void ) const noexcept
 {
-	return SIR_GRAPHICS_BACKEND_D3D11;
+	return SIRGraphicsBackend::SIR_GRAPHICS_BACKEND_D3D11;
 }
 
-sirGraphicsResult_t SIRD3D11Driver::getAdapterCount( uint32_t *pCount ) const noexcept
+SIRGraphicsResult SIRD3D11Driver::getAdapterCount( uint32_t *pCount ) const noexcept
 {
 	if ( pCount == nullptr ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	*pCount = 0;
 	IDXGIAdapter1 *pUnused = nullptr;
 	uint32_t nHardware = 0;
-	const sirGraphicsResult_t eEnumerate = sirD3D11ResolveHardware( UINT32_MAX, &pUnused, &nHardware );
-	if ( eEnumerate != SIR_GRAPHICS_SUCCESS ) {
+	const SIRGraphicsResult eEnumerate = sirD3D11ResolveHardware( UINT32_MAX, &pUnused, &nHardware );
+	if ( eEnumerate != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 		return eEnumerate;
 	}
 	ID3D11Device *pNative = nullptr;
@@ -204,23 +204,23 @@ sirGraphicsResult_t SIRD3D11Driver::getAdapterCount( uint32_t *pCount ) const no
 	const HRESULT hWarp = sirD3D11CreateNative( nullptr, true, &pNative, &pContext, &eLevel );
 	sirD3D11ReleaseNative( &pNative, &pContext );
 	*pCount = nHardware + ( nHardware < SIR_D3D11_MAX_ADAPTERS && SUCCEEDED( hWarp ) ? 1U : 0U );
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t SIRD3D11Driver::queryAdapter( uint32_t nAdapterIndex, sirGraphicsAdapterInfo_t *pInfo ) const noexcept
+SIRGraphicsResult SIRD3D11Driver::queryAdapter( uint32_t nAdapterIndex, sirGraphicsAdapterInfo_t *pInfo ) const noexcept
 {
 	if ( pInfo == nullptr ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	*pInfo = {};
 	IDXGIAdapter1 *pSelected = nullptr;
 	uint32_t nHardware = 0;
-	const sirGraphicsResult_t eEnumerate = sirD3D11ResolveHardware( nAdapterIndex, &pSelected, &nHardware );
-	if ( eEnumerate != SIR_GRAPHICS_SUCCESS ) {
+	const SIRGraphicsResult eEnumerate = sirD3D11ResolveHardware( nAdapterIndex, &pSelected, &nHardware );
+	if ( eEnumerate != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 		return eEnumerate;
 	}
 	if ( nAdapterIndex >= SIR_D3D11_MAX_ADAPTERS || ( pSelected == nullptr && nAdapterIndex != nHardware ) ) {
-		return SIR_GRAPHICS_UNSUPPORTED;
+		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
 	const bool bSoftware = pSelected == nullptr;
 	ID3D11Device *pNative = nullptr;
@@ -235,22 +235,22 @@ sirGraphicsResult_t SIRD3D11Driver::queryAdapter( uint32_t nAdapterIndex, sirGra
 		return sirD3D11MapHRESULT( hDevice );
 	}
 
-	DXGI_ADAPTER_DESC nativeDesc = {};
-	const sirGraphicsResult_t eDesc = sirD3D11GetAdapterDesc( pSelected, pNative, &nativeDesc );
-	sirD3D11FeatureProfile_t profile = {};
-	const sirGraphicsResult_t eProfile = sirD3D11GetProfile( pNative, eLevel, &profile );
+	DXGI_ADAPTER_DESC nativeDesc {};
+	const SIRGraphicsResult eDesc = sirD3D11GetAdapterDesc( pSelected, pNative, &nativeDesc );
+	sirD3D11FeatureProfile_t profile {};
+	const SIRGraphicsResult eProfile = sirD3D11GetProfile( pNative, eLevel, &profile );
 	sirD3D11ReleaseNative( &pNative, &pContext );
 	if ( pSelected != nullptr ) {
 		pSelected->Release();
 	}
-	if ( eDesc != SIR_GRAPHICS_SUCCESS || eProfile != SIR_GRAPHICS_SUCCESS ) {
-		return SIR_GRAPHICS_DRIVER_ERROR;
+	if ( eDesc != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS || eProfile != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
+		return SIRGraphicsResult::SIR_GRAPHICS_DRIVER_ERROR;
 	}
 
 	pInfo->nAdapterIndex = nAdapterIndex;
 	pInfo->nVendorId = nativeDesc.VendorId;
 	pInfo->nDeviceId = nativeDesc.DeviceId;
-	pInfo->nAdapterLuid = ( ( uint64_t )( uint32_t )nativeDesc.AdapterLuid.HighPart << 32 ) | nativeDesc.AdapterLuid.LowPart;
+	pInfo->nAdapterLuid = ( static_cast<uint64_t>static_cast<uint32_t>( nativeDesc.AdapterLuid.HighPart ) << 32 ) | nativeDesc.AdapterLuid.LowPart;
 	pInfo->nDedicatedVideoBytes = nativeDesc.DedicatedVideoMemory;
 	pInfo->nSharedSystemBytes = nativeDesc.SharedSystemMemory;
 	pInfo->nFeatureMask = profile.nEnabledFeatures;
@@ -260,36 +260,36 @@ sirGraphicsResult_t SIRD3D11Driver::queryAdapter( uint32_t nAdapterIndex, sirGra
 		const char *pszFallback = "Direct3D 11 adapter";
 		memcpy( pInfo->szName, pszFallback, sizeof( "Direct3D 11 adapter" ) );
 	}
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t SIRD3D11Driver::createDevice( const sirGraphicsDeviceCreateDesc_t& desc, SIRRenderingDevice **ppDevice ) noexcept
+SIRGraphicsResult SIRD3D11Driver::createDevice( const sirGraphicsDeviceCreateDesc_t& desc, SIRRenderingDevice **ppDevice ) noexcept
 {
 	if ( ppDevice == nullptr ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	*ppDevice = nullptr;
 	if ( desc.nFramesInFlight == 0 || desc.nFramesInFlight > SIR_D3D11_MAX_FRAMES_IN_FLIGHT ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( m_pActiveDevice != nullptr ) {
-		return SIR_GRAPHICS_BUSY;
+		return SIRGraphicsResult::SIR_GRAPHICS_BUSY;
 	}
 	if ( m_nNextDeviceGeneration == 0 ) {
-		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+		return SIRGraphicsResult::SIR_GRAPHICS_CAPACITY_EXCEEDED;
 	}
 	IDXGIAdapter1 *pSelected = nullptr;
 	uint32_t nHardware = 0;
-	const sirGraphicsResult_t eEnumerate = sirD3D11ResolveHardware( desc.nAdapterIndex, &pSelected, &nHardware );
-	if ( eEnumerate != SIR_GRAPHICS_SUCCESS ) {
+	const SIRGraphicsResult eEnumerate = sirD3D11ResolveHardware( desc.nAdapterIndex, &pSelected, &nHardware );
+	if ( eEnumerate != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 		return eEnumerate;
 	}
 	if ( desc.nAdapterIndex >= SIR_D3D11_MAX_ADAPTERS || ( pSelected == nullptr && desc.nAdapterIndex != nHardware ) ) {
-		return SIR_GRAPHICS_UNSUPPORTED;
+		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
 	const bool bSoftware = pSelected == nullptr;
 	if ( bSoftware && !desc.bAllowSoftware ) {
-		return SIR_GRAPHICS_UNSUPPORTED;
+		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
 
 	ID3D11Device *pNative = nullptr;
@@ -301,17 +301,17 @@ sirGraphicsResult_t SIRD3D11Driver::createDevice( const sirGraphicsDeviceCreateD
 	}
 	if ( FAILED( hDevice ) || pNative == nullptr || pContext == nullptr ) {
 		sirD3D11ReleaseNative( &pNative, &pContext );
-		return FAILED( hDevice ) ? sirD3D11MapHRESULT( hDevice ) : SIR_GRAPHICS_DRIVER_ERROR;
+		return FAILED( hDevice ) ? sirD3D11MapHRESULT( hDevice ) : SIRGraphicsResult::SIR_GRAPHICS_DRIVER_ERROR;
 	}
 
-	sirD3D11FeatureProfile_t profile = {};
-	const sirGraphicsResult_t eProfile = sirD3D11GetProfile( pNative, eLevel, &profile );
-	if ( eProfile != SIR_GRAPHICS_SUCCESS || ( profile.nEnabledFeatures & desc.nRequiredFeatures ) != desc.nRequiredFeatures ) {
+	sirD3D11FeatureProfile_t profile {};
+	const SIRGraphicsResult eProfile = sirD3D11GetProfile( pNative, eLevel, &profile );
+	if ( eProfile != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS || ( profile.nEnabledFeatures & desc.nRequiredFeatures ) != desc.nRequiredFeatures ) {
 		sirD3D11ReleaseNative( &pNative, &pContext );
-		return SIR_GRAPHICS_UNSUPPORTED;
+		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
 
-	sirD3D11NativeDeviceInit_t init = {};
+	sirD3D11NativeDeviceInit_t init {};
 	init.pNativeDevice = pNative;
 	init.pImmediateContext = pContext;
 	init.profile = profile;
@@ -322,26 +322,26 @@ sirGraphicsResult_t SIRD3D11Driver::createDevice( const sirGraphicsDeviceCreateD
 	m_pActiveDevice = new ( m_szDeviceStorage ) SIRD3D11Device( init );
 	++m_nNextDeviceGeneration;
 	*ppDevice = m_pActiveDevice;
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t SIRD3D11Driver::destroyDevice( SIRRenderingDevice *pDevice ) noexcept
+SIRGraphicsResult SIRD3D11Driver::destroyDevice( SIRRenderingDevice *pDevice ) noexcept
 {
 	if ( pDevice == nullptr ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( pDevice != m_pActiveDevice ) {
-		return SIR_GRAPHICS_INVALID_HANDLE;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_HANDLE;
 	}
 	m_pActiveDevice->~SIRD3D11Device();
 	m_pActiveDevice = nullptr;
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t sirD3D11RegisterDriver( SIRGraphicsRegistry *pRegistry, SIRD3D11Driver *pDriver ) noexcept
+SIRGraphicsResult sirD3D11RegisterDriver( SIRGraphicsRegistry *pRegistry, SIRD3D11Driver *pDriver ) noexcept
 {
 	if ( pRegistry == nullptr || pDriver == nullptr ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	return pRegistry->registerDriver( pDriver );
 }

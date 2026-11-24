@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRGLFRAMEBUFFERCACHE_H__
-#define __SIRENGINE_SIRGLFRAMEBUFFERCACHE_H__
+#ifndef __SIR_GLFRAMEBUFFERCACHE_H__
+#define __SIR_GLFRAMEBUFFERCACHE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -60,10 +60,10 @@ typedef struct sirGLFramebufferCache_s
 	uint32_t nNextVictim;
 } sirGLFramebufferCache_t;
 
-sirGraphicsResult_t sirGLFramebufferCacheInit( sirGLFramebufferCache_t *pCache, const sirGLFramebufferCacheConfig_t *pConfig ) noexcept;
-sirGraphicsResult_t sirGLFramebufferCacheAcquire( sirGLFramebufferCache_t *pCache, const sirGLFramebufferCacheKey_t *pKey,
+SIRGraphicsResult sirGLFramebufferCacheInit( sirGLFramebufferCache_t *pCache, const sirGLFramebufferCacheConfig_t *pConfig ) noexcept;
+SIRGraphicsResult sirGLFramebufferCacheAcquire( sirGLFramebufferCache_t *pCache, const sirGLFramebufferCacheKey_t *pKey,
                                                   uint32_t *pName ) noexcept;
-sirGraphicsResult_t sirGLFramebufferCacheInvalidate( sirGLFramebufferCache_t *pCache, sirGraphicsHandle_t hResource ) noexcept;
-sirGraphicsResult_t sirGLFramebufferCacheShutdown( sirGLFramebufferCache_t *pCache ) noexcept;
+SIRGraphicsResult sirGLFramebufferCacheInvalidate( sirGLFramebufferCache_t *pCache, sirGraphicsHandle_t hResource ) noexcept;
+SIRGraphicsResult sirGLFramebufferCacheShutdown( sirGLFramebufferCache_t *pCache ) noexcept;
 
-#endif // __SIRENGINE_SIRGLFRAMEBUFFERCACHE_H__
+#endif // __SIR_GLFRAMEBUFFERCACHE_H__

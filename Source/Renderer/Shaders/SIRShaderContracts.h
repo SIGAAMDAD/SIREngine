@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSHADERCONTRACTS_H__
-#define __SIRENGINE_SIRSHADERCONTRACTS_H__
+#ifndef __SIR_SHADERCONTRACTS_H__
+#define __SIR_SHADERCONTRACTS_H__
 
 #include <Core/SIRPCH.h>
 
@@ -38,30 +38,27 @@ constexpr uint32_t SIR_SHADER_PACKAGE_MAX_STAGES = 32;
 constexpr uint32_t SIR_SHADER_PACKAGE_MAX_BINDINGS = 1024;
 
 // A material pass signature is part of variant and PSO compatibility.
-typedef enum sirShaderPass_e : uint16_t
-{
+enum class SIRShaderPass : uint16_t {
 	SIR_SHADER_PASS_COLOR = 1,
 	SIR_SHADER_PASS_DEPTH = 2,
 	SIR_SHADER_PASS_SHADOW = 3,
 	SIR_SHADER_PASS_VELOCITY = 4,
 	SIR_SHADER_PASS_GBUFFER = 5,
 	SIR_SHADER_PASS_COMPUTE = 6
-} sirShaderPass_t;
+};
 
-typedef enum sirShaderBindingFrequency_e : uint8_t
-{
+enum class SIRShaderBindingFrequency : uint8_t {
 	SIR_SHADER_BINDING_FRAME = 0,
 	SIR_SHADER_BINDING_VIEW = 1,
 	SIR_SHADER_BINDING_MATERIAL = 2,
 	SIR_SHADER_BINDING_DRAW = 3
-} sirShaderBindingFrequency_t;
+};
 
-typedef enum sirShaderRate_e : uint8_t
-{
+enum class SIRShaderRate : uint8_t {
 	SIR_SHADER_RATE_FULL = 1,
 	SIR_SHADER_RATE_HALF = 2,
 	SIR_SHADER_RATE_QUARTER = 4
-} sirShaderRate_t;
+};
 
 typedef struct sirShaderPackageHeader_s
 {
@@ -84,8 +81,8 @@ typedef struct sirShaderPackageHeader_s
 typedef struct sirShaderStageRecord_s
 {
 	uint32_t nStageMask;
-	sirShaderPass_t ePass;
-	sirGraphicsShaderFormat_t eFormat;
+	SIRShaderPass ePass;
+	SIRGraphicsShaderFormat eFormat;
 	uint64_t nRequiredFeatures;
 	uint64_t nBinaryHash;
 	uint64_t nEntryPointHash;
@@ -98,8 +95,8 @@ typedef struct sirShaderReflectionBinding_s
 {
 	uint16_t nSet;
 	uint16_t nBinding;
-	sirGraphicsBindingType_t eType;
-	sirShaderBindingFrequency_t eFrequency;
+	SIRGraphicsBindingType eType;
+	SIRShaderBindingFrequency eFrequency;
 	uint8_t nStageMask;
 	uint16_t nSpace;
 	uint16_t nArrayCount;
@@ -109,8 +106,8 @@ typedef struct sirShaderReflectionBinding_s
 
 typedef struct sirShaderMaterialPassSignature_s
 {
-	sirShaderPass_t ePass;
-	sirGraphicsFormat_t eDepthFormat;
+	SIRShaderPass ePass;
+	SIRGraphicsFormat eDepthFormat;
 	uint64_t nColorFormatsHash;
 	uint64_t nBindingSignature;
 	uint32_t nStageMask;
@@ -134,7 +131,7 @@ typedef struct sirShaderPipelineRecipe_s
 
 typedef struct sirShaderNativeIdentity_s
 {
-	sirGraphicsBackend_t eBackend;
+	SIRGraphicsBackend eBackend;
 	uint32_t nVendorId;
 	uint32_t nDeviceId;
 	uint32_t nDriverVersion;
@@ -186,7 +183,7 @@ typedef struct sirShaderWorkRequest_s
 
 typedef struct sirShaderRateEligibility_s
 {
-	sirShaderRate_t eRequested;
+	SIRShaderRate eRequested;
 	bool bDerivativesValid;
 	bool bHistoryValid;
 	bool bMotionCoherent;
@@ -198,28 +195,28 @@ static_assert( sizeof( sirShaderPackageHeader_t ) == 64, "shader package header 
 static_assert( sizeof( sirShaderStageRecord_t ) == 56, "in-memory shader stage record ABI must remain 56 bytes" );
 static_assert( sizeof( sirShaderReflectionBinding_t ) == 24, "shader binding record ABI must remain 24 bytes" );
 
-sirGraphicsResult_t sirShaderEncodePackageHeader( const sirShaderPackageHeader_t& header, void *pBytes, uint64_t nCapacity ) noexcept;
-sirGraphicsResult_t sirShaderDecodePackageHeader( const void *pBytes, uint64_t nLength, sirShaderPackageHeader_t *pHeader ) noexcept;
-sirGraphicsResult_t sirShaderEncodeStage( const sirShaderStageRecord_t& stage, void *pBytes, uint64_t nCapacity ) noexcept;
-sirGraphicsResult_t sirShaderDecodeStage( const void *pBytes, uint64_t nLength, sirShaderStageRecord_t *pStage ) noexcept;
-sirGraphicsResult_t sirShaderEncodeBinding( const sirShaderReflectionBinding_t& binding, void *pBytes, uint64_t nCapacity ) noexcept;
-sirGraphicsResult_t sirShaderDecodeBinding( const void *pBytes, uint64_t nLength, sirShaderReflectionBinding_t *pBinding ) noexcept;
-sirGraphicsResult_t sirShaderBuildBindingSignature( const void *pRecords, uint32_t nCount, uint64_t *pSignature ) noexcept;
-sirGraphicsResult_t sirShaderBuildManifestHash( const sirShaderPackageHeader_t& header, const void *pRecords, uint64_t nRecordBytes,
+SIRGraphicsResult sirShaderEncodePackageHeader( const sirShaderPackageHeader_t& header, void *pBytes, uint64_t nCapacity ) noexcept;
+SIRGraphicsResult sirShaderDecodePackageHeader( const void *pBytes, uint64_t nLength, sirShaderPackageHeader_t *pHeader ) noexcept;
+SIRGraphicsResult sirShaderEncodeStage( const sirShaderStageRecord_t& stage, void *pBytes, uint64_t nCapacity ) noexcept;
+SIRGraphicsResult sirShaderDecodeStage( const void *pBytes, uint64_t nLength, sirShaderStageRecord_t *pStage ) noexcept;
+SIRGraphicsResult sirShaderEncodeBinding( const sirShaderReflectionBinding_t& binding, void *pBytes, uint64_t nCapacity ) noexcept;
+SIRGraphicsResult sirShaderDecodeBinding( const void *pBytes, uint64_t nLength, sirShaderReflectionBinding_t *pBinding ) noexcept;
+SIRGraphicsResult sirShaderBuildBindingSignature( const void *pRecords, uint32_t nCount, uint64_t *pSignature ) noexcept;
+SIRGraphicsResult sirShaderBuildManifestHash( const sirShaderPackageHeader_t& header, const void *pRecords, uint64_t nRecordBytes,
                                                 uint64_t *pHash ) noexcept;
-sirGraphicsResult_t sirShaderValidatePackage( const void *pBytes, uint64_t nLength, sirGraphicsShaderFormat_t eFormat,
+SIRGraphicsResult sirShaderValidatePackage( const void *pBytes, uint64_t nLength, SIRGraphicsShaderFormat eFormat,
                                               uint64_t nAvailableFeatures ) noexcept;
 bool sirShaderPassSignaturesEqual( const sirShaderMaterialPassSignature_t& left, const sirShaderMaterialPassSignature_t& right ) noexcept;
-sirGraphicsResult_t sirShaderBuildPortableKey( const sirShaderPipelineRecipe_t& recipe, sirShaderPipelineKey_t *pKey ) noexcept;
-sirGraphicsResult_t sirShaderBuildNativeKey( const sirShaderPipelineRecipe_t& recipe, const sirShaderNativeIdentity_t& native,
+SIRGraphicsResult sirShaderBuildPortableKey( const sirShaderPipelineRecipe_t& recipe, sirShaderPipelineKey_t *pKey ) noexcept;
+SIRGraphicsResult sirShaderBuildNativeKey( const sirShaderPipelineRecipe_t& recipe, const sirShaderNativeIdentity_t& native,
                                              sirShaderPipelineKey_t *pKey ) noexcept;
 bool sirShaderRecipesEqual( const sirShaderPipelineRecipe_t& left, const sirShaderPipelineRecipe_t& right ) noexcept;
 bool sirShaderNativeIdentitiesEqual( const sirShaderNativeIdentity_t& left, const sirShaderNativeIdentity_t& right ) noexcept;
-sirGraphicsResult_t sirShaderPackVisibilityId( const sirShaderVisibilityId_t& id, uint64_t *pPacked ) noexcept;
-sirGraphicsResult_t sirShaderUnpackVisibilityId( uint64_t nPacked, sirShaderVisibilityId_t *pId ) noexcept;
-sirGraphicsResult_t sirShaderValidateGeometryLease( const sirShaderGeometryLease_t& lease, uint32_t nDeviceGeneration ) noexcept;
+SIRGraphicsResult sirShaderPackVisibilityId( const sirShaderVisibilityId_t& id, uint64_t *pPacked ) noexcept;
+SIRGraphicsResult sirShaderUnpackVisibilityId( uint64_t nPacked, sirShaderVisibilityId_t *pId ) noexcept;
+SIRGraphicsResult sirShaderValidateGeometryLease( const sirShaderGeometryLease_t& lease, uint32_t nDeviceGeneration ) noexcept;
 bool sirShaderCanReuseGeometry( const sirShaderGeometryLease_t& existing, const sirShaderGeometryLease_t& requested ) noexcept;
-sirGraphicsResult_t sirShaderAdmitWork( const sirShaderWorkRequest_t& request, const sirShaderWorkBudget_t& budget ) noexcept;
-sirGraphicsResult_t sirShaderResolveRate( const sirShaderRateEligibility_t& eligibility, sirShaderRate_t *pRate ) noexcept;
+SIRGraphicsResult sirShaderAdmitWork( const sirShaderWorkRequest_t& request, const sirShaderWorkBudget_t& budget ) noexcept;
+SIRGraphicsResult sirShaderResolveRate( const sirShaderRateEligibility_t& eligibility, SIRShaderRate *pRate ) noexcept;
 
-#endif // __SIRENGINE_SIRSHADERCONTRACTS_H__
+#endif // __SIR_SHADERCONTRACTS_H__

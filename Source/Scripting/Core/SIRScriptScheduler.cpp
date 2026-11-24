@@ -49,59 +49,59 @@ void SIRScriptScheduler::release( uint32_t nSlot ) noexcept
 	m_nFreeHead = nSlot;
 }
 
-sirScriptResult_t SIRScriptScheduler::setPayloadAllocator( const sirScriptPayloadAllocatorAPI_t& api ) noexcept
+SIRScriptResult SIRScriptScheduler::setPayloadAllocator( const sirScriptPayloadAllocatorAPI_t& api ) noexcept
 {
 	if ( m_nLivePayloads != 0 ) {
-		return SIR_SCRIPT_BUSY;
+		return SIRScriptResult::SIR_SCRIPT_BUSY;
 	}
 	if ( api.nABIRevision == 0 && api.pAllocate == nullptr && api.pRelease == nullptr ) {
 		m_Allocator = {};
-		return SIR_SCRIPT_OK;
+		return SIRScriptResult::SIR_SCRIPT_OK;
 	}
 	if ( api.nABIRevision != SIR_SCRIPT_PAYLOAD_ALLOCATOR_ABI_REVISION || api.pAllocate == nullptr || api.pRelease == nullptr ||
 	     api.nMaximumBytes == 0 || api.nMaximumBytes > 1024 * 1024 || api.nMaximumAlignment < 64 || api.nMaximumAlignment > 4096 ||
 	     ( api.nMaximumAlignment & ( api.nMaximumAlignment - 1 ) ) != 0 ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 	m_Allocator = api;
-	return SIR_SCRIPT_OK;
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
-sirScriptResult_t SIRScriptScheduler::enqueue( sirScriptPhase_t ePhase, const sirScriptScheduledCall_t& call, const void *pPayload,
+SIRScriptResult SIRScriptScheduler::enqueue( SIRScriptPhase ePhase, const sirScriptScheduledCall_t& call, const void *pPayload,
                                                sirScriptTaskHandle_t *pHandle ) noexcept
 {
-	if ( pHandle == nullptr || ePhase >= SIR_SCRIPT_PHASE_COUNT ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+	if ( pHandle == nullptr || ePhase >= SIRScriptPhase::SIR_SCRIPT_PHASE_COUNT ) {
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 	*pHandle = {};
 	if ( call.nDispatchId == 0 || call.nAlignment == 0 || ( call.nAlignment & ( call.nAlignment - 1 ) ) != 0 ||
-	     ( call.nBytes != 0 && ( pPayload == nullptr || ( ( uintptr_t )pPayload % call.nAlignment ) != 0 ) ) ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+	     ( call.nBytes != 0 && ( pPayload == nullptr || ( reinterpret_cast<uintptr_t>(pPayload) % call.nAlignment ) != 0 ) ) ) {
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
-	if ( call.eKind != SIR_SCRIPT_SCHEDULED_EVENT && call.eKind != SIR_SCRIPT_SCHEDULED_INVOKE ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+	if ( call.eKind != SIRScriptScheduledKind::SIR_SCRIPT_SCHEDULED_EVENT && call.eKind != SIRScriptScheduledKind::SIR_SCRIPT_SCHEDULED_INVOKE ) {
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 	if ( m_nFreeHead == 0 || m_nSequence == UINT64_MAX ) {
-		return SIR_SCRIPT_CAPACITY_EXCEEDED;
+		return SIRScriptResult::SIR_SCRIPT_CAPACITY_EXCEEDED;
 	}
 
 	const bool bNeedsAllocation = call.nBytes > sizeof( call.szPayload ) || call.nAlignment > alignof( sirScriptScheduledCall_t );
 	if ( bNeedsAllocation && ( m_Allocator.pAllocate == nullptr || call.nBytes == 0 || call.nBytes > m_Allocator.nMaximumBytes ||
 	                           call.nAlignment > m_Allocator.nMaximumAlignment ) ) {
-		return SIR_SCRIPT_CAPACITY_EXCEEDED;
+		return SIRScriptResult::SIR_SCRIPT_CAPACITY_EXCEEDED;
 	}
 
-	sirScriptPayloadAllocation_t allocation = {};
+	sirScriptPayloadAllocation_t allocation {};
 	if ( bNeedsAllocation ) {
-		const sirScriptResult_t eResult = m_Allocator.pAllocate( m_Allocator.pUser, call.nBytes, call.nAlignment, &allocation );
-		if ( eResult != SIR_SCRIPT_OK ) {
+		const SIRScriptResult eResult = m_Allocator.pAllocate( m_Allocator.pUser, call.nBytes, call.nAlignment, &allocation );
+		if ( eResult != SIRScriptResult::SIR_SCRIPT_OK ) {
 			return eResult;
 		}
-		if ( allocation.pData == nullptr || allocation.nToken == 0 || ( ( uintptr_t )allocation.pData % call.nAlignment ) != 0 ) {
+		if ( allocation.pData == nullptr || allocation.nToken == 0 || ( reinterpret_cast<uintptr_t>(allocation.pData) % call.nAlignment ) != 0 ) {
 			if ( allocation.pData != nullptr && allocation.nToken != 0 ) {
 				m_Allocator.pRelease( m_Allocator.pUser, allocation );
 			}
-			return SIR_SCRIPT_BACKEND_FAILURE;
+			return SIRScriptResult::SIR_SCRIPT_BACKEND_FAILURE;
 		}
 		memcpy( allocation.pData, pPayload, call.nBytes );
 		m_nAllocatedPayloadBytes += call.nBytes;
@@ -131,7 +131,7 @@ sirScriptResult_t SIRScriptScheduler::enqueue( sirScriptPhase_t ePhase, const si
 	m_szTails[ePhase] = nSlot;
 	++m_szCounts[ePhase];
 	*pHandle = { nSlot, slot.nGeneration };
-	return SIR_SCRIPT_OK;
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
 void SIRScriptScheduler::releasePayload( sirScriptScheduledCall_t *pCall ) noexcept
@@ -160,17 +160,17 @@ uint32_t SIRScriptScheduler::livePayloadCount( void ) const noexcept
 	return m_nLivePayloads;
 }
 
-sirScriptResult_t SIRScriptScheduler::cancel( sirScriptTaskHandle_t handle ) noexcept
+SIRScriptResult SIRScriptScheduler::cancel( sirScriptTaskHandle_t handle ) noexcept
 {
 	if ( handle.nSlot == 0 || handle.nSlot > MAX_TASKS ) {
-		return SIR_SCRIPT_INVALID_HANDLE;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_HANDLE;
 	}
 	const sirScriptScheduledSlot_t& slot = m_szSlots[handle.nSlot];
 	if ( !slot.bActive || slot.nGeneration != handle.nGeneration ) {
-		return SIR_SCRIPT_INVALID_HANDLE;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_HANDLE;
 	}
 
-	for ( uint32_t iPhase = 0; iPhase < SIR_SCRIPT_PHASE_COUNT; ++iPhase ) {
+	for ( uint32_t iPhase = 0; iPhase < SIRScriptPhase::SIR_SCRIPT_PHASE_COUNT; ++iPhase ) {
 		uint32_t nPrevious = 0;
 		uint32_t nCurrent = m_szHeads[iPhase];
 		while ( nCurrent != 0 ) {
@@ -187,18 +187,18 @@ sirScriptResult_t SIRScriptScheduler::cancel( sirScriptTaskHandle_t handle ) noe
 				--m_szCounts[iPhase];
 				releasePayload( &m_szSlots[nCurrent].call );
 				release( nCurrent );
-				return SIR_SCRIPT_OK;
+				return SIRScriptResult::SIR_SCRIPT_OK;
 			}
 			nPrevious = nCurrent;
 			nCurrent = nNext;
 		}
 	}
-	return SIR_SCRIPT_INVALID_HANDLE;
+	return SIRScriptResult::SIR_SCRIPT_INVALID_HANDLE;
 }
 
-bool SIRScriptScheduler::dequeue( sirScriptPhase_t ePhase, uint64_t nLastSequence, sirScriptScheduledCall_t *pCall ) noexcept
+bool SIRScriptScheduler::dequeue( SIRScriptPhase ePhase, uint64_t nLastSequence, sirScriptScheduledCall_t *pCall ) noexcept
 {
-	if ( pCall == nullptr || ePhase >= SIR_SCRIPT_PHASE_COUNT ) {
+	if ( pCall == nullptr || ePhase >= SIRScriptPhase::SIR_SCRIPT_PHASE_COUNT ) {
 		return false;
 	}
 	const uint32_t nSlot = m_szHeads[ePhase];
@@ -220,7 +220,7 @@ bool SIRScriptScheduler::dequeue( sirScriptPhase_t ePhase, uint64_t nLastSequenc
 
 void SIRScriptScheduler::clear( void ) noexcept
 {
-	for ( uint32_t iPhase = 0; iPhase < SIR_SCRIPT_PHASE_COUNT; ++iPhase ) {
+	for ( uint32_t iPhase = 0; iPhase < SIRScriptPhase::SIR_SCRIPT_PHASE_COUNT; ++iPhase ) {
 		while ( m_szHeads[iPhase] != 0 ) {
 			const uint32_t nSlot = m_szHeads[iPhase];
 			m_szHeads[iPhase] = m_szSlots[nSlot].nNext;
@@ -232,9 +232,9 @@ void SIRScriptScheduler::clear( void ) noexcept
 	}
 }
 
-uint32_t SIRScriptScheduler::pendingCount( sirScriptPhase_t ePhase ) const noexcept
+uint32_t SIRScriptScheduler::pendingCount( SIRScriptPhase ePhase ) const noexcept
 {
-	return ePhase < SIR_SCRIPT_PHASE_COUNT ? m_szCounts[ePhase] : 0;
+	return ePhase < SIRScriptPhase::SIR_SCRIPT_PHASE_COUNT ? m_szCounts[ePhase] : 0;
 }
 
 uint64_t SIRScriptScheduler::lastSequence( void ) const noexcept

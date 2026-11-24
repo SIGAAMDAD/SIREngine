@@ -24,7 +24,7 @@ static bool sirGLHasText( const char *pszHaystack, const char *pszNeedle ) noexc
 static uint64_t sirGLHashText( uint64_t nHash, const char *pszText ) noexcept
 {
 	for ( ; pszText != nullptr && *pszText != '\0'; ++pszText ) {
-		nHash = ( nHash ^ ( uint8_t )*pszText ) * UINT64_C( 1099511628211 );
+		nHash = ( nHash ^ static_cast<uint8_t>(*pszText) ) * UINT64_C( 1099511628211 );
 	}
 	return nHash;
 }
@@ -35,37 +35,37 @@ static bool sirGLIsSoftware( const sirGLProbe_t *pProbe ) noexcept
 	       sirGLHasText( pProbe->szRenderer, "Software Rasterizer" ) || sirGLHasText( pProbe->szRenderer, "SWR" );
 }
 
-sirGraphicsResult_t sirGLValidateCore46( const sirGLProbe_t *pProbe ) noexcept
+SIRGraphicsResult sirGLValidateCore46( const sirGLProbe_t *pProbe ) noexcept
 {
 	if ( pProbe == nullptr ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( pProbe->nMajor < 4 || ( pProbe->nMajor == 4 && pProbe->nMinor < 6 ) || ( pProbe->nCoreProfileMask & 1U ) == 0 ||
 	     pProbe->nMaximumTextureSize == 0 || pProbe->nMaximumColorAttachments == 0 || pProbe->nMaximumUniformBindings == 0 ||
 	     pProbe->nMaximumStorageBindings == 0 || pProbe->nMaximumSamples == 0 || pProbe->szVendor[0] == '\0' ||
 	     pProbe->szRenderer[0] == '\0' ) {
-		return SIR_GRAPHICS_UNSUPPORTED;
+		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t sirGLBuildAdapter( const sirGLProbe_t *pProbe, sirGraphicsABIAdapter_t *pAdapter ) noexcept
+SIRGraphicsResult sirGLBuildAdapter( const sirGLProbe_t *pProbe, sirGraphicsABIAdapter_t *pAdapter ) noexcept
 {
 	if ( pAdapter == nullptr || pAdapter->nSize < sizeof( *pAdapter ) || pAdapter->nIndex != 0 ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	const sirGraphicsResult_t eResult = sirGLValidateCore46( pProbe );
-	if ( eResult != SIR_GRAPHICS_SUCCESS ) {
+	const SIRGraphicsResult eResult = sirGLValidateCore46( pProbe );
+	if ( eResult != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 		return eResult;
 	}
-	sirGraphicsABIAdapter_t result = {};
+	sirGraphicsABIAdapter_t result {};
 	result.nSize = sizeof( result );
 	result.nIndex = 0;
-	result.nBackend = SIR_GRAPHICS_BACKEND_OPENGL;
-	result.nKind = sirGLIsSoftware( pProbe ) ? SIR_GRAPHICS_ABI_ADAPTER_SOFTWARE : SIR_GRAPHICS_ABI_ADAPTER_OTHER;
+	result.nBackend = SIRGraphicsBackend::SIR_GRAPHICS_BACKEND_OPENGL;
+	result.nKind = sirGLIsSoftware( pProbe ) ? SIRGraphicsABIAdapterKind::SIR_GRAPHICS_ABI_ADAPTER_SOFTWARE : SIRGraphicsABIAdapterKind::SIR_GRAPHICS_ABI_ADAPTER_OTHER;
 	result.nApiMajor = pProbe->nMajor;
 	result.nApiMinor = pProbe->nMinor;
-	result.nQueueMask = 1U << SIR_GRAPHICS_QUEUE_DIRECT;
+	result.nQueueMask = 1U << SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_DIRECT;
 	result.nStableId = sirGLHashText( sirGLHashText( UINT64_C( 14695981039346656037 ), pProbe->szVendor ), pProbe->szRenderer );
 	if ( result.nStableId == 0 ) {
 		result.nStableId = 1;
@@ -75,25 +75,25 @@ sirGraphicsResult_t sirGLBuildAdapter( const sirGLProbe_t *pProbe, sirGraphicsAB
 	memcpy( result.szName, pProbe->szRenderer, sizeof( result.szName ) );
 	result.szName[sizeof( result.szName ) - 1] = '\0';
 	*pAdapter = result;
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t sirGLBuildCapabilities( const sirGLProbe_t *pProbe, uint32_t nGeneration,
+SIRGraphicsResult sirGLBuildCapabilities( const sirGLProbe_t *pProbe, uint32_t nGeneration,
                                             sirGraphicsABICapabilities_t *pCapabilities ) noexcept
 {
 	if ( pCapabilities == nullptr || pCapabilities->nSize < sizeof( *pCapabilities ) || nGeneration == 0 ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	const sirGraphicsResult_t eResult = sirGLValidateCore46( pProbe );
-	if ( eResult != SIR_GRAPHICS_SUCCESS ) {
+	const SIRGraphicsResult eResult = sirGLValidateCore46( pProbe );
+	if ( eResult != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 		return eResult;
 	}
-	sirGraphicsABICapabilities_t result = {};
+	sirGraphicsABICapabilities_t result {};
 	result.nSize = sizeof( result );
 	result.nDeviceGeneration = nGeneration;
-	result.nBackend = SIR_GRAPHICS_BACKEND_OPENGL;
-	result.nAdapterKind = sirGLIsSoftware( pProbe ) ? SIR_GRAPHICS_ABI_ADAPTER_SOFTWARE : SIR_GRAPHICS_ABI_ADAPTER_OTHER;
-	result.nEnabledQueues = 1U << SIR_GRAPHICS_QUEUE_DIRECT;
+	result.nBackend = SIRGraphicsBackend::SIR_GRAPHICS_BACKEND_OPENGL;
+	result.nAdapterKind = sirGLIsSoftware( pProbe ) ? SIRGraphicsABIAdapterKind::SIR_GRAPHICS_ABI_ADAPTER_SOFTWARE : SIRGraphicsABIAdapterKind::SIR_GRAPHICS_ABI_ADAPTER_OTHER;
+	result.nEnabledQueues = 1U << SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_DIRECT;
 	result.nMaximumTextureDimension = pProbe->nMaximumTextureSize;
 	result.nMaximumColorAttachments = pProbe->nMaximumColorAttachments;
 	result.nMaximumBindings = pProbe->nMaximumUniformBindings;
@@ -102,5 +102,5 @@ sirGraphicsResult_t sirGLBuildCapabilities( const sirGLProbe_t *pProbe, uint32_t
 	result.nShaderProfile = 460;
 	result.nEnabledFeatures = 0; // Do not advertise commands the provider cannot execute.
 	*pCapabilities = result;
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }

@@ -26,8 +26,7 @@
 
 // A material record without visible samples is explicit: no-visible flag and
 // zero histogram. A PARTIAL record always retains reactive VT feedback.
-enum t3dVTVisibilityRecordFlag_t : uint8_t
-{
+enum class SIRVTVisibilityRecordFlag : uint8_t {
 	T3D_VT_VISIBILITY_PARTIAL = 1u << 0u,
 	T3D_VT_VISIBILITY_NO_VISIBLE = 1u << 1u
 };
@@ -112,7 +111,7 @@ struct t3dVTDemandBakedVisibilityRecord_t
 
 // Cells sort by (floor(x/4),floor(z/4),x,z), including negative coordinates.
 // Within each cell records sort by (stableMaterialKey,viewBin). Bundles are
-// 4x4 cells with codec 0 (raw) or T03 codec 1 (canonical PackBits).
+// 4x4 cells with codec 0 or raw, T03(codec), 1 (canonical PackBits).
 bool t3d_vt_demand_write_baked_visibility( const t3dVTDemandVisibilityCell_t *pCells, uint32_t nCellCount,
                                            const t3dVTDemandBakedVisibilityRecord_t *pRecords, uint32_t nRecordCount,
                                            const t3dVTDemandVisibilityCookConfig_t& rConfig, std::vector<uint8_t>& rBytes );

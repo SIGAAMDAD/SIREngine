@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRANIMATIONINTEGRATION_H__
-#define __SIRENGINE_SIRANIMATIONINTEGRATION_H__
+#ifndef __SIR_ANIMATIONINTEGRATION_H__
+#define __SIR_ANIMATIONINTEGRATION_H__
 
 #include <Core/SIRPCH.h>
 
@@ -35,7 +35,7 @@ public:
 	SIRAnimationBudgeter( void ) noexcept = default;
 	virtual ~SIRAnimationBudgeter( void ) noexcept = default;
 
-	virtual sirAnimationResult_t selectQuality( const sirAnimationCostHint_t& cost, const sirAnimationBudgetGrant_t& grant,
+	virtual SIRAnimationResult selectQuality( const sirAnimationCostHint_t& cost, const sirAnimationBudgetGrant_t& grant,
 	                                            sirAnimationQualityDecision_t *pDecision ) noexcept = 0;
 
 protected:
@@ -51,11 +51,11 @@ public:
 	SIRAnimationSkinningBridge( void ) noexcept = default;
 	virtual ~SIRAnimationSkinningBridge( void ) noexcept = default;
 
-	virtual sirAnimationResult_t getSupportedModes( const sirGraphicsCapabilities_t& graphics,
+	virtual SIRAnimationResult getSupportedModes( const sirGraphicsCapabilities_t& graphics,
 	                                                uint32_t *pDeformationModeMask ) const noexcept = 0;
 
-	virtual sirAnimationResult_t submitSkinning( const sirAnimationSkinRequest_t& request, sirAnimationSkinTicket_t *pTicket ) noexcept = 0;
-	virtual sirAnimationResult_t retireSkinning( sirAnimationSkinTicket_t ticket,
+	virtual SIRAnimationResult submitSkinning( const sirAnimationSkinRequest_t& request, sirAnimationSkinTicket_t *pTicket ) noexcept = 0;
+	virtual SIRAnimationResult retireSkinning( sirAnimationSkinTicket_t ticket,
 	                                             const sirGraphicsCompletionSet_t& requiredCompletion ) noexcept = 0;
 
 protected:
@@ -70,15 +70,15 @@ public:
 	SIRAnimationPhysicsBridge( void ) noexcept = default;
 	virtual ~SIRAnimationPhysicsBridge( void ) noexcept = default;
 
-	virtual sirAnimationResult_t getCompletedPhysicsPose( sirAnimationInstance_t instance, const sirAnimationAuthorityAck_t& authority,
+	virtual SIRAnimationResult getCompletedPhysicsPose( sirAnimationInstance_t instance, const sirAnimationAuthorityAck_t& authority,
 	                                                      sirAnimationPhysicsPoseView_t *pView ) noexcept = 0;
 
-	virtual sirAnimationResult_t getAuthorityStatus( sirAnimationAuthorityTicket_t ticket,
+	virtual SIRAnimationResult getAuthorityStatus( sirAnimationAuthorityTicket_t ticket,
 	                                                 sirAnimationAuthorityAck_t *pAcknowledgement ) noexcept = 0;
 
-	virtual sirAnimationResult_t requestAuthority( const sirAnimationAuthorityRequest_t& request,
+	virtual SIRAnimationResult requestAuthority( const sirAnimationAuthorityRequest_t& request,
 	                                               sirAnimationAuthorityTicket_t *pTicket ) noexcept = 0;
-	virtual sirAnimationResult_t releasePhysicsPose( sirAnimationPhysicsPoseView_t *pView ) noexcept = 0;
+	virtual SIRAnimationResult releasePhysicsPose( sirAnimationPhysicsPoseView_t *pView ) noexcept = 0;
 
 protected:
 private:
@@ -92,7 +92,7 @@ public:
 	SIRAnimationAttachmentBridge( void ) noexcept = default;
 	virtual ~SIRAnimationAttachmentBridge( void ) noexcept = default;
 
-	virtual sirAnimationResult_t resolveAttachment( const sirAnimationPoseView_t& pose, uint64_t nSocketId,
+	virtual SIRAnimationResult resolveAttachment( const sirAnimationPoseView_t& pose, uint64_t nSocketId,
 	                                                sirAnimationTransform_t *pTransform ) const noexcept = 0;
 
 protected:
@@ -107,7 +107,7 @@ public:
 	SIRAnimationResidencyBridge( void ) noexcept = default;
 	virtual ~SIRAnimationResidencyBridge( void ) noexcept = default;
 
-	virtual sirAnimationResult_t applyResidency( const sirAnimationResidencyChange_t& change ) noexcept = 0;
+	virtual SIRAnimationResult applyResidency( const sirAnimationResidencyChange_t& change ) noexcept = 0;
 
 protected:
 private:
@@ -121,10 +121,10 @@ public:
 	SIRAnimationDiagnostics( void ) noexcept = default;
 	virtual ~SIRAnimationDiagnostics( void ) noexcept = default;
 
-	virtual sirAnimationResult_t getStats( sirAnimationStats_t *pStats ) const noexcept = 0;
+	virtual SIRAnimationResult getStats( sirAnimationStats_t *pStats ) const noexcept = 0;
 
 protected:
 private:
 };
 
-#endif // __SIRENGINE_SIRANIMATIONINTEGRATION_H__
+#endif // __SIR_ANIMATIONINTEGRATION_H__

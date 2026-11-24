@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRFRAMEGRAPH_H__
-#define __SIRENGINE_SIRFRAMEGRAPH_H__
+#ifndef __SIR_FRAMEGRAPH_H__
+#define __SIR_FRAMEGRAPH_H__
 
 #include <Core/SIRPCH.h>
 
@@ -41,9 +41,9 @@ typedef struct sirFrameGraphProductKey_s
 typedef struct sirFrameGraphResource_s
 {
 	sirGraphicsHandle_t hImported;
-	sirGraphicsHandleType_t eType;
-	sirGraphicsState_t eInitialState;
-	sirGraphicsQueue_t eInitialQueue;
+	SIRGraphicsHandleType eType;
+	SIRGraphicsState eInitialState;
+	SIRGraphicsQueue eInitialQueue;
 	uint32_t nMipLevels;
 	uint32_t nArrayLayers;
 	bool bImported;
@@ -56,7 +56,7 @@ typedef struct sirFrameGraphResource_s
 
 typedef struct sirFrameGraphPass_s
 {
-	sirGraphicsQueue_t eQueue;
+	SIRGraphicsQueue eQueue;
 	uint64_t nRequiredFeatures;
 	bool bSideEffect;
 } sirFrameGraphPass_t;
@@ -69,7 +69,7 @@ typedef struct sirFrameGraphAccess_s
 	uint32_t nMipCount;
 	uint32_t nBaseLayer;
 	uint32_t nLayerCount;
-	sirGraphicsState_t eState;
+	SIRGraphicsState eState;
 	bool bWrite;
 } sirFrameGraphAccess_t;
 
@@ -84,7 +84,7 @@ typedef struct sirFrameGraphOutput_s
 } sirFrameGraphOutput_t;
 
 // CPU recording only; callers must stage reversible work, not submit GPU queues.
-typedef sirGraphicsResult_t ( *sirFrameGraphRecordFn_t )( uint32_t nPass, void *pContext ) noexcept;
+typedef SIRGraphicsResult ( *sirFrameGraphRecordFn_t )( uint32_t nPass, void *pContext ) noexcept;
 typedef void ( *sirFrameGraphRollbackFn_t )( uint32_t nPass, void *pContext ) noexcept;
 
 typedef struct sirFrameGraphCallbacks_s
@@ -103,10 +103,10 @@ typedef struct sirFrameGraphTransition_s
 	uint32_t nMipCount;
 	uint32_t nBaseLayer;
 	uint32_t nLayerCount;
-	sirGraphicsQueue_t eFromQueue;
-	sirGraphicsQueue_t eToQueue;
-	sirGraphicsState_t eBefore;
-	sirGraphicsState_t eAfter;
+	SIRGraphicsQueue eFromQueue;
+	SIRGraphicsQueue eToQueue;
+	SIRGraphicsState eBefore;
+	SIRGraphicsState eAfter;
 	bool bWriteHazard;
 } sirFrameGraphTransition_t;
 
@@ -180,46 +180,46 @@ public:
 	void setCullingEnabled( bool bEnabled ) noexcept;
 
 	void reset( void ) noexcept;
-	sirGraphicsResult_t addResource( const sirFrameGraphResource_t& resource, uint32_t *pIndex ) noexcept;
+	SIRGraphicsResult addResource( const sirFrameGraphResource_t& resource, uint32_t *pIndex ) noexcept;
 	// Imports a verified GRDG-native buffer lease. Repeated subrange imports
 	// from one physical backing always return the same FrameGraph resource.
-	sirGraphicsResult_t importSharedBuffer( const sirNativeGPUBufferLease_t& rLease, sirGraphicsState_t eInitialState,
-											sirGraphicsQueue_t eInitialQueue, uint32_t *pIndex ) noexcept;
+	SIRGraphicsResult importSharedBuffer( const sirNativeGPUBufferLease_t& rLease, SIRGraphicsState eInitialState,
+											SIRGraphicsQueue eInitialQueue, uint32_t *pIndex ) noexcept;
 	// Subrange declarations must remain within the caller's pinned read-only
 	// GRDG view. The FrameGraph only stores metadata and does not own/clone bytes.
-	sirGraphicsResult_t addSharedBufferRead( uint32_t nPass, uint32_t nResource, const sirNativeGPUBufferLease_t& rLease,
-											 uint64_t nOffsetBytes, uint64_t nBytes, sirGraphicsState_t eState ) noexcept;
-	sirGraphicsResult_t addPass( const sirFrameGraphPass_t& pass, uint32_t *pIndex ) noexcept;
-	sirGraphicsResult_t addAccess( const sirFrameGraphAccess_t& access ) noexcept;
-	sirGraphicsResult_t addDependency( uint32_t nBefore, uint32_t nAfter ) noexcept;
-	sirGraphicsResult_t addOutput( const sirFrameGraphOutput_t& output ) noexcept;
-	sirGraphicsResult_t compile( const sirGraphicsCapabilities_t& caps, sirFrameGraphCompiled_t *pCompiled ) const noexcept;
-	sirGraphicsResult_t buildSubmissionPlan( const sirFrameGraphCompiled_t& compiled, sirFrameGraphSubmissionPlan_t *pPlan ) const noexcept;
-	sirGraphicsResult_t submitNative( const sirFrameGraphCompiled_t& compiled, const sirFrameGraphNativeInput_t& input,
+	SIRGraphicsResult addSharedBufferRead( uint32_t nPass, uint32_t nResource, const sirNativeGPUBufferLease_t& rLease,
+											 uint64_t nOffsetBytes, uint64_t nBytes, SIRGraphicsState eState ) noexcept;
+	SIRGraphicsResult addPass( const sirFrameGraphPass_t& pass, uint32_t *pIndex ) noexcept;
+	SIRGraphicsResult addAccess( const sirFrameGraphAccess_t& access ) noexcept;
+	SIRGraphicsResult addDependency( uint32_t nBefore, uint32_t nAfter ) noexcept;
+	SIRGraphicsResult addOutput( const sirFrameGraphOutput_t& output ) noexcept;
+	SIRGraphicsResult compile( const sirGraphicsCapabilities_t& caps, sirFrameGraphCompiled_t *pCompiled ) const noexcept;
+	SIRGraphicsResult buildSubmissionPlan( const sirFrameGraphCompiled_t& compiled, sirFrameGraphSubmissionPlan_t *pPlan ) const noexcept;
+	SIRGraphicsResult submitNative( const sirFrameGraphCompiled_t& compiled, const sirFrameGraphNativeInput_t& input,
 									  sirFrameGraphNativeOutput_t *pOutput ) const noexcept;
-	sirGraphicsResult_t submitDevice( const sirFrameGraphCompiled_t& compiled, const sirFrameGraphDeviceInput_t& input,
+	SIRGraphicsResult submitDevice( const sirFrameGraphCompiled_t& compiled, const sirFrameGraphDeviceInput_t& input,
 									  sirFrameGraphNativeOutput_t *pOutput ) const noexcept;
-	sirGraphicsResult_t planTransients( const sirFrameGraphCompiled_t& compiled, const sirFrameGraphTransientInput_t& input,
+	SIRGraphicsResult planTransients( const sirFrameGraphCompiled_t& compiled, const sirFrameGraphTransientInput_t& input,
 										sirFrameGraphTransientPlan_t *pPlan ) const noexcept;
-	sirGraphicsResult_t record( const sirFrameGraphCompiled_t& compiled, const sirFrameGraphCallbacks_t& callbacks ) const noexcept;
+	SIRGraphicsResult record( const sirFrameGraphCompiled_t& compiled, const sirFrameGraphCallbacks_t& callbacks ) const noexcept;
 
 protected:
 private:
 	// The public graph API cannot invent physical GRDG imports or bypass the
 	// lease-backed subrange path by registering an unpinned raw access.
-	sirGraphicsResult_t addResourceImpl( const sirFrameGraphResource_t& resource, uint32_t *pIndex, bool bSharedLease ) noexcept;
-	sirGraphicsResult_t addAccessImpl( const sirFrameGraphAccess_t& access, bool bSharedLease ) noexcept;
+	SIRGraphicsResult addResourceImpl( const sirFrameGraphResource_t& resource, uint32_t *pIndex, bool bSharedLease ) noexcept;
+	SIRGraphicsResult addAccessImpl( const sirFrameGraphAccess_t& access, bool bSharedLease ) noexcept;
 	static bool overlaps( const sirFrameGraphAccess_t& a, const sirFrameGraphAccess_t& b ) noexcept;
 	static bool covers( const sirFrameGraphAccess_t& a, const sirFrameGraphAccess_t& b ) noexcept;
-	static bool isWritableState( sirGraphicsState_t eState ) noexcept;
-	static bool isReadableState( sirGraphicsState_t eState ) noexcept;
+	static bool isWritableState( SIRGraphicsState eState ) noexcept;
+	static bool isReadableState( SIRGraphicsState eState ) noexcept;
 	bool requiresOrdering( const sirFrameGraphAccess_t& previous, const sirFrameGraphAccess_t& current ) const noexcept;
-	sirGraphicsResult_t markProducers( const sirFrameGraphAccess_t& target, uint32_t nBeforePass, uint8_t *pLive,
+	SIRGraphicsResult markProducers( const sirFrameGraphAccess_t& target, uint32_t nBeforePass, uint8_t *pLive,
 									   uint32_t *pCellBudget ) const noexcept;
-	sirGraphicsResult_t findLivePasses( uint8_t *pLive ) const noexcept;
-	sirGraphicsResult_t validateCapabilities( const sirGraphicsCapabilities_t& caps, const uint8_t *pLive ) const noexcept;
-	sirGraphicsResult_t buildTransitions( uint8_t *pszEdges, const uint8_t *pLive, sirFrameGraphCompiled_t *pCompiled ) const noexcept;
-	sirGraphicsResult_t buildSchedule( const uint8_t *pszEdges, const uint8_t *pLive, sirFrameGraphCompiled_t *pCompiled ) const noexcept;
+	SIRGraphicsResult findLivePasses( uint8_t *pLive ) const noexcept;
+	SIRGraphicsResult validateCapabilities( const sirGraphicsCapabilities_t& caps, const uint8_t *pLive ) const noexcept;
+	SIRGraphicsResult buildTransitions( uint8_t *pszEdges, const uint8_t *pLive, sirFrameGraphCompiled_t *pCompiled ) const noexcept;
+	SIRGraphicsResult buildSchedule( const uint8_t *pszEdges, const uint8_t *pLive, sirFrameGraphCompiled_t *pCompiled ) const noexcept;
 	void calculateLifetimes( sirFrameGraphCompiled_t *pCompiled ) const noexcept;
 
 	sirFrameGraphResource_t m_szResources[SIR_FRAMEGRAPH_MAX_RESOURCES] = {};
@@ -245,4 +245,4 @@ private:
 	uint32_t m_nAccessCount = 0;
 };
 
-#endif // __SIRENGINE_SIRFRAMEGRAPH_H__
+#endif // __SIR_FRAMEGRAPH_H__

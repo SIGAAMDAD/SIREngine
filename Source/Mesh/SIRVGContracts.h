@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRVGCONTRACTS_H__
-#define __SIRENGINE_SIRVGCONTRACTS_H__
+#ifndef __SIR_VGCONTRACTS_H__
+#define __SIR_VGCONTRACTS_H__
 
 #include <Core/SIRPCH.h>
 
@@ -36,8 +36,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // These views do not grant publication, allocation, or submission authority.
 static constexpr uint32_t SIR_VG_CONTRACT_VERSION = 1;
 
-typedef enum sirVGContractResult_e : uint8_t
-{
+enum class SIRVGContractResult : uint8_t {
 	SIR_VG_CONTRACT_OK = 0,
 	SIR_VG_CONTRACT_INVALID_ARGUMENT,
 	SIR_VG_CONTRACT_STALE_REVISION,
@@ -45,7 +44,7 @@ typedef enum sirVGContractResult_e : uint8_t
 	SIR_VG_CONTRACT_NOT_READY,
 	SIR_VG_CONTRACT_UNSUPPORTED,
 	SIR_VG_CONTRACT_VERSION_MISMATCH
-} sirVGContractResult_t;
+};
 
 // A typed SIRResourceKey is the canonical serialized identity. The explicit
 // mesh representation revision is the GRDG published content revision.
@@ -59,14 +58,13 @@ typedef struct sirVGResourceBinding_s
 	uint32_t nResourceTypeId;
 } sirVGResourceBinding_t;
 
-typedef enum sirVGPageState_e : uint32_t
-{
+enum class SIRVGPageState : uint32_t {
 	SIR_VG_PAGE_UNLOADED = 0,
 	SIR_VG_PAGE_REQUESTED = 1,
 	SIR_VG_PAGE_PREPARING = 2,
 	SIR_VG_PAGE_RESIDENT = 3,
 	SIR_VG_PAGE_RETIRING = 4
-} sirVGPageState_t;
+};
 
 // Immutable generation-scoped observation, not an allocator or page table.
 // The source pin and provider-owned native backing must remain live until all
@@ -83,7 +81,7 @@ typedef struct sirVGPageObservation_s
 	uint32_t nDeviceGeneration;
 	uint32_t nManifestGeneration;
 	uint32_t nRequestEpoch;
-	sirVGPageState_t eState;
+	SIRVGPageState eState;
 	uint8_t bRootFallbackResident;
 	uint8_t bSourcePinned;
 	uint8_t szReserved[2];
@@ -91,28 +89,27 @@ typedef struct sirVGPageObservation_s
 
 // Describes a capability checked on the same device generation as the frame.
 // CPU indexed draws are the universal baseline; GPU acceleration is optional.
-typedef enum sirVGExecutionTier_e : uint32_t
-{
+enum class SIRVGExecutionTier : uint32_t {
 	SIR_VG_EXECUTION_CPU_INDEXED = 1,
 	SIR_VG_EXECUTION_GPU_INDIRECT = 2,
 	SIR_VG_EXECUTION_GPU_MESH = 3
-} sirVGExecutionTier_t;
+};
 
 typedef struct sirVGExecutionChoice_s
 {
 	uint32_t nContractVersion;
 	uint32_t nDeviceGeneration;
-	sirVGExecutionTier_t eTier;
+	SIRVGExecutionTier eTier;
 	uint32_t nPipelineModel;
 } sirVGExecutionChoice_t;
 
-sirVGContractResult_t sirVGBindResource( const sirMeshKey_t& mesh, const SIRResourceKey& resource, uint64_t nPublishedRevision,
+SIRVGContractResult sirVGBindResource( const sirMeshKey_t& mesh, const SIRResourceKey& resource, uint64_t nPublishedRevision,
                                          sirVGResourceBinding_t *pBinding ) noexcept;
-sirVGContractResult_t sirVGValidateResourceBinding( const sirVGResourceBinding_t& binding ) noexcept;
-sirVGContractResult_t sirVGValidatePageObservation( const sirVGPageObservation_t& page, const sirVGFramePlan_t& plan ) noexcept;
-sirVGContractResult_t sirVGSelectExecution( const sirGraphicsABICapabilities_t& device, const sirGraphicsABIPipelineModelCaps_t& model,
+SIRVGContractResult sirVGValidateResourceBinding( const sirVGResourceBinding_t& binding ) noexcept;
+SIRVGContractResult sirVGValidatePageObservation( const sirVGPageObservation_t& page, const sirVGFramePlan_t& plan ) noexcept;
+SIRVGContractResult sirVGSelectExecution( const sirGraphicsABICapabilities_t& device, const sirGraphicsABIPipelineModelCaps_t& model,
                                             sirVGExecutionChoice_t *pChoice ) noexcept;
-sirVGContractResult_t sirVGEncodeIndexedDraw( const sirVGDrawRange_t& range, const sirVGExecutionChoice_t& choice,
+SIRVGContractResult sirVGEncodeIndexedDraw( const sirVGDrawRange_t& range, const sirVGExecutionChoice_t& choice,
                                               sirGraphicsABIDrawIndexed_t *pNativeDraw ) noexcept;
 
 static_assert( sizeof( sirMeshKey_t ) == 32 && sizeof( sirMeshHandle_t ) == 16, "mesh identities changed" );
@@ -123,4 +120,4 @@ static_assert( offsetof( sirGraphicsABIDrawIndexed_t, nFirstInstance ) == 16, "f
 static_assert( std::is_standard_layout<sirVGResourceBinding_t>::value && std::is_trivially_copyable<sirVGPageObservation_t>::value,
                "portable views must be POD" );
 
-#endif // __SIRENGINE_SIRVGCONTRACTS_H__
+#endif // __SIR_VGCONTRACTS_H__

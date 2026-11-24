@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRD3D11FORMATS_H__
-#define __SIRENGINE_SIRD3D11FORMATS_H__
+#ifndef __SIR_D3_D11_FORMATS_H__
+#define __SIR_D3_D11_FORMATS_H__
 
 #include <Core/SIRPCH.h>
 
@@ -32,22 +32,22 @@ of merchantability, fitness for a particular purpose and noninfringement.
 typedef struct sirD3D11FormatSupport_s
 {
 	uint32_t nSize;
-	sirGraphicsFormat_t eFormat;
+	SIRGraphicsFormat eFormat;
 	uint32_t nDimensionMask;
 	uint32_t nSupportedUsages;
 	uint32_t nSampleCountMask;
 } sirD3D11FormatSupport_t;
 
 // The portable admission check is also used by the native format probe test.
-sirGraphicsResult_t sirD3D11ValidateTextureSupport( const sirGraphicsTextureDesc_t *pDesc,
+SIRGraphicsResult sirD3D11ValidateTextureSupport( const sirGraphicsTextureDesc_t *pDesc,
                                                     const sirD3D11FormatSupport_t *pSupport ) noexcept;
 
 // The pointer is a borrowed native ID3D11Device; never retained. Returned
 // capability bits are built from CheckFormatSupport and multisample queries.
-sirGraphicsResult_t sirD3D11QueryFormatSupport( void *pNativeDevice, sirGraphicsFormat_t eFormat,
+SIRGraphicsResult sirD3D11QueryFormatSupport( void *pNativeDevice, SIRGraphicsFormat eFormat,
                                                 sirD3D11FormatSupport_t *pSupport ) noexcept;
 uint32_t sirD3D11GetMaxSampleCount( const sirD3D11FormatSupport_t *pSupport ) noexcept;
 // Native DXGI_FORMAT numeric value; the signature remains platform-neutral.
-uint32_t sirD3D11GetNativeFormatCode( sirGraphicsFormat_t eFormat ) noexcept;
+uint32_t sirD3D11GetNativeFormatCode( SIRGraphicsFormat eFormat ) noexcept;
 
-#endif // __SIRENGINE_SIRD3D11FORMATS_H__
+#endif // __SIR_D3_D11_FORMATS_H__

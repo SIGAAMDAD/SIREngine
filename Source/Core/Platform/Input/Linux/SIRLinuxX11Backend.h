@@ -13,10 +13,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRLINUXX11BACKEND_H__
-#define __SIRENGINE_SIRLINUXX11BACKEND_H__
+#ifndef __SIR_LINUXX11_BACKEND_H__
+#define __SIR_LINUXX11_BACKEND_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
 #pragma once
@@ -31,7 +31,7 @@ class SIRLinuxX11Backend final : public SIRInputBackend
 {
 public:
 	explicit SIRLinuxX11Backend( void ) noexcept;
-	sirInputBackendId_t id( void ) const noexcept override;
+	SIRInputBackendId id( void ) const noexcept override;
 	void sample( SIRInputService& service ) noexcept override;
 	void resynchronize( SIRInputService& service ) noexcept override;
 	bool vibrate( sirInputDeviceId_t hDevice, uint16_t nLeft, uint16_t nRight ) noexcept override;
@@ -57,4 +57,4 @@ private:
 	double m_fMotionRemainderY;
 };
 
-#endif // __SIRENGINE_SIRLINUXX11BACKEND_H__
+#endif // __SIR_LINUXX11_BACKEND_H__

@@ -27,14 +27,14 @@ static constexpr uint32_t SIR_D3D12_SEALED_GPU_UPLOAD_BUFFER = 5;
 
 static void *sirD3D12AllocateHostMetadata( size_t nBytes, size_t nAlignment, void *pUser ) noexcept
 {
-	SIRGeneralHeap *pHeap = ( SIRGeneralHeap * )pUser;
+	SIRGeneralHeap *pHeap = static_cast<SIRGeneralHeap *>(pUser);
 	return pHeap != nullptr ? pHeap->allocAligned( nBytes, nAlignment ) : nullptr;
 }
 
 static void sirD3D12FreeHostMetadata( void *pMemory, void *pUser ) noexcept
 {
 	if ( pMemory != nullptr && pUser != nullptr ) {
-		( ( SIRGeneralHeap * )pUser )->free( pMemory );
+		static_cast<SIRGeneralHeap *>(pUser)->free( pMemory );
 	}
 }
 
@@ -54,7 +54,7 @@ bool SIRD3D12Memory::initialize( IDXGIAdapter *pAdapter, ID3D12Device *pDevice, 
 		return false;
 	}
 
-	if ( pCpuHeap != nullptr && !pCpuHeap->isConfiguredForDomain( SIR_MEMORY_DOMAIN_RENDERING_CPU ) ) {
+	if ( pCpuHeap != nullptr && !pCpuHeap->isConfiguredForDomain( SIRMemoryDomain::SIR_MEMORY_DOMAIN_RENDERING_CPU ) ) {
 		m_nLastError = E_INVALIDARG;
 		return false;
 	}
@@ -65,7 +65,7 @@ bool SIRD3D12Memory::initialize( IDXGIAdapter *pAdapter, ID3D12Device *pDevice, 
 		m_Callbacks.pFree = &sirD3D12FreeHostMetadata;
 		m_Callbacks.pPrivateData = m_pHostHeap;
 	}
-	D3D12MA::ALLOCATOR_DESC desc = {};
+	D3D12MA::ALLOCATOR_DESC desc {};
 	desc.pAdapter = pAdapter;
 	desc.pDevice = pDevice;
 	desc.pAllocationCallbacks = m_pHostHeap != nullptr ? &m_Callbacks : nullptr;
@@ -82,8 +82,8 @@ bool SIRD3D12Memory::queryAllocationLedger( sirD3D12AllocationLedger_t *pLedger 
 	if ( pLedger == nullptr || m_pAllocator == nullptr ) {
 		return false;
 	}
-	D3D12MA::Budget local = {};
-	D3D12MA::Budget nonLocal = {};
+	D3D12MA::Budget local {};
+	D3D12MA::Budget nonLocal {};
 	m_pAllocator->GetBudget( &local, &nonLocal );
 	if ( local.Stats.AllocationBytes > UINT64_MAX - nonLocal.Stats.AllocationBytes ||
 	     local.Stats.BlockBytes > UINT64_MAX - nonLocal.Stats.BlockBytes ) {
@@ -104,7 +104,7 @@ bool SIRD3D12Memory::queryAllocationLedger( sirD3D12AllocationLedger_t *pLedger 
 
 bool SIRD3D12Memory::configureResidentBudget( uint64_t nBytes ) noexcept
 {
-	sirD3D12AllocationLedger_t ledger = {};
+	sirD3D12AllocationLedger_t ledger {};
 	if ( !queryAllocationLedger( &ledger ) || ( m_bSealed && nBytes == 0 ) || ( nBytes != 0 && ledger.nCommittedBytes > nBytes ) ) {
 		m_nLastError = E_INVALIDARG;
 		return false;
@@ -143,7 +143,7 @@ bool SIRD3D12Memory::configureSealedPools( const sirD3D12SealedPoolConfig_t& con
 		}
 		nReserveBytes += nBytes;
 	}
-	sirD3D12AllocationLedger_t before = {};
+	sirD3D12AllocationLedger_t before {};
 	if ( nReserveBytes == 0 || !queryAllocationLedger( &before ) ) {
 		m_nLastError = E_INVALIDARG;
 		return false;
@@ -163,7 +163,7 @@ bool SIRD3D12Memory::configureSealedPools( const sirD3D12SealedPoolConfig_t& con
 			m_nLastError = E_NOTIMPL;
 			break;
 		}
-		D3D12MA::POOL_DESC desc = {};
+		D3D12MA::POOL_DESC desc {};
 		desc.HeapProperties.Type = szHeapTypes[iPool];
 		desc.HeapFlags = szHeapFlags[iPool];
 		desc.BlockSize = szPoolBytes[iPool];
@@ -174,7 +174,7 @@ bool SIRD3D12Memory::configureSealedPools( const sirD3D12SealedPoolConfig_t& con
 			break;
 		}
 	}
-	sirD3D12AllocationLedger_t after = {};
+	sirD3D12AllocationLedger_t after {};
 	if ( SUCCEEDED( m_nLastError ) &&
 	     ( !queryAllocationLedger( &after ) || ( m_nResidentLimitBytes != 0 && after.nCommittedBytes > m_nResidentLimitBytes ) ) ) {
 		m_nLastError = E_OUTOFMEMORY;
@@ -201,7 +201,7 @@ bool SIRD3D12Memory::reserveExternalBytes( uint64_t nBytes ) noexcept
 {
 	// External swapchain allocations are accounted independently of the fixed
 	// D3D12MA sealed pools, under the same total resident budget.
-	sirD3D12AllocationLedger_t ledger = {};
+	sirD3D12AllocationLedger_t ledger {};
 	if ( !queryAllocationLedger( &ledger ) ) {
 		m_nLastError = E_INVALIDARG;
 		return false;
@@ -234,7 +234,7 @@ bool SIRD3D12Memory::enforceResidentLimit( D3D12MA::Allocation **ppAllocation ) 
 	if ( ppAllocation == nullptr || *ppAllocation == nullptr ) {
 		return false;
 	}
-	sirD3D12AllocationLedger_t ledger = {};
+	sirD3D12AllocationLedger_t ledger {};
 	if ( !queryAllocationLedger( &ledger ) || ( m_nResidentLimitBytes != 0 && ledger.nCommittedBytes > m_nResidentLimitBytes ) ) {
 		( *ppAllocation )->Release();
 		*ppAllocation = nullptr;
@@ -300,7 +300,7 @@ HRESULT SIRD3D12Memory::createBuffer( D3D12_HEAP_TYPE eHeapType, D3D12_RESOURCE_
 		return m_nLastError;
 	}
 
-	D3D12_RESOURCE_DESC resource = {};
+	D3D12_RESOURCE_DESC resource {};
 	resource.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
 	resource.Width = nBytes;
 	resource.Height = 1;
@@ -310,7 +310,7 @@ HRESULT SIRD3D12Memory::createBuffer( D3D12_HEAP_TYPE eHeapType, D3D12_RESOURCE_
 	resource.SampleDesc.Count = 1;
 	resource.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 	resource.Flags = eResourceFlags;
-	D3D12MA::ALLOCATION_DESC allocation = {};
+	D3D12MA::ALLOCATION_DESC allocation {};
 	allocation.HeapType = eHeapType;
 	allocation.Flags = D3D12MA::ALLOCATION_FLAG_WITHIN_BUDGET;
 	if ( m_bSealed ) {
@@ -353,7 +353,7 @@ HRESULT SIRD3D12Memory::createTexture2D( uint32_t nWidth, uint32_t nHeight, DXGI
 		return m_nLastError;
 	}
 
-	D3D12_RESOURCE_DESC resource = {};
+	D3D12_RESOURCE_DESC resource {};
 	resource.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
 	resource.Width = nWidth;
 	resource.Height = nHeight;
@@ -364,7 +364,7 @@ HRESULT SIRD3D12Memory::createTexture2D( uint32_t nWidth, uint32_t nHeight, DXGI
 	resource.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
 	resource.Flags = eFlags;
 
-	D3D12MA::ALLOCATION_DESC allocation = {};
+	D3D12MA::ALLOCATION_DESC allocation {};
 	allocation.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 	allocation.Flags = D3D12MA::ALLOCATION_FLAG_WITHIN_BUDGET;
 	if ( m_bSealed ) {
@@ -398,7 +398,7 @@ HRESULT SIRD3D12Memory::createTexture( const D3D12_RESOURCE_DESC& resource, D3D1
 		m_nLastError = E_INVALIDARG;
 		return m_nLastError;
 	}
-	D3D12MA::ALLOCATION_DESC allocation = {};
+	D3D12MA::ALLOCATION_DESC allocation {};
 	allocation.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 	allocation.Flags = D3D12MA::ALLOCATION_FLAG_WITHIN_BUDGET;
 	if ( m_bSealed ) {
@@ -435,25 +435,25 @@ bool SIRD3D12Memory::initializeTransferArena( const sirD3D12TransferPoolConfig_t
 	D3D12_HEAP_TYPE eWriteHeap = D3D12_HEAP_TYPE_UPLOAD;
 	if ( config.bPreferDirectMapped && bGPUUpload ) {
 		eWriteHeap = D3D12_HEAP_TYPE_GPU_UPLOAD;
-		m_eTransferPath = SIR_D3D12_TRANSFER_DIRECT_GPU_UPLOAD;
+		m_eTransferPath = SIRD3D12TransferPath::SIR_D3D12_TRANSFER_DIRECT_GPU_UPLOAD;
 	} else if ( config.bPreferDirectMapped && bUMA ) {
-		m_eTransferPath = SIR_D3D12_TRANSFER_DIRECT_UMA;
+		m_eTransferPath = SIRD3D12TransferPath::SIR_D3D12_TRANSFER_DIRECT_UMA;
 	} else {
-		m_eTransferPath = SIR_D3D12_TRANSFER_STAGED;
+		m_eTransferPath = SIRD3D12TransferPath::SIR_D3D12_TRANSFER_STAGED;
 	}
 
 	m_nLastError = createBuffer( eWriteHeap, D3D12_RESOURCE_STATE_GENERIC_READ, nBytes, &m_pTransferWrite );
 	if ( ( m_nLastError == E_OUTOFMEMORY || m_nLastError == E_NOTIMPL ) && eWriteHeap == D3D12_HEAP_TYPE_GPU_UPLOAD ) {
 		// GPU_UPLOAD is optional and can exhaust its own sealed pool while a
 		// regular UPLOAD allocation remains admissible. Preserve functionality.
-		m_eTransferPath = bUMA ? SIR_D3D12_TRANSFER_DIRECT_UMA : SIR_D3D12_TRANSFER_STAGED;
+		m_eTransferPath = bUMA ? SIRD3D12TransferPath::SIR_D3D12_TRANSFER_DIRECT_UMA : SIRD3D12TransferPath::SIR_D3D12_TRANSFER_STAGED;
 		m_nLastError = createBuffer( D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, nBytes, &m_pTransferWrite );
 	}
 	if ( FAILED( m_nLastError ) ) {
 		releaseTransferArena( true );
 		return false;
 	}
-	if ( m_eTransferPath == SIR_D3D12_TRANSFER_STAGED ) {
+	if ( m_eTransferPath == SIRD3D12TransferPath::SIR_D3D12_TRANSFER_STAGED ) {
 		m_nLastError = createBuffer( D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COMMON, nBytes, &m_pTransferGpu );
 		if ( FAILED( m_nLastError ) ) {
 			releaseTransferArena( true );
@@ -476,7 +476,7 @@ bool SIRD3D12Memory::initializeTransferArena( const sirD3D12TransferPoolConfig_t
 		releaseTransferArena( true );
 		return false;
 	}
-	m_pTransferWriteBytes = ( uint8_t * )pWrite;
+	m_pTransferWriteBytes = static_cast<uint8_t *>(pWrite);
 
 	void *pReadback = nullptr;
 	m_nLastError = m_pTransferReadback->GetResource()->Map( 0, nullptr, &pReadback );
@@ -487,7 +487,7 @@ bool SIRD3D12Memory::initializeTransferArena( const sirD3D12TransferPoolConfig_t
 		releaseTransferArena( true );
 		return false;
 	}
-	m_pTransferReadbackBytes = ( const uint8_t * )pReadback;
+	m_pTransferReadbackBytes = static_cast<const uint8_t *>(pReadback);
 	m_nTransferSlotBytes = config.nSlotBytes;
 	m_nTransferReservedBytes = nBytes * ( m_pTransferGpu != nullptr ? 3 : 2 );
 	m_nLastError = S_OK;
@@ -521,7 +521,7 @@ void SIRD3D12Memory::releaseTransferArena( bool bGpuComplete ) noexcept
 	m_pTransferReadbackBytes = nullptr;
 	m_nTransferSlotBytes = 0;
 	m_nTransferReservedBytes = 0;
-	m_eTransferPath = SIR_D3D12_TRANSFER_STAGED;
+	m_eTransferPath = SIRD3D12TransferPath::SIR_D3D12_TRANSFER_STAGED;
 }
 
 bool SIRD3D12Memory::queryTransferArena( sirD3D12ResidentTransferView_t *pView ) const noexcept

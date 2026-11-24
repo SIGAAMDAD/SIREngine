@@ -40,8 +40,8 @@ static uint32_t sirGraphicsCountFeatureBits( uint64_t nMask ) noexcept
 	return nCount;
 }
 
-static bool sirGraphicsPreferAdapter( const sirGraphicsAdapterInfo_t& candidate, sirGraphicsBackend_t eCandidate,
-                                      const sirGraphicsAdapterInfo_t& current, sirGraphicsBackend_t eCurrent ) noexcept
+static bool sirGraphicsPreferAdapter( const sirGraphicsAdapterInfo_t& candidate, SIRGraphicsBackend eCandidate,
+                                      const sirGraphicsAdapterInfo_t& current, SIRGraphicsBackend eCurrent ) noexcept
 {
 	if ( candidate.bSoftwareAdapter != current.bSoftwareAdapter ) {
 		return !candidate.bSoftwareAdapter;
@@ -63,29 +63,29 @@ static bool sirGraphicsPreferAdapter( const sirGraphicsAdapterInfo_t& candidate,
 	return candidate.nAdapterIndex < current.nAdapterIndex;
 }
 
-sirGraphicsResult_t SIRGraphicsRegistry::registerDriver( SIRGraphicsDriver *pDriver ) noexcept
+SIRGraphicsResult SIRGraphicsRegistry::registerDriver( SIRGraphicsDriver *pDriver ) noexcept
 {
 	if ( pDriver == nullptr ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 
-	const sirGraphicsBackend_t eBackend = pDriver->getBackend();
-	if ( !sirGraphicsIsBackendValid( eBackend ) || eBackend == SIR_GRAPHICS_BACKEND_AUTO ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	const SIRGraphicsBackend eBackend = pDriver->getBackend();
+	if ( !sirGraphicsIsBackendValid( eBackend ) || eBackend == SIRGraphicsBackend::SIR_GRAPHICS_BACKEND_AUTO ) {
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( findDriver( eBackend ) != nullptr ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	// Backends are unique and all valid IDs are within 1..OPENGL.
 	// Capacity is therefore a compile-time invariant, not a runtime branch.
-	static_assert( s_nDriverCapacity >= SIR_GRAPHICS_BACKEND_OPENGL, "Graphics registry capacity must fit every backend" );
+	static_assert( s_nDriverCapacity >= SIRGraphicsBackend::SIR_GRAPHICS_BACKEND_OPENGL, "Graphics registry capacity must fit every backend" );
 
 	m_pszDrivers[m_nDriverCount] = pDriver;
 	++m_nDriverCount;
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t SIRGraphicsRegistry::unregisterDriver( sirGraphicsBackend_t eBackend ) noexcept
+SIRGraphicsResult SIRGraphicsRegistry::unregisterDriver( SIRGraphicsBackend eBackend ) noexcept
 {
 	for ( uint32_t iDriver = 0; iDriver < m_nDriverCount; ++iDriver ) {
 		if ( m_pszDrivers[iDriver]->getBackend() != eBackend ) {
@@ -97,12 +97,12 @@ sirGraphicsResult_t SIRGraphicsRegistry::unregisterDriver( sirGraphicsBackend_t 
 		}
 		--m_nDriverCount;
 		m_pszDrivers[m_nDriverCount] = nullptr;
-		return SIR_GRAPHICS_SUCCESS;
+		return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 	}
-	return SIR_GRAPHICS_UNSUPPORTED;
+	return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 }
 
-SIRGraphicsDriver *SIRGraphicsRegistry::findDriver( sirGraphicsBackend_t eBackend ) const noexcept
+SIRGraphicsDriver *SIRGraphicsRegistry::findDriver( SIRGraphicsBackend eBackend ) const noexcept
 {
 	for ( uint32_t iDriver = 0; iDriver < m_nDriverCount; ++iDriver ) {
 		if ( m_pszDrivers[iDriver]->getBackend() == eBackend ) {
@@ -112,58 +112,58 @@ SIRGraphicsDriver *SIRGraphicsRegistry::findDriver( sirGraphicsBackend_t eBacken
 	return nullptr;
 }
 
-sirGraphicsResult_t SIRGraphicsRegistry::selectDriver( const sirGraphicsSelection_t& selection, SIRGraphicsDriver **ppDriver,
+SIRGraphicsResult SIRGraphicsRegistry::selectDriver( const sirGraphicsSelection_t& selection, SIRGraphicsDriver **ppDriver,
                                                        sirGraphicsAdapterInfo_t *pAdapter ) const noexcept
 {
 	if ( ppDriver == nullptr || pAdapter == nullptr || !sirGraphicsIsBackendValid( selection.eBackend ) ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	*ppDriver = nullptr;
 	*pAdapter = {};
-	if ( selection.eBackend == SIR_GRAPHICS_BACKEND_AUTO &&
+	if ( selection.eBackend == SIRGraphicsBackend::SIR_GRAPHICS_BACKEND_AUTO &&
 	     ( selection.nMinimumApiVersion.nMajor != 0 || selection.nMinimumApiVersion.nMinor != 0 ||
 	       selection.nMinimumApiVersion.nPatch != 0 ) ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( selection.nMinimumApiVersion.nMajor == 0 &&
 	     ( selection.nMinimumApiVersion.nMinor != 0 || selection.nMinimumApiVersion.nPatch != 0 ) ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 
 	// An explicitly requested API never falls through to another backend.
 	// AUTO ranks all eligible physical adapters before software fallbacks.
 	SIRGraphicsDriver *pBestDriver = nullptr;
-	sirGraphicsAdapterInfo_t best = {};
+	sirGraphicsAdapterInfo_t best {};
 	for ( uint32_t iDriver = 0; iDriver < m_nDriverCount; ++iDriver ) {
 		SIRGraphicsDriver *pCandidate = m_pszDrivers[iDriver];
-		const sirGraphicsBackend_t eCandidate = pCandidate->getBackend();
-		if ( selection.eBackend != SIR_GRAPHICS_BACKEND_AUTO && eCandidate != selection.eBackend ) {
+		const SIRGraphicsBackend eCandidate = pCandidate->getBackend();
+		if ( selection.eBackend != SIRGraphicsBackend::SIR_GRAPHICS_BACKEND_AUTO && eCandidate != selection.eBackend ) {
 			continue;
 		}
 
 		uint32_t nAdapters = 0;
-		const sirGraphicsResult_t eCount = pCandidate->getAdapterCount( &nAdapters );
-		if ( eCount != SIR_GRAPHICS_SUCCESS ) {
-			if ( selection.eBackend != SIR_GRAPHICS_BACKEND_AUTO ) {
+		const SIRGraphicsResult eCount = pCandidate->getAdapterCount( &nAdapters );
+		if ( eCount != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
+			if ( selection.eBackend != SIRGraphicsBackend::SIR_GRAPHICS_BACKEND_AUTO ) {
 				return eCount;
 			}
 			continue;
 		}
 		if ( nAdapters > 256 ) {
-			return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+			return SIRGraphicsResult::SIR_GRAPHICS_CAPACITY_EXCEEDED;
 		}
 		for ( uint32_t iAdapter = 0; iAdapter < nAdapters; ++iAdapter ) {
-			sirGraphicsAdapterInfo_t info = {};
-			const sirGraphicsResult_t eProbe = pCandidate->queryAdapter( iAdapter, &info );
-			if ( eProbe != SIR_GRAPHICS_SUCCESS ) {
-				if ( selection.eBackend != SIR_GRAPHICS_BACKEND_AUTO ) {
+			sirGraphicsAdapterInfo_t info {};
+			const SIRGraphicsResult eProbe = pCandidate->queryAdapter( iAdapter, &info );
+			if ( eProbe != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
+				if ( selection.eBackend != SIRGraphicsBackend::SIR_GRAPHICS_BACKEND_AUTO ) {
 					return eProbe;
 				}
 				continue;
 			}
 			if ( info.nAdapterIndex != iAdapter || info.nApiVersion.nMajor == 0 ||
-			     ( info.nFeatureMask & ~( ( SIR_GRAPHICS_FEATURE_PRESENT << 1 ) - 1ULL ) ) != 0 ) {
-				return SIR_GRAPHICS_DRIVER_ERROR;
+			     ( info.nFeatureMask & ~( ( SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_PRESENT << 1 ) - 1ULL ) ) != 0 ) {
+				return SIRGraphicsResult::SIR_GRAPHICS_DRIVER_ERROR;
 			}
 			if ( info.bSoftwareAdapter && !selection.bAllowSoftware ) {
 				continue;
@@ -181,11 +181,11 @@ sirGraphicsResult_t SIRGraphicsRegistry::selectDriver( const sirGraphicsSelectio
 		}
 	}
 	if ( pBestDriver == nullptr ) {
-		return SIR_GRAPHICS_UNSUPPORTED;
+		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
 	*ppDriver = pBestDriver;
 	*pAdapter = best;
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
 uint32_t SIRGraphicsRegistry::getCount( void ) const noexcept

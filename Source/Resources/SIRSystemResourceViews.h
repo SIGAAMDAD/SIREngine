@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSYSTEMRESOURCEVIEWS_H__
-#define __SIRENGINE_SIRSYSTEMRESOURCEVIEWS_H__
+#ifndef __SIR_SYSTEMRESOURCEVIEWS_H__
+#define __SIR_SYSTEMRESOURCEVIEWS_H__
 
 #include <Core/SIRPCH.h>
 
@@ -264,4 +264,4 @@ static_assert( sizeof( SIRTerrainHeightView ) == sizeof( SIRResourceView ), "Ter
 static_assert( sizeof( SIRAudioBankResourceView ) == sizeof( SIRResourceView ), "Audio bank view owns data" );
 static_assert( sizeof( SIRWorldCellView ) == sizeof( SIRResourceView ), "World cell view owns data" );
 
-#endif // __SIRENGINE_SIRSYSTEMRESOURCEVIEWS_H__
+#endif // __SIR_SYSTEMRESOURCEVIEWS_H__

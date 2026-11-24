@@ -14,8 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIREVENTQUEUE_H__
-#define __SIRENGINE_SIREVENTQUEUE_H__
+#ifndef __SIR_EVENTQUEUE_H__
+#define __SIR_EVENTQUEUE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -58,9 +58,9 @@ public:
 	SIREventQueue& operator=( const SIREventQueue& ) = delete;
 
 	bool enqueue( void *pContext, callback_t pCallback, const TPayload& payload,
-	              sirEventPriority_t ePriority = SIR_EVENT_PRIORITY_NORMAL ) noexcept
+	              SIREventPriority ePriority = SIREventPriority::SIR_EVENT_PRIORITY_NORMAL ) noexcept
 	{
-		if ( pCallback == nullptr || ePriority >= SIR_EVENT_PRIORITY_COUNT || m_nFreeHead == 0 ) {
+		if ( pCallback == nullptr || ePriority >= SIREventPriority::SIR_EVENT_PRIORITY_COUNT || m_nFreeHead == 0 ) {
 			return false;
 		}
 		const uint32_t nIndex = m_nFreeHead;
@@ -69,7 +69,7 @@ public:
 		m_Slots[nIndex].pCallback = pCallback;
 		m_Slots[nIndex].payload = payload;
 		m_Slots[nIndex].nNext = 0;
-		const uint32_t nPriority = ( uint32_t )ePriority;
+		const uint32_t nPriority = static_cast<uint32_t>(ePriority);
 		if ( m_nTail[nPriority] != 0 ) {
 			m_Slots[m_nTail[nPriority]].nNext = nIndex;
 		} else {
@@ -85,7 +85,7 @@ public:
 		if ( m_bProcessing || m_nCount == 0 ) {
 			return false;
 		}
-		int nPriority = SIR_EVENT_PRIORITY_COUNT - 1;
+		int nPriority = SIREventPriority::SIR_EVENT_PRIORITY_COUNT - 1;
 		while ( nPriority >= 0 && m_nHead[nPriority] == 0 ) {
 			--nPriority;
 		}
@@ -121,7 +121,7 @@ public:
 	// queue list, so clearing queued work cannot invalidate its payload.
 	void clear( void ) noexcept
 	{
-		for ( uint32_t nPriority = 0; nPriority < SIR_EVENT_PRIORITY_COUNT; ++nPriority ) {
+		for ( uint32_t nPriority = 0; nPriority < SIREventPriority::SIR_EVENT_PRIORITY_COUNT; ++nPriority ) {
 			uint32_t nIndex = m_nHead[nPriority];
 			while ( nIndex != 0 ) {
 				const uint32_t nNext = m_Slots[nIndex].nNext;
@@ -141,11 +141,11 @@ public:
 
 private:
 	sirEventQueueSlot_s<TPayload> m_Slots[Capacity + 1];
-	uint32_t m_nHead[SIR_EVENT_PRIORITY_COUNT]{};
-	uint32_t m_nTail[SIR_EVENT_PRIORITY_COUNT]{};
+	uint32_t m_nHead[SIREventPriority::SIR_EVENT_PRIORITY_COUNT]{};
+	uint32_t m_nTail[SIREventPriority::SIR_EVENT_PRIORITY_COUNT]{};
 	uint32_t m_nFreeHead;
 	uint32_t m_nCount;
 	bool m_bProcessing;
 };
 
-#endif // __SIRENGINE_SIREVENTQUEUE_H__
+#endif // __SIR_EVENTQUEUE_H__

@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSCRIPTSCHEDULER_H__
-#define __SIRENGINE_SIRSCRIPTSCHEDULER_H__
+#ifndef __SIR_SCRIPTSCHEDULER_H__
+#define __SIR_SCRIPTSCHEDULER_H__
 
 #include <Core/SIRPCH.h>
 
@@ -26,18 +26,16 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Scripting/Public/SIRScriptTypes.h>
 
-typedef enum sirScriptPhase_e : uint8_t
-{
+enum class SIRScriptPhase : uint8_t {
 	SIR_SCRIPT_PHASE_EARLY = 0,
 	SIR_SCRIPT_PHASE_LATE = 1,
 	SIR_SCRIPT_PHASE_COUNT = 2
-} sirScriptPhase_t;
+};
 
-typedef enum sirScriptScheduledKind_e : uint8_t
-{
+enum class SIRScriptScheduledKind : uint8_t {
 	SIR_SCRIPT_SCHEDULED_EVENT = 0,
 	SIR_SCRIPT_SCHEDULED_INVOKE = 1
-} sirScriptScheduledKind_t;
+};
 
 typedef struct sirScriptTaskHandle_s
 {
@@ -60,7 +58,7 @@ typedef struct sirScriptPayloadAllocatorAPI_s
 	void *pUser;
 	uint32_t nMaximumBytes;
 	uint32_t nMaximumAlignment;
-	sirScriptResult_t ( *pAllocate )( void *, uint32_t, uint32_t, sirScriptPayloadAllocation_t * ) noexcept;
+	SIRScriptResult ( *pAllocate )( void *, uint32_t, uint32_t, sirScriptPayloadAllocation_t * ) noexcept;
 	void ( *pRelease )( void *, sirScriptPayloadAllocation_t ) noexcept;
 } sirScriptPayloadAllocatorAPI_t;
 
@@ -73,7 +71,7 @@ typedef struct sirScriptScheduledCall_s
 	uint64_t nDispatchId;
 	uint32_t nBytes;
 	uint32_t nAlignment;
-	sirScriptScheduledKind_t eKind;
+	SIRScriptScheduledKind eKind;
 	sirScriptPayloadAllocation_t allocation;
 	alignas( 64 ) unsigned char szPayload[256];
 } sirScriptScheduledCall_t;
@@ -96,18 +94,18 @@ public:
 	SIRScriptScheduler( void ) noexcept;
 	~SIRScriptScheduler( void ) noexcept;
 
-	sirScriptResult_t setPayloadAllocator( const sirScriptPayloadAllocatorAPI_t& api ) noexcept;
-	sirScriptResult_t enqueue( sirScriptPhase_t ePhase, const sirScriptScheduledCall_t& call, const void *pPayload,
+	SIRScriptResult setPayloadAllocator( const sirScriptPayloadAllocatorAPI_t& api ) noexcept;
+	SIRScriptResult enqueue( SIRScriptPhase ePhase, const sirScriptScheduledCall_t& call, const void *pPayload,
 	                           sirScriptTaskHandle_t *pHandle ) noexcept;
 	void releasePayload( sirScriptScheduledCall_t *pCall ) noexcept;
 	uint64_t allocatedPayloadBytes( void ) const noexcept;
 	uint64_t peakPayloadBytes( void ) const noexcept;
 	uint32_t livePayloadCount( void ) const noexcept;
-	sirScriptResult_t cancel( sirScriptTaskHandle_t handle ) noexcept;
-	bool dequeue( sirScriptPhase_t ePhase, uint64_t nLastSequence, sirScriptScheduledCall_t *pCall ) noexcept;
+	SIRScriptResult cancel( sirScriptTaskHandle_t handle ) noexcept;
+	bool dequeue( SIRScriptPhase ePhase, uint64_t nLastSequence, sirScriptScheduledCall_t *pCall ) noexcept;
 	uint64_t lastSequence( void ) const noexcept;
 	void clear( void ) noexcept;
-	uint32_t pendingCount( sirScriptPhase_t ePhase ) const noexcept;
+	uint32_t pendingCount( SIRScriptPhase ePhase ) const noexcept;
 
 private:
 	static constexpr uint32_t MAX_TASKS = 64;
@@ -119,11 +117,11 @@ private:
 	uint64_t m_nPeakPayloadBytes;
 	uint32_t m_nLivePayloads;
 	sirScriptScheduledSlot_t m_szSlots[MAX_TASKS + 1];
-	uint32_t m_szHeads[SIR_SCRIPT_PHASE_COUNT];
-	uint32_t m_szTails[SIR_SCRIPT_PHASE_COUNT];
-	uint32_t m_szCounts[SIR_SCRIPT_PHASE_COUNT];
+	uint32_t m_szHeads[static_cast<size_t>( SIRScriptPhase::SIR_SCRIPT_PHASE_COUNT )];
+	uint32_t m_szTails[static_cast<size_t>( SIRScriptPhase::SIR_SCRIPT_PHASE_COUNT )];
+	uint32_t m_szCounts[static_cast<size_t>( SIRScriptPhase::SIR_SCRIPT_PHASE_COUNT )];
 	uint32_t m_nFreeHead;
 	uint64_t m_nSequence;
 };
 
-#endif // __SIRENGINE_SIRSCRIPTSCHEDULER_H__
+#endif // __SIR_SCRIPTSCHEDULER_H__

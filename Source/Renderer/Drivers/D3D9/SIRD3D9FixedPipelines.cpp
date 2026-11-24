@@ -32,27 +32,27 @@ void sirD3D9FixedPipelinesInitialize( sirD3D9FixedPipelines_t *pPool, uint32_t n
 	}
 }
 
-sirGraphicsResult_t sirD3D9FixedPipelineCreate( sirD3D9FixedPipelines_t *pPool, const sirGraphicsABIPipeline_t *pDesc,
+SIRGraphicsResult sirD3D9FixedPipelineCreate( sirD3D9FixedPipelines_t *pPool, const sirGraphicsABIPipeline_t *pDesc,
                                                 sirGraphicsHandle_t *pHandle ) noexcept
 {
 	if ( pPool == nullptr || pDesc == nullptr || pHandle == nullptr || pPool->nDeviceGeneration == 0 ||
-	     pDesc->nSize < sizeof( sirGraphicsABIPipeline_t ) || pDesc->nModel != SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION ||
-	     pDesc->pFixed == nullptr || pDesc->nReserved != 0 || pDesc->nType != SIR_GRAPHICS_PIPELINE_FIXED_FUNCTION ||
+	     pDesc->nSize < sizeof( sirGraphicsABIPipeline_t ) || pDesc->nModel != SIRGraphicsPipelineModel::SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION ||
+	     pDesc->pFixed == nullptr || pDesc->nReserved != 0 || pDesc->nType != SIRGraphicsPipelineType::SIR_GRAPHICS_PIPELINE_FIXED_FUNCTION ||
 	     pDesc->nBindingCount != 0 || pDesc->nColorFormatCount > 1 || pDesc->nSampleCount != 1 ||
-	     pDesc->nTopology > SIR_GRAPHICS_TOPOLOGY_TRIANGLE_STRIP || pDesc->vertexShader.nByteCount != 0 ||
+	     pDesc->nTopology > SIRGraphicsTopology::SIR_GRAPHICS_TOPOLOGY_TRIANGLE_STRIP || pDesc->vertexShader.nByteCount != 0 ||
 	     pDesc->pixelShader.nByteCount != 0 || pDesc->computeShader.nByteCount != 0 ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	// The ABI position and optional normal are float4 streams. FVF cannot
 	// describe their padded offsets; an explicit D3D9 vertex declaration is
 	// required whenever fixed vertex transforms are enabled.
 	const sirGraphicsABIFixedRecipe_t *pRecipe = pDesc->pFixed;
-	const bool bNativeTransform = ( pRecipe->nRequiredFeatures & SIR_GRAPHICS_FIXED_TRANSFORM ) != 0;
-	const bool bLighting = ( pRecipe->nRequiredFeatures & SIR_GRAPHICS_FIXED_LIGHTING ) != 0 || pRecipe->nLightCount != 0;
+	const bool bNativeTransform = ( pRecipe->nRequiredFeatures & SIRGraphicsFixedFeature::SIR_GRAPHICS_FIXED_TRANSFORM ) != 0;
+	const bool bLighting = ( pRecipe->nRequiredFeatures & SIRGraphicsFixedFeature::SIR_GRAPHICS_FIXED_LIGHTING ) != 0 || pRecipe->nLightCount != 0;
 	if ( pDesc->nAttributeCount == 0 || pDesc->nAttributeCount > 4 || pDesc->pAttributes == nullptr ||
-	     ( pRecipe->nRequiredFeatures & ( SIR_GRAPHICS_FIXED_CPU_TRANSFORM | SIR_GRAPHICS_FIXED_TEXCOORD_GEN ) ) != 0 ||
+	     ( pRecipe->nRequiredFeatures & ( SIRGraphicsFixedFeature::SIR_GRAPHICS_FIXED_CPU_TRANSFORM | SIRGraphicsFixedFeature::SIR_GRAPHICS_FIXED_TEXCOORD_GEN ) ) != 0 ||
 	     ( bLighting && !bNativeTransform ) ) {
-		return SIR_GRAPHICS_UNSUPPORTED;
+		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
 	uint32_t nFVF = bNativeTransform ? 0x002U : 0x004U;
 	uint32_t nVertexStride = 0;
@@ -63,57 +63,57 @@ sirGraphicsResult_t sirD3D9FixedPipelineCreate( sirD3D9FixedPipelines_t *pPool, 
 	for ( uint32_t j = 0; j < pDesc->nAttributeCount; ++j ) {
 		const sirGraphicsVertexAttribute_t *pAttr = &pDesc->pAttributes[j];
 		if ( pAttr->nBufferSlot != 0 || pAttr->nStrideBytes == 0 || ( nVertexStride != 0 && pAttr->nStrideBytes != nVertexStride ) ) {
-			return SIR_GRAPHICS_UNSUPPORTED;
+			return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 		}
 		nVertexStride = pAttr->nStrideBytes;
 		uint32_t nSize = 0;
-		if ( j == 0 && pAttr->nLocation == 0 && pAttr->nOffsetBytes == 0 && pAttr->eFormat == SIR_GRAPHICS_FORMAT_RGBA32_FLOAT ) {
+		if ( j == 0 && pAttr->nLocation == 0 && pAttr->nOffsetBytes == 0 && pAttr->eFormat == SIRGraphicsFormat::SIR_GRAPHICS_FORMAT_RGBA32_FLOAT ) {
 			nSize = 16;
-		} else if ( bNativeTransform && !bNormal && pAttr->nLocation == 3 && pAttr->eFormat == SIR_GRAPHICS_FORMAT_RGBA32_FLOAT ) {
+		} else if ( bNativeTransform && !bNormal && pAttr->nLocation == 3 && pAttr->eFormat == SIRGraphicsFormat::SIR_GRAPHICS_FORMAT_RGBA32_FLOAT ) {
 			// XYZ normal, padded to four floats by the shared vertex format.
 			nSize = 16;
 			bNormal = true;
 			nFVF |= 0x010U; // D3DFVF_NORMAL
-		} else if ( !bDiffuse && pAttr->nLocation == 1 && pAttr->eFormat == SIR_GRAPHICS_FORMAT_BGRA8_UNORM ) {
+		} else if ( !bDiffuse && pAttr->nLocation == 1 && pAttr->eFormat == SIRGraphicsFormat::SIR_GRAPHICS_FORMAT_BGRA8_UNORM ) {
 			nSize = 4;
 			bDiffuse = true;
 			nFVF |= 0x040U; // D3DFVF_DIFFUSE
-		} else if ( !bTexcoord && pAttr->nLocation == 2 && pAttr->eFormat == SIR_GRAPHICS_FORMAT_RG32_FLOAT ) {
+		} else if ( !bTexcoord && pAttr->nLocation == 2 && pAttr->eFormat == SIRGraphicsFormat::SIR_GRAPHICS_FORMAT_RG32_FLOAT ) {
 			nSize = 8;
 			bTexcoord = true;
 			nFVF |= 0x100U; // D3DFVF_TEX1
 		} else {
-			return SIR_GRAPHICS_UNSUPPORTED;
+			return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 		}
 		if ( pAttr->nOffsetBytes < nPreviousEnd || pAttr->nOffsetBytes > UINT32_MAX - nSize ||
 		     pAttr->nOffsetBytes + nSize > nVertexStride || pAttr->nOffsetBytes > UINT16_MAX ) {
-			return SIR_GRAPHICS_UNSUPPORTED;
+			return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 		}
 		nPreviousEnd = pAttr->nOffsetBytes + nSize;
 		// Packed FVF streams are legal only when their offsets follow exactly.
 		if ( !bNativeTransform &&
 		     ( ( j == 0 && pAttr->nOffsetBytes != 0 ) || ( j != 0 && pAttr->nOffsetBytes != nPreviousEnd - nSize ) ) ) {
-			return SIR_GRAPHICS_UNSUPPORTED;
+			return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 		}
 	}
 	if ( bLighting && !bNormal ) {
-		return SIR_GRAPHICS_UNSUPPORTED;
+		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
 	if ( !bNativeTransform ) {
 		uint32_t nPackedEnd = 16;
 		for ( uint32_t j = 1; j < pDesc->nAttributeCount; ++j ) {
 			if ( pDesc->pAttributes[j].nOffsetBytes != nPackedEnd ) {
-				return SIR_GRAPHICS_UNSUPPORTED;
+				return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 			}
-			nPackedEnd += pDesc->pAttributes[j].eFormat == SIR_GRAPHICS_FORMAT_BGRA8_UNORM ? 4U : 8U;
+			nPackedEnd += pDesc->pAttributes[j].eFormat == SIRGraphicsFormat::SIR_GRAPHICS_FORMAT_BGRA8_UNORM ? 4U : 8U;
 		}
 	}
 	if ( pDesc->nDepthTest != 0 || pDesc->nDepthWrite != 0 ) {
-		return SIR_GRAPHICS_UNSUPPORTED;
+		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
-	const sirGraphicsResult_t eValid =
+	const SIRGraphicsResult eValid =
 	    sirD3D9ValidateFixedRecipe( pRecipe, pPool->nMaximumTextureStages, pPool->nMaximumTextures, pPool->nMaximumLights );
-	if ( eValid != SIR_GRAPHICS_SUCCESS ) {
+	if ( eValid != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 		return eValid;
 	}
 	// The v1 fixed vertex layouts expose at most TEXCOORD0 and no
@@ -122,15 +122,15 @@ sirGraphicsResult_t sirD3D9FixedPipelineCreate( sirD3D9FixedPipelines_t *pPool, 
 	for ( uint32_t i = 0; i < pRecipe->nTextureStageCount; ++i ) {
 		const sirGraphicsABIFixedStage_t *pStage = &pRecipe->pStages[i];
 		if ( pStage->nCoordinateSet != 0 ) {
-			return SIR_GRAPHICS_UNSUPPORTED;
+			return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 		}
 		const bool bSamplesTexture =
-		    ( pStage->nColorOperation != SIR_GRAPHICS_FIXED_OP_DISABLE && ( pStage->nColorArgument0 == SIR_GRAPHICS_FIXED_ARG_TEXTURE ||
-			                                                                pStage->nColorArgument1 == SIR_GRAPHICS_FIXED_ARG_TEXTURE ) ) ||
-		    ( pStage->nAlphaOperation != SIR_GRAPHICS_FIXED_OP_DISABLE &&
-			  ( pStage->nAlphaArgument0 == SIR_GRAPHICS_FIXED_ARG_TEXTURE || pStage->nAlphaArgument1 == SIR_GRAPHICS_FIXED_ARG_TEXTURE ) );
+		    ( pStage->nColorOperation != SIRGraphicsFixedTextureOp::SIR_GRAPHICS_FIXED_OP_DISABLE && ( pStage->nColorArgument0 == SIRGraphicsFixedTextureArg::SIR_GRAPHICS_FIXED_ARG_TEXTURE ||
+			                                                                pStage->nColorArgument1 == SIRGraphicsFixedTextureArg::SIR_GRAPHICS_FIXED_ARG_TEXTURE ) ) ||
+		    ( pStage->nAlphaOperation != SIRGraphicsFixedTextureOp::SIR_GRAPHICS_FIXED_OP_DISABLE &&
+			  ( pStage->nAlphaArgument0 == SIRGraphicsFixedTextureArg::SIR_GRAPHICS_FIXED_ARG_TEXTURE || pStage->nAlphaArgument1 == SIRGraphicsFixedTextureArg::SIR_GRAPHICS_FIXED_ARG_TEXTURE ) );
 		if ( bSamplesTexture && !bTexcoord ) {
-			return SIR_GRAPHICS_UNSUPPORTED;
+			return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 		}
 	}
 	for ( uint32_t i = 0; i < SIR_D3D9_MAX_FIXED_PIPELINES; ++i ) {
@@ -166,42 +166,42 @@ sirGraphicsResult_t sirD3D9FixedPipelineCreate( sirD3D9FixedPipelines_t *pPool, 
 		memcpy( pSlot->elements, pDesc->pAttributes, pDesc->nAttributeCount * sizeof( pSlot->elements[0] ) );
 		pSlot->nVertexStride = nVertexStride;
 		pSlot->bLive = true;
-		*pHandle = { i, nGeneration, pPool->nDeviceGeneration, SIR_GRAPHICS_HANDLE_PIPELINE };
-		return SIR_GRAPHICS_SUCCESS;
+		*pHandle = { i, nGeneration, pPool->nDeviceGeneration, SIRGraphicsHandleType::SIR_GRAPHICS_HANDLE_PIPELINE };
+		return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 	}
-	return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+	return SIRGraphicsResult::SIR_GRAPHICS_CAPACITY_EXCEEDED;
 }
 
-sirGraphicsResult_t sirD3D9FixedPipelineLookup( const sirD3D9FixedPipelines_t *pPool, sirGraphicsHandle_t hHandle,
+SIRGraphicsResult sirD3D9FixedPipelineLookup( const sirD3D9FixedPipelines_t *pPool, sirGraphicsHandle_t hHandle,
                                                 const sirD3D9FixedPipeline_t **ppPipeline ) noexcept
 {
 	if ( pPool == nullptr || ppPipeline == nullptr ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	*ppPipeline = nullptr;
-	if ( hHandle.eType != SIR_GRAPHICS_HANDLE_PIPELINE || hHandle.nDeviceGeneration != pPool->nDeviceGeneration ||
+	if ( hHandle.eType != SIRGraphicsHandleType::SIR_GRAPHICS_HANDLE_PIPELINE || hHandle.nDeviceGeneration != pPool->nDeviceGeneration ||
 	     hHandle.nSlot >= SIR_D3D9_MAX_FIXED_PIPELINES ) {
-		return SIR_GRAPHICS_INVALID_HANDLE;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_HANDLE;
 	}
 	const sirD3D9FixedPipeline_t *pSlot = &pPool->slots[hHandle.nSlot];
 	if ( !pSlot->bLive || pSlot->nGeneration != hHandle.nGeneration ) {
-		return SIR_GRAPHICS_INVALID_HANDLE;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_HANDLE;
 	}
 	*ppPipeline = pSlot;
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t sirD3D9FixedPipelineRetire( sirD3D9FixedPipelines_t *pPool, sirGraphicsHandle_t hHandle ) noexcept
+SIRGraphicsResult sirD3D9FixedPipelineRetire( sirD3D9FixedPipelines_t *pPool, sirGraphicsHandle_t hHandle ) noexcept
 {
 	const sirD3D9FixedPipeline_t *pSlot = nullptr;
-	const sirGraphicsResult_t eLookup = sirD3D9FixedPipelineLookup( pPool, hHandle, &pSlot );
-	if ( eLookup != SIR_GRAPHICS_SUCCESS ) {
+	const SIRGraphicsResult eLookup = sirD3D9FixedPipelineLookup( pPool, hHandle, &pSlot );
+	if ( eLookup != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 		return eLookup;
 	}
 	sirD3D9FixedPipeline_t *pWritable = &pPool->slots[hHandle.nSlot];
 	pWritable->bLive = false;
 	++pWritable->nGeneration;
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
 void sirD3D9FixedPipelinesInvalidate( sirD3D9FixedPipelines_t *pPool, uint32_t nDeviceGeneration ) noexcept

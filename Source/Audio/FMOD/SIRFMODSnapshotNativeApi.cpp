@@ -20,34 +20,34 @@ of merchantability, fitness for a particular purpose and noninfringement.
 static int32_t fmodSnapshotResolve( void *, void *pStudio, const char *szPath, void **ppDescription ) noexcept
 {
 	FMOD::Studio::EventDescription *pDescription = nullptr;
-	const FMOD_RESULT eResult = ( ( FMOD::Studio::System * )pStudio )->getEvent( szPath, &pDescription );
+	const FMOD_RESULT eResult = static_cast<FMOD::Studio::System *>(pStudio)->getEvent( szPath, &pDescription );
 	*ppDescription = pDescription;
-	return ( int32_t )eResult;
+	return static_cast<int32_t>(eResult);
 }
 
 static int32_t fmodSnapshotCreateInstance( void *, void *pDescription, void **ppInstance ) noexcept
 {
 	FMOD::Studio::EventInstance *pInstance = nullptr;
-	const FMOD_RESULT eResult = ( ( FMOD::Studio::EventDescription * )pDescription )->createInstance( &pInstance );
+	const FMOD_RESULT eResult = static_cast<FMOD::Studio::EventDescription *>(pDescription)->createInstance( &pInstance );
 	*ppInstance = pInstance;
-	return ( int32_t )eResult;
+	return static_cast<int32_t>(eResult);
 }
 
 static int32_t fmodSnapshotStartInstance( void *, void *pInstance ) noexcept
 {
-	return ( int32_t )( ( FMOD::Studio::EventInstance * )pInstance )->start();
+	return ( int32_t )static_cast<FMOD::Studio::EventInstance *>(pInstance)->start();
 }
 
-static int32_t fmodSnapshotStopInstance( void *, void *pInstance, sirAudioStopMode_t eMode ) noexcept
+static int32_t fmodSnapshotStopInstance( void *, void *pInstance, SIRAudioStopMode eMode ) noexcept
 {
 	const FMOD_STUDIO_STOP_MODE eNativeMode =
-	    eMode == SIR_AUDIO_STOP_IMMEDIATE ? FMOD_STUDIO_STOP_IMMEDIATE : FMOD_STUDIO_STOP_ALLOWFADEOUT;
-	return ( int32_t )( ( FMOD::Studio::EventInstance * )pInstance )->stop( eNativeMode );
+	    eMode == SIRAudioStopMode::SIR_AUDIO_STOP_IMMEDIATE ? FMOD_STUDIO_STOP_IMMEDIATE : FMOD_STUDIO_STOP_ALLOWFADEOUT;
+	return ( int32_t )static_cast<FMOD::Studio::EventInstance *>(pInstance)->stop( eNativeMode );
 }
 
 static int32_t fmodSnapshotReleaseInstance( void *, void *pInstance ) noexcept
 {
-	return ( int32_t )( ( FMOD::Studio::EventInstance * )pInstance )->release();
+	return ( int32_t )static_cast<FMOD::Studio::EventInstance *>(pInstance)->release();
 }
 
 sirFMODSnapshotNativeOps_t sirGetFMODSnapshotNativeOps( void ) noexcept

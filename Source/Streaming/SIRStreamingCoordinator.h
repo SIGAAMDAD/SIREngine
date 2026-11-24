@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSTREAMINGCOORDINATOR_H__
-#define __SIRENGINE_SIRSTREAMINGCOORDINATOR_H__
+#ifndef __SIR_STREAMINGCOORDINATOR_H__
+#define __SIR_STREAMINGCOORDINATOR_H__
 
 #include <Core/SIRPCH.h>
 
@@ -50,22 +50,22 @@ public:
 	// Caller supplies aligned, lifetime-stable storage from SIRMemory's STREAMING
 	// domain in the native runtime. No heap allocation, copy or implicit fallback.
 	static uint64_t requiredBytes( uint32_t nCapacity ) noexcept;
-	sirStreamingResult_t initialize( void *pStorage, uint64_t nStorageBytes, uint32_t nCapacity ) noexcept;
+	SIRStreamingResult initialize( void *pStorage, uint64_t nStorageBytes, uint32_t nCapacity ) noexcept;
 	// Stops only after every provider has acknowledged retirement.
-	sirStreamingResult_t shutdown( void ) noexcept;
+	SIRStreamingResult shutdown( void ) noexcept;
 
 	// Each consumer submits its own demand. The future GRDG coordinator merges
 	// identical physical resource requests without creating duplicate payloads.
-	sirStreamingResult_t submit( const sirStreamingDemand_t& demand, sirStreamingTicket_t *pTicket ) noexcept;
+	SIRStreamingResult submit( const sirStreamingDemand_t& demand, sirStreamingTicket_t *pTicket ) noexcept;
 	// Refresh an existing ticket without restarting its provider work. Cannot
 	// revive cancellation or demote already-active provider resources.
-	sirStreamingResult_t updateDemand( sirStreamingTicket_t ticket, const sirStreamingDemand_t& demand ) noexcept;
-	sirStreamingResult_t query( sirStreamingTicket_t ticket, sirStreamingSnapshot_t *pSnapshot ) const noexcept;
+	SIRStreamingResult updateDemand( sirStreamingTicket_t ticket, const sirStreamingDemand_t& demand ) noexcept;
+	SIRStreamingResult query( sirStreamingTicket_t ticket, sirStreamingSnapshot_t *pSnapshot ) const noexcept;
 	// Owner-thread enumeration for bounded dispatch. Empty slots return NOT_READY.
-	sirStreamingResult_t querySlot( uint32_t iSlot, sirStreamingTicket_t *pTicket, sirStreamingSnapshot_t *pSnapshot ) const noexcept;
-	sirStreamingResult_t advance( sirStreamingTicket_t ticket, sirStreamingStage_t eNextStage ) noexcept;
-	sirStreamingResult_t cancel( sirStreamingTicket_t ticket ) noexcept;
+	SIRStreamingResult querySlot( uint32_t iSlot, sirStreamingTicket_t *pTicket, sirStreamingSnapshot_t *pSnapshot ) const noexcept;
+	SIRStreamingResult advance( sirStreamingTicket_t ticket, SIRStreamingStage eNextStage ) noexcept;
+	SIRStreamingResult cancel( sirStreamingTicket_t ticket ) noexcept;
 	sirStreamingStats_t getStats( void ) const noexcept;
 };
 
-#endif // __SIRENGINE_SIRSTREAMINGCOORDINATOR_H__
+#endif // __SIR_STREAMINGCOORDINATOR_H__

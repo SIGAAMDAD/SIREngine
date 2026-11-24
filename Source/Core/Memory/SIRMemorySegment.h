@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRMEMORYSEGMENT_H__
-#define __SIRENGINE_SIRMEMORYSEGMENT_H__
+#ifndef __SIR_MEMORYSEGMENT_H__
+#define __SIR_MEMORYSEGMENT_H__
 
 #include <Core/SIRPCH.h>
 
@@ -43,7 +43,7 @@ public:
 	uint64_t getReservedBytes( void ) const;
 	uint64_t getCommittedBytes( void ) const;
 	uint64_t getCommitLimitBytes( void ) const;
-	sirMemoryDomain_t getDomain( void ) const;
+	SIRMemoryDomain getDomain( void ) const;
 
 	// Offsets and sizes must be multiples of the OS page size.
 	bool commit( uint64_t nOffset, uint64_t nBytes );
@@ -69,8 +69,8 @@ private:
 	uint64_t m_nCommittedBytes;
 	uint64_t m_nCommitLimitBytes;
 	uint64_t m_nPageCount;
-	sirMemoryDomain_t m_eDomain;
+	SIRMemoryDomain m_eDomain;
 	char m_szName[32];
 };
 
-#endif // __SIRENGINE_SIRMEMORYSEGMENT_H__
+#endif // __SIR_MEMORYSEGMENT_H__

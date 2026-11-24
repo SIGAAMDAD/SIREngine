@@ -23,28 +23,29 @@ bool sirInputDecodeWindowsRawRecord( SIRInputService& service, const RAWINPUT& i
 		return true;
 	}
 	const uint64_t nReceivedNs = SIRPlatformTime::getMonotonicNanoseconds();
-	const sirInputDeviceClass_t eClass = input.header.dwType == RIM_TYPEKEYBOARD ? SIR_INPUT_KEYBOARD : SIR_INPUT_POINTER;
-	const uint64_t nNative = ( uint64_t )( uintptr_t )input.header.hDevice;
+	const SIRInputDeviceClass eClass = input.header.dwType == RIM_TYPEKEYBOARD ? SIRInputDeviceClass::SIR_INPUT_KEYBOARD : SIRInputDeviceClass::SIR_INPUT_POINTER;
+	const uint64_t nNative = static_cast<uint64_t>static_cast<uintptr_t>( input.header.hDevice );
 	if ( nNative == 0 ) {
 		return false;
 	}
-	sirInputDeviceId_t hDevice = {};
-	if ( !service.findDevice( SIR_INPUT_WIN_RAW, nNative, &hDevice ) &&
-	     !service.connect( { 0, nNative, SIR_INPUT_WIN_RAW, eClass }, &hDevice ) ) {
+	sirInputDeviceId_t hDevice {};
+	if ( !service.findDevice( SIRInputBackendId::SIR_INPUT_WIN_RAW, nNative, &hDevice ) &&
+	     !service.connect( { 0, nNative, SIRInputBackendId::SIR_INPUT_WIN_RAW, eClass }, &hDevice ) ) {
 		return false;
 	}
-	if ( eClass == SIR_INPUT_KEYBOARD ) {
+	if ( eClass == SIRInputDeviceClass::SIR_INPUT_KEYBOARD ) {
 		const RAWKEYBOARD& key = input.data.keyboard;
 		if ( key.MakeCode == 0 ) {
 			return true;
 		}
 		const uint16_t nScan =
-		    ( uint16_t )( key.MakeCode | ( ( key.Flags & RI_KEY_E0 ) ? 0x100 : 0 ) | ( ( key.Flags & RI_KEY_E1 ) ? 0x200 : 0 ) );
-		const sirInputControlChange_t change = { SIR_INPUT_BUTTON, nScan, ( key.Flags & RI_KEY_BREAK ) ? 0 : 1 };
-		return service.emitControls( SIR_INPUT_WIN_RAW, hDevice, &change, 1, nReceivedNs );
+		    static_cast<uint16_t>(  key.MakeCode | ( ( key.Flags & RI_KEY_E0 ) ? 0x100 : 0 ) | ( ( key.Flags & RI_KEY_E1 ) ? 0x200 : 0 )  );
+		const sirInputControlChange_t change = { SIRInputSignal::SIR_INPUT_BUTTON, nScan, ( key.Flags & RI_KEY_BREAK ) ? 0 : 1 };
+		return service.emitControls( SIRInputBackendId::SIR_INPUT_WIN_RAW, hDevice, &change, 1, nReceivedNs );
 	}
 	const RAWMOUSE& mouse = input.data.mouse;
-	sirInputControlChange_t changes[10] = {};
+	sirInputControlChange_t changes[10];
+	memset( changes, 0, sizeof( changes ) );
 	uint32_t nCount = 0;
 	const uint16_t nDown[5] = { RI_MOUSE_LEFT_BUTTON_DOWN, RI_MOUSE_RIGHT_BUTTON_DOWN, RI_MOUSE_MIDDLE_BUTTON_DOWN, RI_MOUSE_BUTTON_4_DOWN,
 	                            RI_MOUSE_BUTTON_5_DOWN };
@@ -52,25 +53,25 @@ bool sirInputDecodeWindowsRawRecord( SIRInputService& service, const RAWINPUT& i
 	                          RI_MOUSE_BUTTON_5_UP };
 	for ( uint16_t i = 0; i < 5; ++i ) {
 		if ( ( mouse.usButtonFlags & nDown[i] ) != 0 ) {
-			changes[nCount++] = { SIR_INPUT_BUTTON, i, 1 };
+			changes[nCount++] = { SIRInputSignal::SIR_INPUT_BUTTON, i, 1 };
 		}
 		if ( ( mouse.usButtonFlags & nUp[i] ) != 0 ) {
-			changes[nCount++] = { SIR_INPUT_BUTTON, i, 0 };
+			changes[nCount++] = { SIRInputSignal::SIR_INPUT_BUTTON, i, 0 };
 		}
 	}
-	if ( nCount && !service.emitControls( SIR_INPUT_WIN_RAW, hDevice, changes, nCount, nReceivedNs ) ) {
+	if ( nCount && !service.emitControls( SIRInputBackendId::SIR_INPUT_WIN_RAW, hDevice, changes, nCount, nReceivedNs ) ) {
 		return false;
 	}
 	if ( ( mouse.usFlags & MOUSE_MOVE_ABSOLUTE ) == 0 && ( mouse.lLastX || mouse.lLastY ) &&
-	     !service.emitPointer( SIR_INPUT_WIN_RAW, hDevice, SIR_INPUT_MOTION, 0, mouse.lLastX, mouse.lLastY, nReceivedNs ) ) {
+	     !service.emitPointer( SIRInputBackendId::SIR_INPUT_WIN_RAW, hDevice, SIRInputSignal::SIR_INPUT_MOTION, 0, mouse.lLastX, mouse.lLastY, nReceivedNs ) ) {
 		return false;
 	}
 	if ( ( mouse.usButtonFlags & RI_MOUSE_WHEEL ) &&
-	     !service.emitPointer( SIR_INPUT_WIN_RAW, hDevice, SIR_INPUT_WHEEL, 0, ( SHORT )mouse.usButtonData, 0, nReceivedNs ) ) {
+	     !service.emitPointer( SIRInputBackendId::SIR_INPUT_WIN_RAW, hDevice, SIRInputSignal::SIR_INPUT_WHEEL, 0, static_cast<SHORT>(mouse.usButtonData), 0, nReceivedNs ) ) {
 		return false;
 	}
 	if ( ( mouse.usButtonFlags & RI_MOUSE_HWHEEL ) &&
-	     !service.emitPointer( SIR_INPUT_WIN_RAW, hDevice, SIR_INPUT_WHEEL, 1, ( SHORT )mouse.usButtonData, 0, nReceivedNs ) ) {
+	     !service.emitPointer( SIRInputBackendId::SIR_INPUT_WIN_RAW, hDevice, SIRInputSignal::SIR_INPUT_WHEEL, 1, static_cast<SHORT>(mouse.usButtonData), 0, nReceivedNs ) ) {
 		return false;
 	}
 	return true;
@@ -84,18 +85,18 @@ bool sirInputDecodeWindowsRawBatch( SIRInputService& service, const RAWINPUT *pR
 		return false;
 	}
 
-	const uint8_t *pCursor = ( const uint8_t * )pRecords;
+	const uint8_t *pCursor = static_cast<const uint8_t *>(pRecords);
 	uint32_t nRemaining = nCapacityBytes;
 	for ( uint32_t iRecord = 0; iRecord < nCount; ++iRecord ) {
 		if ( nRemaining < sizeof( RAWINPUTHEADER ) ) {
 			return false;
 		}
 
-		const RAWINPUT *pCurrent = ( const RAWINPUT * )pCursor;
+		const RAWINPUT *pCurrent = static_cast<const RAWINPUT *>(pCursor);
 		const uint32_t nPayloadBytes = pCurrent->header.dwType == RIM_TYPEKEYBOARD ? sizeof( RAWKEYBOARD )
 		                               : pCurrent->header.dwType == RIM_TYPEMOUSE  ? sizeof( RAWMOUSE )
 		                                                                           : sizeof( RAWHID );
-		const uint32_t nRequiredBytes = ( uint32_t )offsetof( RAWINPUT, data ) + nPayloadBytes;
+		const uint32_t nRequiredBytes = static_cast<uint32_t>(offsetof( RAWINPUT, data )) + nPayloadBytes;
 		if ( pCurrent->header.dwSize < nRequiredBytes || pCurrent->header.dwSize > nRemaining ) {
 			return false;
 		}
@@ -113,9 +114,9 @@ bool sirInputDecodeWindowsRawBatch( SIRInputService& service, const RAWINPUT *pR
 	}
 
 	// Publish only after every buffer boundary has been validated.
-	pCursor = ( const uint8_t * )pRecords;
+	pCursor = static_cast<const uint8_t *>(pRecords);
 	for ( uint32_t iRecord = 0; iRecord < nCount; ++iRecord ) {
-		const RAWINPUT *pCurrent = ( const RAWINPUT * )pCursor;
+		const RAWINPUT *pCurrent = static_cast<const RAWINPUT *>(pCursor);
 		if ( !sirInputDecodeWindowsRawRecord( service, *pCurrent ) ) {
 			return false;
 		}

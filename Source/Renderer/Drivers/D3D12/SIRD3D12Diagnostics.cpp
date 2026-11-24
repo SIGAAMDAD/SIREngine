@@ -17,25 +17,25 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <d3d12sdklayers.h>
 #include <wrl/client.h>
 
-sirGraphicsResult_t sirD3D12ClassifyStatus( HRESULT nResult ) noexcept
+SIRGraphicsResult sirD3D12ClassifyStatus( HRESULT nResult ) noexcept
 {
 	if ( SUCCEEDED( nResult ) ) {
-		return SIR_GRAPHICS_SUCCESS;
+		return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 	}
 	if ( nResult == DXGI_ERROR_DEVICE_REMOVED || nResult == DXGI_ERROR_DEVICE_RESET || nResult == DXGI_ERROR_DEVICE_HUNG ||
 	     nResult == DXGI_ERROR_DRIVER_INTERNAL_ERROR ) {
-		return SIR_GRAPHICS_DEVICE_LOST;
+		return SIRGraphicsResult::SIR_GRAPHICS_DEVICE_LOST;
 	}
 	if ( nResult == E_INVALIDARG || nResult == E_POINTER ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( nResult == E_OUTOFMEMORY ) {
-		return SIR_GRAPHICS_OUT_OF_MEMORY;
+		return SIRGraphicsResult::SIR_GRAPHICS_OUT_OF_MEMORY;
 	}
 	if ( nResult == HRESULT_FROM_WIN32( ERROR_TIMEOUT ) || nResult == DXGI_ERROR_WAIT_TIMEOUT ) {
-		return SIR_GRAPHICS_TIMEOUT;
+		return SIRGraphicsResult::SIR_GRAPHICS_TIMEOUT;
 	}
-	return SIR_GRAPHICS_DRIVER_ERROR;
+	return SIRGraphicsResult::SIR_GRAPHICS_DRIVER_ERROR;
 }
 
 SIRD3D12Diagnostics::~SIRD3D12Diagnostics( void ) noexcept
@@ -56,19 +56,19 @@ void SIRD3D12Diagnostics::resetDredConfiguration( void ) noexcept
 	m_bDredConfigurationPending = false;
 }
 
-sirGraphicsResult_t SIRD3D12Diagnostics::configureBeforeDevice( const sirD3D12DiagnosticConfig_t& config ) noexcept
+SIRGraphicsResult SIRD3D12Diagnostics::configureBeforeDevice( const sirD3D12DiagnosticConfig_t& config ) noexcept
 {
 	if ( m_pDevice != nullptr || m_bDredConfigurationPending ) {
-		return SIR_GRAPHICS_BUSY;
+		return SIRGraphicsResult::SIR_GRAPHICS_BUSY;
 	}
 	if ( config.bEnableGpuValidation && !config.bEnableDebugLayer ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	m_Snapshot = {};
 	if ( config.bEnableDred ) {
 		Microsoft::WRL::ComPtr<ID3D12DeviceRemovedExtendedDataSettings> pSettings;
 		if ( FAILED( D3D12GetDebugInterface( IID_PPV_ARGS( pSettings.GetAddressOf() ) ) ) ) {
-			return SIR_GRAPHICS_UNSUPPORTED;
+			return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 		}
 		pSettings->SetAutoBreadcrumbsEnablement( D3D12_DRED_ENABLEMENT_FORCED_ON );
 		pSettings->SetPageFaultEnablement( D3D12_DRED_ENABLEMENT_FORCED_ON );
@@ -79,7 +79,7 @@ sirGraphicsResult_t SIRD3D12Diagnostics::configureBeforeDevice( const sirD3D12Di
 		Microsoft::WRL::ComPtr<ID3D12Debug> pDebug;
 		if ( FAILED( D3D12GetDebugInterface( IID_PPV_ARGS( pDebug.GetAddressOf() ) ) ) ) {
 			resetDredConfiguration();
-			return SIR_GRAPHICS_UNSUPPORTED;
+			return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 		}
 		pDebug->EnableDebugLayer();
 		m_Snapshot.bDebugLayerEnabled = true;
@@ -87,13 +87,13 @@ sirGraphicsResult_t SIRD3D12Diagnostics::configureBeforeDevice( const sirD3D12Di
 			Microsoft::WRL::ComPtr<ID3D12Debug1> pDebug1;
 			if ( FAILED( pDebug.As( &pDebug1 ) ) ) {
 				resetDredConfiguration();
-				return SIR_GRAPHICS_UNSUPPORTED;
+				return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 			}
 			pDebug1->SetEnableGPUBasedValidation( TRUE );
 			m_Snapshot.bGpuValidationEnabled = true;
 		}
 	}
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
 void SIRD3D12Diagnostics::attachDevice( ID3D12Device *pDevice ) noexcept
@@ -117,7 +117,7 @@ void SIRD3D12Diagnostics::captureDred( void ) noexcept
 	if ( FAILED( m_pDevice->QueryInterface( IID_PPV_ARGS( pDred.GetAddressOf() ) ) ) ) {
 		return;
 	}
-	D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT breadcrumbs = {};
+	D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT breadcrumbs {};
 	if ( SUCCEEDED( pDred->GetAutoBreadcrumbsOutput( &breadcrumbs ) ) ) {
 		const D3D12_AUTO_BREADCRUMB_NODE *pNode = breadcrumbs.pHeadAutoBreadcrumbNode;
 		while ( pNode != nullptr && m_Snapshot.nBreadcrumbNodes < 128 ) {
@@ -131,7 +131,7 @@ void SIRD3D12Diagnostics::captureDred( void ) noexcept
 		}
 		m_Snapshot.bDredCaptured = true;
 	}
-	D3D12_DRED_PAGE_FAULT_OUTPUT faults = {};
+	D3D12_DRED_PAGE_FAULT_OUTPUT faults {};
 	if ( SUCCEEDED( pDred->GetPageFaultAllocationOutput( &faults ) ) ) {
 		m_Snapshot.nPageFaultAddress = faults.PageFaultVA;
 		for ( const D3D12_DRED_ALLOCATION_NODE *pNode = faults.pHeadExistingAllocationNode;
@@ -148,16 +148,16 @@ void SIRD3D12Diagnostics::captureDred( void ) noexcept
 
 void SIRD3D12Diagnostics::captureStatus( HRESULT nResult ) noexcept
 {
-	m_Snapshot.nLastHRESULT = ( int32_t )nResult;
+	m_Snapshot.nLastHRESULT = static_cast<int32_t>(nResult);
 	if ( m_pDevice == nullptr ) {
 		return;
 	}
 	const HRESULT nReason = m_pDevice->GetDeviceRemovedReason();
-	m_Snapshot.nDeviceRemovedReason = ( int32_t )nReason;
+	m_Snapshot.nDeviceRemovedReason = static_cast<int32_t>(nReason);
 	if ( FAILED( nReason ) ) {
 		m_Snapshot.bDeviceRemoved = true;
 		captureDred();
-	} else if ( sirD3D12ClassifyStatus( nResult ) == SIR_GRAPHICS_DEVICE_LOST ) {
+	} else if ( sirD3D12ClassifyStatus( nResult ) == SIRGraphicsResult::SIR_GRAPHICS_DEVICE_LOST ) {
 		m_Snapshot.bDeviceRemoved = true;
 		captureDred();
 	}
@@ -182,7 +182,7 @@ bool SIRD3D12Diagnostics::querySnapshot( sirD3D12DiagnosticSnapshot_t *pSnapshot
 		return false;
 	}
 	if ( m_pDevice != nullptr ) {
-		( void )checkHealth();
+		static_cast<void>(checkHealth());
 		if ( m_Snapshot.bDebugLayerEnabled ) {
 			Microsoft::WRL::ComPtr<ID3D12InfoQueue> pMessages;
 			if ( SUCCEEDED( m_pDevice->QueryInterface( IID_PPV_ARGS( pMessages.GetAddressOf() ) ) ) ) {

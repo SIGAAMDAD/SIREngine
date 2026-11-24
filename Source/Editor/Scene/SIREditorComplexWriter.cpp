@@ -22,14 +22,15 @@ bool sirEditorValidateComplexValue( const char *pszValue, uint32_t nLength ) noe
 	if ( pszValue == nullptr || nLength == 0 || nLength > 1024 * 1024 ) {
 		return false;
 	}
-	char szStack[128] = {};
+	char szStack[128];
+	memset( szStack, 0, sizeof( szStack ) );
 	uint32_t nDepth = 0;
 	bool bQuote = false;
 	bool bEscape = false;
 	bool bSawToken = false;
 	for ( uint32_t i = 0; i < nLength; ++i ) {
 		const char c = pszValue[i];
-		if ( c == '\0' || c == '\r' || ( uint8_t )c < 0x20 && c != '\n' && c != '\t' ) {
+		if ( c == '\0' || c == '\r' || static_cast<uint8_t>(c) < 0x20 && c != '\n' && c != '\t' ) {
 			return false;
 		}
 		if ( bQuote ) {
@@ -81,68 +82,68 @@ static bool sirEditorComplexOverlap( const void *pInput, size_t nBytes, uintptr_
 	if ( nBytes == 0 ) {
 		return false;
 	}
-	const uintptr_t nStart = ( uintptr_t )pInput;
+	const uintptr_t nStart = reinterpret_cast<uintptr_t>(pInput);
 	return nBytes > UINTPTR_MAX - nStart || ( nStart < nOutput + nCapacity && nOutput < nStart + nBytes );
 }
 
-sirEditorTextWriteResult_t sirEditorWriteComplexPatches( const char *pszSource, size_t nSourceBytes,
+SIREditorTextWriteResult sirEditorWriteComplexPatches( const char *pszSource, size_t nSourceBytes,
                                                          const sirEditorTextPropertyIndex_t& index, const sirEditorTextEdit_t *pEdits,
                                                          uint32_t nEdits, char *pszOutput, size_t nCapacity, size_t *pOutBytes ) noexcept
 {
 	if ( pOutBytes == nullptr || pszSource == nullptr || ( nEdits != 0 && pEdits == nullptr ) ||
 	     ( pszOutput == nullptr && nCapacity != 0 ) || index.nCount > index.nCapacity ||
 	     ( index.nCount != 0 && index.pProperties == nullptr ) || nEdits > index.nCount || nSourceBytes == SIZE_MAX ) {
-		return SIR_EDITOR_WRITE_INVALID_ARGUMENT;
+		return SIREditorTextWriteResult::SIR_EDITOR_WRITE_INVALID_ARGUMENT;
 	}
-	const uintptr_t nDestination = ( uintptr_t )pszOutput;
+	const uintptr_t nDestination = reinterpret_cast<uintptr_t>(pszOutput);
 	if ( pszOutput != nullptr && ( nCapacity > UINTPTR_MAX - nDestination ||
 	                               sirEditorComplexOverlap( pOutBytes, sizeof( *pOutBytes ), nDestination, nCapacity ) ) ) {
-		return SIR_EDITOR_WRITE_INVALID_ARGUMENT;
+		return SIREditorTextWriteResult::SIR_EDITOR_WRITE_INVALID_ARGUMENT;
 	}
 	*pOutBytes = 0;
 	size_t nNeeded = nSourceBytes;
 	for ( uint32_t i = 0; i < nEdits; ++i ) {
 		const sirEditorTextEdit_t& edit = pEdits[i];
 		if ( edit.iProperty >= index.nCount || !sirEditorValidateComplexValue( edit.pszReplacement, edit.nReplacementBytes ) ) {
-			return SIR_EDITOR_WRITE_INVALID_SCALAR;
+			return SIREditorTextWriteResult::SIR_EDITOR_WRITE_INVALID_SCALAR;
 		}
 		const sirEditorTextProperty_t& property = index.pProperties[edit.iProperty];
 		if ( property.nValueLength == 0 || property.nValueOffset > nSourceBytes ||
 		     property.nValueLength > nSourceBytes - property.nValueOffset ) {
-			return SIR_EDITOR_WRITE_INVALID_SOURCE;
+			return SIREditorTextWriteResult::SIR_EDITOR_WRITE_INVALID_SOURCE;
 		}
 		for ( uint32_t j = 0; j < i; ++j ) {
 			const sirEditorTextProperty_t& previous = index.pProperties[pEdits[j].iProperty];
 			if ( pEdits[j].iProperty == edit.iProperty ||
-			     ( ( uint64_t )previous.nValueOffset < ( uint64_t )property.nValueOffset + property.nValueLength &&
-			       ( uint64_t )property.nValueOffset < ( uint64_t )previous.nValueOffset + previous.nValueLength ) ) {
-				return SIR_EDITOR_WRITE_DUPLICATE_PATCH;
+			     ( static_cast<uint64_t>(previous.nValueOffset) < static_cast<uint64_t>(property.nValueOffset) + property.nValueLength &&
+			       static_cast<uint64_t>(property.nValueOffset) < static_cast<uint64_t>(previous.nValueOffset) + previous.nValueLength ) ) {
+				return SIREditorTextWriteResult::SIR_EDITOR_WRITE_DUPLICATE_PATCH;
 			}
 		}
 		if ( edit.nReplacementBytes > SIZE_MAX - nNeeded ) {
-			return SIR_EDITOR_WRITE_OUT_OF_CAPACITY;
+			return SIREditorTextWriteResult::SIR_EDITOR_WRITE_OUT_OF_CAPACITY;
 		}
 		nNeeded += edit.nReplacementBytes;
 		nNeeded -= property.nValueLength;
 	}
 	*pOutBytes = nNeeded;
 	if ( pszOutput == nullptr && nCapacity == 0 ) {
-		return SIR_EDITOR_WRITE_OK;
+		return SIREditorTextWriteResult::SIR_EDITOR_WRITE_OK;
 	}
 	if ( pszOutput == nullptr || nNeeded == SIZE_MAX || nCapacity <= nNeeded ) {
-		return SIR_EDITOR_WRITE_OUT_OF_CAPACITY;
+		return SIREditorTextWriteResult::SIR_EDITOR_WRITE_OUT_OF_CAPACITY;
 	}
 	if ( sirEditorComplexOverlap( pszSource, nSourceBytes, nDestination, nCapacity ) ||
 	     ( nEdits != 0 && ( nEdits > SIZE_MAX / sizeof( *pEdits ) ||
-	                        sirEditorComplexOverlap( pEdits, ( size_t )nEdits * sizeof( *pEdits ), nDestination, nCapacity ) ) ) ||
+	                        sirEditorComplexOverlap( pEdits, static_cast<size_t>(nEdits * sizeof(  *pEdits  )), nDestination, nCapacity ) ) ) ||
 	     ( index.nCount != 0 && ( index.nCount > SIZE_MAX / sizeof( *index.pProperties ) ||
-	                              sirEditorComplexOverlap( index.pProperties, ( size_t )index.nCount * sizeof( *index.pProperties ),
+	                              sirEditorComplexOverlap( index.pProperties, static_cast<size_t>(index.nCount) * sizeof( *index.pProperties ),
 	                                                       nDestination, nCapacity ) ) ) ) {
-		return SIR_EDITOR_WRITE_INVALID_ARGUMENT;
+		return SIREditorTextWriteResult::SIR_EDITOR_WRITE_INVALID_ARGUMENT;
 	}
 	for ( uint32_t i = 0; i < nEdits; ++i ) {
 		if ( sirEditorComplexOverlap( pEdits[i].pszReplacement, pEdits[i].nReplacementBytes, nDestination, nCapacity ) ) {
-			return SIR_EDITOR_WRITE_INVALID_ARGUMENT;
+			return SIREditorTextWriteResult::SIR_EDITOR_WRITE_INVALID_ARGUMENT;
 		}
 	}
 	size_t nRead = 0;
@@ -158,11 +159,11 @@ sirEditorTextWriteResult_t sirEditorWriteComplexPatches( const char *pszSource, 
 			}
 		}
 		if ( iNext == UINT32_MAX ) {
-			return SIR_EDITOR_WRITE_INVALID_SOURCE;
+			return SIREditorTextWriteResult::SIR_EDITOR_WRITE_INVALID_SOURCE;
 		}
 		const sirEditorTextEdit_t& edit = pEdits[iNext];
 		const sirEditorTextProperty_t& property = index.pProperties[edit.iProperty];
-		const size_t nCopy = ( size_t )nNextOffset - nRead;
+		const size_t nCopy = static_cast<size_t>(nNextOffset - nRead);
 		memcpy( pszOutput + nWrite, pszSource + nRead, nCopy );
 		nWrite += nCopy;
 		memcpy( pszOutput + nWrite, edit.pszReplacement, edit.nReplacementBytes );
@@ -171,5 +172,5 @@ sirEditorTextWriteResult_t sirEditorWriteComplexPatches( const char *pszSource, 
 	}
 	memcpy( pszOutput + nWrite, pszSource + nRead, nSourceBytes - nRead );
 	pszOutput[nNeeded] = '\0';
-	return SIR_EDITOR_WRITE_OK;
+	return SIREditorTextWriteResult::SIR_EDITOR_WRITE_OK;
 }

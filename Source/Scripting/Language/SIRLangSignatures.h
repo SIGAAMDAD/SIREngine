@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRLANGSIGNATURES_H__
-#define __SIRENGINE_SIRLANGSIGNATURES_H__
+#ifndef __SIR_LANGSIGNATURES_H__
+#define __SIR_LANGSIGNATURES_H__
 
 #include <Core/SIRPCH.h>
 
@@ -33,11 +33,10 @@ typedef struct sirLangTypeIdentity_s
 {
 	uint64_t nFingerprint;
 	uint32_t iTypeNode;
-	sirLangValueKind_t eValue;
+	SIRLangValueKind eValue;
 } sirLangTypeIdentity_t;
 
-typedef enum sirLangSignatureError_e : uint8_t
-{
+enum class SIRLangSignatureError : uint8_t {
 	SIR_LANG_SIGNATURE_OK = 0,
 	SIR_LANG_SIGNATURE_INVALID_INPUT,
 	SIR_LANG_SIGNATURE_CAPACITY,
@@ -50,7 +49,7 @@ typedef enum sirLangSignatureError_e : uint8_t
 	SIR_LANG_SIGNATURE_ARGUMENT_TYPE,
 	SIR_LANG_SIGNATURE_RETURN_TYPE,
 	SIR_LANG_SIGNATURE_DEPTH_LIMIT
-} sirLangSignatureError_t;
+};
 
 typedef struct sirLangSignatureParameter_s
 {
@@ -80,7 +79,7 @@ typedef struct sirLangResolvedCall_s
 
 typedef struct sirLangSignatureDiagnostic_s
 {
-	sirLangSignatureError_t eError;
+	SIRLangSignatureError eError;
 	uint32_t iNode;
 	uint32_t nOffset;
 	uint32_t nLine;
@@ -92,10 +91,10 @@ typedef struct sirLangSignatureDiagnostic_s
 typedef struct sirLangExternalSignature_s
 {
 	const char *pszName;
-	const sirLangValueKind_t *pParameterTypes;
+	const SIRLangValueKind *pParameterTypes;
 	const char *const *ppszParameterNames;
 	uint32_t nParameterCount;
-	sirLangValueKind_t eReturnType;
+	SIRLangValueKind eReturnType;
 	uint64_t nFunctionId;
 	uint64_t nSignatureId;
 } sirLangExternalSignature_t;
@@ -124,7 +123,7 @@ typedef struct sirLangSignatureOutput_s
 // Run only after a successful SIRLangAnalyze. Collect all signatures before
 // resolving calls, so calls can target declarations appearing later in source.
 // Invalid/unsupported host call signatures produce explicit diagnostics.
-sirLangSignatureError_t SIRLangResolveSignatures( const sirLangSyntaxTree_t *pTree, const sirLangSemanticOutput_t *pSemantic,
+SIRLangSignatureError SIRLangResolveSignatures( const sirLangSyntaxTree_t *pTree, const sirLangSemanticOutput_t *pSemantic,
                                                   sirLangSignatureOutput_t *pOutput ) noexcept;
 
-#endif // __SIRENGINE_SIRLANGSIGNATURES_H__
+#endif // __SIR_LANGSIGNATURES_H__

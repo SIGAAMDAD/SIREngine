@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRWORLDPARTITION_H__
-#define __SIRENGINE_SIRWORLDPARTITION_H__
+#ifndef __SIR_WORLDPARTITION_H__
+#define __SIR_WORLDPARTITION_H__
 
 #include <Core/SIRPCH.h>
 
@@ -24,20 +24,18 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Streaming/SIRStreamingTypes.h>
 
-typedef enum sirWorldPartitionResult_e : uint8_t
-{
+enum class SIRWorldPartitionResult : uint8_t {
 	SIR_WORLD_PARTITION_OK = 0,
 	SIR_WORLD_PARTITION_INVALID_ARGUMENT = 1,
 	SIR_WORLD_PARTITION_NOT_READY = 2,
 	SIR_WORLD_PARTITION_INVALID_DIRECTORY = 3,
 	SIR_WORLD_PARTITION_OUT_OF_CAPACITY = 4
-} sirWorldPartitionResult_t;
+};
 
-typedef enum sirWorldCellFlags_e : uint32_t
-{
+enum class SIRWorldCellFlags : uint32_t {
 	SIR_WORLD_CELL_FLAG_NONE = 0,
 	SIR_WORLD_CELL_FLAG_ALWAYS_LOADED = 1U << 0
-} sirWorldCellFlags_t;
+};
 
 // This is an in-memory, not serialized, form of a cooked cell directory.
 // Cells must be lexicographically sorted by X, Y, Z at mount time.
@@ -72,7 +70,7 @@ typedef struct sirWorldStreamingSource_s
 	uint32_t nGeneration;
 	uint32_t nRadiusCells;
 	uint32_t nHeightRadiusCells;
-	sirStreamingTarget_t eTarget;
+	SIRStreamingTarget eTarget;
 	uint8_t nPriority;
 	uint16_t nReserved;
 } sirWorldStreamingSource_t;
@@ -91,7 +89,7 @@ private:
 	bool m_bInitialized;
 
 	uint32_t lowerBoundX( int64_t iGridX ) const noexcept;
-	void accumulate( uint32_t iCell, sirStreamingTarget_t eTarget, uint8_t nPriority, uint64_t nDeadlineTick ) noexcept;
+	void accumulate( uint32_t iCell, SIRStreamingTarget eTarget, uint8_t nPriority, uint64_t nDeadlineTick ) noexcept;
 
 public:
 	SIRWorldPartition( void ) noexcept;
@@ -99,7 +97,7 @@ public:
 	SIRWorldPartition& operator=( const SIRWorldPartition& ) = delete;
 
 	static uint64_t requiredBytes( uint32_t nCellCount ) noexcept;
-	sirWorldPartitionResult_t initialize( void *pStorage, uint64_t nStorageBytes, const sirWorldPartitionConfig_t& config,
+	SIRWorldPartitionResult initialize( void *pStorage, uint64_t nStorageBytes, const sirWorldPartitionConfig_t& config,
 	                                      const sirWorldCellDescriptor_t *pCells ) noexcept;
 	void shutdown( void ) noexcept;
 	bool hasCell( uint64_t nCellId ) const noexcept;
@@ -108,9 +106,9 @@ public:
 	// Atomic output: when capacity is insufficient, returns required count and
 	// leaves pDemands unchanged. Layer masks are AND-required (zero = global).
 	// All sources are merged per cell into one partition-owned demand per epoch.
-	sirWorldPartitionResult_t gather( const sirWorldStreamingSource_t *pSources, uint32_t nSourceCount, uint64_t nEnabledLayers,
+	SIRWorldPartitionResult gather( const sirWorldStreamingSource_t *pSources, uint32_t nSourceCount, uint64_t nEnabledLayers,
 	                                  uint32_t nRequestEpoch, sirStreamingDemand_t *pDemands, uint32_t nDemandCapacity,
 	                                  uint32_t *pRequiredCount ) noexcept;
 };
 
-#endif // __SIRENGINE_SIRWORLDPARTITION_H__
+#endif // __SIR_WORLDPARTITION_H__

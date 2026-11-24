@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRLANGTYPESYSTEM_H__
-#define __SIRENGINE_SIRLANGTYPESYSTEM_H__
+#ifndef __SIR_LANGTYPESYSTEM_H__
+#define __SIR_LANGTYPESYSTEM_H__
 
 #include <Core/SIRPCH.h>
 
@@ -27,8 +27,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 constexpr uint32_t SIR_LANG_ABI_REVISION = 1;
 constexpr uint32_t SIR_LANG_MAX_TYPE_ARGUMENTS = 8;
 
-typedef enum sirLangTypeCategory_e : uint8_t
-{
+enum class SIRLangTypeCategory : uint8_t {
 	SIR_LANG_TYPE_SCALAR = 0,
 	SIR_LANG_TYPE_NOMINAL,
 	SIR_LANG_TYPE_ARRAY,
@@ -39,10 +38,9 @@ typedef enum sirLangTypeCategory_e : uint8_t
 	SIR_LANG_TYPE_VARIANT,
 	SIR_LANG_TYPE_HANDLE,
 	SIR_LANG_TYPE_VECTOR
-} sirLangTypeCategory_t;
+};
 
-typedef enum sirLangTypeError_e : uint8_t
-{
+enum class SIRLangTypeError : uint8_t {
 	SIR_LANG_TYPE_OK = 0,
 	SIR_LANG_TYPE_INVALID,
 	SIR_LANG_TYPE_CAPACITY,
@@ -51,15 +49,14 @@ typedef enum sirLangTypeError_e : uint8_t
 	SIR_LANG_TYPE_INVALID_ARGUMENT,
 	SIR_LANG_TYPE_OVERFLOW,
 	SIR_LANG_TYPE_UNSUPPORTED_LAYOUT
-} sirLangTypeError_t;
+};
 
-typedef enum sirLangTypeFlags_e : uint32_t
-{
+enum class SIRLangTypeFlags : uint32_t {
 	SIR_LANG_TYPE_FLAG_PLAIN_VALUE = 1U,
 	SIR_LANG_TYPE_FLAG_BORROWED = 2U,
 	SIR_LANG_TYPE_FLAG_SERIALIZABLE = 4U,
 	SIR_LANG_TYPE_FLAG_RUNTIME_OWNED = 8U
-} sirLangTypeFlags_t;
+};
 
 typedef struct sirLangTypeDescriptor_s
 {
@@ -71,8 +68,8 @@ typedef struct sirLangTypeDescriptor_s
 	uint32_t nCapacity;
 	uint32_t szArgumentTypes[SIR_LANG_MAX_TYPE_ARGUMENTS];
 	uint8_t nArgumentCount;
-	sirLangTypeCategory_t eCategory;
-	sirLangValueKind_t eScalar;
+	SIRLangTypeCategory eCategory;
+	SIRLangValueKind eScalar;
 } sirLangTypeDescriptor_t;
 
 typedef struct sirLangNominalLayout_s
@@ -100,11 +97,11 @@ typedef struct sirLangTypeTable_s
 // Identifiers use a versioned, domain-separated stable encoding. Nominal
 // type IDs include the host-authored schema identity, never source offsets.
 uint64_t SIRLangStableTypeId( uint64_t nModuleId, uint64_t nSchemaId, uint32_t nRevision ) noexcept;
-sirLangTypeError_t SIRLangRegisterScalar( sirLangTypeTable_t *pTable, sirLangValueKind_t eScalar, uint32_t *pIndex ) noexcept;
-sirLangTypeError_t SIRLangRegisterNominal( sirLangTypeTable_t *pTable, const sirLangNominalLayout_t& layout, uint32_t *pIndex ) noexcept;
-sirLangTypeError_t SIRLangConstructType( sirLangTypeTable_t *pTable, sirLangTypeCategory_t eCategory,
+SIRLangTypeError SIRLangRegisterScalar( sirLangTypeTable_t *pTable, SIRLangValueKind eScalar, uint32_t *pIndex ) noexcept;
+SIRLangTypeError SIRLangRegisterNominal( sirLangTypeTable_t *pTable, const sirLangNominalLayout_t& layout, uint32_t *pIndex ) noexcept;
+SIRLangTypeError SIRLangConstructType( sirLangTypeTable_t *pTable, SIRLangTypeCategory eCategory,
                                          const sirLangTypeArguments_t& arguments, uint32_t *pIndex ) noexcept;
 bool SIRLangSameType( const sirLangTypeTable_t *pTable, uint32_t iFirst, uint32_t iSecond ) noexcept;
 const sirLangTypeDescriptor_t *SIRLangGetType( const sirLangTypeTable_t *pTable, uint32_t iType ) noexcept;
 
-#endif // __SIRENGINE_SIRLANGTYPESYSTEM_H__
+#endif // __SIR_LANGTYPESYSTEM_H__

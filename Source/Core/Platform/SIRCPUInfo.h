@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRCPUINFO_H__
-#define __SIRENGINE_SIRCPUINFO_H__
+#ifndef __SIR_CPUINFO_H__
+#define __SIR_CPUINFO_H__
 
 #include <Core/SIRPCH.h>
 
@@ -26,8 +26,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <stdint.h>
 
-typedef enum sirCPUFeature_e : uint64_t
-{
+enum class SIRCPUFeature : uint64_t {
 	SIR_CPU_FEATURE_SSE2 = 1ULL << 0,
 	SIR_CPU_FEATURE_SSE41 = 1ULL << 1,
 	SIR_CPU_FEATURE_SSE42 = 1ULL << 2,
@@ -40,7 +39,7 @@ typedef enum sirCPUFeature_e : uint64_t
 	SIR_CPU_FEATURE_BMI2 = 1ULL << 9,
 	SIR_CPU_FEATURE_AVX512F = 1ULL << 10,
 	SIR_CPU_FEATURE_NEON = 1ULL << 11
-} sirCPUFeature_t;
+};
 
 typedef struct sirCPUInfo_s
 {
@@ -68,4 +67,4 @@ private:
 	static bool queryTopology( sirCPUInfo_t *pInfo ) noexcept;
 };
 
-#endif // __SIRENGINE_SIRCPUINFO_H__
+#endif // __SIR_CPUINFO_H__

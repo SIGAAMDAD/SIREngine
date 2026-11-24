@@ -36,9 +36,9 @@ SIRLinuxEvdevBackend::SIRLinuxEvdevBackend( void ) noexcept
 	}
 }
 
-sirInputBackendId_t SIRLinuxEvdevBackend::id( void ) const noexcept
+SIRInputBackendId SIRLinuxEvdevBackend::id( void ) const noexcept
 {
-	return SIR_INPUT_LINUX_EVDEV;
+	return SIRInputBackendId::SIR_INPUT_LINUX_EVDEV;
 }
 
 uint64_t SIRLinuxEvdevBackend::physicalKey( const char *pszPhys, uint16_t nVendor, uint16_t nProduct ) noexcept
@@ -54,12 +54,12 @@ uint64_t SIRLinuxEvdevBackend::physicalKey( const char *pszPhys, uint16_t nVendo
 		if ( p[0] == '/' && strncmp( p, "/input", 6 ) == 0 && p[6] >= '0' && p[6] <= '9' ) {
 			break;
 		}
-		nHash = ( nHash ^ ( uint8_t )*p ) * UINT64_C( 1099511628211 );
+		nHash = ( nHash ^ static_cast<uint8_t>(*p) ) * UINT64_C( 1099511628211 );
 	}
-	nHash = ( nHash ^ ( uint8_t )( nVendor & 255 ) ) * UINT64_C( 1099511628211 );
-	nHash = ( nHash ^ ( uint8_t )( nVendor >> 8 ) ) * UINT64_C( 1099511628211 );
-	nHash = ( nHash ^ ( uint8_t )( nProduct & 255 ) ) * UINT64_C( 1099511628211 );
-	nHash = ( nHash ^ ( uint8_t )( nProduct >> 8 ) ) * UINT64_C( 1099511628211 );
+	nHash = ( nHash ^ static_cast<uint8_t>( nVendor & 255 ) ) * UINT64_C( 1099511628211 );
+	nHash = ( nHash ^ static_cast<uint8_t>( nVendor >> 8 ) ) * UINT64_C( 1099511628211 );
+	nHash = ( nHash ^ static_cast<uint8_t>( nProduct & 255 ) ) * UINT64_C( 1099511628211 );
+	nHash = ( nHash ^ static_cast<uint8_t>( nProduct >> 8 ) ) * UINT64_C( 1099511628211 );
 	return nHash != 0 ? nHash : 1;
 }
 
@@ -67,39 +67,39 @@ int16_t SIRLinuxEvdevBackend::mapButton( uint16_t nNative ) noexcept
 {
 	switch ( nNative ) {
 	case BTN_SOUTH:
-		return SIR_INPUT_PAD_SOUTH;
+		return SIRInputControllerControl::SIR_INPUT_PAD_SOUTH;
 	case BTN_EAST:
-		return SIR_INPUT_PAD_EAST;
+		return SIRInputControllerControl::SIR_INPUT_PAD_EAST;
 	case BTN_WEST:
-		return SIR_INPUT_PAD_WEST;
+		return SIRInputControllerControl::SIR_INPUT_PAD_WEST;
 	case BTN_NORTH:
-		return SIR_INPUT_PAD_NORTH;
+		return SIRInputControllerControl::SIR_INPUT_PAD_NORTH;
 	case BTN_TL:
-		return SIR_INPUT_PAD_LB;
+		return SIRInputControllerControl::SIR_INPUT_PAD_LB;
 	case BTN_TR:
-		return SIR_INPUT_PAD_RB;
+		return SIRInputControllerControl::SIR_INPUT_PAD_RB;
 	case BTN_SELECT:
-		return SIR_INPUT_PAD_BACK;
+		return SIRInputControllerControl::SIR_INPUT_PAD_BACK;
 	case BTN_START:
-		return SIR_INPUT_PAD_START;
+		return SIRInputControllerControl::SIR_INPUT_PAD_START;
 	case BTN_MODE:
-		return SIR_INPUT_PAD_GUIDE;
+		return SIRInputControllerControl::SIR_INPUT_PAD_GUIDE;
 	case BTN_THUMBL:
-		return SIR_INPUT_PAD_L3;
+		return SIRInputControllerControl::SIR_INPUT_PAD_L3;
 	case BTN_THUMBR:
-		return SIR_INPUT_PAD_R3;
+		return SIRInputControllerControl::SIR_INPUT_PAD_R3;
 	case BTN_DPAD_UP:
-		return SIR_INPUT_PAD_DPAD_UP;
+		return SIRInputControllerControl::SIR_INPUT_PAD_DPAD_UP;
 	case BTN_DPAD_DOWN:
-		return SIR_INPUT_PAD_DPAD_DOWN;
+		return SIRInputControllerControl::SIR_INPUT_PAD_DPAD_DOWN;
 	case BTN_DPAD_LEFT:
-		return SIR_INPUT_PAD_DPAD_LEFT;
+		return SIRInputControllerControl::SIR_INPUT_PAD_DPAD_LEFT;
 	case BTN_DPAD_RIGHT:
-		return SIR_INPUT_PAD_DPAD_RIGHT;
+		return SIRInputControllerControl::SIR_INPUT_PAD_DPAD_RIGHT;
 	case BTN_TL2:
-		return SIR_INPUT_PAD_LT_BUTTON;
+		return SIRInputControllerControl::SIR_INPUT_PAD_LT_BUTTON;
 	case BTN_TR2:
-		return SIR_INPUT_PAD_RT_BUTTON;
+		return SIRInputControllerControl::SIR_INPUT_PAD_RT_BUTTON;
 	default:
 		return -1;
 	}
@@ -109,17 +109,17 @@ int16_t SIRLinuxEvdevBackend::mapAxis( uint16_t nNative ) noexcept
 {
 	switch ( nNative ) {
 	case ABS_X:
-		return SIR_INPUT_AXIS_LX;
+		return SIRInputAxisCode::SIR_INPUT_AXIS_LX;
 	case ABS_Y:
-		return SIR_INPUT_AXIS_LY;
+		return SIRInputAxisCode::SIR_INPUT_AXIS_LY;
 	case ABS_RX:
-		return SIR_INPUT_AXIS_RX;
+		return SIRInputAxisCode::SIR_INPUT_AXIS_RX;
 	case ABS_RY:
-		return SIR_INPUT_AXIS_RY;
+		return SIRInputAxisCode::SIR_INPUT_AXIS_RY;
 	case ABS_Z:
-		return SIR_INPUT_AXIS_LT;
+		return SIRInputAxisCode::SIR_INPUT_AXIS_LT;
 	case ABS_RZ:
-		return SIR_INPUT_AXIS_RT;
+		return SIRInputAxisCode::SIR_INPUT_AXIS_RT;
 	default:
 		return -1;
 	}
@@ -172,14 +172,15 @@ bool SIRLinuxEvdevBackend::loadCookedProfilesFile( const char *pszPath ) noexcep
 	if ( pFile == nullptr ) {
 		return false;
 	}
-	uint8_t szBytes[SIR_INPUT_COOKED_PROFILE_MAX_BYTES + 1] = {};
+	uint8_t szBytes[SIR_INPUT_COOKED_PROFILE_MAX_BYTES + 1];
+	memset( szBytes, 0, sizeof( szBytes ) );
 	const size_t nRead = fread( szBytes, 1, sizeof( szBytes ), pFile );
 	const bool bComplete = ferror( pFile ) == 0 && feof( pFile ) != 0;
 	fclose( pFile );
 	if ( !bComplete || nRead > SIR_INPUT_COOKED_PROFILE_MAX_BYTES ) {
 		return false;
 	}
-	return importCookedProfiles( szBytes, ( uint32_t )nRead );
+	return importCookedProfiles( szBytes, static_cast<uint32_t>(nRead) );
 }
 
 int16_t SIRLinuxEvdevBackend::resolveButton( const sirInputEvdevSlot_t& slot, uint16_t nCode ) noexcept
@@ -193,7 +194,7 @@ int16_t SIRLinuxEvdevBackend::resolveButton( const sirInputEvdevSlot_t& slot, ui
 		// claimed by the selected device profile.
 		const int16_t nFallback = mapButton( nCode );
 		for ( uint16_t i = 0; i < slot.profile.nButtonCount; ++i ) {
-			if ( nFallback == ( int16_t )slot.profile.buttons[i].nLogicalCode ) {
+			if ( nFallback == static_cast<int16_t>(slot.profile.buttons[i].nLogicalCode) ) {
 				return -1;
 			}
 		}
@@ -208,12 +209,12 @@ int32_t SIRLinuxEvdevBackend::normalize( int32_t nValue, int32_t nMinimum, int32
 		return 0;
 	}
 	const int64_t nClamped = nValue < nMinimum ? nMinimum : ( nValue > nMaximum ? nMaximum : nValue );
-	const int64_t nScaled = ( nClamped - nMinimum ) * ( bTrigger ? 32767 : 65534 ) / ( nMaximum - ( int64_t )nMinimum );
-	const int32_t nOut = ( int32_t )( bTrigger ? nScaled : nScaled - 32767 );
+	const int64_t nScaled = ( nClamped - nMinimum ) * ( bTrigger ? 32767 : 65534 ) / ( nMaximum - static_cast<int64_t>(nMinimum) );
+	const int32_t nOut = static_cast<int32_t>( bTrigger ? nScaled : nScaled - 32767 );
 	return nOut;
 }
 
-bool SIRLinuxEvdevBackend::queueChange( sirInputEvdevSlot_t& slot, sirInputSignal_t eSignal, uint16_t nCode, int32_t nValue ) noexcept
+bool SIRLinuxEvdevBackend::queueChange( sirInputEvdevSlot_t& slot, SIRInputSignal eSignal, uint16_t nCode, int32_t nValue ) noexcept
 {
 	if ( slot.nPending >= SIR_INPUT_EVDEV_REPORT_CAPACITY ) {
 		slot.bDesynchronized = true;
@@ -255,26 +256,27 @@ bool SIRLinuxEvdevBackend::openDevice( SIRInputService& service, const char *psz
 	unsigned long nKeyBits[( KEY_MAX + sizeof( unsigned long ) * 8 ) / ( sizeof( unsigned long ) * 8 )] = {};
 	const uint32_t nWord = BTN_GAMEPAD / ( sizeof( unsigned long ) * 8 );
 	const uint32_t nMask = BTN_GAMEPAD % ( sizeof( unsigned long ) * 8 );
-	struct stat info = {};
+	struct stat info {};
 	if ( ioctl( nFd, EVIOCGBIT( EV_KEY, sizeof( nKeyBits ) ), nKeyBits ) < 0 || ( nKeyBits[nWord] & ( 1UL << nMask ) ) == 0 ||
 	     fstat( nFd, &info ) != 0 || !S_ISCHR( info.st_mode ) ) {
 		close( nFd );
 		return false;
 	}
-	const uint64_t nNative = ( ( uint64_t )info.st_rdev << 32 ) ^ ( uint64_t )info.st_ino;
+	const uint64_t nNative = ( static_cast<uint64_t>(info.st_rdev) << 32 ) ^ static_cast<uint64_t>(info.st_ino);
 	if ( nNative == 0 ) {
 		close( nFd );
 		return false;
 	}
-	input_id physicalIdentity = {};
-	char szPhysicalPath[256] = {};
+	input_id physicalIdentity {};
+	char szPhysicalPath[256];
+	memset( szPhysicalPath, 0, sizeof( szPhysicalPath ) );
 	const bool bHasIdentity = ioctl( nFd, EVIOCGID, &physicalIdentity ) == 0;
 	const bool bHasPath = ioctl( nFd, EVIOCGPHYS( sizeof( szPhysicalPath ) ), szPhysicalPath ) > 0;
 	szPhysicalPath[sizeof( szPhysicalPath ) - 1] = 0;
 	const uint64_t nPhysical =
 	    bHasPath && bHasIdentity ? physicalKey( szPhysicalPath, physicalIdentity.vendor, physicalIdentity.product ) : 0;
-	sirInputDeviceId_t idOut = {};
-	if ( !service.connect( { nPhysical, nNative, id(), SIR_INPUT_CONTROLLER }, &idOut ) ) {
+	sirInputDeviceId_t idOut {};
+	if ( !service.connect( { nPhysical, nNative, id(), SIRInputDeviceClass::SIR_INPUT_CONTROLLER }, &idOut ) ) {
 		close( nFd );
 		return false;
 	}
@@ -288,7 +290,7 @@ bool SIRLinuxEvdevBackend::openDevice( SIRInputService& service, const char *psz
 	const int nClockId = CLOCK_MONOTONIC;
 	slot.bClockMonotonic = ioctl( nFd, EVIOCSCLOCKID, &nClockId ) == 0;
 	memcpy( slot.szPath, pszPath, strlen( pszPath ) + 1 );
-	input_id deviceIdentity = {};
+	input_id deviceIdentity {};
 	if ( ioctl( nFd, EVIOCGID, &deviceIdentity ) == 0 ) {
 		const sirInputControllerProfile_t *pProfile =
 		    m_Profiles.find( deviceIdentity.bustype, deviceIdentity.vendor, deviceIdentity.product );
@@ -303,8 +305,8 @@ bool SIRLinuxEvdevBackend::openDevice( SIRInputService& service, const char *psz
 	    ( !slot.bHasProfile || !slot.profile.bReplaceButtons );
 	if ( slot.bHasProfile ) {
 		for ( uint16_t i = 0; i < slot.profile.nButtonCount; ++i ) {
-			if ( slot.profile.buttons[i].nLogicalCode >= SIR_INPUT_PAD_DPAD_UP &&
-			     slot.profile.buttons[i].nLogicalCode <= SIR_INPUT_PAD_DPAD_RIGHT ) {
+			if ( slot.profile.buttons[i].nLogicalCode >= SIRInputControllerControl::SIR_INPUT_PAD_DPAD_UP &&
+			     slot.profile.buttons[i].nLogicalCode <= SIRInputControllerControl::SIR_INPUT_PAD_DPAD_RIGHT ) {
 				slot.bHatDPad = false;
 			}
 		}
@@ -318,12 +320,13 @@ bool SIRLinuxEvdevBackend::openDevice( SIRInputService& service, const char *psz
 	slot.bCanRumble =
 	    bWrite && ioctl( nFd, EVIOCGBIT( EV_FF, sizeof( nFF ) ), nFF ) >= 0 &&
 	    ( nFF[FF_RUMBLE / ( sizeof( unsigned long ) * 8 )] & ( 1UL << ( FF_RUMBLE % ( sizeof( unsigned long ) * 8 ) ) ) ) != 0;
-	uint16_t nCodes[SIR_INPUT_AXIS_COUNT] = { ABS_X, ABS_Y, ABS_RX, ABS_RY, ABS_Z, ABS_RZ };
-	bool bInvert[SIR_INPUT_AXIS_COUNT] = { false, true, false, true, false, false };
-	bool bExplicit[SIR_INPUT_AXIS_COUNT] = {};
+	uint16_t nCodes[SIRInputAxisCode::SIR_INPUT_AXIS_COUNT] = { ABS_X, ABS_Y, ABS_RX, ABS_RY, ABS_Z, ABS_RZ };
+	bool bInvert[SIRInputAxisCode::SIR_INPUT_AXIS_COUNT] = { false, true, false, true, false, false };
+	bool bExplicit[SIRInputAxisCode::SIR_INPUT_AXIS_COUNT];
+	memset( bExplicit, 0, sizeof( bExplicit ) );
 	if ( slot.bHasProfile ) {
 		if ( slot.profile.bReplaceAxes ) {
-			for ( uint16_t i = 0; i < SIR_INPUT_AXIS_COUNT; ++i ) {
+			for ( uint16_t i = 0; i < SIRInputAxisCode::SIR_INPUT_AXIS_COUNT; ++i ) {
 				nCodes[i] = UINT16_MAX;
 			}
 		}
@@ -334,11 +337,11 @@ bool SIRLinuxEvdevBackend::openDevice( SIRInputService& service, const char *psz
 			bExplicit[binding.nLogicalCode] = true;
 		}
 		// An overridden hardware axis must have exactly one logical owner.
-		for ( uint16_t i = 0; i < SIR_INPUT_AXIS_COUNT; ++i ) {
+		for ( uint16_t i = 0; i < SIRInputAxisCode::SIR_INPUT_AXIS_COUNT; ++i ) {
 			if ( bExplicit[i] || nCodes[i] == UINT16_MAX ) {
 				continue;
 			}
-			for ( uint16_t j = 0; j < SIR_INPUT_AXIS_COUNT; ++j ) {
+			for ( uint16_t j = 0; j < SIRInputAxisCode::SIR_INPUT_AXIS_COUNT; ++j ) {
 				if ( bExplicit[j] && nCodes[i] == nCodes[j] ) {
 					nCodes[i] = UINT16_MAX;
 					break;
@@ -346,11 +349,11 @@ bool SIRLinuxEvdevBackend::openDevice( SIRInputService& service, const char *psz
 			}
 		}
 	}
-	for ( uint16_t i = 0; i < SIR_INPUT_AXIS_COUNT; ++i ) {
-		input_absinfo axis = {};
+	for ( uint16_t i = 0; i < SIRInputAxisCode::SIR_INPUT_AXIS_COUNT; ++i ) {
+		input_absinfo axis {};
 		const uint16_t nCode = nCodes[i];
 		const bool bValid = nCode != UINT16_MAX && ioctl( nFd, EVIOCGABS( nCode ), &axis ) == 0 && axis.maximum > axis.minimum;
-		slot.axes[i] = { axis.minimum, axis.maximum, nCode, i >= SIR_INPUT_AXIS_LT, bValid, bInvert[i] };
+		slot.axes[i] = { axis.minimum, axis.maximum, nCode, i >= SIRInputAxisCode::SIR_INPUT_AXIS_LT, bValid, bInvert[i] };
 	}
 	// Initial snapshot from actual evdev state, not assumed-neutral inputs.
 	if ( !requery( service, slot, false ) ) {
@@ -387,7 +390,7 @@ bool SIRLinuxEvdevBackend::discover( SIRInputService& service, const char *pszDi
 		}
 		char szPath[512];
 		const int nLen = snprintf( szPath, sizeof( szPath ), "%s/%s", pszDir, pEntry->d_name );
-		if ( nLen > 0 && nLen < ( int )sizeof( szPath ) ) {
+		if ( nLen > 0 && nLen < static_cast<int>(sizeof( szPath ) )) {
 			openDevice( service, szPath );
 		}
 	}
@@ -398,7 +401,8 @@ bool SIRLinuxEvdevBackend::discover( SIRInputService& service, const char *pszDi
 bool SIRLinuxEvdevBackend::requery( SIRInputService& service, sirInputEvdevSlot_t& slot, bool bReset ) noexcept
 {
 	unsigned long nKeys[( KEY_MAX + sizeof( unsigned long ) * 8 ) / ( sizeof( unsigned long ) * 8 )] = {};
-	sirInputControlChange_t changes[SIR_INPUT_EVDEV_REPORT_CAPACITY] = {};
+	sirInputControlChange_t changes[SIR_INPUT_EVDEV_REPORT_CAPACITY];
+	memset( changes, 0, sizeof( changes ) );
 	uint32_t nCount = 0;
 	if ( ioctl( slot.nFd, EVIOCGKEY( sizeof( nKeys ) ), nKeys ) < 0 ) {
 		return false;
@@ -415,20 +419,20 @@ bool SIRLinuxEvdevBackend::requery( SIRInputService& service, sirInputEvdevSlot_
 			if ( nCount == SIR_INPUT_EVDEV_REPORT_CAPACITY ) {
 				return false;
 			}
-			changes[nCount++] = { SIR_INPUT_BUTTON, ( uint16_t )nLogical, 1 };
+			changes[nCount++] = { SIRInputSignal::SIR_INPUT_BUTTON, static_cast<uint16_t>(nLogical), 1 };
 		}
 	}
 
 	// A failed read of a previously discovered axis invalidates the entire
 	// recovery. Never publish a neutral/partial analog snapshot as real data.
-	for ( uint16_t i = 0; i < SIR_INPUT_AXIS_COUNT; ++i ) {
+	for ( uint16_t i = 0; i < SIRInputAxisCode::SIR_INPUT_AXIS_COUNT; ++i ) {
 		if ( !slot.axes[i].bValid ) {
 			continue;
 		}
 		if ( nCount == SIR_INPUT_EVDEV_REPORT_CAPACITY ) {
 			return false;
 		}
-		input_absinfo axis = {};
+		input_absinfo axis {};
 		if ( ioctl( slot.nFd, EVIOCGABS( slot.axes[i].nCode ), &axis ) != 0 ) {
 			return false;
 		}
@@ -436,7 +440,7 @@ bool SIRLinuxEvdevBackend::requery( SIRInputService& service, sirInputEvdevSlot_
 		if ( slot.axes[i].bInvert ) {
 			nValue = -nValue;
 		}
-		changes[nCount++] = { SIR_INPUT_AXIS, i, nValue };
+		changes[nCount++] = { SIRInputSignal::SIR_INPUT_AXIS, i, nValue };
 	}
 
 	int8_t nHatX = slot.nHatX;
@@ -449,12 +453,12 @@ bool SIRLinuxEvdevBackend::requery( SIRInputService& service, sirInputEvdevSlot_
 		if ( ioctl( slot.nFd, EVIOCGABS( ABS_HAT0X ), &x ) != 0 || ioctl( slot.nFd, EVIOCGABS( ABS_HAT0Y ), &y ) != 0 ) {
 			return false;
 		}
-		nHatX = ( int8_t )( x.value < 0 ? -1 : x.value > 0 ? 1 : 0 );
-		nHatY = ( int8_t )( y.value < 0 ? -1 : y.value > 0 ? 1 : 0 );
-		changes[nCount++] = { SIR_INPUT_BUTTON, SIR_INPUT_PAD_DPAD_LEFT, nHatX < 0 ? 1 : 0 };
-		changes[nCount++] = { SIR_INPUT_BUTTON, SIR_INPUT_PAD_DPAD_RIGHT, nHatX > 0 ? 1 : 0 };
-		changes[nCount++] = { SIR_INPUT_BUTTON, SIR_INPUT_PAD_DPAD_UP, nHatY < 0 ? 1 : 0 };
-		changes[nCount++] = { SIR_INPUT_BUTTON, SIR_INPUT_PAD_DPAD_DOWN, nHatY > 0 ? 1 : 0 };
+		nHatX = static_cast<int8_t>( x.value < 0 ? -1 : x.value > 0 ? 1 : 0 );
+		nHatY = static_cast<int8_t>( y.value < 0 ? -1 : y.value > 0 ? 1 : 0 );
+		changes[nCount++] = { SIRInputSignal::SIR_INPUT_BUTTON, SIRInputControllerControl::SIR_INPUT_PAD_DPAD_LEFT, nHatX < 0 ? 1 : 0 };
+		changes[nCount++] = { SIRInputSignal::SIR_INPUT_BUTTON, SIRInputControllerControl::SIR_INPUT_PAD_DPAD_RIGHT, nHatX > 0 ? 1 : 0 };
+		changes[nCount++] = { SIRInputSignal::SIR_INPUT_BUTTON, SIRInputControllerControl::SIR_INPUT_PAD_DPAD_UP, nHatY < 0 ? 1 : 0 };
+		changes[nCount++] = { SIRInputSignal::SIR_INPUT_BUTTON, SIRInputControllerControl::SIR_INPUT_PAD_DPAD_DOWN, nHatY > 0 ? 1 : 0 };
 	}
 
 	const bool bCommitted =
@@ -473,7 +477,7 @@ void SIRLinuxEvdevBackend::closeDevice( SIRInputService& service, sirInputEvdevS
 		return;
 	}
 	if ( slot.nRumbleEffect >= 0 ) {
-		input_event stop = {};
+		input_event stop {};
 		stop.type = EV_FF;
 		stop.code = slot.nRumbleEffect;
 		write( slot.nFd, &stop, sizeof( stop ) );
@@ -498,10 +502,10 @@ void SIRLinuxEvdevBackend::pollHotplug( SIRInputService& service ) noexcept
 			break;
 		}
 		size_t nOffset = 0;
-		while ( nOffset + sizeof( inotify_event ) <= ( size_t )nRead ) {
-			const inotify_event *pEvent = ( const inotify_event * )( szEvents + nOffset );
+		while ( nOffset + sizeof( inotify_event ) <= static_cast<size_t>(nRead) ) {
+			const inotify_event *pEvent = static_cast<const inotify_event *>( szEvents + nOffset );
 			const size_t nStep = sizeof( inotify_event ) + pEvent->len;
-			if ( nStep > ( size_t )nRead - nOffset ) {
+			if ( nStep > static_cast<size_t>( static_cast<nRead>( - nOffset ) ) ) {
 				break;
 			}
 			if ( ( pEvent->mask & IN_Q_OVERFLOW ) != 0 ) {
@@ -510,7 +514,7 @@ void SIRLinuxEvdevBackend::pollHotplug( SIRInputService& service ) noexcept
 			if ( pEvent->len > 5 && strncmp( pEvent->name, "event", 5 ) == 0 ) {
 				char szPath[512];
 				const int nSize = snprintf( szPath, sizeof( szPath ), "%s/%s", m_szDirectory, pEvent->name );
-				if ( nSize > 0 && nSize < ( int )sizeof( szPath ) ) {
+				if ( nSize > 0 && nSize < static_cast<int>(sizeof( szPath ) )) {
 					if ( ( pEvent->mask & ( IN_CREATE | IN_MOVED_TO ) ) != 0 ) {
 						openDevice( service, szPath );
 					} else if ( ( pEvent->mask & ( IN_DELETE | IN_MOVED_FROM ) ) != 0 ) {
@@ -546,7 +550,8 @@ void SIRLinuxEvdevBackend::sample( SIRInputService& service ) noexcept
 		}
 		// Read complete evdev records in bounded batches. Preserve SYN_REPORT
 		// boundaries and keep incomplete device reports across read calls.
-		input_event szEvents[64] = {};
+		input_event szEvents[64];
+		memset( szEvents, 0, sizeof( szEvents ) );
 		uint32_t nConsumed = 0;
 		uint32_t nInterrupted = 0;
 		while ( nConsumed < 512 ) {
@@ -562,11 +567,11 @@ void SIRLinuxEvdevBackend::sample( SIRInputService& service ) noexcept
 			if ( nRead < 0 && ( errno == EAGAIN || errno == EWOULDBLOCK ) ) {
 				break;
 			}
-			if ( nRead <= 0 || ( ( size_t )nRead % sizeof( szEvents[0] ) ) != 0 ) {
+			if ( nRead <= 0 || ( static_cast<size_t>(nRead) % sizeof( szEvents[0] ) ) != 0 ) {
 				closeDevice( service, slot );
 				break;
 			}
-			const uint32_t nRecords = ( uint32_t )( ( size_t )nRead / sizeof( szEvents[0] ) );
+			const uint32_t nRecords = ( uint32_t )( static_cast<size_t>(nRead) / sizeof( szEvents[0] ) );
 			nConsumed += nRecords;
 			for ( uint32_t iEvent = 0; iEvent < nRecords; ++iEvent ) {
 				const input_event& event = szEvents[iEvent];
@@ -584,11 +589,11 @@ void SIRLinuxEvdevBackend::sample( SIRInputService& service ) noexcept
 					} else if ( slot.nPending != 0 ) {
 						uint64_t nSourceNs = 0;
 						if ( slot.bClockMonotonic && event.time.tv_sec >= 0 && event.time.tv_usec >= 0 && event.time.tv_usec < 1000000 &&
-						     ( uint64_t )event.time.tv_sec <= ( UINT64_MAX - 999999000ULL ) / 1000000000ULL ) {
-							nSourceNs = ( uint64_t )event.time.tv_sec * 1000000000ULL + ( uint64_t )event.time.tv_usec * 1000ULL;
+						     static_cast<uint64_t>(event.time.tv_sec) <= ( UINT64_MAX - 999999000ULL ) / 1000000000ULL ) {
+							nSourceNs = static_cast<uint64_t>(event.time.tv_sec) * 1000000000ULL + static_cast<uint64_t>(event.time.tv_usec) * 1000ULL;
 						}
 						service.emitControls( id(), slot.id, slot.pending, slot.nPending, nSourceNs,
-						                      nSourceNs != 0 ? SIR_INPUT_CLOCK_EVDEV_MONOTONIC : SIR_INPUT_CLOCK_ENGINE_MONOTONIC );
+						                      nSourceNs != 0 ? SIRInputClockSource::SIR_INPUT_CLOCK_EVDEV_MONOTONIC : SIRInputClockSource::SIR_INPUT_CLOCK_ENGINE_MONOTONIC );
 						slot.nPending = 0;
 					}
 					continue;
@@ -599,36 +604,36 @@ void SIRLinuxEvdevBackend::sample( SIRInputService& service ) noexcept
 				if ( event.type == EV_KEY ) {
 					const int16_t nMapped = resolveButton( slot, event.code );
 					if ( nMapped >= 0 && event.value <= 1 &&
-					     ( !slot.bHatDPad || nMapped < SIR_INPUT_PAD_DPAD_UP || nMapped > SIR_INPUT_PAD_DPAD_RIGHT ) ) {
-						queueChange( slot, SIR_INPUT_BUTTON, ( uint16_t )nMapped, event.value );
+					     ( !slot.bHatDPad || nMapped < SIRInputControllerControl::SIR_INPUT_PAD_DPAD_UP || nMapped > SIRInputControllerControl::SIR_INPUT_PAD_DPAD_RIGHT ) ) {
+						queueChange( slot, SIRInputSignal::SIR_INPUT_BUTTON, static_cast<uint16_t>(nMapped), event.value );
 					}
 				} else if ( event.type == EV_ABS ) {
 					if ( slot.bHatDPad && event.code == ABS_HAT0X ) {
-						const int8_t nValue = ( int8_t )( event.value < 0 ? -1 : event.value > 0 ? 1 : 0 );
+						const int8_t nValue = static_cast<int8_t>( event.value < 0 ? -1 : event.value > 0 ? 1 : 0 );
 						if ( nValue != slot.nHatX ) {
-							queueChange( slot, SIR_INPUT_BUTTON, SIR_INPUT_PAD_DPAD_LEFT, nValue < 0 ? 1 : 0 );
-							queueChange( slot, SIR_INPUT_BUTTON, SIR_INPUT_PAD_DPAD_RIGHT, nValue > 0 ? 1 : 0 );
+							queueChange( slot, SIRInputSignal::SIR_INPUT_BUTTON, SIRInputControllerControl::SIR_INPUT_PAD_DPAD_LEFT, nValue < 0 ? 1 : 0 );
+							queueChange( slot, SIRInputSignal::SIR_INPUT_BUTTON, SIRInputControllerControl::SIR_INPUT_PAD_DPAD_RIGHT, nValue > 0 ? 1 : 0 );
 							slot.nHatX = nValue;
 						}
 						continue;
 					}
 					if ( slot.bHatDPad && event.code == ABS_HAT0Y ) {
-						const int8_t nValue = ( int8_t )( event.value < 0 ? -1 : event.value > 0 ? 1 : 0 );
+						const int8_t nValue = static_cast<int8_t>( event.value < 0 ? -1 : event.value > 0 ? 1 : 0 );
 						if ( nValue != slot.nHatY ) {
-							queueChange( slot, SIR_INPUT_BUTTON, SIR_INPUT_PAD_DPAD_UP, nValue < 0 ? 1 : 0 );
-							queueChange( slot, SIR_INPUT_BUTTON, SIR_INPUT_PAD_DPAD_DOWN, nValue > 0 ? 1 : 0 );
+							queueChange( slot, SIRInputSignal::SIR_INPUT_BUTTON, SIRInputControllerControl::SIR_INPUT_PAD_DPAD_UP, nValue < 0 ? 1 : 0 );
+							queueChange( slot, SIRInputSignal::SIR_INPUT_BUTTON, SIRInputControllerControl::SIR_INPUT_PAD_DPAD_DOWN, nValue > 0 ? 1 : 0 );
 							slot.nHatY = nValue;
 						}
 						continue;
 					}
-					for ( uint16_t iAxis = 0; iAxis < SIR_INPUT_AXIS_COUNT; ++iAxis ) {
+					for ( uint16_t iAxis = 0; iAxis < SIRInputAxisCode::SIR_INPUT_AXIS_COUNT; ++iAxis ) {
 						const sirInputEvdevAxis_t& axis = slot.axes[iAxis];
 						if ( axis.bValid && axis.nCode == event.code ) {
 							int32_t nNormalized = normalize( event.value, axis.nMinimum, axis.nMaximum, axis.bTrigger );
 							if ( axis.bInvert ) {
 								nNormalized = -nNormalized;
 							}
-							queueChange( slot, SIR_INPUT_AXIS, iAxis, nNormalized );
+							queueChange( slot, SIRInputSignal::SIR_INPUT_AXIS, iAxis, nNormalized );
 							break;
 						}
 					}
@@ -645,7 +650,7 @@ bool SIRLinuxEvdevBackend::vibrate( sirInputDeviceId_t id, uint16_t nLeft, uint1
 		if ( !slot.bOpen || !slot.bCanRumble || slot.id.nSlot != id.nSlot || slot.id.nGeneration != id.nGeneration ) {
 			continue;
 		}
-		ff_effect effect = {};
+		ff_effect effect {};
 		effect.type = FF_RUMBLE;
 		effect.id = slot.nRumbleEffect;
 		effect.u.rumble.strong_magnitude = nLeft;
@@ -655,7 +660,7 @@ bool SIRLinuxEvdevBackend::vibrate( sirInputDeviceId_t id, uint16_t nLeft, uint1
 			return false;
 		}
 		slot.nRumbleEffect = effect.id;
-		input_event play = {};
+		input_event play {};
 		play.type = EV_FF;
 		play.code = effect.id;
 		play.value = ( nLeft || nRight ) ? 1 : 0;
@@ -669,10 +674,10 @@ uint32_t SIRLinuxEvdevBackend::hapticCapabilities( sirInputDeviceId_t hDevice ) 
 	for ( uint32_t i = 0; i < SIR_INPUT_EVDEV_CAPACITY; ++i ) {
 		const sirInputEvdevSlot_t& slot = m_Slots[i];
 		if ( slot.bOpen && slot.bCanRumble && slot.id.nSlot == hDevice.nSlot && slot.id.nGeneration == hDevice.nGeneration ) {
-			return SIR_INPUT_HAPTIC_CAP_RUMBLE;
+			return SIRInputHapticCapability::SIR_INPUT_HAPTIC_CAP_RUMBLE;
 		}
 	}
-	return SIR_INPUT_HAPTIC_CAP_NONE;
+	return SIRInputHapticCapability::SIR_INPUT_HAPTIC_CAP_NONE;
 }
 
 void SIRLinuxEvdevBackend::stop( SIRInputService& service ) noexcept

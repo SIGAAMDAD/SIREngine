@@ -12,8 +12,8 @@ express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIRMESHCOLLISIONBVH_H__
-#define __SIRENGINE_SIRMESHCOLLISIONBVH_H__
+#ifndef __SIR_MESHCOLLISIONBVH_H__
+#define __SIR_MESHCOLLISIONBVH_H__
 
 #include <Core/SIRPCH.h>
 
@@ -52,16 +52,16 @@ public:
 	uint32_t getTriangleCount( void ) const noexcept;
 	uint32_t getReaderCount( void ) const noexcept;
 	bool matchesSource( const SIRMeshCollisionSource& source ) const noexcept;
-	sirMeshResult_t getBounds( float *pMinXYZ, float *pMaxXYZ ) const noexcept;
-	sirMeshResult_t acquireReader( void ) noexcept;
-	sirMeshResult_t releaseReader( void ) noexcept;
+	SIRMeshResult getBounds( float *pMinXYZ, float *pMaxXYZ ) const noexcept;
+	SIRMeshResult acquireReader( void ) noexcept;
+	SIRMeshResult releaseReader( void ) noexcept;
 
 	static uint64_t requiredBytes( uint32_t nTriangles ) noexcept;
 	static uint32_t requiredAlignment( void ) noexcept;
 
-	sirMeshResult_t initialize( SIRMeshCollisionSource& source, void *pStorage, uint64_t nStorageBytes ) noexcept;
-	sirMeshResult_t raycast( const sirMeshCollisionRay_t& ray, sirMeshCollisionHit_t *pHit ) const noexcept;
-	sirMeshResult_t shutdown( void ) noexcept;
+	SIRMeshResult initialize( SIRMeshCollisionSource& source, void *pStorage, uint64_t nStorageBytes ) noexcept;
+	SIRMeshResult raycast( const sirMeshCollisionRay_t& ray, sirMeshCollisionHit_t *pHit ) const noexcept;
+	SIRMeshResult shutdown( void ) noexcept;
 
 protected:
 private:
@@ -79,4 +79,4 @@ private:
 	bool m_bReady;
 };
 
-#endif // __SIRENGINE_SIRMESHCOLLISIONBVH_H__
+#endif // __SIR_MESHCOLLISIONBVH_H__

@@ -12,8 +12,8 @@ express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIRNATIVEWINDOWHOST_H__
-#define __SIRENGINE_SIRNATIVEWINDOWHOST_H__
+#ifndef __SIR_NATIVE_WINDOW_HOST_H__
+#define __SIR_NATIVE_WINDOW_HOST_H__
 
 #include <Core/SIRPCH.h>
 
@@ -32,4 +32,4 @@ int sirRunNativeWindowHosts( const sirWindowCreateDesc_t *pDescs, uint32_t nWind
 int sirRunWindowHostWithDriver( SIRWindowDriver& driver, const sirWindowCreateDesc_t& desc ) noexcept;
 int sirRunNativeWindowHost( const sirWindowCreateDesc_t& desc ) noexcept;
 
-#endif // __SIRENGINE_SIRNATIVEWINDOWHOST_H__
+#endif // __SIR_NATIVE_WINDOW_HOST_H__

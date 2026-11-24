@@ -13,10 +13,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRWEAKPTR_H__
-#define __SIRENGINE_SIRWEAKPTR_H__
+#ifndef __SIR_WEAKPTR_H__
+#define __SIR_WEAKPTR_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -25,6 +25,6 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 // Shared/weak ownership share a single control-block implementation.
-#include <Core/Memory/SIRSharedPtr.h>
+#include <Core/Memory/Pointers/SIRSharedPtr.h>
 
-#endif // __SIRENGINE_SIRWEAKPTR_H__
+#endif // __SIR_WEAKPTR_H__

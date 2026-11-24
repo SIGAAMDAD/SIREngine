@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef SIRENGINE_SIRRESOURCEREVISIONPTR_H
-#define SIRENGINE_SIRRESOURCEREVISIONPTR_H
+#ifndef __SIR_RESOURCEREVISIONPTR_H__
+#define __SIR_RESOURCEREVISIONPTR_H__
 
 #include <Core/SIRPCH.h>
 
@@ -57,7 +57,7 @@ public:
 	SIRResourceResult reset( void ) noexcept
 	{
 		const SIRResourceResult eResult = m_Pin.reset();
-		if ( eResult == SIR_RESOURCE_RESULT_SUCCESS ) {
+		if ( eResult == SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ) {
 			m_hResource = {};
 		}
 		return eResult;
@@ -66,10 +66,10 @@ public:
 	                       uint32_t nProviderId ) noexcept
 	{
 		if ( rView.getKind() != T::RESOURCE_KIND ) {
-			return SIR_RESOURCE_RESULT_TYPE_MISMATCH;
+			return SIRResourceResult::SIR_RESOURCE_RESULT_TYPE_MISMATCH;
 		}
 		const SIRResourceResult eResult = m_Pin.pin( rGraph, rScope, rView, nProviderId );
-		if ( eResult == SIR_RESOURCE_RESULT_SUCCESS ) {
+		if ( eResult == SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ) {
 			m_hResource = rView.getHandle();
 		}
 		return eResult;
@@ -77,7 +77,7 @@ public:
 
 private:
 	SIRResourcePinPtr m_Pin;
-	SIRResourceHandle m_hResource = {};
+	SIRResourceHandle m_hResource {};
 };
 
-#endif // SIRENGINE_SIRRESOURCEREVISIONPTR_H
+#endif // __SIR_RESOURCEREVISIONPTR_H__

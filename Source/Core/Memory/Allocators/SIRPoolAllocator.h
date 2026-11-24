@@ -14,8 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRPOOLALLOCATOR_H__
-#define __SIRENGINE_SIRPOOLALLOCATOR_H__
+#ifndef __SIR_POOLALLOCATOR_H__
+#define __SIR_POOLALLOCATOR_H__
 
 #include <Core/SIRPCH.h>
 
@@ -81,4 +81,4 @@ private:
 	uint64_t m_nLiveBitmapWords;
 };
 
-#endif // __SIRENGINE_SIRPOOLALLOCATOR_H__
+#endif // __SIR_POOLALLOCATOR_H__

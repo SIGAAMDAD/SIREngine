@@ -54,7 +54,7 @@ static uint32_t sirLangContainingFunction( const sirLangEffectInputs_t& inputs, 
 	return iMatch;
 }
 
-static sirLangEffectError_t sirLangEffectReport( sirLangEffectOutput_t *pOutput, sirLangEffectError_t eError, uint32_t iNode ) noexcept
+static SIRLangEffectError sirLangEffectReport( sirLangEffectOutput_t *pOutput, SIRLangEffectError eError, uint32_t iNode ) noexcept
 {
 	pOutput->eError = eError;
 	pOutput->iErrorNode = iNode;
@@ -82,7 +82,7 @@ static uint32_t sirLangFunctionByDeclaration( const sirLangEffectInputs_t& input
 	return SIR_LANG_INVALID_INDEX;
 }
 
-sirLangEffectError_t SIRLangAnalyzeEffects( const sirLangEffectInputs_t& inputs, sirLangEffectOutput_t *pOutput ) noexcept
+SIRLangEffectError SIRLangAnalyzeEffects( const sirLangEffectInputs_t& inputs, sirLangEffectOutput_t *pOutput ) noexcept
 {
 	if ( pOutput == nullptr || inputs.pTree == nullptr || inputs.pHIR == nullptr || inputs.pSignatures == nullptr ||
 	     inputs.pProgram == nullptr || pOutput->pFunctions == nullptr || inputs.pHIR->pNodes == nullptr ||
@@ -90,22 +90,22 @@ sirLangEffectError_t SIRLangAnalyzeEffects( const sirLangEffectInputs_t& inputs,
 	     inputs.pSignatures->nFunctionCount == 0 || inputs.pSignatures->nFunctionCount > pOutput->nCapacity ||
 	     inputs.pSignatures->nFunctionCount != inputs.pProgram->nFunctionCount ||
 	     ( inputs.pProgram->nCapabilityCount && inputs.pProgram->pCapabilities == nullptr ) ) {
-		return SIR_LANG_EFFECT_INVALID_INPUT;
+		return SIRLangEffectError::SIR_LANG_EFFECT_INVALID_INPUT;
 	}
 	pOutput->nCount = inputs.pSignatures->nFunctionCount;
-	pOutput->eError = SIR_LANG_EFFECT_OK;
+	pOutput->eError = SIRLangEffectError::SIR_LANG_EFFECT_OK;
 	pOutput->iErrorNode = SIR_LANG_INVALID_INDEX;
 	for ( uint32_t i = 0; i < pOutput->nCount; ++i ) {
 		const sirLangFunctionSignature_t& signature = inputs.pSignatures->pFunctions[i];
 		pOutput->pFunctions[i] = { signature.iDeclarationNode, 0, 0, 0, true };
 		if ( sirLangTypeSpelling( inputs.pTree, signature.result.iTypeNode, "slice" ) ) {
-			return sirLangEffectReport( pOutput, SIR_LANG_EFFECT_BORROW_ESCAPE, signature.iDeclarationNode );
+			return sirLangEffectReport( pOutput, SIRLangEffectError::SIR_LANG_EFFECT_BORROW_ESCAPE, signature.iDeclarationNode );
 		}
 	}
 	for ( uint32_t iNode = 0; iNode < inputs.pHIR->nCount; ++iNode ) {
 		const sirLangHIRNode_t& hir = inputs.pHIR->pNodes[iNode];
 		if ( hir.iSourceNode != iNode ) {
-			return sirLangEffectReport( pOutput, SIR_LANG_EFFECT_MALFORMED_TREE, iNode );
+			return sirLangEffectReport( pOutput, SIRLangEffectError::SIR_LANG_EFFECT_MALFORMED_TREE, iNode );
 		}
 		const uint32_t iOwner = sirLangContainingFunction( inputs, iNode );
 		if ( iOwner == SIR_LANG_INVALID_INDEX ) {
@@ -113,25 +113,25 @@ sirLangEffectError_t SIRLangAnalyzeEffects( const sirLangEffectInputs_t& inputs,
 		}
 		sirLangEffectFunction_t& summary = pOutput->pFunctions[iOwner];
 		summary.nDirectEffects |= hir.nEffects;
-		if ( hir.eSyntax == SIR_LANG_SYNTAX_CALL && hir.iDeclarationNode == SIR_LANG_INVALID_INDEX ) {
+		if ( hir.eSyntax == SIRLangSyntaxKind::SIR_LANG_SYNTAX_CALL && hir.iDeclarationNode == SIR_LANG_INVALID_INDEX ) {
 			const sirLangCIRCapability_t *pCapability = sirLangFindCapability( inputs, hir );
 			if ( pCapability == nullptr || pCapability->nBindingRevision == 0 ) {
-				return sirLangEffectReport( pOutput, SIR_LANG_EFFECT_UNKNOWN_CAPABILITY, iNode );
+				return sirLangEffectReport( pOutput, SIRLangEffectError::SIR_LANG_EFFECT_UNKNOWN_CAPABILITY, iNode );
 			}
 			if ( summary.nOwnerLane != 0 && pCapability->nOwnerLane != 0 && summary.nOwnerLane != pCapability->nOwnerLane ) {
-				return sirLangEffectReport( pOutput, SIR_LANG_EFFECT_INVALID_LANE, iNode );
+				return sirLangEffectReport( pOutput, SIRLangEffectError::SIR_LANG_EFFECT_INVALID_LANE, iNode );
 			}
 			if ( pCapability->nOwnerLane != 0 ) {
 				summary.nOwnerLane = pCapability->nOwnerLane;
 			}
 			summary.nDirectEffects |= pCapability->nEffects;
-			if ( pCapability->nEffects & SIR_LANG_EFFECT_SUSPEND ) {
+			if ( pCapability->nEffects & SIRLangCapabilityEffect::SIR_LANG_EFFECT_SUSPEND ) {
 				for ( uint32_t iAncestor = 0; iAncestor < inputs.pTree->nNodeCount; ++iAncestor ) {
 					const sirLangSyntaxNode_t& ancestor = inputs.pTree->pNodes[iAncestor];
 					const sirLangSyntaxNode_t& callNode = inputs.pTree->pNodes[iNode];
-					if ( ancestor.eKind == SIR_LANG_SYNTAX_MUTATE && ancestor.nStartToken <= callNode.nStartToken &&
+					if ( ancestor.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_MUTATE && ancestor.nStartToken <= callNode.nStartToken &&
 					     ancestor.nEndToken >= callNode.nEndToken ) {
-						return sirLangEffectReport( pOutput, SIR_LANG_EFFECT_UNSAFE_SUSPEND, iNode );
+						return sirLangEffectReport( pOutput, SIRLangEffectError::SIR_LANG_EFFECT_UNSAFE_SUSPEND, iNode );
 					}
 				}
 			}
@@ -144,13 +144,13 @@ sirLangEffectError_t SIRLangAnalyzeEffects( const sirLangEffectInputs_t& inputs,
 		bool bChanged = false;
 		for ( uint32_t iNode = 0; iNode < inputs.pHIR->nCount; ++iNode ) {
 			const sirLangHIRNode_t& hir = inputs.pHIR->pNodes[iNode];
-			if ( hir.eSyntax != SIR_LANG_SYNTAX_CALL || hir.iDeclarationNode == SIR_LANG_INVALID_INDEX ) {
+			if ( hir.eSyntax != SIRLangSyntaxKind::SIR_LANG_SYNTAX_CALL || hir.iDeclarationNode == SIR_LANG_INVALID_INDEX ) {
 				continue;
 			}
 			const uint32_t iCaller = sirLangContainingFunction( inputs, iNode );
 			const uint32_t iCallee = sirLangFunctionByDeclaration( inputs, hir.iDeclarationNode );
 			if ( iCaller == SIR_LANG_INVALID_INDEX || iCallee == SIR_LANG_INVALID_INDEX ) {
-				return sirLangEffectReport( pOutput, SIR_LANG_EFFECT_MALFORMED_TREE, iNode );
+				return sirLangEffectReport( pOutput, SIRLangEffectError::SIR_LANG_EFFECT_MALFORMED_TREE, iNode );
 			}
 			const uint32_t nPrior = pOutput->pFunctions[iCaller].nTransitiveEffects;
 			pOutput->pFunctions[iCaller].nTransitiveEffects |= pOutput->pFunctions[iCallee].nTransitiveEffects;
@@ -162,10 +162,10 @@ sirLangEffectError_t SIRLangAnalyzeEffects( const sirLangEffectInputs_t& inputs,
 	}
 	for ( uint32_t i = 0; i < pOutput->nCount; ++i ) {
 		sirLangEffectFunction_t& summary = pOutput->pFunctions[i];
-		summary.bDeterministic = ( summary.nTransitiveEffects & SIR_LANG_EFFECT_NONDETERMINISTIC ) == 0;
+		summary.bDeterministic = ( summary.nTransitiveEffects & SIRLangCapabilityEffect::SIR_LANG_EFFECT_NONDETERMINISTIC ) == 0;
 		if ( pOutput->bRequireDeterministic && !summary.bDeterministic ) {
-			return sirLangEffectReport( pOutput, SIR_LANG_EFFECT_NONDETERMINISTIC_CALL, summary.iDeclarationNode );
+			return sirLangEffectReport( pOutput, SIRLangEffectError::SIR_LANG_EFFECT_NONDETERMINISTIC_CALL, summary.iDeclarationNode );
 		}
 	}
-	return SIR_LANG_EFFECT_OK;
+	return SIRLangEffectError::SIR_LANG_EFFECT_OK;
 }

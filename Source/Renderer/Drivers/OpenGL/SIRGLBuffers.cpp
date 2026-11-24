@@ -18,52 +18,52 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 static constexpr uint32_t SIR_GL_NO_ERROR = 0;
 static constexpr uint32_t SIR_GL_OUT_OF_MEMORY = 0x0505;
-static constexpr uint32_t SIR_GL_BUFFER_USES = SIR_GRAPHICS_USAGE_VERTEX | SIR_GRAPHICS_USAGE_INDEX | SIR_GRAPHICS_USAGE_CONSTANT |
-                                               SIR_GRAPHICS_USAGE_STORAGE | SIR_GRAPHICS_USAGE_COPY_SOURCE |
-                                               SIR_GRAPHICS_USAGE_COPY_DESTINATION | SIR_GRAPHICS_USAGE_INDIRECT;
+static constexpr uint32_t SIR_GL_BUFFER_USES = SIRGraphicsUsage::SIR_GRAPHICS_USAGE_VERTEX | SIRGraphicsUsage::SIR_GRAPHICS_USAGE_INDEX | SIRGraphicsUsage::SIR_GRAPHICS_USAGE_CONSTANT |
+                                               SIRGraphicsUsage::SIR_GRAPHICS_USAGE_STORAGE | SIRGraphicsUsage::SIR_GRAPHICS_USAGE_COPY_SOURCE |
+                                               SIRGraphicsUsage::SIR_GRAPHICS_USAGE_COPY_DESTINATION | SIRGraphicsUsage::SIR_GRAPHICS_USAGE_INDIRECT;
 
-static sirGraphicsResult_t sirGLMapError( uint32_t nError ) noexcept
+static SIRGraphicsResult sirGLMapError( uint32_t nError ) noexcept
 {
-	return nError == SIR_GL_OUT_OF_MEMORY ? SIR_GRAPHICS_OUT_OF_MEMORY : SIR_GRAPHICS_DRIVER_ERROR;
+	return nError == SIR_GL_OUT_OF_MEMORY ? SIRGraphicsResult::SIR_GRAPHICS_OUT_OF_MEMORY : SIRGraphicsResult::SIR_GRAPHICS_DRIVER_ERROR;
 }
 
-sirGraphicsResult_t sirGLLoadBufferDispatch( sirGLProcedureLookup_t pLookup, void *pContext, sirGLBufferDispatch_t *pAPI ) noexcept
+SIRGraphicsResult sirGLLoadBufferDispatch( sirGLProcedureLookup_t pLookup, void *pContext, sirGLBufferDispatch_t *pAPI ) noexcept
 {
 	if ( pLookup == nullptr || pContext == nullptr || pAPI == nullptr ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	sirGLBufferDispatch_t result = {};
+	sirGLBufferDispatch_t result {};
 	void *pCreate = pLookup( pContext, "glCreateBuffers" );
 	void *pStorage = pLookup( pContext, "glNamedBufferStorage" );
 	void *pDelete = pLookup( pContext, "glDeleteBuffers" );
 	void *pError = pLookup( pContext, "glGetError" );
 	if ( !sirGLIsUsableProcedure( pCreate ) || !sirGLIsUsableProcedure( pStorage ) || !sirGLIsUsableProcedure( pDelete ) ||
 	     !sirGLIsUsableProcedure( pError ) ) {
-		return SIR_GRAPHICS_UNSUPPORTED;
+		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
-	result.pCreateBuffers = ( decltype( result.pCreateBuffers ) )pCreate;
-	result.pNamedBufferStorage = ( decltype( result.pNamedBufferStorage ) )pStorage;
-	result.pDeleteBuffers = ( decltype( result.pDeleteBuffers ) )pDelete;
-	result.pGetError = ( decltype( result.pGetError ) )pError;
+	result.pCreateBuffers = reinterpret_cast<void ( * )( int32_t, uint32_t * )>( pCreate );
+	result.pNamedBufferStorage = reinterpret_cast<void ( * )( uint32_t, intptr_t, const void *, uint32_t )>( pStorage );
+	result.pDeleteBuffers = reinterpret_cast<void ( * )( int32_t, const uint32_t * )>( pDelete );
+	result.pGetError = reinterpret_cast<uint32_t ( * )( void )>( pError );
 	*pAPI = result;
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t sirGLCreateNativeBuffer( const sirGLBufferDispatch_t *pAPI, const sirGraphicsBufferDesc_t *pDesc,
+SIRGraphicsResult sirGLCreateNativeBuffer( const sirGLBufferDispatch_t *pAPI, const sirGraphicsBufferDesc_t *pDesc,
                                              uint32_t *pName ) noexcept
 {
 	if ( pAPI == nullptr || pDesc == nullptr || pName == nullptr || pAPI->pCreateBuffers == nullptr ||
 	     pAPI->pNamedBufferStorage == nullptr || pAPI->pDeleteBuffers == nullptr || pAPI->pGetError == nullptr || pDesc->nSizeBytes == 0 ||
-	     pDesc->nSizeBytes > ( uint64_t )INTPTR_MAX || pDesc->nUsage == 0 || ( pDesc->nUsage & ~SIR_GL_BUFFER_USES ) != 0 ||
+	     pDesc->nSizeBytes > static_cast<uint64_t>(INTPTR_MAX) || pDesc->nUsage == 0 || ( pDesc->nUsage & ~SIR_GL_BUFFER_USES ) != 0 ||
 	     ( pDesc->nAlignmentBytes != 0 && ( pDesc->nAlignmentBytes & ( pDesc->nAlignmentBytes - 1 ) ) != 0 ) ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( pDesc->eMemory != SIR_GRAPHICS_MEMORY_GPU_LOCAL ) {
-		return SIR_GRAPHICS_UNSUPPORTED;
+	if ( pDesc->eMemory != SIRGraphicsMemoryClass::SIR_GRAPHICS_MEMORY_GPU_LOCAL ) {
+		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
 	// Never attribute a previously queued GL error to a new allocation.
 	if ( pAPI->pGetError() != SIR_GL_NO_ERROR ) {
-		return SIR_GRAPHICS_DRIVER_ERROR;
+		return SIRGraphicsResult::SIR_GRAPHICS_DRIVER_ERROR;
 	}
 	uint32_t nName = 0;
 	pAPI->pCreateBuffers( 1, &nName );
@@ -74,25 +74,25 @@ sirGraphicsResult_t sirGLCreateNativeBuffer( const sirGLBufferDispatch_t *pAPI, 
 		}
 		return sirGLMapError( nCreateError );
 	}
-	pAPI->pNamedBufferStorage( nName, ( intptr_t )pDesc->nSizeBytes, nullptr, 0 );
+	pAPI->pNamedBufferStorage( nName, static_cast<intptr_t>(pDesc->nSizeBytes), nullptr, 0 );
 	const uint32_t nStorageError = pAPI->pGetError();
 	if ( nStorageError != SIR_GL_NO_ERROR ) {
 		pAPI->pDeleteBuffers( 1, &nName );
 		return sirGLMapError( nStorageError );
 	}
 	*pName = nName;
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t sirGLDeleteNativeBuffer( const sirGLBufferDispatch_t *pAPI, uint32_t nName ) noexcept
+SIRGraphicsResult sirGLDeleteNativeBuffer( const sirGLBufferDispatch_t *pAPI, uint32_t nName ) noexcept
 {
 	if ( pAPI == nullptr || pAPI->pDeleteBuffers == nullptr || pAPI->pGetError == nullptr || nName == 0 ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( pAPI->pGetError() != SIR_GL_NO_ERROR ) {
-		return SIR_GRAPHICS_DRIVER_ERROR;
+		return SIRGraphicsResult::SIR_GRAPHICS_DRIVER_ERROR;
 	}
 	pAPI->pDeleteBuffers( 1, &nName );
 	const uint32_t nError = pAPI->pGetError();
-	return nError == SIR_GL_NO_ERROR ? SIR_GRAPHICS_SUCCESS : sirGLMapError( nError );
+	return nError == SIR_GL_NO_ERROR ? SIRGraphicsResult::SIR_GRAPHICS_SUCCESS : sirGLMapError( nError );
 }

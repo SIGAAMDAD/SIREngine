@@ -12,8 +12,8 @@ express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIRANIMATIONSIMD_H__
-#define __SIRENGINE_SIRANIMATIONSIMD_H__
+#ifndef __SIR_ANIMATIONSIMD_H__
+#define __SIR_ANIMATIONSIMD_H__
 
 #include <Core/SIRPCH.h>
 // clang-format off
@@ -24,13 +24,12 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Animation/Cooked/SIRAnimationCooked.h>
 
-typedef enum sirAnimationSIMDPath_e : uint8_t
-{
+enum class SIRAnimationSIMDPath : uint8_t {
 	SIR_ANIMATION_SIMD_SCALAR = 0,
 	SIR_ANIMATION_SIMD_SSE2 = 1,
 	SIR_ANIMATION_SIMD_AVX2 = 2,
 	SIR_ANIMATION_SIMD_NEON = 3
-} sirAnimationSIMDPath_t;
+};
 
 typedef struct sirAnimationSoaBlend_s
 {
@@ -45,11 +44,11 @@ class SIRAnimationSIMD
 public:
 	SIRAnimationSIMD( void ) noexcept = delete;
 
-	static sirAnimationSIMDPath_t getCompiledPath( void ) noexcept;
-	static sirAnimationCookResult_t blendChannels( const sirAnimationSoaBlend_t& options ) noexcept;
+	static SIRAnimationSIMDPath getCompiledPath( void ) noexcept;
+	static SIRAnimationCookResult blendChannels( const sirAnimationSoaBlend_t& options ) noexcept;
 
 protected:
 private:
 };
 
-#endif // __SIRENGINE_SIRANIMATIONSIMD_H__
+#endif // __SIR_ANIMATIONSIMD_H__

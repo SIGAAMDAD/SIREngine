@@ -421,10 +421,10 @@ static void sirTestInjectedOSLifecycles( void )
 {
 	SIRPlatformPipe pipe;
 	s_bPipeFault.store( true, std::memory_order_relaxed );
-	SIR_CHECK( pipe.create() == SIR_PIPE_IO_ERROR );
+	SIR_CHECK( pipe.create() == SIRPipeResult::SIR_PIPE_IO_ERROR );
 	SIR_CHECK( !pipe.isReadOpen() && !pipe.isWriteOpen() );
-	SIR_CHECK( pipe.create() == SIR_PIPE_OK );
-	SIR_CHECK( pipe.close() == SIR_PIPE_OK );
+	SIR_CHECK( pipe.create() == SIRPipeResult::SIR_PIPE_OK );
+	SIR_CHECK( pipe.close() == SIRPipeResult::SIR_PIPE_OK );
 
 	SIRSemaphore semaphore;
 	SIR_CHECK( semaphore.create( 0 ) == SIR_SEMAPHORE_OK );

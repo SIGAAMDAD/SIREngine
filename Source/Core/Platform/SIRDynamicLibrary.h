@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRDYNAMICLIBRARY_H__
-#define __SIRENGINE_SIRDYNAMICLIBRARY_H__
+#ifndef __SIR_DYNAMICLIBRARY_H__
+#define __SIR_DYNAMICLIBRARY_H__
 
 #include <Core/SIRPCH.h>
 
@@ -44,4 +44,4 @@ public:
 	static bool getLastError( char *szOutput, size_t nCapacity ) noexcept;
 };
 
-#endif // __SIRENGINE_SIRDYNAMICLIBRARY_H__
+#endif // __SIR_DYNAMICLIBRARY_H__

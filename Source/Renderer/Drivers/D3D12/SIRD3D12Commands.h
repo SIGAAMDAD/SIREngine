@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRD3D12COMMANDS_H__
-#define __SIRENGINE_SIRD3D12COMMANDS_H__
+#ifndef __SIR_D3_D12_COMMANDS_H__
+#define __SIR_D3_D12_COMMANDS_H__
 
 #include <Core/SIRPCH.h>
 
@@ -44,12 +44,12 @@ private:
 	SIRD3D12Resources *m_pResources = nullptr;
 	SIRD3D12Pipelines *m_pPipelines = nullptr;
 	SIRD3D12Bindings *m_pBindings = nullptr;
-	sirGraphicsHandle_t m_hBoundPipeline = {};
+	sirGraphicsHandle_t m_hBoundPipeline {};
 	uint8_t m_szBoundRoots[32] = {};
 	sirGraphicsHandle_t m_szReferences[s_nReferenceCapacity] = {};
-	sirGraphicsQueue_t m_eQueue = SIR_GRAPHICS_QUEUE_DIRECT;
-	sirGraphicsPipelineType_t m_ePipelineType = SIR_GRAPHICS_PIPELINE_GRAPHICS;
-	sirGraphicsTopology_t m_eTopology = SIR_GRAPHICS_TOPOLOGY_TRIANGLES;
+	SIRGraphicsQueue m_eQueue = SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_DIRECT;
+	SIRGraphicsPipelineType m_ePipelineType = SIRGraphicsPipelineType::SIR_GRAPHICS_PIPELINE_GRAPHICS;
+	SIRGraphicsTopology m_eTopology = SIRGraphicsTopology::SIR_GRAPHICS_TOPOLOGY_TRIANGLES;
 	uint32_t m_nReferenceCount = 0;
 	uint32_t m_nBindingCount = 0;
 	uint64_t m_nSubmittedFence = 0;
@@ -59,7 +59,7 @@ private:
 	bool m_bRenderPass = false;
 	bool m_bPipelineBound = false;
 
-	sirGraphicsResult_t pin( sirGraphicsHandle_t hHandle ) noexcept;
+	SIRGraphicsResult pin( sirGraphicsHandle_t hHandle ) noexcept;
 	void releaseReferences( void ) noexcept;
 	bool completeSubmission( void ) noexcept;
 	bool validRecording( void ) const noexcept;
@@ -73,34 +73,34 @@ public:
 	SIRD3D12CommandList& operator=( const SIRD3D12CommandList& ) = delete;
 
 	bool initialize( SIRD3D12Device *pNative, SIRD3D12Resources *pResources, SIRD3D12Pipelines *pPipelines, SIRD3D12Bindings *pBindings,
-	                 sirGraphicsQueue_t eQueue ) noexcept;
+	                 SIRGraphicsQueue eQueue ) noexcept;
 	void shutdown( bool bGpuComplete ) noexcept;
-	sirGraphicsQueue_t getQueue( void ) const noexcept override;
-	sirGraphicsResult_t reset( void ) noexcept override;
-	sirGraphicsResult_t barrier( const sirGraphicsBarrier_t *pBarriers, uint32_t nCount ) noexcept override;
-	sirGraphicsResult_t copyBuffer( sirGraphicsHandle_t hDestination, uint64_t nDstOffset, sirGraphicsHandle_t hSource, uint64_t nSrcOffset,
+	SIRGraphicsQueue getQueue( void ) const noexcept override;
+	SIRGraphicsResult reset( void ) noexcept override;
+	SIRGraphicsResult barrier( const sirGraphicsBarrier_t *pBarriers, uint32_t nCount ) noexcept override;
+	SIRGraphicsResult copyBuffer( sirGraphicsHandle_t hDestination, uint64_t nDstOffset, sirGraphicsHandle_t hSource, uint64_t nSrcOffset,
 	                                uint64_t nBytes ) noexcept override;
-	sirGraphicsResult_t copyBufferTexture( const sirGraphicsBufferTextureCopy_t& copy ) noexcept override;
-	sirGraphicsResult_t beginRenderPass( const sirGraphicsRenderPass_t& pass ) noexcept override;
-	sirGraphicsResult_t endRenderPass( void ) noexcept override;
-	sirGraphicsResult_t bindPipeline( sirGraphicsHandle_t hPipeline ) noexcept override;
-	sirGraphicsResult_t bindBindingSet( uint32_t nSetIndex, sirGraphicsHandle_t hBindingSet ) noexcept override;
-	sirGraphicsResult_t bindVertexBuffer( uint32_t nSlot, sirGraphicsHandle_t hBuffer, uint64_t nOffsetBytes,
+	SIRGraphicsResult copyBufferTexture( const sirGraphicsBufferTextureCopy_t& copy ) noexcept override;
+	SIRGraphicsResult beginRenderPass( const sirGraphicsRenderPass_t& pass ) noexcept override;
+	SIRGraphicsResult endRenderPass( void ) noexcept override;
+	SIRGraphicsResult bindPipeline( sirGraphicsHandle_t hPipeline ) noexcept override;
+	SIRGraphicsResult bindBindingSet( uint32_t nSetIndex, sirGraphicsHandle_t hBindingSet ) noexcept override;
+	SIRGraphicsResult bindVertexBuffer( uint32_t nSlot, sirGraphicsHandle_t hBuffer, uint64_t nOffsetBytes,
 	                                      uint32_t nStrideBytes ) noexcept override;
-	sirGraphicsResult_t bindIndexBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffsetBytes, bool bIndex32 ) noexcept override;
-	sirGraphicsResult_t setViewport( const sirGraphicsViewport_t& viewport, const sirGraphicsRect_t& scissor ) noexcept override;
-	sirGraphicsResult_t draw( uint32_t nVertices, uint32_t nInstances, uint32_t nFirstVertex, uint32_t nFirstInstance ) noexcept override;
-	sirGraphicsResult_t drawIndexed( uint32_t nIndices, uint32_t nInstances, uint32_t nFirstIndex, int32_t nVertexOffset,
+	SIRGraphicsResult bindIndexBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffsetBytes, bool bIndex32 ) noexcept override;
+	SIRGraphicsResult setViewport( const sirGraphicsViewport_t& viewport, const sirGraphicsRect_t& scissor ) noexcept override;
+	SIRGraphicsResult draw( uint32_t nVertices, uint32_t nInstances, uint32_t nFirstVertex, uint32_t nFirstInstance ) noexcept override;
+	SIRGraphicsResult drawIndexed( uint32_t nIndices, uint32_t nInstances, uint32_t nFirstIndex, int32_t nVertexOffset,
 	                                 uint32_t nFirstInstance ) noexcept override;
-	sirGraphicsResult_t dispatch( uint32_t nX, uint32_t nY, uint32_t nZ ) noexcept override;
-	sirGraphicsResult_t close( void ) noexcept override;
+	SIRGraphicsResult dispatch( uint32_t nX, uint32_t nY, uint32_t nZ ) noexcept override;
+	SIRGraphicsResult close( void ) noexcept override;
 };
 
 class SIRD3D12Commands
 {
 private:
 	static constexpr uint32_t s_nListsPerQueue = 4;
-	SIRD3D12CommandList m_szLists[SIR_GRAPHICS_QUEUE_COUNT][s_nListsPerQueue];
+	SIRD3D12CommandList m_szLists[SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT][s_nListsPerQueue];
 	SIRD3D12Device *m_pNative = nullptr;
 
 public:
@@ -112,9 +112,9 @@ public:
 	                 SIRD3D12Bindings *pBindings ) noexcept;
 	void shutdown( bool bGpuComplete ) noexcept;
 	void collectCompleted( void ) noexcept;
-	sirGraphicsResult_t acquire( sirGraphicsQueue_t eQueue, SIRGraphicsCommandList **ppCommands ) noexcept;
-	sirGraphicsResult_t submit( sirGraphicsQueue_t eQueue, const sirGraphicsSubmission_t& submission,
+	SIRGraphicsResult acquire( SIRGraphicsQueue eQueue, SIRGraphicsCommandList **ppCommands ) noexcept;
+	SIRGraphicsResult submit( SIRGraphicsQueue eQueue, const sirGraphicsSubmission_t& submission,
 	                            sirGraphicsCompletion_t *pCompletion ) noexcept;
 };
 
-#endif // __SIRENGINE_SIRD3D12COMMANDS_H__
+#endif // __SIR_D3_D12_COMMANDS_H__

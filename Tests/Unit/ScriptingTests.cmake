@@ -211,7 +211,7 @@ add_test(NAME scripting.language.signed-runner
 # These tests use assert() for both setup and validation. Release/profile
 # builds define NDEBUG globally; explicitly enable assertions for native
 # language test targets so initialization and negative checks still execute.
-get_property(sirScriptingUnitTargets DIRECTORY "${PROJECT_SOURCE_DIR}/Tests" PROPERTY BUILDSYSTEM_TARGETS)
+get_property(sirScriptingUnitTargets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
 foreach(sirScriptingUnitTarget IN LISTS sirScriptingUnitTargets)
     if(sirScriptingUnitTarget MATCHES "^SIRLang.*Tests$")
         if(MSVC)

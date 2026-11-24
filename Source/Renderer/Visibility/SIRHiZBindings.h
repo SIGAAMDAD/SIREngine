@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRHIZBINDINGS_H__
-#define __SIRENGINE_SIRHIZBINDINGS_H__
+#ifndef __SIR_HIZBINDINGS_H__
+#define __SIR_HIZBINDINGS_H__
 
 #include <Core/SIRPCH.h>
 
@@ -66,21 +66,21 @@ typedef struct sirHiZBindings_s
 // must be retired. Output bReady is true only after every binding succeeds.
 // Currently only D32F input can be created as a sampled depth view here;
 // D16/D24S8 depth-as-sampled imports require native backend qualification.
-sirGraphicsResult_t sirHiZBindingsCreate( SIRRenderingDevice& device, const sirHiZBindingsDesc_t& desc,
+SIRGraphicsResult sirHiZBindingsCreate( SIRRenderingDevice& device, const sirHiZBindingsDesc_t& desc,
                                           sirHiZBindings_t *pBindings ) noexcept;
 
 // Fill the command recorder from the validated, copied plan and bound handles.
 // Does not mutate the caller's input states. Callers must keep bindings stable
 // until command recording completes; retired bindings cannot be recorded.
-sirGraphicsResult_t sirHiZBindingsGetCommands( const sirHiZBindings_t& bindings, sirHiZCommandResources_t *pCommands ) noexcept;
+SIRGraphicsResult sirHiZBindingsGetCommands( const sirHiZBindings_t& bindings, sirHiZCommandResources_t *pCommands ) noexcept;
 
 // May be called repeatedly after partial allocation/retirement failures.
 // Failed retirement leaves the outstanding handles in the backing for retry.
 // The completion set must include all reader and writer GPU submissions.
-sirGraphicsResult_t sirHiZBindingsRetire( SIRRenderingDevice& device, const sirGraphicsCompletionSet_t& completion,
+SIRGraphicsResult sirHiZBindingsRetire( SIRRenderingDevice& device, const sirGraphicsCompletionSet_t& completion,
                                           sirHiZBindings_t *pBindings ) noexcept;
 
 // For irrecoverably lost devices, release stale host-side handle records only.
-sirGraphicsResult_t sirHiZBindingsDiscardLost( uint32_t nReplacementGeneration, sirHiZBindings_t *pBindings ) noexcept;
+SIRGraphicsResult sirHiZBindingsDiscardLost( uint32_t nReplacementGeneration, sirHiZBindings_t *pBindings ) noexcept;
 
-#endif // __SIRENGINE_SIRHIZBINDINGS_H__
+#endif // __SIR_HIZBINDINGS_H__

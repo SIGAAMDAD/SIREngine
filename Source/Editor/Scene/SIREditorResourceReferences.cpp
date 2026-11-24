@@ -33,8 +33,8 @@ static bool sirEditorReferenceOverlaps( const void *pLeft, size_t nLeft, const v
 	if ( pLeft == nullptr || pRight == nullptr || nLeft == 0 || nRight == 0 ) {
 		return false;
 	}
-	const uintptr_t nA = ( uintptr_t )pLeft;
-	const uintptr_t nB = ( uintptr_t )pRight;
+	const uintptr_t nA = reinterpret_cast<uintptr_t>(pLeft);
+	const uintptr_t nB = reinterpret_cast<uintptr_t>(pRight);
 	if ( nLeft > UINTPTR_MAX - nA || nRight > UINTPTR_MAX - nB ) {
 		return true;
 	}
@@ -54,7 +54,7 @@ static bool sirEditorReferenceIndexValid( const sirEditorResourceReferenceScan_t
 		const sirEditorTextResource_t& resource = index.pResources[i];
 		if ( resource.nStableKey == 0 || resource.nSourceLine == 0 || resource.nIdLength == 0 ||
 		     resource.nIdOffset > context.nSourceBytes || resource.nIdLength > context.nSourceBytes - resource.nIdOffset ||
-		     ( resource.eKind != SIR_EDITOR_RESOURCE_EXTERNAL && resource.eKind != SIR_EDITOR_RESOURCE_EMBEDDED ) ) {
+		     ( resource.eKind != SIREditorTextResourceKind::SIR_EDITOR_RESOURCE_EXTERNAL && resource.eKind != SIREditorTextResourceKind::SIR_EDITOR_RESOURCE_EMBEDDED ) ) {
 			return false;
 		}
 		if ( i != 0 && resource.nSourceLine <= index.pResources[i - 1].nSourceLine ) {
@@ -69,7 +69,7 @@ static bool sirEditorReferenceIndexValid( const sirEditorResourceReferenceScan_t
 	return true;
 }
 
-static sirEditorTextResourceResult_t sirEditorReferencePass( const sirEditorResourceReferenceScan_t& context, bool bWrite,
+static SIREditorTextResourceResult sirEditorReferencePass( const sirEditorResourceReferenceScan_t& context, bool bWrite,
                                                              uint32_t *pOutCount ) noexcept
 {
 	const char *pszSource = context.pszSource;
@@ -121,7 +121,7 @@ static sirEditorTextResourceResult_t sirEditorReferencePass( const sirEditorReso
 				}
 				if ( iNextResource < context.pIndex->nCount && context.pIndex->pResources[iNextResource].nSourceLine == nLine ) {
 					const sirEditorTextResource_t& item = context.pIndex->pResources[iNextResource++];
-					if ( item.eKind == SIR_EDITOR_RESOURCE_EMBEDDED ) {
+					if ( item.eKind == SIREditorTextResourceKind::SIR_EDITOR_RESOURCE_EMBEDDED ) {
 						nOwnerKey = item.nStableKey;
 					}
 				}
@@ -138,14 +138,14 @@ static sirEditorTextResourceResult_t sirEditorReferencePass( const sirEditorReso
 		if ( pCursor > pszSource && sirEditorReferenceToken( pCursor[-1] ) ) {
 			continue;
 		}
-		sirEditorTextResourceKind_t eKind = SIR_EDITOR_RESOURCE_EXTERNAL;
-		if ( ( size_t )( pEnd - pCursor ) < 12 ) {
+		SIREditorTextResourceKind eKind = SIREditorTextResourceKind::SIR_EDITOR_RESOURCE_EXTERNAL;
+		if ( static_cast<size_t>( pEnd - pCursor ) < 12 ) {
 			continue;
 		}
 		if ( memcmp( pCursor, "ExtResource(", 12 ) == 0 ) {
-			eKind = SIR_EDITOR_RESOURCE_EXTERNAL;
+			eKind = SIREditorTextResourceKind::SIR_EDITOR_RESOURCE_EXTERNAL;
 		} else if ( memcmp( pCursor, "SubResource(", 12 ) == 0 ) {
-			eKind = SIR_EDITOR_RESOURCE_EMBEDDED;
+			eKind = SIREditorTextResourceKind::SIR_EDITOR_RESOURCE_EMBEDDED;
 		} else {
 			continue;
 		}
@@ -154,90 +154,90 @@ static sirEditorTextResourceResult_t sirEditorReferencePass( const sirEditorReso
 			++pCall;
 		}
 		if ( pCall == pEnd || *pCall++ != '"' ) {
-			return SIR_EDITOR_RESOURCE_INVALID_REFERENCE;
+			return SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_INVALID_REFERENCE;
 		}
 		const char *pId = pCall;
 		while ( pCall < pEnd && sirEditorReferenceToken( *pCall ) ) {
 			++pCall;
 		}
 		if ( pCall == pId || pCall == pEnd || *pCall++ != '"' ) {
-			return SIR_EDITOR_RESOURCE_INVALID_REFERENCE;
+			return SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_INVALID_REFERENCE;
 		}
-		const uint32_t nIdLength = ( uint32_t )( pCall - pId - 1 );
+		const uint32_t nIdLength = static_cast<uint32_t>( pCall - pId - 1 );
 		while ( pCall < pEnd && sirEditorReferenceSpace( *pCall ) ) {
 			++pCall;
 		}
 		if ( pCall == pEnd || *pCall != ')' ) {
-			return SIR_EDITOR_RESOURCE_INVALID_REFERENCE;
+			return SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_INVALID_REFERENCE;
 		}
 		uint32_t iTarget = 0;
-		if ( sirEditorFindTextResource( pszSource, *context.pIndex, eKind, pId, nIdLength, &iTarget ) != SIR_EDITOR_RESOURCE_OK ) {
-			return SIR_EDITOR_RESOURCE_MISSING_REFERENCE;
+		if ( sirEditorFindTextResource( pszSource, *context.pIndex, eKind, pId, nIdLength, &iTarget ) != SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_OK ) {
+			return SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_MISSING_REFERENCE;
 		}
 		if ( nReferences == UINT32_MAX ) {
-			return SIR_EDITOR_RESOURCE_OUT_OF_CAPACITY;
+			return SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_OUT_OF_CAPACITY;
 		}
 		if ( bWrite ) {
 			const sirEditorTextResource_t& target = context.pIndex->pResources[iTarget];
-			context.pOutput[nReferences] = { nOwnerKey, target.nStableKey, iTarget, ( uint32_t )( pCursor - pszSource ), nLine };
+			context.pOutput[nReferences] = { nOwnerKey, target.nStableKey, iTarget, static_cast<uint32_t>( pCursor - pszSource ), nLine };
 		}
 		++nReferences;
 		pCursor = pCall;
 	}
 	*pOutCount = nReferences;
-	return SIR_EDITOR_RESOURCE_OK;
+	return SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_OK;
 }
 
-sirEditorTextResourceResult_t sirEditorScanResourceReferences( const sirEditorResourceReferenceScan_t& context,
+SIREditorTextResourceResult sirEditorScanResourceReferences( const sirEditorResourceReferenceScan_t& context,
                                                                uint32_t *pOutCount ) noexcept
 {
 	if ( pOutCount == nullptr ) {
-		return SIR_EDITOR_RESOURCE_INVALID_ARGUMENT;
+		return SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_INVALID_ARGUMENT;
 	}
 	// Never initialize a count through an alias of the immutable input or index.
 	if ( sirEditorReferenceOverlaps( pOutCount, sizeof( *pOutCount ), context.pszSource, context.nSourceBytes ) ||
 	     sirEditorReferenceOverlaps( pOutCount, sizeof( *pOutCount ), context.pIndex, sizeof( sirEditorTextResourceIndex_t ) ) ) {
-		return SIR_EDITOR_RESOURCE_INVALID_ARGUMENT;
+		return SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_INVALID_ARGUMENT;
 	}
 	if ( !sirEditorReferenceIndexValid( context ) || ( context.pOutput == nullptr && context.nCapacity != 0 ) ) {
 		*pOutCount = 0;
-		return SIR_EDITOR_RESOURCE_INVALID_ARGUMENT;
+		return SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_INVALID_ARGUMENT;
 	}
 #if SIZE_MAX == UINT32_MAX
 	if ( context.nCapacity > SIZE_MAX / sizeof( sirEditorResourceReference_t ) ||
 	     context.pIndex->nCount > SIZE_MAX / sizeof( sirEditorTextResource_t ) ) {
-		return SIR_EDITOR_RESOURCE_INVALID_ARGUMENT;
+		return SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_INVALID_ARGUMENT;
 	}
 #endif
-	const size_t nOutputBytes = ( size_t )context.nCapacity * sizeof( sirEditorResourceReference_t );
-	const size_t nIndexBytes = ( size_t )context.pIndex->nCount * sizeof( sirEditorTextResource_t );
+	const size_t nOutputBytes = static_cast<size_t>(context.nCapacity) * sizeof( sirEditorResourceReference_t );
+	const size_t nIndexBytes = static_cast<size_t>(context.pIndex->nCount) * sizeof( sirEditorTextResource_t );
 	if ( sirEditorReferenceOverlaps( pOutCount, sizeof( *pOutCount ), context.pOutput, nOutputBytes ) ||
 	     sirEditorReferenceOverlaps( pOutCount, sizeof( *pOutCount ), context.pIndex->pResources, nIndexBytes ) ) {
-		return SIR_EDITOR_RESOURCE_INVALID_ARGUMENT;
+		return SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_INVALID_ARGUMENT;
 	}
 	*pOutCount = 0;
-	if ( context.pOutput != nullptr && ( ( uintptr_t )context.pOutput % alignof( sirEditorResourceReference_t ) ) != 0 ) {
-		return SIR_EDITOR_RESOURCE_INVALID_ARGUMENT;
+	if ( context.pOutput != nullptr && ( reinterpret_cast<uintptr_t>(context.pOutput) % alignof( sirEditorResourceReference_t ) ) != 0 ) {
+		return SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_INVALID_ARGUMENT;
 	}
 	if ( context.pOutput != nullptr &&
 	     ( sirEditorReferenceOverlaps( context.pOutput, nOutputBytes, context.pszSource, context.nSourceBytes ) ||
 	       sirEditorReferenceOverlaps( context.pOutput, nOutputBytes, context.pIndex->pResources, nIndexBytes ) ||
 	       sirEditorReferenceOverlaps( context.pOutput, nOutputBytes, context.pIndex, sizeof( *context.pIndex ) ) ) ) {
-		return SIR_EDITOR_RESOURCE_INVALID_ARGUMENT;
+		return SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_INVALID_ARGUMENT;
 	}
 	uint32_t nRequired = 0;
-	const sirEditorTextResourceResult_t eFirst = sirEditorReferencePass( context, false, &nRequired );
-	if ( eFirst != SIR_EDITOR_RESOURCE_OK ) {
+	const SIREditorTextResourceResult eFirst = sirEditorReferencePass( context, false, &nRequired );
+	if ( eFirst != SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_OK ) {
 		return eFirst;
 	}
 	*pOutCount = nRequired;
 	if ( context.pOutput == nullptr ) {
-		return SIR_EDITOR_RESOURCE_OK;
+		return SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_OK;
 	}
 	if ( context.nCapacity < nRequired ) {
-		return SIR_EDITOR_RESOURCE_OUT_OF_CAPACITY;
+		return SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_OUT_OF_CAPACITY;
 	}
 	uint32_t nWritten = 0;
-	const sirEditorTextResourceResult_t eSecond = sirEditorReferencePass( context, true, &nWritten );
-	return eSecond == SIR_EDITOR_RESOURCE_OK && nWritten == nRequired ? SIR_EDITOR_RESOURCE_OK : SIR_EDITOR_RESOURCE_INVALID_REFERENCE;
+	const SIREditorTextResourceResult eSecond = sirEditorReferencePass( context, true, &nWritten );
+	return eSecond == SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_OK && nWritten == nRequired ? SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_OK : SIREditorTextResourceResult::SIR_EDITOR_RESOURCE_INVALID_REFERENCE;
 }

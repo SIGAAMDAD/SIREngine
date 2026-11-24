@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRAUDIOTYPES_H__
-#define __SIRENGINE_SIRAUDIOTYPES_H__
+#ifndef __SIR_AUDIOTYPES_H__
+#define __SIR_AUDIOTYPES_H__
 
 #include <Core/SIRPCH.h>
 
@@ -24,8 +24,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-typedef enum sirAudioResult_e : uint8_t
-{
+enum class SIRAudioResult : uint8_t {
 	SIR_AUDIO_OK = 0,
 	SIR_AUDIO_PENDING = 1,
 	SIR_AUDIO_INVALID_HANDLE = 2,
@@ -36,34 +35,30 @@ typedef enum sirAudioResult_e : uint8_t
 	SIR_AUDIO_NOT_INITIALIZED = 7,
 	SIR_AUDIO_BUSY = 8,
 	SIR_AUDIO_CANCELLED = 9
-} sirAudioResult_t;
+};
 
-typedef enum sirAudioPlaybackState_e : uint8_t
-{
+enum class SIRAudioPlaybackState : uint8_t {
 	SIR_AUDIO_PLAYBACK_FREE = 0,
 	SIR_AUDIO_PLAYBACK_QUEUED = 1,
 	SIR_AUDIO_PLAYBACK_PLAYING = 2,
 	SIR_AUDIO_PLAYBACK_STOPPING = 3,
 	SIR_AUDIO_PLAYBACK_FINISHED = 4,
 	SIR_AUDIO_PLAYBACK_FAILED = 5
-} sirAudioPlaybackState_t;
+};
 
-typedef enum sirAudioControlScope_e : uint8_t
-{
+enum class SIRAudioControlScope : uint8_t {
 	SIR_AUDIO_CONTROL_GLOBAL = 0,
 	SIR_AUDIO_CONTROL_EMITTER = 1,
 	SIR_AUDIO_CONTROL_PLAYING = 2
-} sirAudioControlScope_t;
+};
 
-typedef enum sirAudioControlType_e : uint8_t
-{
+enum class SIRAudioControlType : uint8_t {
 	SIR_AUDIO_CONTROL_FLOAT = 0,
 	SIR_AUDIO_CONTROL_BOOLEAN = 1,
 	SIR_AUDIO_CONTROL_DISCRETE = 2
-} sirAudioControlType_t;
+};
 
-typedef enum sirAudioCommandType_e : uint8_t
-{
+enum class SIRAudioCommandType : uint8_t {
 	SIR_AUDIO_COMMAND_PLAY = 1,
 	SIR_AUDIO_COMMAND_STOP = 2,
 	SIR_AUDIO_COMMAND_SET_PARAMETER = 3,
@@ -83,21 +78,19 @@ typedef enum sirAudioCommandType_e : uint8_t
 	SIR_AUDIO_COMMAND_SET_PLAYING_PITCH = 17,
 	SIR_AUDIO_COMMAND_SET_PLAYING_PAUSED = 18,
 	SIR_AUDIO_COMMAND_SEEK_PLAYING_TIMELINE = 19
-} sirAudioCommandType_t;
+};
 
-typedef enum sirAudioCompletionType_e : uint8_t
-{
+enum class SIRAudioCompletionType : uint8_t {
 	SIR_AUDIO_COMPLETION_STARTED = 1,
 	SIR_AUDIO_COMPLETION_FINISHED = 2,
 	SIR_AUDIO_COMPLETION_STOPPED = 3,
 	SIR_AUDIO_COMPLETION_FAILED = 4
-} sirAudioCompletionType_t;
+};
 
-typedef enum sirAudioStopMode_e : uint8_t
-{
+enum class SIRAudioStopMode : uint8_t {
 	SIR_AUDIO_STOP_ALLOW_FADE = 0,
 	SIR_AUDIO_STOP_IMMEDIATE = 1
-} sirAudioStopMode_t;
+};
 
 typedef struct sirAudioPlayingHandle_s
 {
@@ -136,8 +129,8 @@ typedef struct sirAudioCommand_s
 	sirAudioPlayingHandle_t hPlaying;
 	sirAudioEmitterHandle_t hEmitter;
 	float fValue;
-	sirAudioCommandType_t eType;
-	sirAudioStopMode_t eStopMode;
+	SIRAudioCommandType eType;
+	SIRAudioStopMode eStopMode;
 	uint8_t nReserved[2];
 } sirAudioCommand_t;
 
@@ -145,8 +138,8 @@ typedef struct sirAudioCompletion_s
 {
 	sirAudioPlayingHandle_t hPlaying;
 	uint64_t nSequence;
-	sirAudioResult_t eResult;
-	sirAudioCompletionType_t eType;
+	SIRAudioResult eResult;
+	SIRAudioCompletionType eType;
 	uint8_t nReserved[6];
 } sirAudioCompletion_t;
 
@@ -182,8 +175,8 @@ typedef struct sirAudioControlBinding_s
 	float fDefault;
 	float fMinimum;
 	float fMaximum;
-	sirAudioControlScope_t eScope;
-	sirAudioControlType_t eType;
+	SIRAudioControlScope eScope;
+	SIRAudioControlType eType;
 	uint8_t bSupported;
 	uint8_t nReserved;
 } sirAudioControlBinding_t;
@@ -194,4 +187,4 @@ static_assert( sizeof( sirAudioPlayingHandle_t ) == 16, "Audio handle ABI change
 static_assert( sizeof( sirAudioCommand_t ) == 64, "Audio command ABI changed" );
 static_assert( sizeof( sirAudioCompletion_t ) == 32, "Audio completion ABI changed" );
 
-#endif // __SIRENGINE_SIRAUDIOTYPES_H__
+#endif // __SIR_AUDIOTYPES_H__

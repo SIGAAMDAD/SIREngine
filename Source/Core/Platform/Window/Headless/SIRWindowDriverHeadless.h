@@ -12,14 +12,17 @@ express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIRWINDOWDRIVERHEADLESS_H__
-#define __SIRENGINE_SIRWINDOWDRIVERHEADLESS_H__
+#ifndef __SIR_WINDOW_DRIVER_HEADLESS_H__
+#define __SIR_WINDOW_DRIVER_HEADLESS_H__
+
 #include <Core/SIRPCH.h>
+
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
 	#pragma once
 #endif
 // clang-format on
+
 #include <Core/Platform/Window/SIRWindowDriver.h>
 
 class SIRWindowDriverHeadless final : public SIRWindowDriver
@@ -28,15 +31,14 @@ public:
 	SIRWindowDriverHeadless( void ) noexcept = default;
 	~SIRWindowDriverHeadless( void ) noexcept override = default;
 
-	sirWindowResult_t initialize( void ) noexcept override;
-	sirWindowResult_t createWindow( const sirWindowCreateDesc_t& desc, uint32_t nSlot, sirWindowNativeView_t *pView ) noexcept override;
-	sirWindowResult_t destroyWindow( uint32_t nSlot ) noexcept override;
-	sirWindowResult_t mutateWindow( uint32_t nSlot, const sirWindowMutation_t& mutation ) noexcept override;
-	sirWindowResult_t pumpEvents( uint32_t nBudget, sirWindowDriverEventFn_t pCallback, void *pContext ) noexcept override;
+	SIRWindowResult initialize( void ) noexcept override;
+	SIRWindowResult createWindow( const sirWindowCreateDesc_t& desc, uint32_t nSlot, sirWindowNativeView_t *pView ) noexcept override;
+	SIRWindowResult destroyWindow( uint32_t nSlot ) noexcept override;
+	SIRWindowResult mutateWindow( uint32_t nSlot, const sirWindowMutation_t& mutation ) noexcept override;
+	SIRWindowResult pumpEvents( uint32_t nBudget, sirWindowDriverEventFn_t pCallback, void *pContext ) noexcept override;
 	void shutdown( void ) noexcept override;
 
-protected:
-private:
+	private:
 	bool m_bInitialized = false;
 };
-#endif // __SIRENGINE_SIRWINDOWDRIVERHEADLESS_H__
+#endif // __SIR_WINDOW_DRIVER_HEADLESS_H__

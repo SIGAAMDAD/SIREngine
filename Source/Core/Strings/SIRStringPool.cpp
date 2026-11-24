@@ -13,6 +13,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 #include <Core/Strings/SIRStringPool.h>
+#include <atomic>
 #include <assert.h>
 #include <string.h>
 #include <stdlib.h>
@@ -45,11 +46,11 @@ static bool reserveAtomIds( uint32_t count, uint32_t& baseId ) noexcept
 {
 	uint64_t first = s_nNextAtomId.load( std::memory_order_relaxed );
 	for ( ;; ) {
-		if ( first > UINT32_MAX || count > ( uint64_t )UINT32_MAX + 1 - first ) {
+		if ( first > UINT32_MAX || count > static_cast<uint64_t>(UINT32_MAX) + 1 - first ) {
 			return false;
 		}
 		if ( s_nNextAtomId.compare_exchange_weak( first, first + count, std::memory_order_acq_rel, std::memory_order_relaxed ) ) {
-			baseId = ( uint32_t )first;
+			baseId = static_cast<uint32_t>(first);
 			return true;
 		}
 	}
@@ -60,16 +61,16 @@ static inline uint16_t groupMask( uint64_t lo, uint64_t hi, uint8_t value ) noex
 {
 #if SIR_STRING_HAS_SSE2_GROUP
 	const __m128i control = _mm_set_epi64x( ( long long )hi, ( long long )lo );
-	const __m128i match = _mm_cmpeq_epi8( control, _mm_set1_epi8( ( char )value ) );
-	return ( uint16_t )_mm_movemask_epi8( match );
+	const __m128i match = _mm_cmpeq_epi8( control, _mm_set1_epi8( static_cast<char>(value) ) );
+	return static_cast<uint16_t>(_mm_movemask_epi8( match ));
 #else
 	uint16_t mask = 0;
 	for ( uint32_t i = 0; i < 8; ++i ) {
-		if ( ( uint8_t )( lo >> ( i * 8 ) ) == value ) {
-			mask |= ( uint16_t )( 1U << i );
+		if ( static_cast<uint8_t>(  lo >> ( i * 8 )  ) == value ) {
+			mask |= static_cast<uint16_t>( 1U << i );
 		}
-		if ( ( uint8_t )( hi >> ( i * 8 ) ) == value ) {
-			mask |= ( uint16_t )( 1U << ( i + 8 ) );
+		if ( static_cast<uint8_t>(  hi >> ( i * 8 )  ) == value ) {
+			mask |= static_cast<uint16_t>(  1U << ( i + 8 )  );
 		}
 	}
 	return mask;
@@ -80,9 +81,9 @@ static inline uint32_t firstSetBit( uint16_t bits ) noexcept
 #if defined( _MSC_VER )
 	unsigned long index = 0;
 	_BitScanForward( &index, bits );
-	return ( uint32_t )index;
+	return static_cast<uint32_t>(index);
 #else
-	return ( uint32_t )__builtin_ctz( ( unsigned int )bits );
+	return static_cast<uint32_t>(__builtin_ctz( static_cast<unsigned int>(bits) ));
 #endif
 }
 #endif
@@ -110,7 +111,7 @@ static uint64_t hashCookedPayload( const char *pText, size_t nBytes ) noexcept
 {
 	uint64_t hash = 14695981039346656037ULL;
 	for ( size_t i = 0; i < nBytes; ++i ) {
-		hash = ( hash ^ ( uint8_t )pText[i] ) * 1099511628211ULL;
+		hash = ( hash ^ static_cast<uint8_t>(pText[i]) ) * 1099511628211ULL;
 	}
 	return hash;
 }
@@ -125,8 +126,8 @@ static uint32_t initialBudget( uint32_t nMaximum, uint32_t nRequested, uint32_t 
 static uint32_t grownBudget( uint32_t nActive, uint32_t nRequired, uint32_t nMaximum ) noexcept
 {
 	while ( nActive < nRequired && nActive < nMaximum ) {
-		const uint64_t nDoubled = nActive == 0 ? 1u : ( uint64_t )nActive * 2u;
-		nActive = nDoubled > nMaximum ? nMaximum : ( uint32_t )nDoubled;
+		const uint64_t nDoubled = nActive == 0 ? 1u : static_cast<uint64_t>(nActive) * 2u;
+		nActive = nDoubled > nMaximum ? nMaximum : static_cast<uint32_t>(nDoubled);
 	}
 	return nActive;
 }
@@ -239,20 +240,20 @@ void SIRStringTextRef::set( SIRStringPool *pPool, SIRStringAtom atom ) noexcept
 	m_Atom = atom;
 }
 
-sirStringStatus_t SIRStringTextRef::get( const char *& pText, uint32_t& nBytes ) noexcept
+SIRStringStatus SIRStringTextRef::get( const char *& pText, uint32_t& nBytes ) noexcept
 {
 	pText = NULL;
 	nBytes = 0;
 	if ( m_Lease.isValid() ) {
 		pText = m_Lease.data();
 		nBytes = m_Lease.bytes();
-		return SIR_STRING_OK;
+		return SIRStringStatus::SIR_STRING_OK;
 	}
 	if ( m_pPool == NULL ) {
-		return SIR_STRING_NOT_INITIALIZED;
+		return SIRStringStatus::SIR_STRING_NOT_INITIALIZED;
 	}
-	const sirStringStatus_t status = m_pPool->acquire( m_Atom, m_Lease );
-	if ( status == SIR_STRING_OK ) {
+	const SIRStringStatus status = m_pPool->acquire( m_Atom, m_Lease );
+	if ( status == SIRStringStatus::SIR_STRING_OK ) {
 		pText = m_Lease.data();
 		nBytes = m_Lease.bytes();
 	}
@@ -277,7 +278,7 @@ uint32_t SIRStringTextRef::bytes( void ) noexcept
 	}
 	const char *pText = NULL;
 	uint32_t nBytes = 0;
-	return get( pText, nBytes ) == SIR_STRING_OK ? nBytes : 0;
+	return get( pText, nBytes ) == SIRStringStatus::SIR_STRING_OK ? nBytes : 0;
 }
 
 bool SIRStringTextRef::isPinned( void ) const noexcept
@@ -366,13 +367,13 @@ size_t SIRStringPool::requiredBytes( const sirStringPoolConfig_t& config, size_t
 		       ( config.nInitialShortSlots > config.nShortSlots || config.nInitialLongSlots > config.nLongSlots ) ) ) {
 			return 0;
 		}
-		nCacheSlots = ( uint64_t )config.nShortSlots + config.nLongSlots;
+		nCacheSlots = static_cast<uint64_t>(config.nShortSlots) + config.nLongSlots;
 		if ( nCacheSlots > UINT32_MAX ) {
 			return 0;
 		}
 	}
 	uint64_t requiredSlots =
-	    ( ( uint64_t )config.nMaxNames * 100 + SIR_STRING_INDEX_TARGET_LOAD_PERCENT - 1 ) / SIR_STRING_INDEX_TARGET_LOAD_PERCENT;
+	    ( static_cast<uint64_t>(config.nMaxNames) * 100 + SIR_STRING_INDEX_TARGET_LOAD_PERCENT - 1 ) / SIR_STRING_INDEX_TARGET_LOAD_PERCENT;
 #if SIR_STRING_GROUPED_INDEX && !SIR_STRING_ADAPTIVE_INDEX
 	if ( requiredSlots < 16 ) {
 		requiredSlots = 16;
@@ -398,21 +399,21 @@ size_t SIRStringPool::requiredBytes( const sirStringPoolConfig_t& config, size_t
 	if ( !checkedMultiply( config.nMaxNames, sizeof( sirStringPoolDynamicEntry_t ), bytes ) || !checkedAdd( total, bytes ) ||
 	     !checkedMultiply( cookedUpper, sizeof( sirStringPoolCookedEntry_t ) + sizeof( uint64_t ) + sizeof( std::atomic<uint32_t> ),
 	                       bytes ) ||
-	     !checkedAdd( total, bytes ) || !checkedMultiply( ( size_t )nCacheSlots, sizeof( sirStringPoolCacheSlot_t ), bytes ) ||
-	     !checkedAdd( total, bytes ) || !checkedAdd( total, ( size_t )config.nDynamicTextBytes + 1 ) ||
+	     !checkedAdd( total, bytes ) || !checkedMultiply( static_cast<size_t>(nCacheSlots), sizeof( sirStringPoolCacheSlot_t ), bytes ) ||
+	     !checkedAdd( total, bytes ) || !checkedAdd( total, static_cast<size_t>(config.nDynamicTextBytes) + 1 ) ||
 	     !checkedAdd( total, cookedBytes ) ) {
 		return 0;
 	}
 	if ( config.bTieredCache ) {
 		for ( uint32_t iTier = 0; iTier < SIR_STRING_CACHE_TIER_COUNT; ++iTier ) {
-			if ( !checkedMultiply( config.nTierSlots[iTier], ( size_t )config.nTierBytes[iTier] + 1, bytes ) ||
+			if ( !checkedMultiply( config.nTierSlots[iTier], static_cast<size_t>(config.nTierBytes[iTier]) + 1, bytes ) ||
 			     !checkedAdd( total, bytes ) ) {
 				return 0;
 			}
 		}
 	} else {
-		if ( !checkedMultiply( config.nShortSlots, ( size_t )config.nShortBytes + 1, bytes ) || !checkedAdd( total, bytes ) ||
-		     !checkedMultiply( config.nLongSlots, ( size_t )config.nLongBytes + 1, bytes ) || !checkedAdd( total, bytes ) ) {
+		if ( !checkedMultiply( config.nShortSlots, static_cast<size_t>(config.nShortBytes) + 1, bytes ) || !checkedAdd( total, bytes ) ||
+		     !checkedMultiply( config.nLongSlots, static_cast<size_t>(config.nLongBytes) + 1, bytes ) || !checkedAdd( total, bytes ) ) {
 			return 0;
 		}
 	}
@@ -422,7 +423,7 @@ size_t SIRStringPool::requiredBytes( const sirStringPoolConfig_t& config, size_t
 size_t SIRStringPool::requiredBytes( const sirStringPoolConfig_t& config, const void *pCooked, size_t cookedBytes ) noexcept
 {
 	if ( cookedBytes && ( !pCooked || cookedBytes < 48 || memcmp( pCooked, "SIRS", 4 ) != 0 ||
-	                      readU16( ( const uint8_t * )pCooked + 4 ) != SIR_STRING_CATALOG_VERSION ) ) {
+	                      readU16( static_cast<const uint8_t *>(pCooked) + 4 ) != SIR_STRING_CATALOG_VERSION ) ) {
 		return 0;
 	}
 	const size_t conservative = requiredBytes( config, cookedBytes );
@@ -430,13 +431,13 @@ size_t SIRStringPool::requiredBytes( const sirStringPoolConfig_t& config, const 
 		return conservative;
 	}
 	const size_t cookedUpper = ( cookedBytes - 48 ) / 8 < config.nMaxNames ? ( cookedBytes - 48 ) / 8 : config.nMaxNames;
-	const uint32_t cooked = readU32( ( const uint8_t * )pCooked + 8 );
+	const uint32_t cooked = readU32( static_cast<const uint8_t *>(pCooked) + 8 );
 	if ( cooked > cookedUpper ) {
 		return 0;
 	}
 	/* Every cooked record replaces a 16-byte dynamic descriptor and adds
 	   an 8-byte descriptor, 8-byte hash and 4-byte hint: net +4 bytes. */
-	return conservative - ( cookedUpper - cooked ) * 20 - ( size_t )cooked * 16;
+	return conservative - ( cookedUpper - cooked ) * 20 - static_cast<size_t>(cooked) * 16;
 }
 
 void *SIRStringPool::carve( size_t nBytes, size_t nAlignment ) noexcept
@@ -444,17 +445,17 @@ void *SIRStringPool::carve( size_t nBytes, size_t nAlignment ) noexcept
 	if ( m_pMemory == NULL || nAlignment == 0 || ( nAlignment & ( nAlignment - 1 ) ) != 0 ) {
 		return NULL;
 	}
-	const uintptr_t base = ( uintptr_t )m_pMemory;
+	const uintptr_t base = reinterpret_cast<uintptr_t>(m_pMemory);
 	if ( m_nCursor > UINTPTR_MAX - base || base + m_nCursor > UINTPTR_MAX - ( nAlignment - 1 ) ) {
 		return NULL;
 	}
-	const uintptr_t start = ( base + m_nCursor + nAlignment - 1 ) & ~( ( uintptr_t )nAlignment - 1 );
-	const size_t offset = ( size_t )( start - base );
+	const uintptr_t start = ( base + m_nCursor + nAlignment - 1 ) & ~( static_cast<uintptr_t>(nAlignment) - 1 );
+	const size_t offset = static_cast<size_t>( start - base );
 	if ( offset > m_nMemoryBytes || nBytes > m_nMemoryBytes - offset ) {
 		return NULL;
 	}
 	m_nCursor = offset + nBytes;
-	return ( void * )start;
+	return reinterpret_cast<void *>(start);
 }
 
 void SIRStringPool::resetState( void ) noexcept
@@ -515,20 +516,20 @@ bool SIRStringPool::initialize( const sirStringPoolSpan_t& span, const sirString
 	uint32_t cooked = 0;
 	if ( nCookedBytes != 0 ) {
 		if ( nCookedBytes < SIR_COOKED_HEADER_BYTES || memcmp( pCooked, "SIRS", 4 ) != 0 ||
-		     readU16( ( const uint8_t * )pCooked + 4 ) != SIR_STRING_CATALOG_VERSION ) {
+		     readU16( static_cast<const uint8_t *>(pCooked) + 4 ) != SIR_STRING_CATALOG_VERSION ) {
 			return false;
 		}
-		cooked = readU32( ( const uint8_t * )pCooked + 8 );
+		cooked = readU32( static_cast<const uint8_t *>(pCooked) + 8 );
 	}
 	const size_t required = requiredBytes( config, pCooked, nCookedBytes );
 	if ( required == 0 || nMemoryBytes < required || cooked > config.nMaxNames ) {
 		return false;
 	}
-	m_pMemory = ( uint8_t * )pMemory;
+	m_pMemory = static_cast<uint8_t *>(pMemory);
 	m_nMemoryBytes = nMemoryBytes;
 	m_nCursor = 0;
 	uint64_t requiredSlots =
-	    ( ( uint64_t )config.nMaxNames * 100 + SIR_STRING_INDEX_TARGET_LOAD_PERCENT - 1 ) / SIR_STRING_INDEX_TARGET_LOAD_PERCENT;
+	    ( static_cast<uint64_t>(config.nMaxNames) * 100 + SIR_STRING_INDEX_TARGET_LOAD_PERCENT - 1 ) / SIR_STRING_INDEX_TARGET_LOAD_PERCENT;
 #if SIR_STRING_GROUPED_INDEX && !SIR_STRING_ADAPTIVE_INDEX
 	if ( requiredSlots < 16 ) {
 		requiredSlots = 16;
@@ -583,28 +584,28 @@ bool SIRStringPool::initialize( const sirStringPoolSpan_t& span, const sirString
 	m_bGroupedIndex = m_nMaxNames >= 32768;
 	if ( m_bGroupedIndex ) {
 #endif
-		m_pGroupControl = ( std::atomic<uint64_t> * )carve( ( size_t )m_nHashBuckets, alignof( std::atomic<uint64_t> ) );
-		m_pGroupIndices = ( uint8_t * )carve( ( size_t )m_nHashBuckets * 3, 1 );
+		m_pGroupControl = ( std::atomic<uint64_t> * )carve( static_cast<size_t>(m_nHashBuckets), alignof( std::atomic<uint64_t> ) );
+		m_pGroupIndices = static_cast<uint8_t *>(carve( static_cast<size_t>(m_nHashBuckets) * 3, 1 ));
 #if SIR_STRING_ADAPTIVE_INDEX
 	} else {
-		m_pDynamicIndex = ( std::atomic<uint32_t> * )carve( ( size_t )m_nHashBuckets * sizeof( std::atomic<uint32_t> ),
+		m_pDynamicIndex = ( std::atomic<uint32_t> * )carve( static_cast<size_t>(m_nHashBuckets * sizeof(  std::atomic<uint32_t>  )),
 		                                                    alignof( std::atomic<uint32_t> ) );
 	}
 #endif
 #else
 	m_pDynamicIndex =
-	    ( std::atomic<uint32_t> * )carve( ( size_t )m_nHashBuckets * sizeof( std::atomic<uint32_t> ), alignof( std::atomic<uint32_t> ) );
+	    ( std::atomic<uint32_t> * )carve( static_cast<size_t>(m_nHashBuckets * sizeof(  std::atomic<uint32_t>  )), alignof( std::atomic<uint32_t> ) );
 #endif
-	m_pCooked = ( sirStringPoolCookedEntry_t * )carve( ( size_t )cooked * sizeof( sirStringPoolCookedEntry_t ),
-	                                                   alignof( sirStringPoolCookedEntry_t ) );
-	m_pCookedHashes = ( uint64_t * )carve( ( size_t )cooked * sizeof( uint64_t ), alignof( uint64_t ) );
-	m_pCookedHot = ( std::atomic<uint32_t> * )carve( ( size_t )cooked * sizeof( std::atomic<uint32_t> ), alignof( std::atomic<uint32_t> ) );
-	m_pDynamicEntries = ( sirStringPoolDynamicEntry_t * )carve( ( size_t )( m_nMaxNames - cooked ) * sizeof( sirStringPoolDynamicEntry_t ),
-	                                                            alignof( sirStringPoolDynamicEntry_t ) );
-	m_pCache = ( sirStringPoolCacheSlot_t * )carve( ( size_t )m_nCacheSlots * sizeof( sirStringPoolCacheSlot_t ),
-	                                                alignof( sirStringPoolCacheSlot_t ) );
-	m_pDynamic = ( uint8_t * )carve( ( size_t )m_nDynamicTextCapacity + 1, 1 );
-	uint8_t *copy = ( uint8_t * )carve( nCookedBytes, 1 );
+	m_pCooked = static_cast<sirStringPoolCookedEntry_t *>(carve( static_cast<size_t>(cooked) * sizeof( sirStringPoolCookedEntry_t ),
+	                                                   alignof( sirStringPoolCookedEntry_t ) ));
+	m_pCookedHashes = static_cast<uint64_t *>(carve( static_cast<size_t>(cooked * sizeof(  uint64_t  )), alignof( uint64_t ) ));
+	m_pCookedHot = ( std::atomic<uint32_t> * )carve( static_cast<size_t>(cooked * sizeof(  std::atomic<uint32_t>  )), alignof( std::atomic<uint32_t> ) );
+	m_pDynamicEntries = static_cast<sirStringPoolDynamicEntry_t *>(carve( static_cast<size_t>( m_nMaxNames - cooked ) * sizeof( sirStringPoolDynamicEntry_t ),
+	                                                            alignof( sirStringPoolDynamicEntry_t ) ));
+	m_pCache = static_cast<sirStringPoolCacheSlot_t *>(carve( static_cast<size_t>(m_nCacheSlots) * sizeof( sirStringPoolCacheSlot_t ),
+	                                                alignof( sirStringPoolCacheSlot_t ) ));
+	m_pDynamic = static_cast<uint8_t *>(carve( static_cast<size_t>(m_nDynamicTextCapacity) + 1, 1 ));
+	uint8_t *copy = static_cast<uint8_t *>(carve( nCookedBytes, 1 ));
 #if SIR_STRING_GROUPED_INDEX
 	if (
 #if SIR_STRING_ADAPTIVE_INDEX
@@ -628,7 +629,7 @@ bool SIRStringPool::initialize( const sirStringPoolSpan_t& span, const sirString
 		for ( uint32_t i = 0; i < m_nHashBuckets / 8; ++i ) {
 			new ( &m_pGroupControl[i] ) std::atomic<uint64_t>( SIR_GROUP_EMPTY );
 		}
-		memset( m_pGroupIndices, 0, ( size_t )m_nHashBuckets * 3 );
+		memset( m_pGroupIndices, 0, static_cast<size_t>(m_nHashBuckets) * 3 );
 #if SIR_STRING_ADAPTIVE_INDEX
 	} else {
 		for ( uint32_t i = 0; i < m_nHashBuckets; ++i ) {
@@ -657,7 +658,7 @@ bool SIRStringPool::initialize( const sirStringPoolSpan_t& span, const sirString
 		} else {
 			m_pCache[i].nCapacity = i < m_nShortSlots ? m_nShortBytes : m_nLongBytes;
 		}
-		m_pCache[i].pszData = ( char * )carve( ( size_t )m_pCache[i].nCapacity + 1, 1 );
+		m_pCache[i].pszData = static_cast<char *>(carve( static_cast<size_t>(m_pCache[i].nCapacity) + 1, 1 ));
 		if ( m_pCache[i].pszData == NULL ) {
 			resetState();
 			return false;
@@ -758,7 +759,7 @@ bool SIRStringPool::retireScope( void ) noexcept
 		for ( uint32_t i = 0; i < m_nHashBuckets / 8; ++i ) {
 			m_pGroupControl[i].store( SIR_GROUP_EMPTY, std::memory_order_release );
 		}
-		memset( m_pGroupIndices, 0, ( size_t )m_nHashBuckets * 3 );
+		memset( m_pGroupIndices, 0, static_cast<size_t>(m_nHashBuckets) * 3 );
 #if SIR_STRING_ADAPTIVE_INDEX
 	} else {
 		for ( uint32_t i = 0; i < m_nHashBuckets; ++i ) {
@@ -821,20 +822,20 @@ bool SIRStringPool::isInitialized( void ) const noexcept
 }
 uint16_t SIRStringPool::readU16( const uint8_t *p ) noexcept
 {
-	return ( uint16_t )( p[0] | ( ( uint16_t )p[1] << 8 ) );
+	return ( uint16_t )( p[0] | ( static_cast<uint16_t>(p[1]) << 8 ) );
 }
 uint32_t SIRStringPool::readU32( const uint8_t *p ) noexcept
 {
-	return ( uint32_t )p[0] | ( ( uint32_t )p[1] << 8 ) | ( ( uint32_t )p[2] << 16 ) | ( ( uint32_t )p[3] << 24 );
+	return static_cast<uint32_t>(p[0]) | ( static_cast<uint32_t>(p[1]) << 8 ) | ( static_cast<uint32_t>(p[2]) << 16 ) | ( static_cast<uint32_t>(p[3]) << 24 );
 }
 uint64_t SIRStringPool::readU64( const uint8_t *p ) noexcept
 {
-	return ( uint64_t )readU32( p ) | ( ( uint64_t )readU32( p + 4 ) << 32 );
+	return static_cast<uint64_t>(readU32( p )) | ( static_cast<uint64_t>(readU32( p + 4 )) << 32 );
 }
 bool SIRStringPool::isValidUtf8( const char *pText, size_t nBytes ) noexcept
 {
 	for ( size_t i = 0; i < nBytes; ) {
-		const uint8_t c = ( uint8_t )pText[i];
+		const uint8_t c = static_cast<uint8_t>(pText[i]);
 		if ( c < 0x80 ) {
 			++i;
 			continue;
@@ -856,7 +857,7 @@ bool SIRStringPool::isValidUtf8( const char *pText, size_t nBytes ) noexcept
 			return false;
 		}
 		for ( uint32_t j = 0; j < more; ++j ) {
-			const uint8_t d = ( uint8_t )pText[i + j + 1];
+			const uint8_t d = static_cast<uint8_t>(pText[i + j + 1]);
 			if ( ( d & 0xc0 ) != 0x80 ) {
 				return false;
 			}
@@ -881,12 +882,12 @@ bool SIRStringPool::loadCatalog( const uint8_t *data, size_t size ) noexcept
 	const uint32_t frozenBytes = readU32( data + 16 );
 	const uint32_t dictionaryBytes = readU32( data + 20 );
 	const uint32_t blobBytes = readU32( data + 24 );
-	if ( count != m_nCookedNames || ( uint64_t )count * 8 != recBytes || dictionaryBytes != 0 || frozenBytes != 0 ||
-	     ( uint64_t )recBytes + frozenBytes + blobBytes != size - 48 ) {
+	if ( count != m_nCookedNames || static_cast<uint64_t>(count) * 8 != recBytes || dictionaryBytes != 0 || frozenBytes != 0 ||
+	     static_cast<uint64_t>(recBytes) + frozenBytes + blobBytes != size - 48 ) {
 		return false;
 	}
 	const uint8_t *payload = data + 48;
-	if ( hashCookedPayload( ( const char * )payload, size - 48 ) != readU64( data + 28 ) ) {
+	if ( hashCookedPayload( reinterpret_cast<const char *>(payload), size - 48 ) != readU64( data + 28 ) ) {
 		return false;
 	}
 	m_nCatalogHash = readU64( data + 36 );
@@ -925,7 +926,7 @@ bool SIRStringPool::loadCatalog( const uint8_t *data, size_t size ) noexcept
 		previousBytes = written;
 		m_pCookedHashes[i] = hashString( text, written );
 		for ( uint32_t j = 0; j < written; ++j ) {
-			corpus = ( corpus ^ ( uint8_t )text[j] ) * 1099511628211ULL;
+			corpus = ( corpus ^ static_cast<uint8_t>(text[j]) ) * 1099511628211ULL;
 		}
 		corpus = ( corpus ^ 0xff ) * 1099511628211ULL;
 	}
@@ -974,7 +975,7 @@ bool SIRStringPool::decodeCooked( uint32_t index, char *out, size_t capacity, ui
 	while ( in < encoded ) {
 		const uint8_t token = source[in++];
 		if ( token < 128 ) {
-			const uint32_t n = ( uint32_t )token + 1;
+			const uint32_t n = static_cast<uint32_t>(token) + 1;
 			if ( n > encoded - in || n > entry.nLength - pos ) {
 				return false;
 			}
@@ -1008,7 +1009,7 @@ uint64_t SIRStringPool::hashString( const char *pText, size_t bytes ) noexcept
 {
 	uint64_t hash = 14695981039346656037ULL;
 	for ( size_t i = 0; i < bytes; ++i ) {
-		hash = ( hash ^ ( uint8_t )pText[i] ) * 1099511628211ULL;
+		hash = ( hash ^ static_cast<uint8_t>(pText[i]) ) * 1099511628211ULL;
 	}
 	return hash;
 }
@@ -1058,7 +1059,7 @@ bool SIRStringPool::matchesCooked( uint32_t index, const char *text, size_t byte
 	if ( m_nBaseId != 0 ) {
 		SIRStringLease lease;
 		if ( tryAcquireHot( index, makeAtom( index ).getId(), lease ) ||
-		     const_cast<SIRStringPool *>( this )->acquire( makeAtom( index ), lease ) == SIR_STRING_OK ) {
+		     const_cast<SIRStringPool *>( this )->acquire( makeAtom( index ), lease ) == SIRStringStatus::SIR_STRING_OK ) {
 			return bytes == 0 || memcmp( lease.data(), text, bytes ) == 0;
 		}
 	}
@@ -1078,7 +1079,7 @@ bool SIRStringPool::findInsertionSlot( uint64_t hash, uint32_t& slot ) const noe
 #if SIR_STRING_GROUPED_INDEX
 #if SIR_STRING_ADAPTIVE_INDEX
 	if ( !m_bGroupedIndex ) {
-		uint32_t at = ( uint32_t )hash & ( m_nHashBuckets - 1 );
+		uint32_t at = static_cast<uint32_t>(hash) & ( m_nHashBuckets - 1 );
 		for ( uint32_t scanned = 0; scanned < m_nHashBuckets; ++scanned ) {
 			if ( m_pDynamicIndex[at].load( std::memory_order_relaxed ) == 0 ) {
 				slot = at;
@@ -1090,7 +1091,7 @@ bool SIRStringPool::findInsertionSlot( uint64_t hash, uint32_t& slot ) const noe
 	}
 #endif
 	const uint32_t groups = m_nHashBuckets / 16;
-	uint32_t group = ( uint32_t )hash & ( groups - 1 );
+	uint32_t group = static_cast<uint32_t>(hash) & ( groups - 1 );
 	for ( uint32_t scanned = 0; scanned < groups; ++scanned ) {
 		const uint64_t lo = m_pGroupControl[group * 2].load( std::memory_order_relaxed );
 		const uint64_t hi = m_pGroupControl[group * 2 + 1].load( std::memory_order_relaxed );
@@ -1103,7 +1104,7 @@ bool SIRStringPool::findInsertionSlot( uint64_t hash, uint32_t& slot ) const noe
 	}
 	return false;
 #else
-	uint32_t at = ( uint32_t )hash & ( m_nHashBuckets - 1 );
+	uint32_t at = static_cast<uint32_t>(hash) & ( m_nHashBuckets - 1 );
 	for ( uint32_t scanned = 0; scanned < m_nHashBuckets; ++scanned ) {
 		if ( m_pDynamicIndex[at].load( std::memory_order_relaxed ) == 0 ) {
 			slot = at;
@@ -1120,21 +1121,21 @@ void SIRStringPool::publishIndex( uint32_t slot, uint64_t hash, uint32_t indexPl
 #if SIR_STRING_GROUPED_INDEX
 #if SIR_STRING_ADAPTIVE_INDEX
 	if ( !m_bGroupedIndex ) {
-		m_pDynamicIndex[slot].store( ( ( uint32_t )( hash >> 56 ) << 24 ) | indexPlus, std::memory_order_release );
+		m_pDynamicIndex[slot].store( ( static_cast<uint32_t>( hash >> 56 ) << 24 ) | indexPlus, std::memory_order_release );
 		return;
 	}
 #endif
-	const size_t at = ( size_t )slot * 3;
-	m_pGroupIndices[at] = ( uint8_t )indexPlus;
-	m_pGroupIndices[at + 1] = ( uint8_t )( indexPlus >> 8 );
-	m_pGroupIndices[at + 2] = ( uint8_t )( indexPlus >> 16 );
+	const size_t at = static_cast<size_t>(slot) * 3;
+	m_pGroupIndices[at] = static_cast<uint8_t>(indexPlus);
+	m_pGroupIndices[at + 1] = static_cast<uint8_t>( indexPlus >> 8 );
+	m_pGroupIndices[at + 2] = static_cast<uint8_t>( indexPlus >> 16 );
 	const uint32_t word = slot / 8;
 	const uint32_t shift = ( slot & 7 ) * 8;
 	const uint64_t original = m_pGroupControl[word].load( std::memory_order_relaxed );
 	const uint64_t published = ( original & ~( 0xffULL << shift ) ) | ( ( ( hash >> 57 ) & 0x7fULL ) << shift );
 	m_pGroupControl[word].store( published, std::memory_order_release );
 #else
-	m_pDynamicIndex[slot].store( ( ( uint32_t )( hash >> 56 ) << 24 ) | indexPlus, std::memory_order_release );
+	m_pDynamicIndex[slot].store( ( static_cast<uint32_t>( hash >> 56 ) << 24 ) | indexPlus, std::memory_order_release );
 #endif
 }
 
@@ -1150,18 +1151,18 @@ uint32_t SIRStringPool::findLocal( const char *text, size_t bytes, uint64_t hash
 		return 0;
 	}
 	const uint32_t groups = m_nHashBuckets / 16;
-	uint32_t group = ( uint32_t )hash & ( groups - 1 );
-	const uint8_t fingerprint = ( uint8_t )( hash >> 57 );
+	uint32_t group = static_cast<uint32_t>(hash) & ( groups - 1 );
+	const uint8_t fingerprint = static_cast<uint8_t>( hash >> 57 );
 	for ( uint32_t scanned = 0; scanned < groups; ++scanned ) {
 		const uint64_t lo = m_pGroupControl[group * 2].load( std::memory_order_acquire );
 		const uint64_t hi = m_pGroupControl[group * 2 + 1].load( std::memory_order_acquire );
 		uint16_t match = groupMask( lo, hi, fingerprint );
 		while ( match ) {
 			const uint32_t bit = firstSetBit( match );
-			match &= ( uint16_t )( match - 1 );
-			const size_t at = ( size_t )( group * 16 + bit ) * 3;
-			const uint32_t indexPlus = ( uint32_t )m_pGroupIndices[at] | ( ( uint32_t )m_pGroupIndices[at + 1] << 8 ) |
-			                           ( ( uint32_t )m_pGroupIndices[at + 2] << 16 );
+			match &= static_cast<uint16_t>( match - 1 );
+			const size_t at = static_cast<size_t>( group * 16 + bit ) * 3;
+			const uint32_t indexPlus = static_cast<uint32_t>(m_pGroupIndices[at]) | ( static_cast<uint32_t>(m_pGroupIndices[at + 1]) << 8 ) |
+			                           ( static_cast<uint32_t>(m_pGroupIndices[at + 2]) << 16 );
 			if ( indexPlus == 0 ) {
 				continue;
 			}
@@ -1193,8 +1194,8 @@ uint32_t SIRStringPool::findLocalFlat( const char *text, size_t bytes, uint64_t 
 	if ( !m_nHashBuckets ) {
 		return 0;
 	}
-	uint32_t at = ( uint32_t )hash & ( m_nHashBuckets - 1 );
-	const uint32_t fingerprint = ( uint32_t )( hash >> 56 );
+	uint32_t at = static_cast<uint32_t>(hash) & ( m_nHashBuckets - 1 );
+	const uint32_t fingerprint = static_cast<uint32_t>( hash >> 56 );
 	for ( uint32_t step = 0; step < m_nHashBuckets; ++step ) {
 		const uint32_t tag = m_pDynamicIndex[at].load( std::memory_order_acquire );
 		if ( tag == 0 ) {
@@ -1232,9 +1233,9 @@ uint32_t SIRStringPool::findLocalFlat( const char *text, size_t bytes, uint64_t 
 	}
 	return 0;
 #else
-	( void )text;
-	( void )bytes;
-	( void )hash;
+	static_cast<void>(text);
+	static_cast<void>(bytes);
+	static_cast<void>(hash);
 	return 0;
 #endif
 }
@@ -1284,8 +1285,8 @@ SIRStringAtom SIRStringPool::intern( const char *text, size_t bytes ) noexcept
 		return SIRStringAtom();
 	}
 	const uint32_t nNameBudget = grownBudget( m_nActiveNameBudget, index + 1, m_nMaxNames );
-	const uint32_t nTextBudget = grownBudget( m_nActiveDynamicTextBudget, m_nDynamicUsed + ( uint32_t )bytes + 1, m_nDynamicTextCapacity );
-	if ( nNameBudget <= index || nTextBudget < m_nDynamicUsed + ( uint32_t )bytes + 1 ) {
+	const uint32_t nTextBudget = grownBudget( m_nActiveDynamicTextBudget, m_nDynamicUsed + static_cast<uint32_t>(bytes) + 1, m_nDynamicTextCapacity );
+	if ( nNameBudget <= index || nTextBudget < m_nDynamicUsed + static_cast<uint32_t>(bytes) + 1 ) {
 		m_registryLock.unlock();
 		return SIRStringAtom();
 	}
@@ -1298,12 +1299,12 @@ SIRStringAtom SIRStringPool::intern( const char *text, size_t bytes ) noexcept
 	new ( &entry ) sirStringPoolDynamicEntry_t();
 	entry.nHash = hashString( text, bytes );
 	entry.nOffset = m_nDynamicUsed;
-	entry.nLength = ( uint32_t )bytes;
+	entry.nLength = static_cast<uint32_t>(bytes);
 	if ( bytes ) {
 		memcpy( m_pDynamic + m_nDynamicUsed, text, bytes );
 	}
 	m_pDynamic[m_nDynamicUsed + bytes] = 0;
-	m_nDynamicUsed += ( uint32_t )bytes + 1;
+	m_nDynamicUsed += static_cast<uint32_t>(bytes) + 1;
 	m_nActiveNameBudget = nNameBudget;
 	m_nActiveDynamicTextBudget = nTextBudget;
 	m_nNames.store( index + 1, std::memory_order_release );
@@ -1339,12 +1340,12 @@ bool SIRStringPool::tryAcquireHot( uint32_t index, uint32_t atomId, SIRStringLea
 	return false;
 }
 
-sirStringStatus_t SIRStringPool::acquireTiered( uint32_t nIndex, SIRStringAtom atom, SIRStringLease& lease ) noexcept
+SIRStringStatus SIRStringPool::acquireTiered( uint32_t nIndex, SIRStringAtom atom, SIRStringLease& lease ) noexcept
 {
 	m_cacheLock.lock();
 	if ( tryAcquireHot( nIndex, atom.getId(), lease ) ) {
 		m_cacheLock.unlock();
-		return SIR_STRING_OK;
+		return SIRStringStatus::SIR_STRING_OK;
 	}
 	const uint32_t nBytes = m_pCooked[nIndex].nLength;
 	uint32_t nVictim = m_nCacheSlots;
@@ -1391,7 +1392,7 @@ sirStringStatus_t SIRStringPool::acquireTiered( uint32_t nIndex, SIRStringAtom a
 	}
 	if ( nVictim == m_nCacheSlots ) {
 		m_cacheLock.unlock();
-		return nBytes > m_nTierBytes[SIR_STRING_CACHE_TIER_COUNT - 1] ? SIR_STRING_OUTPUT_TOO_SMALL : SIR_STRING_ALL_SLOTS_PINNED;
+		return nBytes > m_nTierBytes[SIR_STRING_CACHE_TIER_COUNT - 1] ? SIRStringStatus::SIR_STRING_OUTPUT_TOO_SMALL : SIRStringStatus::SIR_STRING_ALL_SLOTS_PINNED;
 	}
 	sirStringPoolCacheSlot_t& slot = m_pCache[nVictim];
 	const uint32_t nOldId = slot.nAtomId.load( std::memory_order_relaxed );
@@ -1403,10 +1404,10 @@ sirStringStatus_t SIRStringPool::acquireTiered( uint32_t nIndex, SIRStringAtom a
 	}
 	slot.nAtomId.store( 0, std::memory_order_release );
 	uint32_t nWritten = 0;
-	if ( !decodeCooked( nIndex, slot.pszData, ( size_t )slot.nCapacity + 1, nWritten ) ) {
+	if ( !decodeCooked( nIndex, slot.pszData, static_cast<size_t>(slot.nCapacity) + 1, nWritten ) ) {
 		slot.nPins.store( 0, std::memory_order_release );
 		m_cacheLock.unlock();
-		return SIR_STRING_CORRUPT_CATALOG;
+		return SIRStringStatus::SIR_STRING_CORRUPT_CATALOG;
 	}
 	slot.nBytes = nWritten;
 	++slot.nGeneration;
@@ -1423,40 +1424,40 @@ sirStringStatus_t SIRStringPool::acquireTiered( uint32_t nIndex, SIRStringAtom a
 	m_pCookedHot[nIndex].store( nVictim + 1, std::memory_order_release );
 	lease.bind( this, { nVictim, atom.getId(), slot.nGeneration, slot.pszData, nWritten } );
 	m_cacheLock.unlock();
-	return SIR_STRING_OK;
+	return SIRStringStatus::SIR_STRING_OK;
 }
 
-sirStringStatus_t SIRStringPool::acquire( SIRStringAtom atom, SIRStringLease& lease ) noexcept
+SIRStringStatus SIRStringPool::acquire( SIRStringAtom atom, SIRStringLease& lease ) noexcept
 {
 	if ( lease.m_pPool == this && lease.m_nAtomId == atom.getId() ) {
-		return SIR_STRING_OK;
+		return SIRStringStatus::SIR_STRING_OK;
 	}
 	lease.release();
 	uint32_t index = 0;
 	if ( !isInitialized() ) {
-		return SIR_STRING_NOT_INITIALIZED;
+		return SIRStringStatus::SIR_STRING_NOT_INITIALIZED;
 	}
 	if ( !resolveIndex( atom, index ) ) {
-		return SIR_STRING_INVALID_ATOM;
+		return SIRStringStatus::SIR_STRING_INVALID_ATOM;
 	}
 	if ( index >= m_nCookedNames || ( m_pCooked[index].nFlags & 0xc000U ) == 0x8000U ) {
 		const char *pText;
 		uint32_t bytes;
 		if ( index >= m_nCookedNames ) {
 			const sirStringPoolDynamicEntry_t& entry = m_pDynamicEntries[index - m_nCookedNames];
-			pText = ( const char * )m_pDynamic + entry.nOffset;
+			pText = reinterpret_cast<const char *>(m_pDynamic) + entry.nOffset;
 			bytes = entry.nLength;
 		} else {
 			const sirStringPoolCookedEntry_t& entry = m_pCooked[index];
-			pText = ( const char * )m_pBlob + entry.nOffset;
+			pText = reinterpret_cast<const char *>(m_pBlob) + entry.nOffset;
 			bytes = entry.nLength;
 		}
 		m_nDirectLeases.fetch_add( 1, std::memory_order_acq_rel );
 		lease.bind( this, { SIR_DIRECT_TEXT_SLOT, atom.getId(), 0, pText, bytes } );
-		return SIR_STRING_OK;
+		return SIRStringStatus::SIR_STRING_OK;
 	}
 	if ( tryAcquireHot( index, atom.getId(), lease ) ) {
-		return SIR_STRING_OK;
+		return SIRStringStatus::SIR_STRING_OK;
 	}
 	if ( m_bTieredCache ) {
 		return acquireTiered( index, atom, lease );
@@ -1464,7 +1465,7 @@ sirStringStatus_t SIRStringPool::acquire( SIRStringAtom atom, SIRStringLease& le
 	m_cacheLock.lock();
 	if ( tryAcquireHot( index, atom.getId(), lease ) ) {
 		m_cacheLock.unlock();
-		return SIR_STRING_OK;
+		return SIRStringStatus::SIR_STRING_OK;
 	}
 	const uint32_t bytes = m_pCooked[index].nLength;
 	uint32_t victim = m_nCacheSlots;
@@ -1495,7 +1496,7 @@ sirStringStatus_t SIRStringPool::acquire( SIRStringAtom atom, SIRStringLease& le
 		if ( !m_pCache[victim].nPins.compare_exchange_strong( expected, UINT32_MAX, std::memory_order_acq_rel,
 		                                                      std::memory_order_acquire ) ) {
 			m_cacheLock.unlock();
-			return SIR_STRING_ALL_SLOTS_PINNED;
+			return SIRStringStatus::SIR_STRING_ALL_SLOTS_PINNED;
 		}
 	} else {
 		/* Once the compatible virgin slots are used, a single circular
@@ -1525,7 +1526,7 @@ sirStringStatus_t SIRStringPool::acquire( SIRStringAtom atom, SIRStringLease& le
 	}
 	if ( victim == m_nCacheSlots ) {
 		m_cacheLock.unlock();
-		return bytes > m_nLongBytes || m_nCacheSlots == 0 ? SIR_STRING_OUTPUT_TOO_SMALL : SIR_STRING_ALL_SLOTS_PINNED;
+		return bytes > m_nLongBytes || m_nCacheSlots == 0 ? SIRStringStatus::SIR_STRING_OUTPUT_TOO_SMALL : SIRStringStatus::SIR_STRING_ALL_SLOTS_PINNED;
 	}
 	sirStringPoolCacheSlot_t& slot = m_pCache[victim];
 	const uint32_t oldId = slot.nAtomId.load( std::memory_order_relaxed );
@@ -1537,10 +1538,10 @@ sirStringStatus_t SIRStringPool::acquire( SIRStringAtom atom, SIRStringLease& le
 	}
 	slot.nAtomId.store( 0, std::memory_order_release );
 	uint32_t written = 0;
-	if ( !decodeCooked( index, slot.pszData, ( size_t )slot.nCapacity + 1, written ) ) {
+	if ( !decodeCooked( index, slot.pszData, static_cast<size_t>(slot.nCapacity) + 1, written ) ) {
 		slot.nPins.store( 0, std::memory_order_release );
 		m_cacheLock.unlock();
-		return SIR_STRING_CORRUPT_CATALOG;
+		return SIRStringStatus::SIR_STRING_CORRUPT_CATALOG;
 	}
 	slot.nBytes = written;
 	++slot.nGeneration;
@@ -1565,7 +1566,7 @@ sirStringStatus_t SIRStringPool::acquire( SIRStringAtom atom, SIRStringLease& le
 	}
 	lease.bind( this, { victim, atom.getId(), slot.nGeneration, slot.pszData, written } );
 	m_cacheLock.unlock();
-	return SIR_STRING_OK;
+	return SIRStringStatus::SIR_STRING_OK;
 }
 
 void SIRStringPool::releaseLease( uint32_t slotIndex, uint32_t generation ) noexcept
@@ -1591,46 +1592,46 @@ const char *SIRStringPool::peekRaw( SIRStringAtom atom, uint32_t& nBytes ) const
 	if ( index >= m_nCookedNames ) {
 		const sirStringPoolDynamicEntry_t& entry = m_pDynamicEntries[index - m_nCookedNames];
 		nBytes = entry.nLength;
-		return ( const char * )m_pDynamic + entry.nOffset;
+		return reinterpret_cast<const char *>(m_pDynamic) + entry.nOffset;
 	}
 	const sirStringPoolCookedEntry_t& entry = m_pCooked[index];
 	if ( ( entry.nFlags & 0xc000U ) != 0x8000U ) {
 		return NULL;
 	}
 	nBytes = entry.nLength;
-	return ( const char * )m_pBlob + entry.nOffset;
+	return reinterpret_cast<const char *>(m_pBlob) + entry.nOffset;
 }
 
-sirStringStatus_t SIRStringPool::decodeInto( SIRStringAtom atom, char *out, size_t capacity, uint32_t& written ) const noexcept
+SIRStringStatus SIRStringPool::decodeInto( SIRStringAtom atom, char *out, size_t capacity, uint32_t& written ) const noexcept
 {
 	written = 0;
 	if ( !isInitialized() ) {
-		return SIR_STRING_NOT_INITIALIZED;
+		return SIRStringStatus::SIR_STRING_NOT_INITIALIZED;
 	}
 	uint32_t index;
 	if ( !resolveIndex( atom, index ) ) {
-		return SIR_STRING_INVALID_ATOM;
+		return SIRStringStatus::SIR_STRING_INVALID_ATOM;
 	}
 	const uint32_t bytes = index < m_nCookedNames ? m_pCooked[index].nLength : m_pDynamicEntries[index - m_nCookedNames].nLength;
 	if ( !out || capacity <= bytes ) {
-		return SIR_STRING_OUTPUT_TOO_SMALL;
+		return SIRStringStatus::SIR_STRING_OUTPUT_TOO_SMALL;
 	}
 	if ( index < m_nCookedNames && ( m_pCooked[index].nFlags & 0xc000U ) == 0 ) {
 		SIRStringLease lease;
-		if ( const_cast<SIRStringPool *>( this )->acquire( atom, lease ) == SIR_STRING_OK ) {
+		if ( const_cast<SIRStringPool *>( this )->acquire( atom, lease ) == SIRStringStatus::SIR_STRING_OK ) {
 			memcpy( out, lease.data(), bytes );
 			out[bytes] = 0;
 			written = bytes;
-			return SIR_STRING_OK;
+			return SIRStringStatus::SIR_STRING_OK;
 		}
-		return decodeCooked( index, out, capacity, written ) ? SIR_STRING_OK : SIR_STRING_CORRUPT_CATALOG;
+		return decodeCooked( index, out, capacity, written ) ? SIRStringStatus::SIR_STRING_OK : SIRStringStatus::SIR_STRING_CORRUPT_CATALOG;
 	}
-	const char *pText = index < m_nCookedNames ? ( const char * )m_pBlob + m_pCooked[index].nOffset
-	                                           : ( const char * )m_pDynamic + m_pDynamicEntries[index - m_nCookedNames].nOffset;
+	const char *pText = index < m_nCookedNames ? reinterpret_cast<const char *>(m_pBlob) + m_pCooked[index].nOffset
+	                                           : reinterpret_cast<const char *>(m_pDynamic) + m_pDynamicEntries[index - m_nCookedNames].nOffset;
 	memcpy( out, pText, bytes );
 	out[bytes] = 0;
 	written = bytes;
-	return SIR_STRING_OK;
+	return SIRStringStatus::SIR_STRING_OK;
 }
 
 uint32_t SIRStringPool::getDecodedByteLength( SIRStringAtom atom ) const noexcept

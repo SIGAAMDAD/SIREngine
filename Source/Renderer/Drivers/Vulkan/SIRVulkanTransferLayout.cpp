@@ -229,9 +229,9 @@ bool sirVulkanSetSubresourceLayout( sirVulkanImage_t *pImage, uint32_t nMip, uin
 		return false;
 	}
 	const uint32_t nShift = ( nIndex & 1U ) * 4U;
-	const uint8_t nMask = ( uint8_t )( 15U << nShift );
+	const uint8_t nMask = static_cast<uint8_t>( 15U << nShift );
 	uint8_t *pEntry = &pImage->szSubresourceLayouts[nIndex / 2];
-	*pEntry = ( uint8_t )( ( *pEntry & ~nMask ) | ( nValue << nShift ) );
+	*pEntry = static_cast<uint8_t>(  ( *pEntry & ~nMask ) | ( nValue << nShift )  );
 	return true;
 }
 
@@ -281,7 +281,7 @@ bool sirVulkanTextureTransferFootprint( const sirVulkanImage_t *pImage, const si
 		return false;
 	}
 
-	sirVulkanFormatBlock_t block = {};
+	sirVulkanFormatBlock_t block {};
 	if ( !sirVulkanGetFormatBlock( pImage->eFormat, &block ) ) {
 		return false;
 	}
@@ -315,7 +315,7 @@ bool sirVulkanTextureTransferFootprint( const sirVulkanImage_t *pImage, const si
 	return true;
 }
 
-sirVulkanResult_t sirVulkanValidateTextureTransfer( const sirVulkanBuffer_t *pBuffer, const sirVulkanImage_t *pImage,
+SIRVulkanResult sirVulkanValidateTextureTransfer( const sirVulkanBuffer_t *pBuffer, const sirVulkanImage_t *pImage,
                                                     const sirVulkanTextureTransfer_t& transfer ) noexcept
 {
 	if ( pBuffer == nullptr || pImage == nullptr || ( pImage->eType != VK_IMAGE_TYPE_2D && pImage->eType != VK_IMAGE_TYPE_3D ) ||
@@ -325,12 +325,12 @@ sirVulkanResult_t sirVulkanValidateTextureTransfer( const sirVulkanBuffer_t *pBu
 	     transfer.offset.x < 0 || transfer.offset.y < 0 || transfer.offset.z < 0 ||
 	     ( pImage->eType == VK_IMAGE_TYPE_2D && ( transfer.extent.depth != 1 || transfer.offset.z != 0 ) ) ||
 	     ( pImage->eType == VK_IMAGE_TYPE_3D && ( pImage->nLayers != 1 || transfer.nLayer != 0 ) ) ) {
-		return SIR_VULKAN_INVALID_ARGUMENT;
+		return SIRVulkanResult::SIR_VULKAN_INVALID_ARGUMENT;
 	}
 
-	sirVulkanFormatBlock_t block = {};
+	sirVulkanFormatBlock_t block {};
 	if ( !sirVulkanGetFormatBlock( pImage->eFormat, &block ) ) {
-		return SIR_VULKAN_API_UNSUPPORTED;
+		return SIRVulkanResult::SIR_VULKAN_API_UNSUPPORTED;
 	}
 	uint32_t nMipWidth = pImage->nWidth >> transfer.nMip;
 	uint32_t nMipHeight = pImage->nHeight >> transfer.nMip;
@@ -344,49 +344,49 @@ sirVulkanResult_t sirVulkanValidateTextureTransfer( const sirVulkanBuffer_t *pBu
 	if ( nMipDepth == 0 ) {
 		nMipDepth = 1;
 	}
-	const uint32_t nZ = ( uint32_t )transfer.offset.z;
+	const uint32_t nZ = static_cast<uint32_t>(transfer.offset.z);
 	if ( nZ >= nMipDepth || transfer.extent.depth > nMipDepth - nZ ) {
-		return SIR_VULKAN_INVALID_ARGUMENT;
+		return SIRVulkanResult::SIR_VULKAN_INVALID_ARGUMENT;
 	}
-	const uint32_t nX = ( uint32_t )transfer.offset.x;
-	const uint32_t nY = ( uint32_t )transfer.offset.y;
+	const uint32_t nX = static_cast<uint32_t>(transfer.offset.x);
+	const uint32_t nY = static_cast<uint32_t>(transfer.offset.y);
 	if ( nX >= nMipWidth || nY >= nMipHeight || transfer.extent.width > nMipWidth - nX || transfer.extent.height > nMipHeight - nY ||
 	     ( nX % block.nBlockWidth ) != 0 || ( nY % block.nBlockHeight ) != 0 ||
 	     ( transfer.extent.width % block.nBlockWidth != 0 && transfer.extent.width != nMipWidth - nX ) ||
 	     ( transfer.extent.height % block.nBlockHeight != 0 && transfer.extent.height != nMipHeight - nY ) ) {
-		return SIR_VULKAN_INVALID_ARGUMENT;
+		return SIRVulkanResult::SIR_VULKAN_INVALID_ARGUMENT;
 	}
 	if ( transfer.nBufferRowLength != 0 &&
 	     ( transfer.nBufferRowLength < transfer.extent.width || transfer.nBufferRowLength % block.nBlockWidth != 0 ) ) {
-		return SIR_VULKAN_INVALID_ARGUMENT;
+		return SIRVulkanResult::SIR_VULKAN_INVALID_ARGUMENT;
 	}
 	if ( transfer.nBufferImageHeight != 0 &&
 	     ( transfer.nBufferImageHeight < transfer.extent.height || transfer.nBufferImageHeight % block.nBlockHeight != 0 ) ) {
-		return SIR_VULKAN_INVALID_ARGUMENT;
+		return SIRVulkanResult::SIR_VULKAN_INVALID_ARGUMENT;
 	}
 	const uint32_t nOffsetAlignment = block.nBytesPerBlock >= 4 ? block.nBytesPerBlock : 4;
 	if ( transfer.nBufferOffset % nOffsetAlignment != 0 || transfer.nBufferOffset > pBuffer->nSize ) {
-		return SIR_VULKAN_INVALID_ARGUMENT;
+		return SIRVulkanResult::SIR_VULKAN_INVALID_ARGUMENT;
 	}
 
 	const bool bUpload = transfer.bBufferToImage;
 	if ( bUpload &&
 	     ( ( pBuffer->nUsage & VK_BUFFER_USAGE_TRANSFER_SRC_BIT ) == 0 || ( pImage->nUsage & VK_IMAGE_USAGE_TRANSFER_DST_BIT ) == 0 ) ) {
-		return SIR_VULKAN_INVALID_ARGUMENT;
+		return SIRVulkanResult::SIR_VULKAN_INVALID_ARGUMENT;
 	}
 	if ( !bUpload &&
 	     ( ( pBuffer->nUsage & VK_BUFFER_USAGE_TRANSFER_DST_BIT ) == 0 || ( pImage->nUsage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT ) == 0 ) ) {
-		return SIR_VULKAN_INVALID_ARGUMENT;
+		return SIRVulkanResult::SIR_VULKAN_INVALID_ARGUMENT;
 	}
 	const uint32_t nIndex = transfer.nLayer * pImage->nMips + transfer.nMip;
 	if ( !bUpload && ( pImage->szUploadedSubresources[nIndex / 64] & ( 1ULL << ( nIndex % 64 ) ) ) == 0 ) {
-		return SIR_VULKAN_INVALID_ARGUMENT;
+		return SIRVulkanResult::SIR_VULKAN_INVALID_ARGUMENT;
 	}
 
 	uint64_t nRequiredBytes = 0;
 	if ( !sirVulkanTextureTransferFootprint( pImage, transfer, &nRequiredBytes ) ||
 	     nRequiredBytes > pBuffer->nSize - transfer.nBufferOffset ) {
-		return SIR_VULKAN_INVALID_ARGUMENT;
+		return SIRVulkanResult::SIR_VULKAN_INVALID_ARGUMENT;
 	}
-	return SIR_VULKAN_SUCCESS;
+	return SIRVulkanResult::SIR_VULKAN_SUCCESS;
 }

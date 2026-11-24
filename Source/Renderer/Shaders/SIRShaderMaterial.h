@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSHADERMATERIAL_H__
-#define __SIRENGINE_SIRSHADERMATERIAL_H__
+#ifndef __SIR_SHADERMATERIAL_H__
+#define __SIR_SHADERMATERIAL_H__
 
 #include <Core/SIRPCH.h>
 
@@ -62,12 +62,12 @@ typedef struct sirShaderMaterialPassRecord_s
 static_assert( sizeof( sirShaderMaterialHeader_t ) == 56, "Material header memory layout changed; wire header remains 48 bytes" );
 static_assert( sizeof( sirShaderMaterialPassRecord_t ) == 32, "Material pass memory layout changed" );
 
-sirGraphicsResult_t sirShaderEncodeMaterialHeader( const sirShaderMaterialHeader_t& header, void *pBytes, uint64_t nCapacity ) noexcept;
-sirGraphicsResult_t sirShaderDecodeMaterialHeader( const void *pBytes, uint64_t nLength, sirShaderMaterialHeader_t *pHeader ) noexcept;
-sirGraphicsResult_t sirShaderEncodeMaterialPass( const sirShaderMaterialPassRecord_t& pass, void *pBytes, uint64_t nCapacity ) noexcept;
-sirGraphicsResult_t sirShaderDecodeMaterialPass( const void *pBytes, uint64_t nLength, sirShaderMaterialPassRecord_t *pPass ) noexcept;
-sirGraphicsResult_t sirShaderBuildMaterialHash( const sirShaderMaterialHeader_t& header, const void *pPassBytes, uint64_t nLength,
+SIRGraphicsResult sirShaderEncodeMaterialHeader( const sirShaderMaterialHeader_t& header, void *pBytes, uint64_t nCapacity ) noexcept;
+SIRGraphicsResult sirShaderDecodeMaterialHeader( const void *pBytes, uint64_t nLength, sirShaderMaterialHeader_t *pHeader ) noexcept;
+SIRGraphicsResult sirShaderEncodeMaterialPass( const sirShaderMaterialPassRecord_t& pass, void *pBytes, uint64_t nCapacity ) noexcept;
+SIRGraphicsResult sirShaderDecodeMaterialPass( const void *pBytes, uint64_t nLength, sirShaderMaterialPassRecord_t *pPass ) noexcept;
+SIRGraphicsResult sirShaderBuildMaterialHash( const sirShaderMaterialHeader_t& header, const void *pPassBytes, uint64_t nLength,
                                                 uint64_t *pHash ) noexcept;
-sirGraphicsResult_t sirShaderValidateMaterial( const void *pBytes, uint64_t nLength ) noexcept;
+SIRGraphicsResult sirShaderValidateMaterial( const void *pBytes, uint64_t nLength ) noexcept;
 
-#endif // __SIRENGINE_SIRSHADERMATERIAL_H__
+#endif // __SIR_SHADERMATERIAL_H__

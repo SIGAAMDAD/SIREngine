@@ -20,7 +20,7 @@ bool sirPlatformDecodeWindowsWindow( const sirWindowNativeView_t& view, sirWindo
 		return false;
 	}
 	*pWindow = {};
-	if ( view.ePlatform != SIR_WINDOW_PLATFORM_WIN32 || view.nNativeWindow == 0 || view.nDisplayOrInstance == 0 ||
+	if ( view.ePlatform != SIRWindowPlatform::SIR_WINDOW_PLATFORM_WIN32 || view.nNativeWindow == 0 || view.nDisplayOrInstance == 0 ||
 	     view.nWindowGeneration == 0 ) {
 		return false;
 	}
@@ -34,11 +34,11 @@ bool sirPlatformDecodeLinuxWindow( const sirWindowNativeView_t& view, sirLinuxNa
 		return false;
 	}
 	*pWindow = {};
-	sirLinuxDisplayKind_t eDisplay = SIR_LINUX_DISPLAY_NONE;
-	if ( view.ePlatform == SIR_WINDOW_PLATFORM_X11 ) {
-		eDisplay = SIR_LINUX_DISPLAY_X11;
-	} else if ( view.ePlatform == SIR_WINDOW_PLATFORM_WAYLAND ) {
-		eDisplay = SIR_LINUX_DISPLAY_WAYLAND;
+	SIRLinuxDisplayKind eDisplay = SIRLinuxDisplayKind::SIR_LINUX_DISPLAY_NONE;
+	if ( view.ePlatform == SIRWindowPlatform::SIR_WINDOW_PLATFORM_X11 ) {
+		eDisplay = SIRLinuxDisplayKind::SIR_LINUX_DISPLAY_X11;
+	} else if ( view.ePlatform == SIRWindowPlatform::SIR_WINDOW_PLATFORM_WAYLAND ) {
+		eDisplay = SIRLinuxDisplayKind::SIR_LINUX_DISPLAY_WAYLAND;
 	} else {
 		return false;
 	}

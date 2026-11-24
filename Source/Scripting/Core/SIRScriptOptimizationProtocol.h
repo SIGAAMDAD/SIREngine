@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSCRIPTOPTIMIZATIONPROTOCOL_H__
-#define __SIRENGINE_SIRSCRIPTOPTIMIZATIONPROTOCOL_H__
+#ifndef __SIR_SCRIPTOPTIMIZATIONPROTOCOL_H__
+#define __SIR_SCRIPTOPTIMIZATIONPROTOCOL_H__
 
 #include <Core/SIRPCH.h>
 
@@ -29,12 +29,11 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // Scripting-language-independent record sent to an external optimizer.
 // A caller computes the recipe key from canonical source/dependency/toolchain
 // inputs. It is never constructed from a host pointer or process-local ID.
-typedef enum sirScriptOptimizationTier_e : uint32_t
-{
+enum class SIRScriptOptimizationTier : uint32_t {
 	SIR_SCRIPT_OPT_BASELINE = 0,
 	SIR_SCRIPT_OPT_TARGET_CPU = 1,
 	SIR_SCRIPT_OPT_PROFILE_GUIDED = 2
-} sirScriptOptimizationTier_t;
+};
 
 typedef struct sirScriptOptimizationRequest_s
 {
@@ -42,14 +41,14 @@ typedef struct sirScriptOptimizationRequest_s
 	sirScriptCodeArtifact_t artifact;
 	sirScriptCacheKey_t key;
 	uint64_t nInputBytes;
-	sirScriptOptimizationTier_t eTier;
+	SIRScriptOptimizationTier eTier;
 	uint32_t nFlags;
 } sirScriptOptimizationRequest_t;
 
 typedef struct sirScriptOptimizationReply_s
 {
 	uint64_t nJobId;
-	sirScriptResult_t eResult;
+	SIRScriptResult eResult;
 	sirScriptCachedArtifact_t cached;
 } sirScriptOptimizationReply_t;
 
@@ -62,11 +61,11 @@ public:
 	static constexpr uint32_t REQUEST_BYTES = 160;
 	static constexpr uint32_t REPLY_BYTES = 200;
 
-	static sirScriptResult_t encodeRequest( const sirScriptOptimizationRequest_t& request, uint8_t szOutput[REQUEST_BYTES] ) noexcept;
-	static sirScriptResult_t decodeRequest( const uint8_t *pInput, uint32_t nBytes, sirScriptOptimizationRequest_t *pRequest ) noexcept;
-	static sirScriptResult_t encodeReply( const sirScriptOptimizationReply_t& reply, uint8_t szOutput[REPLY_BYTES] ) noexcept;
-	static sirScriptResult_t decodeReply( const uint8_t *pInput, uint32_t nBytes, sirScriptOptimizationReply_t *pReply ) noexcept;
-	static sirScriptResult_t validateCompletion( const sirScriptOptimizationRequest_t& request,
+	static SIRScriptResult encodeRequest( const sirScriptOptimizationRequest_t& request, uint8_t szOutput[REQUEST_BYTES] ) noexcept;
+	static SIRScriptResult decodeRequest( const uint8_t *pInput, uint32_t nBytes, sirScriptOptimizationRequest_t *pRequest ) noexcept;
+	static SIRScriptResult encodeReply( const sirScriptOptimizationReply_t& reply, uint8_t szOutput[REPLY_BYTES] ) noexcept;
+	static SIRScriptResult decodeReply( const uint8_t *pInput, uint32_t nBytes, sirScriptOptimizationReply_t *pReply ) noexcept;
+	static SIRScriptResult validateCompletion( const sirScriptOptimizationRequest_t& request,
 	                                             const sirScriptOptimizationReply_t& reply ) noexcept;
 
 private:
@@ -74,4 +73,4 @@ private:
 	static bool validReply( const sirScriptOptimizationReply_t& reply ) noexcept;
 };
 
-#endif // __SIRENGINE_SIRSCRIPTOPTIMIZATIONPROTOCOL_H__
+#endif // __SIR_SCRIPTOPTIMIZATIONPROTOCOL_H__

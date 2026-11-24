@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRTERRAINREGIONCATALOG_H__
-#define __SIRENGINE_SIRTERRAINREGIONCATALOG_H__
+#ifndef __SIR_TERRAINREGIONCATALOG_H__
+#define __SIR_TERRAINREGIONCATALOG_H__
 
 #include <Core/SIRPCH.h>
 
@@ -45,8 +45,7 @@ typedef struct sirTerrainRegionCatalogEntry_s
 	uint8_t nState;
 } sirTerrainRegionCatalogEntry_t;
 
-typedef enum sirTerrainCatalogResult_e : uint8_t
-{
+enum class SIRTerrainCatalogResult : uint8_t {
 	SIR_TERRAIN_CATALOG_SUCCESS = 0,
 	SIR_TERRAIN_CATALOG_INVALID_ARGUMENT,
 	SIR_TERRAIN_CATALOG_NOT_INITIALIZED,
@@ -55,7 +54,7 @@ typedef enum sirTerrainCatalogResult_e : uint8_t
 	SIR_TERRAIN_CATALOG_STALE_REVISION,
 	SIR_TERRAIN_CATALOG_REVISION_CONFLICT,
 	SIR_TERRAIN_CATALOG_STALE_HANDLE
-} sirTerrainCatalogResult_t;
+};
 
 // The caller owns the entire entry array and its lifetime. One writer at a time.
 // Readers receive metadata copies; physical region pages remain GRDG-owned.
@@ -69,11 +68,11 @@ public:
 
 	bool initialize( sirTerrainRegionCatalogEntry_t *pEntries, uint32_t nCapacity ) noexcept;
 	void reset( void ) noexcept;
-	sirTerrainCatalogResult_t upsert( const sirTerrainRegionDescriptor_t& descriptor, sirTerrainRegionHandle_t& handle ) noexcept;
-	sirTerrainCatalogResult_t find( sirTerrainRegionKey_t key, sirTerrainRegionDescriptor_t& descriptor,
+	SIRTerrainCatalogResult upsert( const sirTerrainRegionDescriptor_t& descriptor, sirTerrainRegionHandle_t& handle ) noexcept;
+	SIRTerrainCatalogResult find( sirTerrainRegionKey_t key, sirTerrainRegionDescriptor_t& descriptor,
 	                                sirTerrainRegionHandle_t& handle ) const noexcept;
-	sirTerrainCatalogResult_t find( sirTerrainRegionHandle_t handle, sirTerrainRegionDescriptor_t& descriptor ) const noexcept;
-	sirTerrainCatalogResult_t erase( sirTerrainRegionHandle_t handle ) noexcept;
+	SIRTerrainCatalogResult find( sirTerrainRegionHandle_t handle, sirTerrainRegionDescriptor_t& descriptor ) const noexcept;
+	SIRTerrainCatalogResult erase( sirTerrainRegionHandle_t handle ) noexcept;
 
 protected:
 private:
@@ -85,4 +84,4 @@ private:
 	uint32_t m_nCount;
 };
 
-#endif // __SIRENGINE_SIRTERRAINREGIONCATALOG_H__
+#endif // __SIR_TERRAINREGIONCATALOG_H__

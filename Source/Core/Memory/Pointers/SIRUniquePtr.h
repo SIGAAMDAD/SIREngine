@@ -13,10 +13,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRUNIQUEPTR_H__
-#define __SIRENGINE_SIRUNIQUEPTR_H__
+#ifndef __SIR_UNIQUEPTR_H__
+#define __SIR_UNIQUEPTR_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -149,4 +149,4 @@ private:
 	T *m_pObject = nullptr;
 };
 
-#endif // __SIRENGINE_SIRUNIQUEPTR_H__
+#endif // __SIR_UNIQUEPTR_H__

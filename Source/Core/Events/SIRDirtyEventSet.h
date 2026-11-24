@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRDIRTYEVENTSET_H__
-#define __SIRENGINE_SIRDIRTYEVENTSET_H__
+#ifndef __SIR_DIRTYEVENTSET_H__
+#define __SIR_DIRTYEVENTSET_H__
 
 #include <Core/SIRPCH.h>
 
@@ -88,10 +88,10 @@ public:
 				unsigned long nOffset = 0;
 				_BitScanForward64( &nOffset, nBits );
 #else
-				const uint32_t nOffset = ( uint32_t )__builtin_ctzll( nBits );
+				const uint32_t nOffset = static_cast<uint32_t>(__builtin_ctzll( nBits ));
 #endif
 				const uint64_t nBit = UINT64_C( 1 ) << nOffset;
-				const uint32_t nIndex = iWord * 64 + ( uint32_t )nOffset;
+				const uint32_t nIndex = iWord * 64 + static_cast<uint32_t>(nOffset);
 				nBits &= ~nBit;
 				m_nWords[iWord] &= ~nBit;
 				--m_nPending;
@@ -142,4 +142,4 @@ private:
 	bool m_bDiscardSnapshot;
 };
 
-#endif // __SIRENGINE_SIRDIRTYEVENTSET_H__
+#endif // __SIR_DIRTYEVENTSET_H__

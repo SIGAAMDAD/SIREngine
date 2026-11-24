@@ -4,10 +4,10 @@ SIREngineSystem::~SIREngineSystem( void ) noexcept = default;
 
 void SIREngineSystem::update( float fDeltaSeconds ) noexcept
 {
-	( void )fDeltaSeconds;
+	static_cast<void>(fDeltaSeconds);
 }
 
 void SIREngineSystem::fixedUpdate( float fFixedDeltaSeconds ) noexcept
 {
-	( void )fFixedDeltaSeconds;
+	static_cast<void>(fFixedDeltaSeconds);
 }

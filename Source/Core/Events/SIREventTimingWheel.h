@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIREVENTTIMINGWHEEL_H__
-#define __SIRENGINE_SIREVENTTIMINGWHEEL_H__
+#ifndef __SIR_EVENTTIMINGWHEEL_H__
+#define __SIR_EVENTTIMINGWHEEL_H__
 
 #include <Core/SIRPCH.h>
 
@@ -31,13 +31,12 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 #include <type_traits>
 
-typedef enum sirEventWheelState_e : uint8_t
-{
+enum class SIREventWheelState : uint8_t {
 	SIR_EVENT_WHEEL_FREE = 0,
 	SIR_EVENT_WHEEL_QUEUED = 1,
 	SIR_EVENT_WHEEL_INVOKING = 2,
 	SIR_EVENT_WHEEL_CANCELLED = 3
-} sirEventWheelState_t;
+};
 
 template <typename TPayload>
 struct sirEventWheelSlot_s
@@ -50,7 +49,7 @@ struct sirEventWheelSlot_s
 	uint32_t nNext = 0;
 	uint32_t nPrev = 0;
 	uint32_t nGeneration = 1;
-	sirEventWheelState_t eState = SIR_EVENT_WHEEL_FREE;
+	SIREventWheelState eState = SIREventWheelState::SIR_EVENT_WHEEL_FREE;
 };
 
 // Bounded, single-level owner-thread wheel for dense short-horizon timers.
@@ -100,7 +99,7 @@ public:
 		slot.nInterval = nInterval;
 		handle = { this, nIndex, slot.nGeneration };
 		if ( nDelay == 0 ) {
-			slot.eState = SIR_EVENT_WHEEL_INVOKING;
+			slot.eState = SIREventWheelState::SIR_EVENT_WHEEL_INVOKING;
 			slot.pCallback( slot.pContext, slot.payload );
 			release( nIndex );
 			return true;
@@ -115,14 +114,14 @@ public:
 			return false;
 		}
 		sirEventWheelSlot_s<TPayload>& slot = m_Slots[handle.nSlot];
-		if ( slot.nGeneration != handle.nGeneration || slot.eState == SIR_EVENT_WHEEL_FREE || slot.eState == SIR_EVENT_WHEEL_CANCELLED ) {
+		if ( slot.nGeneration != handle.nGeneration || slot.eState == SIREventWheelState::SIR_EVENT_WHEEL_FREE || slot.eState == SIREventWheelState::SIR_EVENT_WHEEL_CANCELLED ) {
 			return false;
 		}
-		if ( slot.eState == SIR_EVENT_WHEEL_QUEUED ) {
+		if ( slot.eState == SIREventWheelState::SIR_EVENT_WHEEL_QUEUED ) {
 			unlink( handle.nSlot );
 			release( handle.nSlot );
 		} else {
-			slot.eState = SIR_EVENT_WHEEL_CANCELLED;
+			slot.eState = SIREventWheelState::SIR_EVENT_WHEEL_CANCELLED;
 		}
 		return true;
 	}
@@ -156,13 +155,13 @@ public:
 				break;
 			}
 			nTick = nOccupiedTick;
-			const uint32_t nBucket = ( uint32_t )( nTick & ( BucketCount - 1 ) );
+			const uint32_t nBucket = static_cast<uint32_t>(  nTick & ( BucketCount - 1 )  );
 			uint32_t nIndex = m_nHeads[nBucket];
 			while ( nIndex != 0 && nCollected < nMax ) {
 				const uint32_t nNext = m_Slots[nIndex].nNext;
 				if ( m_Slots[nIndex].nDue <= nNow ) {
 					unlink( nIndex );
-					m_Slots[nIndex].eState = SIR_EVENT_WHEEL_INVOKING;
+					m_Slots[nIndex].eState = SIREventWheelState::SIR_EVENT_WHEEL_INVOKING;
 					szDue[nCollected++] = nIndex;
 				}
 				nIndex = nNext;
@@ -181,11 +180,11 @@ public:
 		for ( uint32_t i = 0; i < nCollected; ++i ) {
 			const uint32_t nIndex = szDue[i];
 			sirEventWheelSlot_s<TPayload>& slot = m_Slots[nIndex];
-			if ( slot.eState == SIR_EVENT_WHEEL_INVOKING ) {
+			if ( slot.eState == SIREventWheelState::SIR_EVENT_WHEEL_INVOKING ) {
 				slot.pCallback( slot.pContext, slot.payload );
 				++nInvoked;
 			}
-			if ( slot.eState == SIR_EVENT_WHEEL_INVOKING && slot.nInterval != 0 && nNow <= UINT64_MAX - slot.nInterval ) {
+			if ( slot.eState == SIREventWheelState::SIR_EVENT_WHEEL_INVOKING && slot.nInterval != 0 && nNow <= UINT64_MAX - slot.nInterval ) {
 				slot.nDue = nNow + slot.nInterval;
 				insert( nIndex );
 			} else {
@@ -209,10 +208,10 @@ public:
 		m_nFreeHead = 0;
 		for ( uint32_t i = Capacity; i > 0; --i ) {
 			sirEventWheelSlot_s<TPayload>& slot = m_Slots[i];
-			if ( slot.eState == SIR_EVENT_WHEEL_INVOKING ) {
-				slot.eState = SIR_EVENT_WHEEL_CANCELLED;
-			} else if ( slot.eState == SIR_EVENT_WHEEL_QUEUED || slot.eState == SIR_EVENT_WHEEL_FREE ) {
-				slot.eState = SIR_EVENT_WHEEL_FREE;
+			if ( slot.eState == SIREventWheelState::SIR_EVENT_WHEEL_INVOKING ) {
+				slot.eState = SIREventWheelState::SIR_EVENT_WHEEL_CANCELLED;
+			} else if ( slot.eState == SIREventWheelState::SIR_EVENT_WHEEL_QUEUED || slot.eState == SIREventWheelState::SIR_EVENT_WHEEL_FREE ) {
+				slot.eState = SIREventWheelState::SIR_EVENT_WHEEL_FREE;
 				if ( ++slot.nGeneration == 0 ) {
 					++slot.nGeneration;
 				}
@@ -236,10 +235,10 @@ private:
 		if ( nDistance >= BucketCount ) {
 			nDistance = BucketCount - 1;
 		}
-		uint32_t nRemaining = ( uint32_t )nDistance + 1;
+		uint32_t nRemaining = static_cast<uint32_t>(nDistance) + 1;
 		uint32_t nAdvanced = 0;
 		while ( nRemaining != 0 ) {
-			const uint32_t nBucket = ( uint32_t )( ( nStart + nAdvanced ) & ( BucketCount - 1 ) );
+			const uint32_t nBucket = static_cast<uint32_t>(  ( nStart + nAdvanced ) & ( BucketCount - 1 )  );
 			const uint32_t nShift = nBucket & 63;
 			const uint32_t nGroupLimit = BucketCount - nBucket < 64 - nShift ? BucketCount - nBucket : 64 - nShift;
 			const uint32_t nStep = nRemaining < nGroupLimit ? nRemaining : nGroupLimit;
@@ -253,7 +252,7 @@ private:
 				_BitScanForward64( &nBit, nBits );
 				nFound = nStart + nAdvanced + nBit;
 #else
-				nFound = nStart + nAdvanced + ( uint32_t )__builtin_ctzll( nBits );
+				nFound = nStart + nAdvanced + static_cast<uint32_t>(__builtin_ctzll( nBits ));
 #endif
 				return true;
 			}
@@ -266,7 +265,7 @@ private:
 	void insert( uint32_t nIndex ) noexcept
 	{
 		sirEventWheelSlot_s<TPayload>& slot = m_Slots[nIndex];
-		const uint32_t nBucket = ( uint32_t )( slot.nDue & ( BucketCount - 1 ) );
+		const uint32_t nBucket = static_cast<uint32_t>(  slot.nDue & ( BucketCount - 1 )  );
 		slot.nNext = 0;
 		slot.nPrev = m_nTails[nBucket];
 		if ( m_nTails[nBucket] != 0 ) {
@@ -276,13 +275,13 @@ private:
 		}
 		m_nTails[nBucket] = nIndex;
 		m_nOccupied[nBucket >> 6] |= UINT64_C( 1 ) << ( nBucket & 63 );
-		slot.eState = SIR_EVENT_WHEEL_QUEUED;
+		slot.eState = SIREventWheelState::SIR_EVENT_WHEEL_QUEUED;
 		++m_nPending;
 	}
 	void unlink( uint32_t nIndex ) noexcept
 	{
 		sirEventWheelSlot_s<TPayload>& slot = m_Slots[nIndex];
-		const uint32_t nBucket = ( uint32_t )( slot.nDue & ( BucketCount - 1 ) );
+		const uint32_t nBucket = static_cast<uint32_t>(  slot.nDue & ( BucketCount - 1 )  );
 		if ( slot.nPrev != 0 ) {
 			m_Slots[slot.nPrev].nNext = slot.nNext;
 		} else {
@@ -301,7 +300,7 @@ private:
 	void release( uint32_t nIndex ) noexcept
 	{
 		sirEventWheelSlot_s<TPayload>& slot = m_Slots[nIndex];
-		slot.eState = SIR_EVENT_WHEEL_FREE;
+		slot.eState = SIREventWheelState::SIR_EVENT_WHEEL_FREE;
 		if ( ++slot.nGeneration == 0 ) {
 			++slot.nGeneration;
 		}
@@ -321,4 +320,4 @@ private:
 	bool m_bIncompleteTick;
 };
 
-#endif // __SIRENGINE_SIREVENTTIMINGWHEEL_H__
+#endif // __SIR_EVENTTIMINGWHEEL_H__

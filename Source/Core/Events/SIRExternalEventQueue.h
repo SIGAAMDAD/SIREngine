@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIREXTERNALEVENTQUEUE_H__
-#define __SIRENGINE_SIREXTERNALEVENTQUEUE_H__
+#ifndef __SIR_EXTERNALEVENTQUEUE_H__
+#define __SIR_EXTERNALEVENTQUEUE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -50,10 +50,10 @@ public:
 
 	static size_t requiredStorageBytes( uint32_t nCapacity ) noexcept
 	{
-		if ( ( size_t )nCapacity > SIZE_MAX / sizeof( TPayload ) ) {
+		if ( static_cast<size_t>(nCapacity) > SIZE_MAX / sizeof( TPayload ) ) {
 			return 0;
 		}
-		return ( size_t )nCapacity * sizeof( TPayload );
+		return static_cast<size_t>(nCapacity * sizeof(  TPayload  ));
 	}
 
 	bool init( TPayload *pEvents, uint32_t nCapacity, void *pContext, callback_t pCallback ) noexcept
@@ -173,4 +173,4 @@ private:
 	bool m_bClearDuringPump;
 };
 
-#endif // __SIRENGINE_SIREXTERNALEVENTQUEUE_H__
+#endif // __SIR_EXTERNALEVENTQUEUE_H__

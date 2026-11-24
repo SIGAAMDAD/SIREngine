@@ -80,149 +80,153 @@ SIRChildProcess::SIRChildProcess( void ) noexcept : m_pProcess( nullptr ), m_nPr
 
 SIRChildProcess::~SIRChildProcess( void ) noexcept
 {
-	( void )close();
+	static_cast<void>(close());
 }
 
-sirChildProcessResult_t SIRChildProcess::start( const sirChildProcessLaunch_t& rLaunch ) noexcept
+SIRChildProcessResult SIRChildProcess::start( const sirChildProcessLaunch_t& rLaunch ) noexcept
 {
 	if ( isOpen() ) {
-		return SIR_CHILD_PROCESS_ALREADY_OPEN;
+		return SIRChildProcessResult::SIR_CHILD_PROCESS_ALREADY_OPEN;
 	}
 	if ( rLaunch.pszExecutable == nullptr || rLaunch.pszExecutable[0] == '\0' || rLaunch.nArgumentCount > 128 ||
 	     ( rLaunch.nArgumentCount != 0 && rLaunch.ppszArguments == nullptr ) ||
 	     ( rLaunch.pszWorkingDirectory != nullptr && rLaunch.pszWorkingDirectory[0] == '\0' ) ) {
-		return SIR_CHILD_PROCESS_INVALID_ARGUMENT;
+		return SIRChildProcessResult::SIR_CHILD_PROCESS_INVALID_ARGUMENT;
 	}
-	wchar_t szExecutable[32768] = {};
-	wchar_t szCommand[32768] = {};
-	wchar_t szArgument[32768] = {};
-	wchar_t szWorkingDirectory[32768] = {};
+	wchar_t szExecutable[32768];
+	memset( szExecutable, 0, sizeof( szExecutable ) );
+	wchar_t szCommand[32768];
+	memset( szCommand, 0, sizeof( szCommand ) );
+	wchar_t szArgument[32768];
+	memset( szArgument, 0, sizeof( szArgument ) );
+	wchar_t szWorkingDirectory[32768];
+	memset( szWorkingDirectory, 0, sizeof( szWorkingDirectory ) );
 	if ( !sirConvertProcessUtf8( rLaunch.pszExecutable, szExecutable, 32768 ) ) {
-		return SIR_CHILD_PROCESS_INVALID_ARGUMENT;
+		return SIRChildProcessResult::SIR_CHILD_PROCESS_INVALID_ARGUMENT;
 	}
 	if ( rLaunch.pszWorkingDirectory != nullptr && !sirConvertProcessUtf8( rLaunch.pszWorkingDirectory, szWorkingDirectory, 32768 ) ) {
-		return SIR_CHILD_PROCESS_INVALID_ARGUMENT;
+		return SIRChildProcessResult::SIR_CHILD_PROCESS_INVALID_ARGUMENT;
 	}
 	const wchar_t *pszCwd = rLaunch.pszWorkingDirectory == nullptr ? nullptr : szWorkingDirectory;
 	size_t nCursor = 0;
 	if ( !sirAppendProcessArgument( szCommand, 32768, &nCursor, szExecutable ) ) {
-		return SIR_CHILD_PROCESS_INVALID_ARGUMENT;
+		return SIRChildProcessResult::SIR_CHILD_PROCESS_INVALID_ARGUMENT;
 	}
 	for ( uint32_t i = 0; i < rLaunch.nArgumentCount; ++i ) {
 		if ( rLaunch.ppszArguments[i] == nullptr || !sirConvertProcessUtf8( rLaunch.ppszArguments[i], szArgument, 32768 ) ||
 		     !sirAppendProcessCharacter( szCommand, 32768, &nCursor, L' ' ) ||
 		     !sirAppendProcessArgument( szCommand, 32768, &nCursor, szArgument ) ) {
-			return SIR_CHILD_PROCESS_INVALID_ARGUMENT;
+			return SIRChildProcessResult::SIR_CHILD_PROCESS_INVALID_ARGUMENT;
 		}
 	}
 	STARTUPINFOW startup{};
 	startup.cb = sizeof( startup );
 	PROCESS_INFORMATION process{};
 	if ( !CreateProcessW( szExecutable, szCommand, nullptr, nullptr, FALSE, 0, nullptr, pszCwd, &startup, &process ) ) {
-		return SIR_CHILD_PROCESS_SPAWN_FAILED;
+		return SIRChildProcessResult::SIR_CHILD_PROCESS_SPAWN_FAILED;
 	}
 	CloseHandle( process.hThread );
 	m_pProcess = process.hProcess;
-	m_nProcessId = ( uint32_t )process.dwProcessId;
+	m_nProcessId = static_cast<uint32_t>(process.dwProcessId);
 	m_nExitCode = 0;
 	m_bExited = false;
-	return SIR_CHILD_PROCESS_OK;
+	return SIRChildProcessResult::SIR_CHILD_PROCESS_OK;
 }
 
-sirChildProcessResult_t SIRChildProcess::poll( bool *pbExited, uint32_t *pnExitCode ) noexcept
+SIRChildProcessResult SIRChildProcess::poll( bool *pbExited, uint32_t *pnExitCode ) noexcept
 {
 	if ( pbExited == nullptr ) {
-		return SIR_CHILD_PROCESS_INVALID_ARGUMENT;
+		return SIRChildProcessResult::SIR_CHILD_PROCESS_INVALID_ARGUMENT;
 	}
 	if ( !isOpen() ) {
-		return SIR_CHILD_PROCESS_CLOSED;
+		return SIRChildProcessResult::SIR_CHILD_PROCESS_CLOSED;
 	}
 	if ( !m_bExited ) {
-		const DWORD nWait = WaitForSingleObject( ( HANDLE )m_pProcess, 0 );
+		const DWORD nWait = WaitForSingleObject( static_cast<HANDLE>(m_pProcess), 0 );
 		if ( nWait == WAIT_OBJECT_0 ) {
 			DWORD nExitCode = 0;
-			if ( !GetExitCodeProcess( ( HANDLE )m_pProcess, &nExitCode ) ) {
-				return SIR_CHILD_PROCESS_OS_ERROR;
+			if ( !GetExitCodeProcess( static_cast<HANDLE>(m_pProcess), &nExitCode ) ) {
+				return SIRChildProcessResult::SIR_CHILD_PROCESS_OS_ERROR;
 			}
-			m_nExitCode = ( uint32_t )nExitCode;
+			m_nExitCode = static_cast<uint32_t>(nExitCode);
 			m_bExited = true;
 		} else if ( nWait != WAIT_TIMEOUT ) {
-			return SIR_CHILD_PROCESS_OS_ERROR;
+			return SIRChildProcessResult::SIR_CHILD_PROCESS_OS_ERROR;
 		}
 	}
 	*pbExited = m_bExited;
 	if ( m_bExited && pnExitCode != nullptr ) {
 		*pnExitCode = m_nExitCode;
 	}
-	return SIR_CHILD_PROCESS_OK;
+	return SIRChildProcessResult::SIR_CHILD_PROCESS_OK;
 }
 
-sirChildProcessResult_t SIRChildProcess::wait( uint32_t *pnExitCode ) noexcept
+SIRChildProcessResult SIRChildProcess::wait( uint32_t *pnExitCode ) noexcept
 {
 	if ( !isOpen() ) {
-		return SIR_CHILD_PROCESS_CLOSED;
+		return SIRChildProcessResult::SIR_CHILD_PROCESS_CLOSED;
 	}
-	if ( !m_bExited && WaitForSingleObject( ( HANDLE )m_pProcess, INFINITE ) != WAIT_OBJECT_0 ) {
-		return SIR_CHILD_PROCESS_OS_ERROR;
+	if ( !m_bExited && WaitForSingleObject( static_cast<HANDLE>(m_pProcess), INFINITE ) != WAIT_OBJECT_0 ) {
+		return SIRChildProcessResult::SIR_CHILD_PROCESS_OS_ERROR;
 	}
 	bool bExited = false;
 	return poll( &bExited, pnExitCode );
 }
 
-sirChildProcessResult_t SIRChildProcess::waitFor( uint32_t nMilliseconds, uint32_t *pnExitCode ) noexcept
+SIRChildProcessResult SIRChildProcess::waitFor( uint32_t nMilliseconds, uint32_t *pnExitCode ) noexcept
 {
 	if ( !isOpen() ) {
-		return SIR_CHILD_PROCESS_CLOSED;
+		return SIRChildProcessResult::SIR_CHILD_PROCESS_CLOSED;
 	}
 	if ( !m_bExited ) {
-		const DWORD nWait = WaitForSingleObject( ( HANDLE )m_pProcess, nMilliseconds == INFINITE ? INFINITE - 1 : nMilliseconds );
+		const DWORD nWait = WaitForSingleObject( static_cast<HANDLE>(m_pProcess), nMilliseconds == INFINITE ? INFINITE - 1 : nMilliseconds );
 		if ( nWait == WAIT_TIMEOUT ) {
-			return SIR_CHILD_PROCESS_TIMED_OUT;
+			return SIRChildProcessResult::SIR_CHILD_PROCESS_TIMED_OUT;
 		}
 		if ( nWait != WAIT_OBJECT_0 ) {
-			return SIR_CHILD_PROCESS_OS_ERROR;
+			return SIRChildProcessResult::SIR_CHILD_PROCESS_OS_ERROR;
 		}
 	}
 	bool bExited = false;
 	return poll( &bExited, pnExitCode );
 }
 
-sirChildProcessResult_t SIRChildProcess::terminate( void ) noexcept
+SIRChildProcessResult SIRChildProcess::terminate( void ) noexcept
 {
 	if ( !isOpen() ) {
-		return SIR_CHILD_PROCESS_CLOSED;
+		return SIRChildProcessResult::SIR_CHILD_PROCESS_CLOSED;
 	}
 	bool bExited = false;
-	const sirChildProcessResult_t eState = poll( &bExited, nullptr );
-	if ( eState != SIR_CHILD_PROCESS_OK || bExited ) {
+	const SIRChildProcessResult eState = poll( &bExited, nullptr );
+	if ( eState != SIRChildProcessResult::SIR_CHILD_PROCESS_OK || bExited ) {
 		return eState;
 	}
-	if ( !TerminateProcess( ( HANDLE )m_pProcess, 137 ) ) {
+	if ( !TerminateProcess( static_cast<HANDLE>(m_pProcess), 137 ) ) {
 		// If the child exited between poll and termination, that is success.
-		return poll( &bExited, nullptr ) == SIR_CHILD_PROCESS_OK && bExited ? SIR_CHILD_PROCESS_OK : SIR_CHILD_PROCESS_OS_ERROR;
+		return poll( &bExited, nullptr ) == SIRChildProcessResult::SIR_CHILD_PROCESS_OK && bExited ? SIRChildProcessResult::SIR_CHILD_PROCESS_OK : SIRChildProcessResult::SIR_CHILD_PROCESS_OS_ERROR;
 	}
 	return wait( nullptr );
 }
 
-sirChildProcessResult_t SIRChildProcess::close( void ) noexcept
+SIRChildProcessResult SIRChildProcess::close( void ) noexcept
 {
 	if ( !isOpen() ) {
-		return SIR_CHILD_PROCESS_OK;
+		return SIRChildProcessResult::SIR_CHILD_PROCESS_OK;
 	}
 	if ( !m_bExited ) {
-		const sirChildProcessResult_t eResult = terminate();
-		if ( eResult != SIR_CHILD_PROCESS_OK ) {
+		const SIRChildProcessResult eResult = terminate();
+		if ( eResult != SIRChildProcessResult::SIR_CHILD_PROCESS_OK ) {
 			return eResult;
 		}
 	}
-	if ( !CloseHandle( ( HANDLE )m_pProcess ) ) {
-		return SIR_CHILD_PROCESS_OS_ERROR;
+	if ( !CloseHandle( static_cast<HANDLE>(m_pProcess) ) ) {
+		return SIRChildProcessResult::SIR_CHILD_PROCESS_OS_ERROR;
 	}
 	m_pProcess = nullptr;
 	m_nProcessId = 0;
 	m_nExitCode = 0;
 	m_bExited = false;
-	return SIR_CHILD_PROCESS_OK;
+	return SIRChildProcessResult::SIR_CHILD_PROCESS_OK;
 }
 
 bool SIRChildProcess::isOpen( void ) const noexcept

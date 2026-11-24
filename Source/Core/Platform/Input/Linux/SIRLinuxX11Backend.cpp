@@ -27,24 +27,24 @@ SIRLinuxX11Backend::SIRLinuxX11Backend( void ) noexcept
 {
 }
 
-sirInputBackendId_t SIRLinuxX11Backend::id( void ) const noexcept
+SIRInputBackendId SIRLinuxX11Backend::id( void ) const noexcept
 {
-	return SIR_INPUT_LINUX_X11;
+	return SIRInputBackendId::SIR_INPUT_LINUX_X11;
 }
 void SIRLinuxX11Backend::sample( SIRInputService& service ) noexcept
 {
-	( void )service;
+	static_cast<void>(service);
 }
 void SIRLinuxX11Backend::resynchronize( SIRInputService& service ) noexcept
 {
-	( void )service;
+	static_cast<void>(service);
 	m_bHaveMotion = false;
 }
 bool SIRLinuxX11Backend::vibrate( sirInputDeviceId_t hDevice, uint16_t nLeft, uint16_t nRight ) noexcept
 {
-	( void )hDevice;
-	( void )nLeft;
-	( void )nRight;
+	static_cast<void>(hDevice);
+	static_cast<void>(nLeft);
+	static_cast<void>(nRight);
 	return false;
 }
 
@@ -64,12 +64,12 @@ bool SIRLinuxX11Backend::attachWindow( SIRInputService& service, Window hWindow 
 	if ( m_bAttached || hWindow == 0 ) {
 		return false;
 	}
-	const uint64_t nKey = ( uint64_t )hWindow << 1;
-	if ( !service.connect( { nKey, nKey, id(), SIR_INPUT_KEYBOARD }, &m_hKeyboard ) ) {
+	const uint64_t nKey = static_cast<uint64_t>(hWindow) << 1;
+	if ( !service.connect( { nKey, nKey, id(), SIRInputDeviceClass::SIR_INPUT_KEYBOARD }, &m_hKeyboard ) ) {
 		return false;
 	}
 	const uint64_t nPointer = nKey | 1;
-	if ( !service.connect( { nPointer, nPointer, id(), SIR_INPUT_POINTER }, &m_hPointer ) ) {
+	if ( !service.connect( { nPointer, nPointer, id(), SIRInputDeviceClass::SIR_INPUT_POINTER }, &m_hPointer ) ) {
 		service.disconnect( id(), m_hKeyboard );
 		return false;
 	}
@@ -97,7 +97,7 @@ bool SIRLinuxX11Backend::enableRawPointer( Display *pDisplay ) noexcept
 	}
 	unsigned char szMask[XIMaskLen( XI_RawMotion )] = {};
 	XISetMask( szMask, XI_RawMotion );
-	XIEventMask mask = {};
+	XIEventMask mask {};
 	mask.deviceid = XIAllMasterDevices;
 	mask.mask_len = sizeof( szMask );
 	mask.mask = szMask;
@@ -111,7 +111,7 @@ bool SIRLinuxX11Backend::enableRawPointer( Display *pDisplay ) noexcept
 	m_fMotionRemainderY = 0.0;
 	return true;
 #else
-	( void )pDisplay;
+	static_cast<void>(pDisplay);
 	return false;
 #endif
 }
@@ -127,7 +127,7 @@ bool SIRLinuxX11Backend::processEvent( SIRInputService& service, const XEvent& e
 		}
 		bool bProcessed = false;
 		if ( cookie.evtype == XI_RawMotion && cookie.data != nullptr && m_bFocused ) {
-			const XIRawEvent *pRaw = ( const XIRawEvent * )cookie.data;
+			const XIRawEvent *pRaw = static_cast<const XIRawEvent *>(cookie.data);
 			const double *pValues = pRaw->raw_values;
 			double fDeltaX = 0.0;
 			double fDeltaY = 0.0;
@@ -144,11 +144,11 @@ bool SIRLinuxX11Backend::processEvent( SIRInputService& service, const XEvent& e
 			if ( isfinite( fDeltaX ) && isfinite( fDeltaY ) ) {
 				const double fX = fDeltaX + m_fMotionRemainderX;
 				const double fY = fDeltaY + m_fMotionRemainderY;
-				const int32_t nX = fX > INT32_MAX ? INT32_MAX : ( fX < INT32_MIN ? INT32_MIN : ( int32_t )fX );
-				const int32_t nY = fY > INT32_MAX ? INT32_MAX : ( fY < INT32_MIN ? INT32_MIN : ( int32_t )fY );
+				const int32_t nX = fX > INT32_MAX ? INT32_MAX : ( fX < INT32_MIN ? INT32_MIN : static_cast<int32_t>(fX) );
+				const int32_t nY = fY > INT32_MAX ? INT32_MAX : ( fY < INT32_MIN ? INT32_MIN : static_cast<int32_t>(fY) );
 				m_fMotionRemainderX = fX > INT32_MAX || fX < INT32_MIN ? 0.0 : fX - nX;
 				m_fMotionRemainderY = fY > INT32_MAX || fY < INT32_MIN ? 0.0 : fY - nY;
-				bProcessed = ( nX == 0 && nY == 0 ) || service.emitPointer( id(), m_hPointer, SIR_INPUT_MOTION, 0, nX, nY );
+				bProcessed = ( nX == 0 && nY == 0 ) || service.emitPointer( id(), m_hPointer, SIRInputSignal::SIR_INPUT_MOTION, 0, nX, nY );
 			}
 		}
 		XFreeEventData( event.xcookie.display, &cookie );
@@ -174,7 +174,7 @@ bool SIRLinuxX11Backend::processEvent( SIRInputService& service, const XEvent& e
 		return false;
 	}
 	if ( event.type == KeyPress || event.type == KeyRelease ) {
-		const sirInputControlChange_t change = { SIR_INPUT_BUTTON, ( uint16_t )event.xkey.keycode, event.type == KeyPress ? 1 : 0 };
+		const sirInputControlChange_t change = { SIRInputSignal::SIR_INPUT_BUTTON, static_cast<uint16_t>(event.xkey.keycode), event.type == KeyPress ? 1 : 0 };
 		return service.emitControls( id(), m_hKeyboard, &change, 1 );
 	}
 	if ( event.type == ButtonPress || event.type == ButtonRelease ) {
@@ -185,13 +185,13 @@ bool SIRLinuxX11Backend::processEvent( SIRInputService& service, const XEvent& e
 			}
 			const uint16_t nAxis = nButton <= 5 ? 0 : 1;
 			const int32_t nDelta = ( nButton == 4 || nButton == 6 ) ? 120 : -120;
-			return service.emitPointer( id(), m_hPointer, SIR_INPUT_WHEEL, nAxis, nDelta, 0 );
+			return service.emitPointer( id(), m_hPointer, SIRInputSignal::SIR_INPUT_WHEEL, nAxis, nDelta, 0 );
 		}
 		if ( nButton == 0 || nButton > 3 ) {
 			return true;
 		}
 		const uint16_t nCode = nButton == 1 ? 0 : ( nButton == 3 ? 1 : 2 );
-		const sirInputControlChange_t change = { SIR_INPUT_BUTTON, nCode, event.type == ButtonPress ? 1 : 0 };
+		const sirInputControlChange_t change = { SIRInputSignal::SIR_INPUT_BUTTON, nCode, event.type == ButtonPress ? 1 : 0 };
 		return service.emitControls( id(), m_hPointer, &change, 1 );
 	}
 	if ( event.type == MotionNotify ) {
@@ -204,13 +204,13 @@ bool SIRLinuxX11Backend::processEvent( SIRInputService& service, const XEvent& e
 			m_bHaveMotion = true;
 			return true;
 		}
-		const int64_t nDX = ( int64_t )event.xmotion.x_root - m_nRootX;
-		const int64_t nDY = ( int64_t )event.xmotion.y_root - m_nRootY;
+		const int64_t nDX = static_cast<int64_t>(event.xmotion.x_root) - m_nRootX;
+		const int64_t nDY = static_cast<int64_t>(event.xmotion.y_root) - m_nRootY;
 		m_nRootX = event.xmotion.x_root;
 		m_nRootY = event.xmotion.y_root;
-		const int32_t nX = ( int32_t )( nDX > INT32_MAX ? INT32_MAX : ( nDX < INT32_MIN ? INT32_MIN : nDX ) );
-		const int32_t nY = ( int32_t )( nDY > INT32_MAX ? INT32_MAX : ( nDY < INT32_MIN ? INT32_MIN : nDY ) );
-		return service.emitPointer( id(), m_hPointer, SIR_INPUT_MOTION, 0, nX, nY );
+		const int32_t nX = static_cast<int32_t>(  nDX > INT32_MAX ? INT32_MAX : ( nDX < INT32_MIN ? INT32_MIN : nDX )  );
+		const int32_t nY = static_cast<int32_t>(  nDY > INT32_MAX ? INT32_MAX : ( nDY < INT32_MIN ? INT32_MIN : nDY )  );
+		return service.emitPointer( id(), m_hPointer, SIRInputSignal::SIR_INPUT_MOTION, 0, nX, nY );
 	}
 	return false;
 }

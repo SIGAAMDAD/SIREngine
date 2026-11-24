@@ -24,8 +24,8 @@ static bool sirVFSCanonicalFilePath( const sirVFSPath_t& path ) noexcept
 	if ( path.nLength >= SIR_VFS_MAX_PATH_BYTES || path.szPath[path.nLength] != '\0' ) {
 		return false;
 	}
-	sirVFSPath_t canonical = {};
-	return SIRVFSPath::normalize( path.szPath, path.nLength, &canonical ) == SIR_VFS_PATH_OK && path.nLength == canonical.nLength &&
+	sirVFSPath_t canonical {};
+	return SIRVFSPath::normalize( path.szPath, path.nLength, &canonical ) == SIRVFSPathResult::SIR_VFS_PATH_OK && path.nLength == canonical.nLength &&
 	       path.nNamespaceLength == canonical.nNamespaceLength && memcmp( path.szPath, canonical.szPath, path.nLength + 1 ) == 0;
 }
 
@@ -43,7 +43,7 @@ SIRVFSFileHandleTable::SIRVFSFileHandleTable( SIRVFSMountTable& table, uint32_t 
 
 SIRVFSFileHandleTable::~SIRVFSFileHandleTable( void ) noexcept
 {
-	if ( shutdown() == SIR_VFS_BUSY ) {
+	if ( shutdown() == SIRVFSResult::SIR_VFS_BUSY ) {
 		abort();
 	}
 }
@@ -80,33 +80,33 @@ void SIRVFSFileHandleTable::retireFile( uint32_t nIndex ) noexcept
 	const uint32_t nGeneration = slot.nGeneration;
 	slot = {};
 	slot.nGeneration = nGeneration;
-	( void )m_Table.release( lease );
+	static_cast<void>(m_Table.release( lease ));
 }
 
-sirVFSResult_t SIRVFSFileHandleTable::openResolved( const sirVFSPath_t& path, sirVFSMountLease_t sourceLease,
+SIRVFSResult SIRVFSFileHandleTable::openResolved( const sirVFSPath_t& path, sirVFSMountLease_t sourceLease,
                                                     sirVFSFileHandle_t *pHandle ) noexcept
 {
 	if ( pHandle == nullptr || !sirVFSCanonicalFilePath( path ) ) {
-		return SIR_VFS_INVALID_ARGUMENT;
+		return SIRVFSResult::SIR_VFS_INVALID_ARGUMENT;
 	}
 	const SIRScopedLock<SIRMutex> guard( m_Mutex );
 	if ( m_bStopped ) {
-		return SIR_VFS_STOPPED;
+		return SIRVFSResult::SIR_VFS_STOPPED;
 	}
 	const uint32_t nIndex = findFreeFile();
 	if ( nIndex == m_nFileCapacity ) {
-		return SIR_VFS_NO_CAPACITY;
+		return SIRVFSResult::SIR_VFS_NO_CAPACITY;
 	}
-	sirVFSMountCandidate_t retained = {};
-	const sirVFSResult_t eRetain = m_Table.retain( sourceLease, &retained );
-	if ( eRetain != SIR_VFS_OK ) {
+	sirVFSMountCandidate_t retained {};
+	const SIRVFSResult eRetain = m_Table.retain( sourceLease, &retained );
+	if ( eRetain != SIRVFSResult::SIR_VFS_OK ) {
 		return eRetain;
 	}
-	if ( ( retained.descriptor.nAllowedOps & SIR_VFS_ACCESS_READ ) == 0 ||
+	if ( ( retained.descriptor.nAllowedOps & SIRVFSAccess::SIR_VFS_ACCESS_READ ) == 0 ||
 	     strlen( retained.descriptor.szNamespace ) != path.nNamespaceLength ||
 	     memcmp( retained.descriptor.szNamespace, path.szPath, path.nNamespaceLength ) != 0 ) {
-		( void )m_Table.release( retained.lease );
-		return SIR_VFS_FORBIDDEN;
+		static_cast<void>(m_Table.release( retained.lease ));
+		return SIRVFSResult::SIR_VFS_FORBIDDEN;
 	}
 	sirVFSFileSlot_t& slot = m_szFiles[nIndex];
 	slot.nGeneration++;
@@ -117,28 +117,28 @@ sirVFSResult_t SIRVFSFileHandleTable::openResolved( const sirVFSPath_t& path, si
 	slot.bOpen = true;
 	slot.bClosing = false;
 	*pHandle = { nIndex + 1, slot.nGeneration };
-	return SIR_VFS_OK;
+	return SIRVFSResult::SIR_VFS_OK;
 }
 
-sirVFSResult_t SIRVFSFileHandleTable::borrow( sirVFSFileHandle_t handle, sirVFSFileView_t *pView ) noexcept
+SIRVFSResult SIRVFSFileHandleTable::borrow( sirVFSFileHandle_t handle, sirVFSFileView_t *pView ) noexcept
 {
 	if ( pView == nullptr || handle.nSlot == 0 || handle.nSlot > m_nFileCapacity ) {
-		return SIR_VFS_INVALID_ARGUMENT;
+		return SIRVFSResult::SIR_VFS_INVALID_ARGUMENT;
 	}
 	const SIRScopedLock<SIRMutex> guard( m_Mutex );
 	if ( m_bStopped ) {
-		return SIR_VFS_STOPPED;
+		return SIRVFSResult::SIR_VFS_STOPPED;
 	}
 	sirVFSFileSlot_t& slot = m_szFiles[handle.nSlot - 1];
 	if ( !slot.bOpen || slot.nGeneration != handle.nGeneration ) {
-		return SIR_VFS_STALE_HANDLE;
+		return SIRVFSResult::SIR_VFS_STALE_HANDLE;
 	}
 	if ( m_nNextToken == UINT64_MAX ) {
-		return SIR_VFS_NO_CAPACITY;
+		return SIRVFSResult::SIR_VFS_NO_CAPACITY;
 	}
 	const uint32_t nBorrow = findFreeBorrow();
 	if ( nBorrow == m_nBorrowCapacity ) {
-		return SIR_VFS_NO_CAPACITY;
+		return SIRVFSResult::SIR_VFS_NO_CAPACITY;
 	}
 	sirVFSFileBorrowSlot_t& ticket = m_szBorrows[nBorrow];
 	ticket.nToken = m_nNextToken++;
@@ -149,24 +149,24 @@ sirVFSResult_t SIRVFSFileHandleTable::borrow( sirVFSFileHandle_t handle, sirVFSF
 	           slot.path,
 	           { handle.nSlot, handle.nGeneration, ticket.nToken },
 	           { slot.mountLease.nSlot, slot.mountLease.nGeneration } };
-	return SIR_VFS_OK;
+	return SIRVFSResult::SIR_VFS_OK;
 }
 
-sirVFSResult_t SIRVFSFileHandleTable::retainBorrow( sirVFSFileBorrow_t borrow, sirVFSFileView_t *pView ) noexcept
+SIRVFSResult SIRVFSFileHandleTable::retainBorrow( sirVFSFileBorrow_t borrow, sirVFSFileView_t *pView ) noexcept
 {
 	if ( pView == nullptr ) {
-		return SIR_VFS_INVALID_ARGUMENT;
+		return SIRVFSResult::SIR_VFS_INVALID_ARGUMENT;
 	}
 	if ( borrow.nSlot == 0 || borrow.nSlot > m_nFileCapacity || borrow.nToken == 0 ) {
-		return SIR_VFS_STALE_HANDLE;
+		return SIRVFSResult::SIR_VFS_STALE_HANDLE;
 	}
 	const SIRScopedLock<SIRMutex> guard( m_Mutex );
 	if ( m_bStopped ) {
-		return SIR_VFS_STOPPED;
+		return SIRVFSResult::SIR_VFS_STOPPED;
 	}
 	sirVFSFileSlot_t& slot = m_szFiles[borrow.nSlot - 1];
 	if ( slot.nGeneration != borrow.nGeneration || slot.nBorrows == 0 || ( !slot.bOpen && !slot.bClosing ) ) {
-		return SIR_VFS_STALE_HANDLE;
+		return SIRVFSResult::SIR_VFS_STALE_HANDLE;
 	}
 	bool bFound = false;
 	for ( uint32_t i = 0; i < m_nBorrowCapacity; ++i ) {
@@ -177,14 +177,14 @@ sirVFSResult_t SIRVFSFileHandleTable::retainBorrow( sirVFSFileBorrow_t borrow, s
 		}
 	}
 	if ( !bFound ) {
-		return SIR_VFS_STALE_HANDLE;
+		return SIRVFSResult::SIR_VFS_STALE_HANDLE;
 	}
 	if ( m_nNextToken == UINT64_MAX ) {
-		return SIR_VFS_NO_CAPACITY;
+		return SIRVFSResult::SIR_VFS_NO_CAPACITY;
 	}
 	const uint32_t nBorrow = findFreeBorrow();
 	if ( nBorrow == m_nBorrowCapacity ) {
-		return SIR_VFS_NO_CAPACITY;
+		return SIRVFSResult::SIR_VFS_NO_CAPACITY;
 	}
 	sirVFSFileBorrowSlot_t& retained = m_szBorrows[nBorrow];
 	retained.nToken = m_nNextToken++;
@@ -195,36 +195,36 @@ sirVFSResult_t SIRVFSFileHandleTable::retainBorrow( sirVFSFileBorrow_t borrow, s
 	           slot.path,
 	           { borrow.nSlot, borrow.nGeneration, retained.nToken },
 	           { slot.mountLease.nSlot, slot.mountLease.nGeneration } };
-	return SIR_VFS_OK;
+	return SIRVFSResult::SIR_VFS_OK;
 }
 
-sirVFSResult_t SIRVFSFileHandleTable::close( sirVFSFileHandle_t handle ) noexcept
+SIRVFSResult SIRVFSFileHandleTable::close( sirVFSFileHandle_t handle ) noexcept
 {
 	if ( handle.nSlot == 0 || handle.nSlot > m_nFileCapacity ) {
-		return SIR_VFS_STALE_HANDLE;
+		return SIRVFSResult::SIR_VFS_STALE_HANDLE;
 	}
 	const SIRScopedLock<SIRMutex> guard( m_Mutex );
 	sirVFSFileSlot_t& slot = m_szFiles[handle.nSlot - 1];
 	if ( !slot.bOpen || slot.nGeneration != handle.nGeneration ) {
-		return SIR_VFS_STALE_HANDLE;
+		return SIRVFSResult::SIR_VFS_STALE_HANDLE;
 	}
 	slot.bOpen = false;
 	slot.bClosing = true;
 	if ( slot.nBorrows == 0 ) {
 		retireFile( handle.nSlot - 1 );
 	}
-	return SIR_VFS_OK;
+	return SIRVFSResult::SIR_VFS_OK;
 }
 
-sirVFSResult_t SIRVFSFileHandleTable::releaseBorrow( sirVFSFileBorrow_t borrow ) noexcept
+SIRVFSResult SIRVFSFileHandleTable::releaseBorrow( sirVFSFileBorrow_t borrow ) noexcept
 {
 	if ( borrow.nSlot == 0 || borrow.nSlot > m_nFileCapacity || borrow.nToken == 0 ) {
-		return SIR_VFS_STALE_HANDLE;
+		return SIRVFSResult::SIR_VFS_STALE_HANDLE;
 	}
 	const SIRScopedLock<SIRMutex> guard( m_Mutex );
 	sirVFSFileSlot_t& slot = m_szFiles[borrow.nSlot - 1];
 	if ( slot.nGeneration != borrow.nGeneration || slot.nBorrows == 0 ) {
-		return SIR_VFS_STALE_HANDLE;
+		return SIRVFSResult::SIR_VFS_STALE_HANDLE;
 	}
 	for ( uint32_t i = 0; i < m_nBorrowCapacity; ++i ) {
 		sirVFSFileBorrowSlot_t& ticket = m_szBorrows[i];
@@ -234,21 +234,21 @@ sirVFSResult_t SIRVFSFileHandleTable::releaseBorrow( sirVFSFileBorrow_t borrow )
 			if ( slot.bClosing && slot.nBorrows == 0 ) {
 				retireFile( borrow.nSlot - 1 );
 			}
-			return SIR_VFS_OK;
+			return SIRVFSResult::SIR_VFS_OK;
 		}
 	}
-	return SIR_VFS_STALE_HANDLE;
+	return SIRVFSResult::SIR_VFS_STALE_HANDLE;
 }
 
-sirVFSResult_t SIRVFSFileHandleTable::shutdown( void ) noexcept
+SIRVFSResult SIRVFSFileHandleTable::shutdown( void ) noexcept
 {
 	const SIRScopedLock<SIRMutex> guard( m_Mutex );
 	if ( m_bStopped ) {
-		return SIR_VFS_STOPPED;
+		return SIRVFSResult::SIR_VFS_STOPPED;
 	}
 	for ( uint32_t i = 0; i < m_nBorrowCapacity; ++i ) {
 		if ( m_szBorrows[i].bActive ) {
-			return SIR_VFS_BUSY;
+			return SIRVFSResult::SIR_VFS_BUSY;
 		}
 	}
 	for ( uint32_t i = 0; i < m_nFileCapacity; ++i ) {
@@ -257,5 +257,5 @@ sirVFSResult_t SIRVFSFileHandleTable::shutdown( void ) noexcept
 		}
 	}
 	m_bStopped = true;
-	return SIR_VFS_OK;
+	return SIRVFSResult::SIR_VFS_OK;
 }

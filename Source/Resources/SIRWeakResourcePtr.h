@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef SIRENGINE_SIRWEAKRESOURCEPTR_H
-#define SIRENGINE_SIRWEAKRESOURCEPTR_H
+#ifndef __SIR_WEAKRESOURCEPTR_H__
+#define __SIR_WEAKRESOURCEPTR_H__
 
 #include <Core/SIRPCH.h>
 
@@ -73,7 +73,7 @@ template <typename T>
 SIRResourceResult SIRWeakResourcePtr<T>::lock( SIRResourcePtr<T> *pOut ) const noexcept
 {
 	if ( m_pGraph == nullptr ) {
-		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_HANDLE;
 	}
 	return SIRResourcePtr<T>::acquire( *m_pGraph, m_hResource, pOut );
 }
@@ -85,4 +85,4 @@ void SIRWeakResourcePtr<T>::reset( void ) noexcept
 	m_hResource = {};
 }
 
-#endif // SIRENGINE_SIRWEAKRESOURCEPTR_H
+#endif // __SIR_WEAKRESOURCEPTR_H__

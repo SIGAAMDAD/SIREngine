@@ -41,42 +41,42 @@ __attribute__( ( target( "avx2" ) ) ) static void sirAnimationBlendAVX2( const s
 }
 #endif
 
-sirAnimationSIMDPath_t SIRAnimationSIMD::getCompiledPath( void ) noexcept
+SIRAnimationSIMDPath SIRAnimationSIMD::getCompiledPath( void ) noexcept
 {
 #if defined( SIR_ANIMATION_X86_SIMD ) && ( defined( __GNUC__ ) || defined( __clang__ ) )
 	if ( sirAnimationCanUseAVX2() ) {
-		return SIR_ANIMATION_SIMD_AVX2;
+		return SIRAnimationSIMDPath::SIR_ANIMATION_SIMD_AVX2;
 	}
 #endif
 #if defined( __SSE2__ ) || defined( _M_X64 )
-	return SIR_ANIMATION_SIMD_SSE2;
+	return SIRAnimationSIMDPath::SIR_ANIMATION_SIMD_SSE2;
 #elif defined( __ARM_NEON ) || defined( __ARM_NEON__ )
-	return SIR_ANIMATION_SIMD_NEON;
+	return SIRAnimationSIMDPath::SIR_ANIMATION_SIMD_NEON;
 #else
-	return SIR_ANIMATION_SIMD_SCALAR;
+	return SIRAnimationSIMDPath::SIR_ANIMATION_SIMD_SCALAR;
 #endif
 }
 
-sirAnimationCookResult_t SIRAnimationSIMD::blendChannels( const sirAnimationSoaBlend_t& options ) noexcept
+SIRAnimationCookResult SIRAnimationSIMD::blendChannels( const sirAnimationSoaBlend_t& options ) noexcept
 {
 	if ( !options.pDestination || !options.pSource || !std::isfinite( options.fWeight ) || options.fWeight < 0.0f ||
 	     options.fWeight > 1.0f || !options.nCount || options.nCount > SIR_ANIM_COOK_MAX_BONES * 10 ) {
-		return SIR_ANIM_COOK_INVALID;
+		return SIRAnimationCookResult::SIR_ANIM_COOK_INVALID;
 	}
-	const uintptr_t nDest = ( uintptr_t )options.pDestination;
-	const uintptr_t nSource = ( uintptr_t )options.pSource;
-	const uintptr_t nBytes = ( uintptr_t )options.nCount * sizeof( float );
+	const uintptr_t nDest = reinterpret_cast<uintptr_t>(options.pDestination);
+	const uintptr_t nSource = reinterpret_cast<uintptr_t>(options.pSource);
+	const uintptr_t nBytes = static_cast<uintptr_t>(options.nCount) * sizeof( float );
 	if ( nDest > UINTPTR_MAX - nBytes || nSource > UINTPTR_MAX - nBytes ||
 	     ( nDest != nSource && nDest < nSource + nBytes && nSource < nDest + nBytes ) ) {
-		return SIR_ANIM_COOK_INVALID;
+		return SIRAnimationCookResult::SIR_ANIM_COOK_INVALID;
 	}
 	for ( uint32_t i = 0; i < options.nCount; ++i ) {
 		if ( !std::isfinite( options.pSource[i] ) || !std::isfinite( options.pDestination[i] ) ) {
-			return SIR_ANIM_COOK_INVALID;
+			return SIRAnimationCookResult::SIR_ANIM_COOK_INVALID;
 		}
 	}
 	if ( nDest == nSource ) {
-		return SIR_ANIM_COOK_OK;
+		return SIRAnimationCookResult::SIR_ANIM_COOK_OK;
 	}
 	uint32_t i = 0;
 #if defined( SIR_ANIMATION_X86_SIMD ) && ( defined( __GNUC__ ) || defined( __clang__ ) )
@@ -102,5 +102,5 @@ sirAnimationCookResult_t SIRAnimationSIMD::blendChannels( const sirAnimationSoaB
 	for ( ; i < options.nCount; ++i ) {
 		options.pDestination[i] += ( options.pSource[i] - options.pDestination[i] ) * options.fWeight;
 	}
-	return SIR_ANIM_COOK_OK;
+	return SIRAnimationCookResult::SIR_ANIM_COOK_OK;
 }

@@ -17,7 +17,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Memory/Allocators/SIRReclaimableSizeClassAllocator.h>
 #include <Core/Memory/SIRMemoryManager.h>
 #include <Core/Memory/SIRMemorySegment.h>
-#include <Core/Memory/SIRMemoryUtils.h>
+#include <Core/SIRMath.h>
 #include <new>
 
 SIRReclaimableSizeClassAllocator::SIRReclaimableSizeClassAllocator( void )
@@ -50,11 +50,11 @@ bool SIRReclaimableSizeClassAllocator::init( SIRMemorySegment *const *ppSegments
 	}
 	// Three arrays, all permanent manager metadata. Provision once, discard the
 	// unpublished manager if an error occurs after this point.
-	m_pSlabs = ( ( SIRSlabAllocator * )( pManager->allocateMetadata( ( ( uint64_t )( nCount ) ) * sizeof( SIRSlabAllocator ),
+	m_pSlabs = ( ( SIRSlabAllocator * )( pManager->allocateMetadata( static_cast<uint64_t>( nCount ) * sizeof( SIRSlabAllocator ),
 	                                                                 alignof( SIRSlabAllocator ) ) ) );
-	m_ppSegments = ( ( SIRMemorySegment ** )( pManager->allocateMetadata( ( ( uint64_t )( nCount ) ) * sizeof( SIRMemorySegment * ),
+	m_ppSegments = ( ( SIRMemorySegment ** )( pManager->allocateMetadata( static_cast<uint64_t>( nCount ) * sizeof( SIRMemorySegment * ),
 	                                                                      alignof( SIRMemorySegment * ) ) ) );
-	m_pClassState = ( ( sirClassState_t * )( pManager->allocateMetadata( ( ( uint64_t )( nCount ) ) * sizeof( sirClassState_t ),
+	m_pClassState = ( ( sirClassState_t * )( pManager->allocateMetadata( static_cast<uint64_t>( nCount ) * sizeof( sirClassState_t ),
 	                                                                     alignof( sirClassState_t ) ) ) );
 	if ( m_pSlabs == nullptr || m_ppSegments == nullptr || m_pClassState == nullptr ) {
 		return false;

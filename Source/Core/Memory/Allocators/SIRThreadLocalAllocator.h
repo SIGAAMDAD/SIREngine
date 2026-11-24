@@ -14,8 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRTHREADLOCALALLOCATOR_H__
-#define __SIRENGINE_SIRTHREADLOCALALLOCATOR_H__
+#ifndef __SIR_THREADLOCALALLOCATOR_H__
+#define __SIR_THREADLOCALALLOCATOR_H__
 
 #include <Core/SIRPCH.h>
 
@@ -25,7 +25,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-#include <Core/Platform/SIRAtomic.h>
+#include <atomic>
 #include <Core/Memory/Allocators/SIRSlabAllocator.h>
 #include <Core/Memory/Allocators/SIRSizeClassAllocator.h>
 #include <cstdint>
@@ -65,11 +65,11 @@ typedef struct sirSeat_s
 {
 	SIRSlabAllocator Classes[SIRSizeClassAllocator::SIR_SIZE_CLASS_COUNT];
 	SIRMemorySegment *pSegments[SIRSizeClassAllocator::SIR_SIZE_CLASS_COUNT];
-	SIRAtomic<uint8_t> *pSlotClaims[SIRSizeClassAllocator::SIR_SIZE_CLASS_COUNT];
+	std::atomic<uint8_t> *pSlotClaims[SIRSizeClassAllocator::SIR_SIZE_CLASS_COUNT];
 	sirRemoteFree_t *pInbox;
-	SIRAtomicFlag InboxLock;
-	SIRAtomic<uint32_t> nState;
-	SIRAtomic<uint32_t> nGeneration;
+	std::atomic<bool> InboxLock;
+	std::atomic<uint32_t> nState;
+	std::atomic<uint32_t> nGeneration;
 	uint64_t nOwnerThread;
 	uint64_t nLiveBytes;
 	uint64_t nPendingBytes;
@@ -112,9 +112,9 @@ private:
 	uint32_t m_nSeatCount;
 	uint32_t m_nInboxCapacity;
 	uint32_t m_nAlignment;
-	SIRAtomic<uint64_t> m_nRemoteAccepted;
-	SIRAtomic<uint64_t> m_nRemoteRejected;
-	SIRAtomic<uint64_t> m_nRemoteDrained;
+	std::atomic<uint64_t> m_nRemoteAccepted;
+	std::atomic<uint64_t> m_nRemoteRejected;
+	std::atomic<uint64_t> m_nRemoteDrained;
 };
 
-#endif // __SIRENGINE_SIRTHREADLOCALALLOCATOR_H__
+#endif // __SIR_THREADLOCALALLOCATOR_H__

@@ -71,7 +71,7 @@ inline bool t3d_vt_feedback_grid_make_params( const t3dVTFeedbackGridLayout_t& r
 	            nMaterialMask,
 	            ( nViewportWidth << 16u ) | rLayout.m_nHeight,
 	            ( nViewportHeight << 16u ) | nSlot,
-	            ( uint32_t )( rLayout.m_nSlotBytes / sizeof( uint32_t ) ) };
+	            static_cast<uint32_t>(  rLayout.m_nSlotBytes / sizeof( uint32_t )  ) };
 	return true;
 }
 
@@ -80,12 +80,12 @@ inline bool t3d_vt_feedback_grid_layout( const uint64_t nReadbackLimit, t3dVTFee
 	const uint32_t dimensions[][2] = { { 240u, 136u }, { 160u, 90u }, { 128u, 72u }, { 32u, 24u } };
 	for ( uint32_t i = 0u; i < 4u; ++i ) {
 		const uint64_t nSlotBytes =
-		    sizeof( t3dVTFeedbackGridHeader_t ) + ( uint64_t )dimensions[i][0] * dimensions[i][1] * sizeof( t3dVTFeedbackWord_t );
+		    sizeof( t3dVTFeedbackGridHeader_t ) + static_cast<uint64_t>(dimensions[i][0]) * dimensions[i][1] * sizeof( t3dVTFeedbackWord_t );
 		if ( nSlotBytes <= nReadbackLimit && nSlotBytes <= UINT32_MAX / T3D_VT_FEEDBACK_GRID_SLOT_COUNT ) {
 			rLayout.m_nWidth = dimensions[i][0];
 			rLayout.m_nHeight = dimensions[i][1];
-			rLayout.m_nSlotBytes = ( uint32_t )nSlotBytes;
-			rLayout.m_nTotalBytes = ( uint32_t )nSlotBytes * T3D_VT_FEEDBACK_GRID_SLOT_COUNT;
+			rLayout.m_nSlotBytes = static_cast<uint32_t>(nSlotBytes);
+			rLayout.m_nTotalBytes = static_cast<uint32_t>(nSlotBytes) * T3D_VT_FEEDBACK_GRID_SLOT_COUNT;
 			return true;
 		}
 	}
@@ -103,8 +103,7 @@ inline bool t3d_vt_feedback_grid_validate( const t3dVTFeedbackGridHeader_t& rHea
 	       rHeader.m_nWordCount == nExpectedWords;
 }
 
-enum t3dVTFeedbackGridSlotStatus_t : uint8_t
-{
+enum class SIRVTFeedbackGridSlotStatus : uint8_t {
 	T3D_VT_FEEDBACK_SLOT_FREE = 0u,
 	T3D_VT_FEEDBACK_SLOT_PREPARED,
 	T3D_VT_FEEDBACK_SLOT_DRAWN,
@@ -115,50 +114,50 @@ enum t3dVTFeedbackGridSlotStatus_t : uint8_t
 struct t3dVTFeedbackGridSlot_t
 {
 	t3dVTFeedbackGridHeader_t m_Header{};
-	t3dVTFeedbackGridSlotStatus_t m_eStatus = T3D_VT_FEEDBACK_SLOT_FREE;
+	SIRVTFeedbackGridSlotStatus m_eStatus = SIRVTFeedbackGridSlotStatus::T3D_VT_FEEDBACK_SLOT_FREE;
 	bool m_bRetireOnCallback = false;
 
 	void reset()
 	{
 		m_Header = t3dVTFeedbackGridHeader_t{};
-		m_eStatus = T3D_VT_FEEDBACK_SLOT_FREE;
+		m_eStatus = SIRVTFeedbackGridSlotStatus::T3D_VT_FEEDBACK_SLOT_FREE;
 		m_bRetireOnCallback = false;
 	}
 	void invalidate()
 	{
-		if ( m_eStatus == T3D_VT_FEEDBACK_SLOT_READBACK_SUBMITTED )
+		if ( m_eStatus == SIRVTFeedbackGridSlotStatus::T3D_VT_FEEDBACK_SLOT_READBACK_SUBMITTED )
 			m_bRetireOnCallback = true;
 		else
 			reset();
 	}
 	bool prepare( const t3dVTFeedbackGridHeader_t& rHeader )
 	{
-		if ( m_eStatus != T3D_VT_FEEDBACK_SLOT_FREE )
+		if ( m_eStatus != SIRVTFeedbackGridSlotStatus::T3D_VT_FEEDBACK_SLOT_FREE )
 			return false;
 		m_Header = rHeader;
-		m_eStatus = T3D_VT_FEEDBACK_SLOT_PREPARED;
+		m_eStatus = SIRVTFeedbackGridSlotStatus::T3D_VT_FEEDBACK_SLOT_PREPARED;
 		return true;
 	}
 	bool markDrawn()
 	{
-		if ( m_eStatus != T3D_VT_FEEDBACK_SLOT_PREPARED )
+		if ( m_eStatus != SIRVTFeedbackGridSlotStatus::T3D_VT_FEEDBACK_SLOT_PREPARED )
 			return false;
-		m_eStatus = T3D_VT_FEEDBACK_SLOT_DRAWN;
+		m_eStatus = SIRVTFeedbackGridSlotStatus::T3D_VT_FEEDBACK_SLOT_DRAWN;
 		return true;
 	}
 	bool submit( const bool bAccepted )
 	{
-		if ( m_eStatus != T3D_VT_FEEDBACK_SLOT_DRAWN )
+		if ( m_eStatus != SIRVTFeedbackGridSlotStatus::T3D_VT_FEEDBACK_SLOT_DRAWN )
 			return false;
 		if ( bAccepted )
-			m_eStatus = T3D_VT_FEEDBACK_SLOT_READBACK_SUBMITTED;
+			m_eStatus = SIRVTFeedbackGridSlotStatus::T3D_VT_FEEDBACK_SLOT_READBACK_SUBMITTED;
 		else
 			reset(); // This frame's feedback is skipped. Prediction remains authoritative.
 		return bAccepted;
 	}
 	bool complete( const t3dVTFeedbackGridHeader_t& rReceived )
 	{
-		if ( m_eStatus != T3D_VT_FEEDBACK_SLOT_READBACK_SUBMITTED ||
+		if ( m_eStatus != SIRVTFeedbackGridSlotStatus::T3D_VT_FEEDBACK_SLOT_READBACK_SUBMITTED ||
 		     !t3d_vt_feedback_grid_validate( rReceived, m_Header.m_nSlot, m_Header.m_nFrame, m_Header.m_nFeedbackEpoch,
 		                                     m_Header.m_nDatabaseGeneration, m_Header.m_nDeviceGeneration, m_Header.m_nViewportKey,
 		                                     m_Header.m_nWordCount ) )
@@ -167,7 +166,7 @@ struct t3dVTFeedbackGridSlot_t
 			reset();
 			return false;
 		}
-		m_eStatus = T3D_VT_FEEDBACK_SLOT_READY;
+		m_eStatus = SIRVTFeedbackGridSlotStatus::T3D_VT_FEEDBACK_SLOT_READY;
 		return true;
 	}
 };

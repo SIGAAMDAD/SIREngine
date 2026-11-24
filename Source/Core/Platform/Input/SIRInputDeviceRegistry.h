@@ -13,10 +13,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRINPUTDEVICEREGISTRY_H__
-#define __SIRENGINE_SIRINPUTDEVICEREGISTRY_H__
+#ifndef __SIR_INPUTDEVICEREGISTRY_H__
+#define __SIR_INPUTDEVICEREGISTRY_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
 #pragma once
@@ -40,9 +40,9 @@ public:
 	SIRInputDeviceRegistry( void ) noexcept;
 	bool connect( const sirInputHardwareKey_t& key, sirInputDeviceId_t *pResult ) noexcept;
 	bool disconnect( sirInputDeviceId_t id ) noexcept;
-	bool resolve( sirInputBackendId_t eBackend, uint64_t nNativeId, sirInputDeviceId_t *pResult ) const noexcept;
+	bool resolve( SIRInputBackendId eBackend, uint64_t nNativeId, sirInputDeviceId_t *pResult ) const noexcept;
 	bool describe( sirInputDeviceId_t id, sirInputDeviceDescriptor_t *pOut ) const noexcept;
-	bool authorize( sirInputBackendId_t eSource, sirInputDeviceId_t id, sirInputDeviceClass_t *pClass ) const noexcept;
+	bool authorize( SIRInputBackendId eSource, sirInputDeviceId_t id, SIRInputDeviceClass *pClass ) const noexcept;
 	bool pairUser( sirInputDeviceId_t id, uint32_t nUser ) noexcept;
 	bool valid( sirInputDeviceId_t id ) const noexcept;
 	bool inspectSlot( uint32_t nSlot, sirInputDeviceDescriptor_t *pOut ) const noexcept;
@@ -55,4 +55,4 @@ private:
 	uint32_t m_nCount;
 };
 
-#endif // __SIRENGINE_SIRINPUTDEVICEREGISTRY_H__
+#endif // __SIR_INPUTDEVICEREGISTRY_H__

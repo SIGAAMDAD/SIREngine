@@ -13,10 +13,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRPOOLPTR_H__
-#define __SIRENGINE_SIRPOOLPTR_H__
+#ifndef __SIR_POOLPTR_H__
+#define __SIR_POOLPTR_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -109,8 +109,8 @@ public:
 		if ( pMemory == nullptr ) {
 			return result;
 		}
-		if ( ( ( uintptr_t )pMemory % alignof( T ) ) != 0 ) {
-			( void )pPool->free( pMemory );
+		if ( ( reinterpret_cast<uintptr_t>(pMemory) % alignof( T ) ) != 0 ) {
+			static_cast<void>(pPool->free( pMemory ));
 			return result;
 		}
 
@@ -118,7 +118,7 @@ public:
 		try {
 			result.m_pObject = ::new ( pMemory ) T( std::forward<TArgs>( args )... );
 		} catch ( ... ) {
-			( void )pPool->free( pMemory );
+			static_cast<void>(pPool->free( pMemory ));
 			throw;
 		}
 #else
@@ -134,4 +134,4 @@ private:
 	T *m_pObject = nullptr;
 };
 
-#endif // __SIRENGINE_SIRPOOLPTR_H__
+#endif // __SIR_POOLPTR_H__

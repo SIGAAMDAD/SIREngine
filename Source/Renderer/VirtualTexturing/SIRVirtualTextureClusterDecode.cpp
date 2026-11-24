@@ -21,18 +21,18 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // Source contract: Terrain3D's Sparse VT V1 cluster/payload record layout.
 // Metadata is borrowed and may be unaligned, hence memcpy for each record.
 template <typename T>
-static T sirVTReadClusterRecord( const sirVirtualTexturePackView_t& view, sirVirtualTexturePackDirectory_t eDirectory,
+static T sirVTReadClusterRecord( const sirVirtualTexturePackView_t& view, SIRVirtualTexturePackDirectory eDirectory,
                                  uint32_t nIndex ) noexcept
 {
-	T record = {};
-	memcpy( &record, view.szDirectories[eDirectory].pData + ( uint64_t )nIndex * sizeof( T ), sizeof( T ) );
+	T record {};
+	memcpy( &record, view.szDirectories[eDirectory].pData + static_cast<uint64_t>(nIndex * sizeof(  T  )), sizeof( T ) );
 	return record;
 }
 
 static bool sirVTClusterOverlaps( const sirVirtualTextureClusterBuffers_t& buffers, uint32_t nStored, uint32_t nDecoded ) noexcept
 {
-	const uintptr_t nInput = ( uintptr_t )buffers.pStoredBytes;
-	const uintptr_t nOutput = ( uintptr_t )buffers.pDecodedBytes;
+	const uintptr_t nInput = reinterpret_cast<uintptr_t>(buffers.pStoredBytes);
+	const uintptr_t nOutput = reinterpret_cast<uintptr_t>(buffers.pDecodedBytes);
 	if ( nStored > UINTPTR_MAX - nInput || nDecoded > UINTPTR_MAX - nOutput ) {
 		return true;
 	}
@@ -44,7 +44,7 @@ static bool sirVTVerifyDecodedCluster( const sirVirtualTexturePackView_t& view, 
 {
 	for ( uint32_t i = 0; i < cluster.nPayloadCount; ++i ) {
 		const sirVirtualTexturePackPayloadRecord_t payload =
-		    sirVTReadClusterRecord<sirVirtualTexturePackPayloadRecord_t>( view, SIR_VT_PACK_PAYLOADS, cluster.nFirstPayload + i );
+		    sirVTReadClusterRecord<sirVirtualTexturePackPayloadRecord_t>( view, SIRVirtualTexturePackDirectory::SIR_VT_PACK_PAYLOADS, cluster.nFirstPayload + i );
 		if ( payload.nClusterOffset > cluster.nDecodedBytes || payload.nDecodedBytes > cluster.nDecodedBytes - payload.nClusterOffset ) {
 			return false;
 		}
@@ -60,12 +60,12 @@ static bool sirVTVerifyDecodedCluster( const sirVirtualTexturePackView_t& view, 
 bool sirVTDecodePackCluster( const sirVirtualTexturePackView_t& view, uint32_t nClusterId, const sirVirtualTextureClusterBuffers_t& buffers,
                              const sirVirtualTextureClusterCodec_t *pCodec ) noexcept
 {
-	if ( view.szDirectories[SIR_VT_PACK_CLUSTERS].pData == nullptr || view.szDirectories[SIR_VT_PACK_PAYLOADS].pData == nullptr ||
+	if ( view.szDirectories[SIRVirtualTexturePackDirectory::SIR_VT_PACK_CLUSTERS].pData == nullptr || view.szDirectories[SIRVirtualTexturePackDirectory::SIR_VT_PACK_PAYLOADS].pData == nullptr ||
 	     nClusterId >= view.header.nClusterCount || buffers.pStoredBytes == nullptr || buffers.pDecodedBytes == nullptr ) {
 		return false;
 	}
 	const sirVirtualTexturePackClusterRecord_t cluster =
-	    sirVTReadClusterRecord<sirVirtualTexturePackClusterRecord_t>( view, SIR_VT_PACK_CLUSTERS, nClusterId );
+	    sirVTReadClusterRecord<sirVirtualTexturePackClusterRecord_t>( view, SIRVirtualTexturePackDirectory::SIR_VT_PACK_CLUSTERS, nClusterId );
 	if ( cluster.nStoredBytes == 0 || cluster.nDecodedBytes == 0 || cluster.nStoredBytes > buffers.nStoredCapacity ||
 	     cluster.nDecodedBytes > buffers.nDecodedCapacity || cluster.nCodec > 1 ||
 	     cluster.nPayloadDataOffset > view.header.nPayloadDataBytes ||

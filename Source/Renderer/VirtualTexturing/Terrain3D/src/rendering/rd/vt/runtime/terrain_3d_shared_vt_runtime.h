@@ -62,16 +62,16 @@ public:
 	t3dVTSharedResourceClass_t get_shared_resource_class() const;
 	const t3dWorldLimits_t& get_limits() const;
 	const Terrain3DVTResourceImage& get_resources() const;
-	t3dVTAcquireStatus_t acquirePublishedBindingsHot( t3dVTSharedResourceClass_t eRequestedClass, t3dSharedVTBindings_t& rBindings ) const;
+	SIRVTAcquireStatus acquirePublishedBindingsHot( t3dVTSharedResourceClass_t eRequestedClass, t3dSharedVTBindings_t& rBindings ) const;
 
 private:
 	bool refresh_shared_vt_bindings_hot();
 	void invalidateBoundDescriptorsCold( Terrain3DRdContext& rContext );
 	Terrain3DVTResourceImage m_Resources;
-	t3dSharedVTBindings_t m_SharedVTBindings = {};
+	t3dSharedVTBindings_t m_SharedVTBindings {};
 	uint64_t m_nPublishedDeviceGeneration = 0u;
-	t3dWorldLimits_t m_Limits = {};
-	t3dVTGpuProfile_t m_Profile = {};
+	t3dWorldLimits_t m_Limits {};
+	t3dVTGpuProfile_t m_Profile {};
 	Terrain3DMemoryZone *m_pRuntimeAllocatorZone = NULL;
 	Terrain3DVirtualTexture m_VirtualTexture;
 	t3dVTSharedResourceClass_t m_eSharedResourceClass = T3D_VT_SHARED_RESOURCES_NONE;

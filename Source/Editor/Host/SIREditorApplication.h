@@ -12,8 +12,8 @@ express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIREDITORAPPLICATION_H__
-#define __SIRENGINE_SIREDITORAPPLICATION_H__
+#ifndef __SIR_EDITORAPPLICATION_H__
+#define __SIR_EDITORAPPLICATION_H__
 #include <Core/SIRPCH.h>
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -22,8 +22,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 #include <Core/SIRApplication.h>
 
-typedef enum sirEditorApplicationResult_e : uint8_t
-{
+enum class SIREditorApplicationResult : uint8_t {
 	SIR_EDITOR_APP_OK = 0,
 	SIR_EDITOR_APP_INVALID_ARGUMENT = 1,
 	SIR_EDITOR_APP_NOT_INITIALIZED = 2,
@@ -31,7 +30,7 @@ typedef enum sirEditorApplicationResult_e : uint8_t
 	SIR_EDITOR_APP_CALLBACK_FAILED = 4,
 	SIR_EDITOR_APP_FRAME_EXHAUSTED = 5,
 	SIR_EDITOR_APP_HOST_FAILED = 6
-} sirEditorApplicationResult_t;
+};
 
 typedef bool ( *sirEditorFrameCallback_t )( uint64_t nFrame, void *pContext ) noexcept;
 
@@ -48,11 +47,11 @@ public:
 
 	uint64_t getFrameCount( void ) const noexcept;
 	bool isRunning( void ) const noexcept;
-	sirAppState_t getCoreState( void ) const noexcept;
+	SIRAppState getCoreState( void ) const noexcept;
 
-	sirEditorApplicationResult_t initialize( sirEditorFrameCallback_t pfnFrame, void *pContext ) noexcept;
-	sirEditorApplicationResult_t tick( void ) noexcept;
-	sirEditorApplicationResult_t run( uint64_t nMaxFrames ) noexcept;
+	SIREditorApplicationResult initialize( sirEditorFrameCallback_t pfnFrame, void *pContext ) noexcept;
+	SIREditorApplicationResult tick( void ) noexcept;
+	SIREditorApplicationResult run( uint64_t nMaxFrames ) noexcept;
 	void requestQuit( void ) noexcept;
 	void shutdown( void ) noexcept;
 
@@ -63,9 +62,9 @@ private:
 	public:
 		explicit FrameSystem( SIREditorApplication& owner ) noexcept;
 
-		sirSystemResult_t initialize( void ) noexcept override;
+		SIRSystemResult initialize( void ) noexcept override;
 		void update( float fDeltaSeconds ) noexcept override;
-		sirSystemResult_t shutdown( void ) noexcept override;
+		SIRSystemResult shutdown( void ) noexcept override;
 
 	protected:
 	private:
@@ -81,4 +80,4 @@ private:
 	bool m_bRunning;
 	bool m_bFrameFailed;
 };
-#endif // __SIRENGINE_SIREDITORAPPLICATION_H__
+#endif // __SIR_EDITORAPPLICATION_H__

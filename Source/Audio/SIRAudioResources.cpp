@@ -17,11 +17,11 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Resources/SIRResourceGraph.h>
 
 #include <Core/Containers/SIRRawStorage.h>
-#include <Core/Platform/SIRAtomic.h>
+#include <atomic>
 #include <cmath>
 #include <new>
 
-static SIRAtomic<uint64_t> s_nAudioManifestEpoch = SIRAtomic<uint64_t>( 1 );
+static std::atomic<uint64_t> s_nAudioManifestEpoch = std::atomic<uint64_t>( 1 );
 
 static bool advanceAudioTable( size_t& nOffset, uint32_t nCount, size_t nRecordBytes, size_t nLimit ) noexcept
 {
@@ -35,23 +35,23 @@ static bool advanceAudioTable( size_t& nOffset, uint32_t nCount, size_t nRecordB
 
 static void readAudioPackage( const uint8_t *pBytes, size_t nOffset, uint32_t iIndex, sirAudioPackageRecord_t& record ) noexcept
 {
-	memcpy( &record, pBytes + nOffset + ( size_t )iIndex * sizeof( record ), sizeof( record ) );
+	memcpy( &record, pBytes + nOffset + static_cast<size_t>(iIndex * sizeof(  record  )), sizeof( record ) );
 }
 
 static void readAudioEvent( const uint8_t *pBytes, size_t nOffset, uint32_t iIndex, sirAudioEventRecord_t& record ) noexcept
 {
-	memcpy( &record, pBytes + nOffset + ( size_t )iIndex * sizeof( record ), sizeof( record ) );
+	memcpy( &record, pBytes + nOffset + static_cast<size_t>(iIndex * sizeof(  record  )), sizeof( record ) );
 }
 
 static void readAudioControl( const uint8_t *pBytes, size_t nOffset, uint32_t iIndex, sirAudioControlRecord_t& record ) noexcept
 {
-	memcpy( &record, pBytes + nOffset + ( size_t )iIndex * sizeof( record ), sizeof( record ) );
+	memcpy( &record, pBytes + nOffset + static_cast<size_t>(iIndex * sizeof(  record  )), sizeof( record ) );
 }
 
 static uint64_t readAudioDependency( const uint8_t *pBytes, size_t nOffset, uint32_t iIndex ) noexcept
 {
 	uint64_t nDependency = 0;
-	memcpy( &nDependency, pBytes + nOffset + ( size_t )iIndex * sizeof( nDependency ), sizeof( nDependency ) );
+	memcpy( &nDependency, pBytes + nOffset + static_cast<size_t>(iIndex * sizeof(  nDependency  )), sizeof( nDependency ) );
 	return nDependency;
 }
 
@@ -62,7 +62,7 @@ static bool findAudioPackageIndex( const uint8_t *pBytes, size_t nPackageOffset,
 	uint32_t iEnd = nPackageCount;
 	while ( iFirst < iEnd ) {
 		const uint32_t iMiddle = iFirst + ( iEnd - iFirst ) / 2;
-		sirAudioPackageRecord_t package = {};
+		sirAudioPackageRecord_t package {};
 		readAudioPackage( pBytes, nPackageOffset, iMiddle, package );
 		if ( package.nPackageId < nPackageId ) {
 			iFirst = iMiddle + 1;
@@ -73,7 +73,7 @@ static bool findAudioPackageIndex( const uint8_t *pBytes, size_t nPackageOffset,
 	if ( iFirst == nPackageCount ) {
 		return false;
 	}
-	sirAudioPackageRecord_t package = {};
+	sirAudioPackageRecord_t package {};
 	readAudioPackage( pBytes, nPackageOffset, iFirst, package );
 	if ( package.nPackageId != nPackageId ) {
 		return false;
@@ -84,35 +84,35 @@ static bool findAudioPackageIndex( const uint8_t *pBytes, size_t nPackageOffset,
 
 static int compareAudioProviderKeys( const void *pA, const void *pB ) noexcept
 {
-	const uint64_t a = *( const uint64_t * )pA;
-	const uint64_t b = *( const uint64_t * )pB;
+	const uint64_t a = *static_cast<const uint64_t *>(pA);
+	const uint64_t b = *static_cast<const uint64_t *>(pB);
 	return a < b ? -1 : ( a > b ? 1 : 0 );
 }
 
-static sirAudioManifestResult_t validateAudioPackages( const uint8_t *pBytes, const sirAudioManifestHeader_t& header, size_t nPackageOffset,
+static SIRAudioManifestResult validateAudioPackages( const uint8_t *pBytes, const sirAudioManifestHeader_t& header, size_t nPackageOffset,
                                                        size_t nDependencyOffset, uint64_t nAvailableCapabilities,
                                                        const sirContainerAllocator_t *pAllocator ) noexcept
 {
 	uint64_t nPreviousId = 0;
 	uint32_t nConsumedDependencies = 0;
 	for ( uint32_t iPackage = 0; iPackage < header.nPackageCount; ++iPackage ) {
-		sirAudioPackageRecord_t package = {};
+		sirAudioPackageRecord_t package {};
 		readAudioPackage( pBytes, nPackageOffset, iPackage, package );
 		if ( package.nPackageId == 0 || package.nProviderPackageKey == 0 || package.iDependencyStart != nConsumedDependencies ||
 		     package.nDependencyCount > header.nDependencyCount - nConsumedDependencies ) {
-			return SIR_AUDIO_MANIFEST_INVALID_RECORD;
+			return SIRAudioManifestResult::SIR_AUDIO_MANIFEST_INVALID_RECORD;
 		}
 		if ( iPackage != 0 && package.nPackageId <= nPreviousId ) {
-			return SIR_AUDIO_MANIFEST_DUPLICATE_ID;
+			return SIRAudioManifestResult::SIR_AUDIO_MANIFEST_DUPLICATE_ID;
 		}
 		if ( ( package.nRequiredCapabilities & ~nAvailableCapabilities ) != 0 ) {
-			return SIR_AUDIO_MANIFEST_MISSING_CAPABILITY;
+			return SIRAudioManifestResult::SIR_AUDIO_MANIFEST_MISSING_CAPABILITY;
 		}
 		nPreviousId = package.nPackageId;
 		nConsumedDependencies += package.nDependencyCount;
 	}
 	if ( nConsumedDependencies != header.nDependencyCount ) {
-		return SIR_AUDIO_MANIFEST_INVALID_RECORD;
+		return SIRAudioManifestResult::SIR_AUDIO_MANIFEST_INVALID_RECORD;
 	}
 	// Two logical package IDs may not cause the native audio provider to load the
 	// same cooked bank twice. Build a bounded, temporary key index without copying
@@ -120,15 +120,15 @@ static sirAudioManifestResult_t validateAudioPackages( const uint8_t *pBytes, co
 	if ( header.nPackageCount > 1 ) {
 		size_t nIndexBytes = 0;
 		if ( !SIRRawStorage::checkedMultiply( header.nPackageCount, sizeof( uint64_t ), &nIndexBytes ) ) {
-			return SIR_AUDIO_MANIFEST_BAD_SCHEMA;
+			return SIRAudioManifestResult::SIR_AUDIO_MANIFEST_BAD_SCHEMA;
 		}
 		void *pIndex = nullptr;
-		if ( SIRRawStorage::tryAllocate( pAllocator, nIndexBytes, alignof( uint64_t ), &pIndex ) != SIR_CONTAINER_OK ) {
-			return SIR_AUDIO_MANIFEST_OUT_OF_MEMORY;
+		if ( SIRRawStorage::tryAllocate( pAllocator, nIndexBytes, alignof( uint64_t ), &pIndex ) != SIRContainerResult::SIR_CONTAINER_OK ) {
+			return SIRAudioManifestResult::SIR_AUDIO_MANIFEST_OUT_OF_MEMORY;
 		}
-		uint64_t *pKeys = ( uint64_t * )pIndex;
+		uint64_t *pKeys = static_cast<uint64_t *>(pIndex);
 		for ( uint32_t iPackage = 0; iPackage < header.nPackageCount; ++iPackage ) {
-			sirAudioPackageRecord_t package = {};
+			sirAudioPackageRecord_t package {};
 			readAudioPackage( pBytes, nPackageOffset, iPackage, package );
 			pKeys[iPackage] = package.nProviderPackageKey;
 		}
@@ -139,26 +139,26 @@ static sirAudioManifestResult_t validateAudioPackages( const uint8_t *pBytes, co
 		}
 		SIRRawStorage::deallocate( pAllocator, pIndex, nIndexBytes, alignof( uint64_t ) );
 		if ( bDuplicate ) {
-			return SIR_AUDIO_MANIFEST_DUPLICATE_ID;
+			return SIRAudioManifestResult::SIR_AUDIO_MANIFEST_DUPLICATE_ID;
 		}
 	}
 	for ( uint32_t iPackage = 0; iPackage < header.nPackageCount; ++iPackage ) {
-		sirAudioPackageRecord_t package = {};
+		sirAudioPackageRecord_t package {};
 		readAudioPackage( pBytes, nPackageOffset, iPackage, package );
 		uint64_t nPreviousDependency = 0;
 		for ( uint32_t iDependency = 0; iDependency < package.nDependencyCount; ++iDependency ) {
 			const uint64_t nDependencyId = readAudioDependency( pBytes, nDependencyOffset, package.iDependencyStart + iDependency );
 			if ( nDependencyId == package.nPackageId || ( iDependency != 0 && nDependencyId <= nPreviousDependency ) ) {
-				return SIR_AUDIO_MANIFEST_INVALID_RECORD;
+				return SIRAudioManifestResult::SIR_AUDIO_MANIFEST_INVALID_RECORD;
 			}
 			uint32_t iResolved = 0;
 			if ( !findAudioPackageIndex( pBytes, nPackageOffset, header.nPackageCount, nDependencyId, iResolved ) ) {
-				return SIR_AUDIO_MANIFEST_MISSING_DEPENDENCY;
+				return SIRAudioManifestResult::SIR_AUDIO_MANIFEST_MISSING_DEPENDENCY;
 			}
 			nPreviousDependency = nDependencyId;
 		}
 	}
-	return SIR_AUDIO_MANIFEST_OK;
+	return SIRAudioManifestResult::SIR_AUDIO_MANIFEST_OK;
 }
 
 typedef struct sirAudioDependencyFrame_s
@@ -167,33 +167,33 @@ typedef struct sirAudioDependencyFrame_s
 	uint32_t iNextDependency;
 } sirAudioDependencyFrame_t;
 
-static sirAudioManifestResult_t validateAudioDependencyGraph( const uint8_t *pBytes, const sirAudioManifestHeader_t& header,
+static SIRAudioManifestResult validateAudioDependencyGraph( const uint8_t *pBytes, const sirAudioManifestHeader_t& header,
                                                               size_t nPackageOffset, size_t nDependencyOffset,
                                                               const sirContainerAllocator_t *pAllocator ) noexcept
 {
 	if ( header.nPackageCount < 2 || header.nDependencyCount == 0 ) {
-		return SIR_AUDIO_MANIFEST_OK;
+		return SIRAudioManifestResult::SIR_AUDIO_MANIFEST_OK;
 	}
 	size_t nFrameBytes = 0;
 	if ( !SIRRawStorage::checkedMultiply( header.nPackageCount, sizeof( sirAudioDependencyFrame_t ), &nFrameBytes ) ) {
-		return SIR_AUDIO_MANIFEST_BAD_SCHEMA;
+		return SIRAudioManifestResult::SIR_AUDIO_MANIFEST_BAD_SCHEMA;
 	}
-	const size_t nStateBytes = ( size_t )header.nPackageCount;
+	const size_t nStateBytes = static_cast<size_t>(header.nPackageCount);
 	if ( nStateBytes > SIZE_MAX - nFrameBytes - alignof( sirAudioDependencyFrame_t ) ) {
-		return SIR_AUDIO_MANIFEST_BAD_SCHEMA;
+		return SIRAudioManifestResult::SIR_AUDIO_MANIFEST_BAD_SCHEMA;
 	}
 	const size_t nAlignedStateBytes =
 	    ( nStateBytes + alignof( sirAudioDependencyFrame_t ) - 1 ) & ~( size_t )( alignof( sirAudioDependencyFrame_t ) - 1 );
 	void *pScratch = nullptr;
 	if ( SIRRawStorage::tryAllocate( pAllocator, nAlignedStateBytes + nFrameBytes, alignof( sirAudioDependencyFrame_t ), &pScratch ) !=
-	     SIR_CONTAINER_OK ) {
-		return SIR_AUDIO_MANIFEST_OUT_OF_MEMORY;
+	     SIRContainerResult::SIR_CONTAINER_OK ) {
+		return SIRAudioManifestResult::SIR_AUDIO_MANIFEST_OUT_OF_MEMORY;
 	}
-	uint8_t *pStates = ( uint8_t * )pScratch;
-	sirAudioDependencyFrame_t *pFrames = ( sirAudioDependencyFrame_t * )( pStates + nAlignedStateBytes );
+	uint8_t *pStates = static_cast<uint8_t *>(pScratch);
+	sirAudioDependencyFrame_t *pFrames = reinterpret_cast<sirAudioDependencyFrame_t *>( pStates + nAlignedStateBytes );
 	memset( pStates, 0, nStateBytes );
-	sirAudioManifestResult_t eResult = SIR_AUDIO_MANIFEST_OK;
-	for ( uint32_t iRoot = 0; iRoot < header.nPackageCount && eResult == SIR_AUDIO_MANIFEST_OK; ++iRoot ) {
+	SIRAudioManifestResult eResult = SIRAudioManifestResult::SIR_AUDIO_MANIFEST_OK;
+	for ( uint32_t iRoot = 0; iRoot < header.nPackageCount && eResult == SIRAudioManifestResult::SIR_AUDIO_MANIFEST_OK; ++iRoot ) {
 		if ( pStates[iRoot] != 0 ) {
 			continue;
 		}
@@ -202,7 +202,7 @@ static sirAudioManifestResult_t validateAudioDependencyGraph( const uint8_t *pBy
 		uint32_t nDepth = 1;
 		while ( nDepth != 0 ) {
 			sirAudioDependencyFrame_t& frame = pFrames[nDepth - 1];
-			sirAudioPackageRecord_t package = {};
+			sirAudioPackageRecord_t package {};
 			readAudioPackage( pBytes, nPackageOffset, frame.iPackage, package );
 			if ( frame.iNextDependency == package.nDependencyCount ) {
 				pStates[frame.iPackage] = 2;
@@ -214,11 +214,11 @@ static sirAudioManifestResult_t validateAudioDependencyGraph( const uint8_t *pBy
 			++frame.iNextDependency;
 			uint32_t iDependency = 0;
 			if ( !findAudioPackageIndex( pBytes, nPackageOffset, header.nPackageCount, nDependencyId, iDependency ) ) {
-				eResult = SIR_AUDIO_MANIFEST_MISSING_DEPENDENCY;
+				eResult = SIRAudioManifestResult::SIR_AUDIO_MANIFEST_MISSING_DEPENDENCY;
 				break;
 			}
 			if ( pStates[iDependency] == 1 ) {
-				eResult = SIR_AUDIO_MANIFEST_CYCLIC_DEPENDENCY;
+				eResult = SIRAudioManifestResult::SIR_AUDIO_MANIFEST_CYCLIC_DEPENDENCY;
 				break;
 			}
 			if ( pStates[iDependency] == 0 ) {
@@ -232,64 +232,64 @@ static sirAudioManifestResult_t validateAudioDependencyGraph( const uint8_t *pBy
 	return eResult;
 }
 
-static sirAudioManifestResult_t validateAudioEvents( const uint8_t *pBytes, const sirAudioManifestHeader_t& header, size_t nPackageOffset,
+static SIRAudioManifestResult validateAudioEvents( const uint8_t *pBytes, const sirAudioManifestHeader_t& header, size_t nPackageOffset,
                                                      size_t nEventOffset, uint64_t nAvailableCapabilities ) noexcept
 {
 	uint64_t nPreviousId = 0;
 	for ( uint32_t iEvent = 0; iEvent < header.nEventCount; ++iEvent ) {
-		sirAudioEventRecord_t event = {};
+		sirAudioEventRecord_t event {};
 		readAudioEvent( pBytes, nEventOffset, iEvent, event );
 		if ( event.nEventId == 0 || event.nProviderEventKey == 0 ) {
-			return SIR_AUDIO_MANIFEST_INVALID_RECORD;
+			return SIRAudioManifestResult::SIR_AUDIO_MANIFEST_INVALID_RECORD;
 		}
 		if ( iEvent != 0 && event.nEventId <= nPreviousId ) {
-			return SIR_AUDIO_MANIFEST_DUPLICATE_ID;
+			return SIRAudioManifestResult::SIR_AUDIO_MANIFEST_DUPLICATE_ID;
 		}
 		if ( ( event.nRequiredCapabilities & ~nAvailableCapabilities ) != 0 ) {
-			return SIR_AUDIO_MANIFEST_MISSING_CAPABILITY;
+			return SIRAudioManifestResult::SIR_AUDIO_MANIFEST_MISSING_CAPABILITY;
 		}
 		uint32_t iPackage = 0;
 		if ( !findAudioPackageIndex( pBytes, nPackageOffset, header.nPackageCount, event.nPackageId, iPackage ) ) {
-			return SIR_AUDIO_MANIFEST_MISSING_DEPENDENCY;
+			return SIRAudioManifestResult::SIR_AUDIO_MANIFEST_MISSING_DEPENDENCY;
 		}
 		nPreviousId = event.nEventId;
 	}
-	return SIR_AUDIO_MANIFEST_OK;
+	return SIRAudioManifestResult::SIR_AUDIO_MANIFEST_OK;
 }
 
-static sirAudioManifestResult_t validateAudioControls( const uint8_t *pBytes, const sirAudioManifestHeader_t& header, size_t nControlOffset,
+static SIRAudioManifestResult validateAudioControls( const uint8_t *pBytes, const sirAudioManifestHeader_t& header, size_t nControlOffset,
                                                        uint64_t nAvailableCapabilities ) noexcept
 {
 	uint64_t nPreviousId = 0;
 	for ( uint32_t iControl = 0; iControl < header.nControlCount; ++iControl ) {
-		sirAudioControlRecord_t control = {};
+		sirAudioControlRecord_t control {};
 		readAudioControl( pBytes, nControlOffset, iControl, control );
-		if ( control.nControlId == 0 || control.nReserved != 0 || control.eScope > SIR_AUDIO_CONTROL_PLAYING ||
-		     control.eType > SIR_AUDIO_CONTROL_DISCRETE || control.eBindingMode > SIR_AUDIO_BINDING_EMULATED ||
-		     ( control.eBindingMode == SIR_AUDIO_BINDING_NATIVE && control.nProviderControlId == 0 ) ||
+		if ( control.nControlId == 0 || control.nReserved != 0 || control.eScope > SIRAudioControlScope::SIR_AUDIO_CONTROL_PLAYING ||
+		     control.eType > SIRAudioControlType::SIR_AUDIO_CONTROL_DISCRETE || control.eBindingMode > SIRAudioBindingMode::SIR_AUDIO_BINDING_EMULATED ||
+		     ( control.eBindingMode == SIRAudioBindingMode::SIR_AUDIO_BINDING_NATIVE && control.nProviderControlId == 0 ) ||
 		     !std::isfinite( control.fDefault ) || !std::isfinite( control.fMinimum ) || !std::isfinite( control.fMaximum ) ||
 		     control.fMinimum > control.fDefault || control.fDefault > control.fMaximum ) {
-			return SIR_AUDIO_MANIFEST_INVALID_RECORD;
+			return SIRAudioManifestResult::SIR_AUDIO_MANIFEST_INVALID_RECORD;
 		}
 		if ( iControl != 0 && control.nControlId <= nPreviousId ) {
-			return SIR_AUDIO_MANIFEST_DUPLICATE_ID;
+			return SIRAudioManifestResult::SIR_AUDIO_MANIFEST_DUPLICATE_ID;
 		}
 		if ( ( control.nRequiredCapabilities & ~nAvailableCapabilities ) != 0 ) {
-			return SIR_AUDIO_MANIFEST_MISSING_CAPABILITY;
+			return SIRAudioManifestResult::SIR_AUDIO_MANIFEST_MISSING_CAPABILITY;
 		}
-		if ( control.eType == SIR_AUDIO_CONTROL_BOOLEAN ) {
+		if ( control.eType == SIRAudioControlType::SIR_AUDIO_CONTROL_BOOLEAN ) {
 			if ( control.fMinimum < 0.0f || control.fMaximum > 1.0f || ( control.fDefault != 0.0f && control.fDefault != 1.0f ) ) {
-				return SIR_AUDIO_MANIFEST_INVALID_RECORD;
+				return SIRAudioManifestResult::SIR_AUDIO_MANIFEST_INVALID_RECORD;
 			}
-		} else if ( control.eType == SIR_AUDIO_CONTROL_DISCRETE ) {
+		} else if ( control.eType == SIRAudioControlType::SIR_AUDIO_CONTROL_DISCRETE ) {
 			if ( std::trunc( control.fDefault ) != control.fDefault || std::trunc( control.fMinimum ) != control.fMinimum ||
 			     std::trunc( control.fMaximum ) != control.fMaximum ) {
-				return SIR_AUDIO_MANIFEST_INVALID_RECORD;
+				return SIRAudioManifestResult::SIR_AUDIO_MANIFEST_INVALID_RECORD;
 			}
 		}
 		nPreviousId = control.nControlId;
 	}
-	return SIR_AUDIO_MANIFEST_OK;
+	return SIRAudioManifestResult::SIR_AUDIO_MANIFEST_OK;
 }
 
 SIRAudioResourceStore::~SIRAudioResourceStore( void ) noexcept
@@ -302,7 +302,7 @@ uint64_t SIRAudioResourceStore::hashPayload( const void *pBytes, size_t nBytes )
 	if ( pBytes == nullptr && nBytes != 0 ) {
 		return 0;
 	}
-	const uint8_t *pData = ( const uint8_t * )pBytes;
+	const uint8_t *pData = static_cast<const uint8_t *>(pBytes);
 	uint64_t nHash = UINT64_C( 14695981039346656037 );
 	for ( size_t iByte = 0; iByte < nBytes; ++iByte ) {
 		nHash ^= pData[iByte];
@@ -320,114 +320,114 @@ typedef struct sirAudioManifestParsedLayout_s
 	size_t nDependencyOffset;
 } sirAudioManifestParsedLayout_t;
 
-static sirAudioManifestResult_t validateAudioManifestBytes( const void *pBytes, size_t nBytes,
+static SIRAudioManifestResult validateAudioManifestBytes( const void *pBytes, size_t nBytes,
                                                             const sirAudioManifestLoadOptions_t& rOptions,
                                                             sirAudioManifestParsedLayout_t *pLayout ) noexcept
 {
-	const sirAudioProvider_t eExpectedProvider = rOptions.eExpectedProvider;
+	const SIRAudioProvider eExpectedProvider = rOptions.eExpectedProvider;
 	const uint64_t nAvailableCapabilities = rOptions.nAvailableCapabilities;
 	const sirContainerAllocator_t *pAllocator = rOptions.pAllocator;
 	if ( pBytes == nullptr || ( pAllocator == nullptr || pAllocator->pfnAllocate == nullptr || pAllocator->pfnDeallocate == nullptr ) ||
-	     nBytes < sizeof( sirAudioManifestHeader_t ) || nBytes > UINT32_MAX || eExpectedProvider <= SIR_AUDIO_PROVIDER_NONE ||
-	     eExpectedProvider > SIR_AUDIO_PROVIDER_OPENAL ) {
-		return SIR_AUDIO_MANIFEST_INVALID_ARGUMENT;
+	     nBytes < sizeof( sirAudioManifestHeader_t ) || nBytes > UINT32_MAX || eExpectedProvider <= SIRAudioProvider::SIR_AUDIO_PROVIDER_NONE ||
+	     eExpectedProvider > SIRAudioProvider::SIR_AUDIO_PROVIDER_OPENAL ) {
+		return SIRAudioManifestResult::SIR_AUDIO_MANIFEST_INVALID_ARGUMENT;
 	}
-	const uint8_t *pSource = ( const uint8_t * )pBytes;
-	sirAudioManifestHeader_t header = {};
+	const uint8_t *pSource = static_cast<const uint8_t *>(pBytes);
+	sirAudioManifestHeader_t header {};
 	memcpy( &header, pSource, sizeof( header ) );
 	const uint16_t nHostEndianProbe = 1;
-	if ( *( const uint8_t * )&nHostEndianProbe != 1 || header.nMagic != SIR_AUDIO_MANIFEST_MAGIC ||
+	if ( *reinterpret_cast<const uint8_t *>(&nHostEndianProbe) != 1 || header.nMagic != SIR_AUDIO_MANIFEST_MAGIC ||
 	     header.nVersion != SIR_AUDIO_MANIFEST_VERSION || header.nHeaderBytes != sizeof( header ) ||
 	     header.nEndianness != SIR_AUDIO_MANIFEST_LITTLE_ENDIAN || header.nFlags != 0 || header.nReserved != 0 ||
 	     header.nTotalBytes != nBytes ) {
-		return SIR_AUDIO_MANIFEST_BAD_SCHEMA;
+		return SIRAudioManifestResult::SIR_AUDIO_MANIFEST_BAD_SCHEMA;
 	}
 	if ( header.eProvider != eExpectedProvider ) {
-		return SIR_AUDIO_MANIFEST_PROVIDER_MISMATCH;
+		return SIRAudioManifestResult::SIR_AUDIO_MANIFEST_PROVIDER_MISMATCH;
 	}
 	if ( ( header.nRequiredCapabilities & ~nAvailableCapabilities ) != 0 ) {
-		return SIR_AUDIO_MANIFEST_MISSING_CAPABILITY;
+		return SIRAudioManifestResult::SIR_AUDIO_MANIFEST_MISSING_CAPABILITY;
 	}
 	size_t nOffset = sizeof( header );
 	const size_t nPackageOffset = nOffset;
 	if ( !advanceAudioTable( nOffset, header.nPackageCount, sizeof( sirAudioPackageRecord_t ), nBytes ) ) {
-		return SIR_AUDIO_MANIFEST_BAD_SCHEMA;
+		return SIRAudioManifestResult::SIR_AUDIO_MANIFEST_BAD_SCHEMA;
 	}
 	const size_t nEventOffset = nOffset;
 	if ( !advanceAudioTable( nOffset, header.nEventCount, sizeof( sirAudioEventRecord_t ), nBytes ) ) {
-		return SIR_AUDIO_MANIFEST_BAD_SCHEMA;
+		return SIRAudioManifestResult::SIR_AUDIO_MANIFEST_BAD_SCHEMA;
 	}
 	const size_t nControlOffset = nOffset;
 	if ( !advanceAudioTable( nOffset, header.nControlCount, sizeof( sirAudioControlRecord_t ), nBytes ) ) {
-		return SIR_AUDIO_MANIFEST_BAD_SCHEMA;
+		return SIRAudioManifestResult::SIR_AUDIO_MANIFEST_BAD_SCHEMA;
 	}
 	const size_t nDependencyOffset = nOffset;
 	if ( !advanceAudioTable( nOffset, header.nDependencyCount, sizeof( uint64_t ), nBytes ) || nOffset != nBytes ) {
-		return SIR_AUDIO_MANIFEST_BAD_SCHEMA;
+		return SIRAudioManifestResult::SIR_AUDIO_MANIFEST_BAD_SCHEMA;
 	}
 	if ( SIRAudioResourceStore::hashPayload( pSource + sizeof( header.nContentHash ), nBytes - sizeof( header.nContentHash ) ) !=
 	     header.nContentHash ) {
-		return SIR_AUDIO_MANIFEST_HASH_MISMATCH;
+		return SIRAudioManifestResult::SIR_AUDIO_MANIFEST_HASH_MISMATCH;
 	}
-	sirAudioManifestResult_t eResult =
+	SIRAudioManifestResult eResult =
 	    validateAudioPackages( pSource, header, nPackageOffset, nDependencyOffset, nAvailableCapabilities, pAllocator );
-	if ( eResult != SIR_AUDIO_MANIFEST_OK ) {
+	if ( eResult != SIRAudioManifestResult::SIR_AUDIO_MANIFEST_OK ) {
 		return eResult;
 	}
 	eResult = validateAudioDependencyGraph( pSource, header, nPackageOffset, nDependencyOffset, pAllocator );
-	if ( eResult != SIR_AUDIO_MANIFEST_OK ) {
+	if ( eResult != SIRAudioManifestResult::SIR_AUDIO_MANIFEST_OK ) {
 		return eResult;
 	}
 	eResult = validateAudioEvents( pSource, header, nPackageOffset, nEventOffset, nAvailableCapabilities );
-	if ( eResult != SIR_AUDIO_MANIFEST_OK ) {
+	if ( eResult != SIRAudioManifestResult::SIR_AUDIO_MANIFEST_OK ) {
 		return eResult;
 	}
 	eResult = validateAudioControls( pSource, header, nControlOffset, nAvailableCapabilities );
-	if ( eResult != SIR_AUDIO_MANIFEST_OK ) {
+	if ( eResult != SIRAudioManifestResult::SIR_AUDIO_MANIFEST_OK ) {
 		return eResult;
 	}
 
 	if ( pLayout != nullptr ) {
 		*pLayout = { header, nPackageOffset, nEventOffset, nControlOffset, nDependencyOffset };
 	}
-	return SIR_AUDIO_MANIFEST_OK;
+	return SIRAudioManifestResult::SIR_AUDIO_MANIFEST_OK;
 }
 
-sirAudioManifestResult_t SIRAudioResourceStore::load( SIRResourceGraph& rGraph, SIRResourceHandle hManifest, SIRResourceChunkId chunkId,
+SIRAudioManifestResult SIRAudioResourceStore::load( SIRResourceGraph& rGraph, SIRResourceHandle hManifest, SIRResourceChunkId chunkId,
                                                       const sirAudioManifestLoadOptions_t& rOptions ) noexcept
 {
 	if ( rOptions.pAllocator == nullptr || rOptions.pAllocator->pfnAllocate == nullptr || rOptions.pAllocator->pfnDeallocate == nullptr ||
 	     rOptions.nSourceProviderId == 0 ) {
-		return SIR_AUDIO_MANIFEST_INVALID_ARGUMENT;
+		return SIRAudioManifestResult::SIR_AUDIO_MANIFEST_INVALID_ARGUMENT;
 	}
 	SIRResourceReadScope scope( rGraph );
 	SIRResourceView view;
-	SIRResourceConstBytes manifest = {};
-	SIRResourceInfo resource = {};
-	if ( !scope.isActive() || rGraph.resolve( scope, hManifest, &view ) != SIR_RESOURCE_RESULT_SUCCESS ||
-	     view.getInfo( &resource ) != SIR_RESOURCE_RESULT_SUCCESS || resource.m_eKind != SIR_RESOURCE_KIND_BLOB ||
-	     resource.m_eState != SIR_RESOURCE_STATE_RESIDENT || view.getChunk( chunkId, &manifest ) != SIR_RESOURCE_RESULT_SUCCESS ||
+	SIRResourceConstBytes manifest {};
+	SIRResourceInfo resource {};
+	if ( !scope.isActive() || rGraph.resolve( scope, hManifest, &view ) != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ||
+	     view.getInfo( &resource ) != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS || resource.m_eKind != SIRResourceKind::SIR_RESOURCE_KIND_BLOB ||
+	     resource.m_eState != SIRResourceState::SIR_RESOURCE_STATE_RESIDENT || view.getChunk( chunkId, &manifest ) != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ||
 	     manifest.m_nSize > SIZE_MAX ) {
-		return SIR_AUDIO_MANIFEST_INVALID_ARGUMENT;
+		return SIRAudioManifestResult::SIR_AUDIO_MANIFEST_INVALID_ARGUMENT;
 	}
-	sirAudioManifestParsedLayout_t parsed = {};
-	const sirAudioManifestResult_t eValid = validateAudioManifestBytes( manifest.m_pData, ( size_t )manifest.m_nSize, rOptions, &parsed );
-	if ( eValid != SIR_AUDIO_MANIFEST_OK ) {
+	sirAudioManifestParsedLayout_t parsed {};
+	const SIRAudioManifestResult eValid = validateAudioManifestBytes( manifest.m_pData, static_cast<size_t>(manifest.m_nSize), rOptions, &parsed );
+	if ( eValid != SIRAudioManifestResult::SIR_AUDIO_MANIFEST_OK ) {
 		return eValid;
 	}
-	SIRResourcePinHandle pin = {};
-	if ( rGraph.pinForProvider( scope, view, rOptions.nSourceProviderId, &pin ) != SIR_RESOURCE_RESULT_SUCCESS ) {
-		return SIR_AUDIO_MANIFEST_OUT_OF_MEMORY;
+	SIRResourcePinHandle pin {};
+	if ( rGraph.pinForProvider( scope, view, rOptions.nSourceProviderId, &pin ) != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ) {
+		return SIRAudioManifestResult::SIR_AUDIO_MANIFEST_OUT_OF_MEMORY;
 	}
-	uint64_t nNewEpoch = s_nAudioManifestEpoch.load( SIR_MEMORY_ORDER_RELAXED );
+	uint64_t nNewEpoch = s_nAudioManifestEpoch.load( std::memory_order_relaxed );
 	while ( nNewEpoch != 0 && nNewEpoch != UINT64_MAX ) {
-		if ( s_nAudioManifestEpoch.compareExchangeWeak( nNewEpoch, nNewEpoch + 1, SIR_MEMORY_ORDER_RELAXED ) ) {
+		if ( s_nAudioManifestEpoch.compare_exchange_weak( nNewEpoch, nNewEpoch + 1, std::memory_order_relaxed ) ) {
 			break;
 		}
 	}
 	if ( nNewEpoch == 0 || nNewEpoch == UINT64_MAX ) {
-		( void )rGraph.releaseProviderPin( pin );
-		return SIR_AUDIO_MANIFEST_EPOCH_EXHAUSTED;
+		static_cast<void>(rGraph.releaseProviderPin( pin ));
+		return SIRAudioManifestResult::SIR_AUDIO_MANIFEST_EPOCH_EXHAUSTED;
 	}
 	shutdown();
 	m_pBytes = manifest.m_pData;
@@ -442,7 +442,7 @@ sirAudioManifestResult_t SIRAudioResourceStore::load( SIRResourceGraph& rGraph, 
 	m_nControlOffset = parsed.nControlOffset;
 	m_nDependencyOffset = parsed.nDependencyOffset;
 	m_nEpoch = nNewEpoch;
-	return SIR_AUDIO_MANIFEST_OK;
+	return SIRAudioManifestResult::SIR_AUDIO_MANIFEST_OK;
 }
 
 const uint8_t *SIRAudioResourceStore::getBorrowedManifestBytes( void ) const noexcept
@@ -458,7 +458,7 @@ uint64_t SIRAudioResourceStore::getSourceRevision( void ) const noexcept
 void SIRAudioResourceStore::shutdown( void ) noexcept
 {
 	if ( m_pSourceGraph != nullptr ) {
-		if ( m_pSourceGraph->releaseProviderPin( m_SourcePin ) != SIR_RESOURCE_RESULT_SUCCESS ) {
+		if ( m_pSourceGraph->releaseProviderPin( m_SourcePin ) != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ) {
 			abort();
 		}
 	}
@@ -486,7 +486,7 @@ uint64_t SIRAudioResourceStore::getEpoch( void ) const noexcept
 	return m_nEpoch;
 }
 
-sirAudioProvider_t SIRAudioResourceStore::getProvider( void ) const noexcept
+SIRAudioProvider SIRAudioResourceStore::getProvider( void ) const noexcept
 {
 	return m_Header.eProvider;
 }
@@ -516,7 +516,7 @@ bool SIRAudioResourceStore::getPackageDependency( uint64_t nPackageId, uint32_t 
 	if ( !findPackageIndex( nPackageId, iPackage ) ) {
 		return false;
 	}
-	sirAudioPackageRecord_t package = {};
+	sirAudioPackageRecord_t package {};
 	readAudioPackage( m_pBytes, m_nPackageOffset, iPackage, package );
 	if ( iDependency >= package.nDependencyCount ) {
 		return false;
@@ -539,7 +539,7 @@ bool SIRAudioResourceStore::findEventIndex( uint64_t nEventId, uint32_t& iEvent 
 	uint32_t iEnd = m_Header.nEventCount;
 	while ( iFirst < iEnd ) {
 		const uint32_t iMiddle = iFirst + ( iEnd - iFirst ) / 2;
-		sirAudioEventRecord_t event = {};
+		sirAudioEventRecord_t event {};
 		readAudioEvent( m_pBytes, m_nEventOffset, iMiddle, event );
 		if ( event.nEventId < nEventId ) {
 			iFirst = iMiddle + 1;
@@ -550,7 +550,7 @@ bool SIRAudioResourceStore::findEventIndex( uint64_t nEventId, uint32_t& iEvent 
 	if ( iFirst == m_Header.nEventCount ) {
 		return false;
 	}
-	sirAudioEventRecord_t event = {};
+	sirAudioEventRecord_t event {};
 	readAudioEvent( m_pBytes, m_nEventOffset, iFirst, event );
 	if ( event.nEventId != nEventId ) {
 		return false;
@@ -641,7 +641,7 @@ bool SIRAudioResourceStore::findControl( uint64_t nControlId, sirAudioControlRec
 	uint32_t iEnd = m_Header.nControlCount;
 	while ( iFirst < iEnd ) {
 		const uint32_t iMiddle = iFirst + ( iEnd - iFirst ) / 2;
-		sirAudioControlRecord_t candidate = {};
+		sirAudioControlRecord_t candidate {};
 		readAudioControl( m_pBytes, m_nControlOffset, iMiddle, candidate );
 		if ( candidate.nControlId < nControlId ) {
 			iFirst = iMiddle + 1;
@@ -656,23 +656,23 @@ bool SIRAudioResourceStore::findControl( uint64_t nControlId, sirAudioControlRec
 	return control.nControlId == nControlId;
 }
 
-sirAudioResult_t SIRAudioResourceStore::validateControl( uint64_t nControlId, sirAudioControlScope_t eScope, float fValue ) const noexcept
+SIRAudioResult SIRAudioResourceStore::validateControl( uint64_t nControlId, SIRAudioControlScope eScope, float fValue ) const noexcept
 {
-	sirAudioControlRecord_t control = {};
+	sirAudioControlRecord_t control {};
 	if ( !findControl( nControlId, control ) ) {
-		return SIR_AUDIO_INVALID_HANDLE;
+		return SIRAudioResult::SIR_AUDIO_INVALID_HANDLE;
 	}
 	if ( control.eScope != eScope || !std::isfinite( fValue ) || fValue < control.fMinimum || fValue > control.fMaximum ) {
-		return SIR_AUDIO_INVALID_ARGUMENT;
+		return SIRAudioResult::SIR_AUDIO_INVALID_ARGUMENT;
 	}
-	if ( control.eBindingMode == SIR_AUDIO_BINDING_REJECT ) {
-		return SIR_AUDIO_UNSUPPORTED;
+	if ( control.eBindingMode == SIRAudioBindingMode::SIR_AUDIO_BINDING_REJECT ) {
+		return SIRAudioResult::SIR_AUDIO_UNSUPPORTED;
 	}
-	if ( control.eType == SIR_AUDIO_CONTROL_BOOLEAN && fValue != 0.0f && fValue != 1.0f ) {
-		return SIR_AUDIO_INVALID_ARGUMENT;
+	if ( control.eType == SIRAudioControlType::SIR_AUDIO_CONTROL_BOOLEAN && fValue != 0.0f && fValue != 1.0f ) {
+		return SIRAudioResult::SIR_AUDIO_INVALID_ARGUMENT;
 	}
-	if ( control.eType == SIR_AUDIO_CONTROL_DISCRETE && std::trunc( fValue ) != fValue ) {
-		return SIR_AUDIO_INVALID_ARGUMENT;
+	if ( control.eType == SIRAudioControlType::SIR_AUDIO_CONTROL_DISCRETE && std::trunc( fValue ) != fValue ) {
+		return SIRAudioResult::SIR_AUDIO_INVALID_ARGUMENT;
 	}
-	return SIR_AUDIO_OK;
+	return SIRAudioResult::SIR_AUDIO_OK;
 }

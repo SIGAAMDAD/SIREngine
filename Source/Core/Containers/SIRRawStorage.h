@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRRAWSTORAGE_H__
-#define __SIRENGINE_SIRRAWSTORAGE_H__
+#ifndef __SIR_RAWSTORAGE_H__
+#define __SIR_RAWSTORAGE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -58,29 +58,29 @@ public:
 		return true;
 	}
 
-	static sirContainerResult_t tryAllocate( const sirContainerAllocator_t *pAllocator, size_t nBytes, size_t nAlignment,
+	static SIRContainerResult tryAllocate( const sirContainerAllocator_t *pAllocator, size_t nBytes, size_t nAlignment,
 	                                         void **ppMemory ) noexcept
 	{
 		if ( ppMemory == nullptr ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		*ppMemory = nullptr;
 		if ( nBytes == 0 ) {
-			return SIR_CONTAINER_OK;
+			return SIRContainerResult::SIR_CONTAINER_OK;
 		}
 		if ( !isValidAllocator( pAllocator ) || nAlignment == 0 || ( nAlignment & ( nAlignment - 1 ) ) != 0 ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		void *pMemory = pAllocator->pfnAllocate( pAllocator->pContext, nBytes, nAlignment );
 		if ( pMemory == nullptr ) {
-			return SIR_CONTAINER_OUT_OF_MEMORY;
+			return SIRContainerResult::SIR_CONTAINER_OUT_OF_MEMORY;
 		}
-		if ( ( ( uintptr_t )pMemory & ( nAlignment - 1 ) ) != 0 ) {
+		if ( ( reinterpret_cast<uintptr_t>(pMemory) & ( nAlignment - 1 ) ) != 0 ) {
 			pAllocator->pfnDeallocate( pAllocator->pContext, pMemory, nBytes, nAlignment );
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		*ppMemory = pMemory;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
 	static bool tryExpandInPlace( const sirContainerAllocatorCapabilities_t *pCapabilities, void *pMemory, size_t nOldBytes,
@@ -172,7 +172,7 @@ public:
 		static_assert( CAN_RELOCATE, "Transactional relocation requires nothrow move construction or copy construction" );
 		if constexpr ( SIRRelocationTraits<T>::CAN_BYTE_RELOCATE ) {
 			if ( nCount != 0 ) {
-				memcpy( pDestination, pSource, ( size_t )nCount * sizeof( T ) );
+				memcpy( pDestination, pSource, static_cast<size_t>(nCount * sizeof(  T  )) );
 			}
 			return;
 		}
@@ -192,4 +192,4 @@ public:
 	}
 };
 
-#endif // __SIRENGINE_SIRRAWSTORAGE_H__
+#endif // __SIR_RAWSTORAGE_H__

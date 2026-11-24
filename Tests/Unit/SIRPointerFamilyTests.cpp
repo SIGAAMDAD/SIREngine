@@ -5,14 +5,14 @@
 #include <Resources/SIRResourceRevisionPtr.h>
 #include <Resources/SIRSoftResourcePtr.h>
 #include <Resources/SIRDerivedResourcePtr.h>
-#include <Core/Memory/SIRUniquePtr.h>
-#include <Core/Memory/SIRIntrusivePtr.h>
-#include <Core/Memory/SIRObserverPtr.h>
-#include <Core/Memory/SIROffsetPtr.h>
-#include <Core/Memory/SIRHazardPtr.h>
-#include <Core/Memory/SIRRCUPtr.h>
-#include <Core/Memory/SIRDeferredPtr.h>
-#include <Core/Memory/SIRFenceRetiredPtr.h>
+#include <Core/Memory/Pointers/SIRUniquePtr.h>
+#include <Core/Memory/Pointers/SIRIntrusivePtr.h>
+#include <Core/Memory/Pointers/SIRObserverPtr.h>
+#include <Core/Memory/Pointers/SIROffsetPtr.h>
+#include <Core/Memory/Pointers/SIRHazardPtr.h>
+#include <Core/Memory/Pointers/SIRRCUPtr.h>
+#include <Core/Memory/Pointers/SIRDeferredPtr.h>
+#include <Core/Memory/Pointers/SIRFenceRetiredPtr.h>
 #include <Core/Platform/SIRThread.h>
 #include <Core/Jobs/SIRTaskGraph.h>
 #include <Core/Jobs/SIRTaskScheduler.h>
@@ -235,7 +235,7 @@ static void testHazardRetirement( void )
 	SIRHazardRecord records[2];
 	SIRHazardDomain domain( records, 2 );
 	int *pInitial = new int( 12 );
-	SIRAtomic<int *> source( pInitial );
+	std::atomic<int *> source( pInitial );
 	uint32_t nDestroyed = 0;
 	sirHazardRetiredEntry_t entries[2] = {};
 	SIRHazardRetireList retired( domain, entries, 2 );
@@ -260,7 +260,7 @@ static void testRCUEpoch( void )
 	SIRRCUDomain domain( records, 2 );
 	int *pOld = new int( 11 );
 	int *pNew = new int( 22 );
-	SIRAtomic<int *> source( pOld );
+	std::atomic<int *> source( pOld );
 	SIRRCUPtr<int> reader;
 	REQUIRE( reader.read( domain, source ) );
 	REQUIRE( *reader.get() == 11 );
@@ -366,7 +366,7 @@ static void testDerivedRetirement( void )
 typedef struct sirPointerWeakRace_s
 {
 	SIRWeakResourcePtr<SIRBlobResourceView> *pWeak;
-	SIRAtomic<uint32_t> nInvalid;
+	std::atomic<uint32_t> nInvalid;
 } sirPointerWeakRace_t;
 
 static void weakRaceWorker( void *pContext )
@@ -378,7 +378,7 @@ static void weakRaceWorker( void *pContext )
 		if ( eResult == SIR_RESOURCE_RESULT_SUCCESS ) {
 			acquired.reset();
 		} else if ( eResult != SIR_RESOURCE_RESULT_INVALID_HANDLE ) {
-			pState->nInvalid.fetchAdd( 1 );
+			pState->nInvalid.fetch_add( 1 );
 		}
 	}
 }
@@ -393,7 +393,7 @@ static void testConcurrentResourceLockAndRetire( void )
 		SIRResourcePtr<SIRBlobResourceView> strong;
 		REQUIRE( SIRResourcePtr<SIRBlobResourceView>::acquire( graph, hResource, &strong ) == SIR_RESOURCE_RESULT_SUCCESS );
 		SIRWeakResourcePtr<SIRBlobResourceView> weak( strong );
-		sirPointerWeakRace_t state = { &weak, SIRAtomic<uint32_t>( 0 ) };
+		sirPointerWeakRace_t state = { &weak, std::atomic<uint32_t>( 0 ) };
 		SIRThread worker;
 		REQUIRE( worker.start( weakRaceWorker, &state ) );
 		strong.reset();
@@ -420,8 +420,8 @@ static void testConcurrentResourceLockAndRetire( void )
 typedef struct sirPointerHazardRace_s
 {
 	SIRHazardDomain *pDomain;
-	SIRAtomic<int *> *pSource;
-	SIRAtomic<uint32_t> nInvalid;
+	std::atomic<int *> *pSource;
+	std::atomic<uint32_t> nInvalid;
 } sirPointerHazardRace_t;
 
 static void hazardRaceWorker( void *pContext )
@@ -432,7 +432,7 @@ static void hazardRaceWorker( void *pContext )
 		if ( guard.protect( *pState->pDomain, *pState->pSource ) ) {
 			int *pValue = guard.get();
 			if ( pValue != nullptr && *pValue != 11 && *pValue != 22 ) {
-				pState->nInvalid.fetchAdd( 1 );
+				pState->nInvalid.fetch_add( 1 );
 			}
 			guard.reset();
 		}
@@ -445,11 +445,11 @@ static void testConcurrentHazardAccess( void )
 	SIRHazardDomain domain( records, 2 );
 	int *pInitial = new int( 11 );
 	int *pReplacement = new int( 22 );
-	SIRAtomic<int *> source( pInitial );
+	std::atomic<int *> source( pInitial );
 	uint32_t nDestroyed = 0;
 	sirHazardRetiredEntry_t entries[2] = {};
 	SIRHazardRetireList retired( domain, entries, 2 );
-	sirPointerHazardRace_t state = { &domain, &source, SIRAtomic<uint32_t>( 0 ) };
+	sirPointerHazardRace_t state = { &domain, &source, std::atomic<uint32_t>( 0 ) };
 	SIRThread worker;
 	REQUIRE( worker.start( hazardRaceWorker, &state ) );
 	int *pPrior = source.exchange( pReplacement );
@@ -468,8 +468,8 @@ static void testConcurrentHazardAccess( void )
 typedef struct sirPointerRCURace_s
 {
 	SIRRCUDomain *pDomain;
-	SIRAtomic<int *> *pSource;
-	SIRAtomic<uint32_t> nInvalid;
+	std::atomic<int *> *pSource;
+	std::atomic<uint32_t> nInvalid;
 } sirPointerRCURace_t;
 
 static void rcuRaceWorker( void *pContext )
@@ -480,7 +480,7 @@ static void rcuRaceWorker( void *pContext )
 		if ( guard.read( *pState->pDomain, *pState->pSource ) ) {
 			const int *pValue = guard.get();
 			if ( pValue == nullptr || *pValue < 0 || *pValue > 300 ) {
-				pState->nInvalid.fetchAdd( 1 );
+				pState->nInvalid.fetch_add( 1 );
 			}
 			guard.reset();
 		}
@@ -495,8 +495,8 @@ static void testConcurrentRCU( void )
 	for ( int iIndex = 0; iIndex < 301; ++iIndex ) {
 		nValues[iIndex] = iIndex;
 	}
-	SIRAtomic<int *> source( &nValues[0] );
-	sirPointerRCURace_t state = { &domain, &source, SIRAtomic<uint32_t>( 0 ) };
+	std::atomic<int *> source( &nValues[0] );
+	sirPointerRCURace_t state = { &domain, &source, std::atomic<uint32_t>( 0 ) };
 	SIRThread worker;
 	REQUIRE( worker.start( rcuRaceWorker, &state ) );
 	sirRCURetiredEntry_t last = {};

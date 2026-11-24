@@ -17,7 +17,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Memory/SIRMemoryLayoutPlanner.h>
 #include <Core/Memory/SIRMemorySegment.h>
 #include <Core/Memory/Allocators/SIRCompactBucketAllocator.h>
-#include <Core/Memory/SIRMemoryUtils.h>
+#include <Core/SIRMath.h>
 #include <Core/Platform/SIRVirtualMemory.h>
 #include <limits>
 
@@ -43,13 +43,13 @@ bool SIRMemoryLayoutPlanner::preflight( const sirMemoryConfig_t& config, const s
 	if ( !SIR_IS_POWER_OF_TWO( nPage ) ) {
 		return false;
 	}
-	if ( !SIR_IS_POWER_OF_TWO( nPage ) || ( uint64_t )( nPage ) > UINTPTR_MAX ||
-	     ( uint64_t )( config.nReserveBytes ) > UINTPTR_MAX - ( ( uint64_t )( nPage )-1 ) ) {
+	if ( !SIR_IS_POWER_OF_TWO( nPage ) || static_cast<uint64_t>( nPage ) > UINTPTR_MAX ||
+	     static_cast<uint64_t>( config.nReserveBytes ) > UINTPTR_MAX - ( static_cast<uint64_t>( nPage )-1 ) ) {
 		return false;
 	}
 	nReserve = SIR_ALIGN_UP( config.nReserveBytes, nPage );
-	if ( !SIR_IS_POWER_OF_TWO( nPage ) || ( uint64_t )( nPage ) > UINTPTR_MAX ||
-	     ( uint64_t )( config.nMetadataBytes ) > UINTPTR_MAX - ( ( uint64_t )( nPage )-1 ) ) {
+	if ( !SIR_IS_POWER_OF_TWO( nPage ) || static_cast<uint64_t>( nPage ) > UINTPTR_MAX ||
+	     static_cast<uint64_t>( config.nMetadataBytes ) > UINTPTR_MAX - ( static_cast<uint64_t>( nPage )-1 ) ) {
 		return false;
 	}
 	nMetadata = SIR_ALIGN_UP( config.nMetadataBytes, nPage );
@@ -58,7 +58,7 @@ bool SIRMemoryLayoutPlanner::preflight( const sirMemoryConfig_t& config, const s
 	     ( budget.nInitialCommitBudgetBytes % nPage ) != 0 || ( budget.nMaximumCommitBudgetBytes % nPage ) != 0 ) {
 		return false;
 	}
-	uint64_t nRequiredMetadata = ( ( uint64_t )( config.nMaxSegments ) ) * sizeof( SIRMemorySegment );
+	uint64_t nRequiredMetadata = static_cast<uint64_t>( config.nMaxSegments ) * sizeof( SIRMemorySegment );
 	uint64_t nTotalData = 0;
 	for ( uint32_t i = 0; i < nEntryCount; ++i ) {
 		const sirMemoryLayoutEntry_t& entry = pEntries[i];
@@ -66,8 +66,8 @@ bool SIRMemoryLayoutPlanner::preflight( const sirMemoryConfig_t& config, const s
 		if ( entry.nReserveBytes == 0 ) {
 			return false;
 		}
-		if ( !SIR_IS_POWER_OF_TWO( nPage ) || ( uint64_t )( nPage ) > UINTPTR_MAX ||
-		     ( uint64_t )( entry.nReserveBytes ) > UINTPTR_MAX - ( ( uint64_t )( nPage )-1 ) ) {
+		if ( !SIR_IS_POWER_OF_TWO( nPage ) || static_cast<uint64_t>( nPage ) > UINTPTR_MAX ||
+		     static_cast<uint64_t>( entry.nReserveBytes ) > UINTPTR_MAX - ( static_cast<uint64_t>( nPage )-1 ) ) {
 			return false;
 		}
 		nBytes = SIR_ALIGN_UP( entry.nReserveBytes, nPage );
@@ -76,8 +76,8 @@ bool SIRMemoryLayoutPlanner::preflight( const sirMemoryConfig_t& config, const s
 		}
 		uint64_t nLimit = nBytes;
 		if ( entry.nCommitLimitBytes != 0 ) {
-			if ( !SIR_IS_POWER_OF_TWO( nPage ) || ( uint64_t )( nPage ) > UINTPTR_MAX ||
-			     ( uint64_t )( entry.nCommitLimitBytes ) > UINTPTR_MAX - ( ( uint64_t )( nPage )-1 ) ) {
+			if ( !SIR_IS_POWER_OF_TWO( nPage ) || static_cast<uint64_t>( nPage ) > UINTPTR_MAX ||
+			     static_cast<uint64_t>( entry.nCommitLimitBytes ) > UINTPTR_MAX - ( static_cast<uint64_t>( nPage )-1 ) ) {
 				return false;
 			}
 			nLimit = SIR_ALIGN_UP( entry.nCommitLimitBytes, nPage );

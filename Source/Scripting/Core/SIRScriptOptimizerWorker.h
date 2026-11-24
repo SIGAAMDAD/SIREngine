@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSCRIPTOPTIMIZERWORKER_H__
-#define __SIRENGINE_SIRSCRIPTOPTIMIZERWORKER_H__
+#ifndef __SIR_SCRIPTOPTIMIZERWORKER_H__
+#define __SIR_SCRIPTOPTIMIZERWORKER_H__
 
 #include <Core/SIRPCH.h>
 
@@ -49,7 +49,7 @@ typedef struct sirScriptOptimizerBackendAPI_s
 {
 	uint32_t nABIRevision;
 	void *pUser;
-	sirScriptResult_t ( *pCompile )( void *pUser, const sirScriptOptimizerWorkView_t *pView, sirScriptOptimizerOutput_t *pOutput ) noexcept;
+	SIRScriptResult ( *pCompile )( void *pUser, const sirScriptOptimizerWorkView_t *pView, sirScriptOptimizerOutput_t *pOutput ) noexcept;
 	void ( *pRelease )( void *pUser, sirScriptOptimizerOutput_t *pOutput ) noexcept;
 } sirScriptOptimizerBackendAPI_t;
 
@@ -67,9 +67,9 @@ public:
 	SIRScriptOptimizerWorker( const SIRScriptOptimizerWorker& ) = delete;
 	SIRScriptOptimizerWorker& operator=( const SIRScriptOptimizerWorker& ) = delete;
 
-	sirScriptResult_t configure( SIRScriptOptimizerInputStore *pInputs, SIRScriptArtifactCache *pCache,
+	SIRScriptResult configure( SIRScriptOptimizerInputStore *pInputs, SIRScriptArtifactCache *pCache,
 	                             const sirScriptOptimizerBackendAPI_t& backend, uint64_t nMaximumOutputBytes ) noexcept;
-	sirScriptResult_t process( const sirScriptOptimizationRequest_t& request, sirScriptOptimizationReply_t *pReply ) noexcept;
+	SIRScriptResult process( const sirScriptOptimizationRequest_t& request, sirScriptOptimizationReply_t *pReply ) noexcept;
 
 protected:
 	// Lives only in the external optimizer process; no host allocations.
@@ -82,4 +82,4 @@ private:
 	bool m_bProcessing;
 };
 
-#endif // __SIRENGINE_SIRSCRIPTOPTIMIZERWORKER_H__
+#endif // __SIR_SCRIPTOPTIMIZERWORKER_H__

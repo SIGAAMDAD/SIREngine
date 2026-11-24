@@ -101,11 +101,11 @@ bool SIRMemoryManager::initBudgeted( const sirMemoryConfig_t& config, const sirM
 	     budget.nInitialCommitBudgetBytes > budget.nMaximumCommitBudgetBytes || budget.nMaximumCommitBudgetBytes > nReserve ||
 	     ( budget.nInitialCommitBudgetBytes != budget.nMaximumCommitBudgetBytes &&
 	       ( ( budget.nInitialCommitBudgetBytes % nPageSize ) != 0 || ( budget.nMaximumCommitBudgetBytes % nPageSize ) != 0 ) ) ||
-	     ( ( uint64_t )( config.nMaxSegments ) ) > ( nMetadata / sizeof( SIRMemorySegment ) ) ) {
+	     static_cast<uint64_t>( config.nMaxSegments ) > ( nMetadata / sizeof( SIRMemorySegment ) ) ) {
 		return false;
 	}
 
-	uint8_t *pBase = ( ( uint8_t * )( SIRVirtualMemory::reserve( nReserve ) ) );
+	uint8_t *pBase = static_cast<uint8_t *>(  SIRVirtualMemory::reserve( nReserve )  );
 	if ( pBase == nullptr ) {
 		return false;
 	}
@@ -148,7 +148,7 @@ bool SIRMemoryManager::initBudgeted( const sirMemoryConfig_t& config, const sirM
 	m_nSegmentCursor = nMetadata;
 	m_nCommittedBytes = 0;
 	m_nPeakCommittedBytes = 0;
-	for ( uint32_t i = 0; i < SIR_MEMORY_DOMAIN_COUNT; ++i ) {
+	for ( uint32_t i = 0; i < static_cast<uint32_t>( SIRMemoryDomain::SIR_MEMORY_DOMAIN_COUNT ); ++i ) {
 		m_nDomainCommittedBytes[i] = 0;
 		m_nDomainMetadataCommittedBytes[i] = 0;
 		m_nDomainPeakCommittedBytes[i] = 0;
@@ -157,17 +157,17 @@ bool SIRMemoryManager::initBudgeted( const sirMemoryConfig_t& config, const sirM
 	m_nMaxSegments = config.nMaxSegments;
 	m_nSegmentCount = 0;
 
-	const uint64_t nDescriptorBytes = ( ( uint64_t )( config.nMaxSegments ) ) * sizeof( SIRMemorySegment );
+	const uint64_t nDescriptorBytes = static_cast<uint64_t>( config.nMaxSegments ) * sizeof( SIRMemorySegment );
 	m_pSegments =
-	    ( ( SIRMemorySegment * )( allocateMetadataLocked( nDescriptorBytes, alignof( SIRMemorySegment ), SIR_MEMORY_DOMAIN_CORE ) ) );
-	m_pRecyclableStates = ( ( uint8_t * )( allocateMetadataLocked( nMetadata / nPageSize, alignof( uint8_t ), SIR_MEMORY_DOMAIN_CORE ) ) );
+	    ( static_cast<SIRMemorySegment *>(  allocateMetadataLocked( nDescriptorBytes, alignof( SIRMemorySegment ), SIRMemoryDomain::SIR_MEMORY_DOMAIN_CORE )  ) );
+	m_pRecyclableStates = static_cast<uint8_t *>(  allocateMetadataLocked( nMetadata / nPageSize, alignof( uint8_t ), SIRMemoryDomain::SIR_MEMORY_DOMAIN_CORE )  );
 
 	if ( m_pSegments == nullptr || m_pRecyclableStates == nullptr ) {
 		SIRVirtualMemory::release( m_pBase, m_nReservedBytes );
 		m_pBase = nullptr;
 		m_pSegments = nullptr;
 		m_nSegmentCount = 0;
-		for ( uint32_t iDomain = 0; iDomain < SIR_MEMORY_DOMAIN_COUNT; ++iDomain ) {
+		for ( uint32_t iDomain = 0; iDomain < static_cast<uint32_t>( SIRMemoryDomain::SIR_MEMORY_DOMAIN_COUNT ); ++iDomain ) {
 			m_nDomainCommittedBytes[iDomain] = 0;
 			m_nDomainMetadataCommittedBytes[iDomain] = 0;
 			m_nDomainPeakCommittedBytes[iDomain] = 0;
@@ -231,7 +231,7 @@ void SIRMemoryManager::shutdown( void )
 	m_nTraceCount = 0;
 	m_nCommittedBytes = 0;
 	m_nPeakCommittedBytes = 0;
-	for ( uint32_t i = 0; i < SIR_MEMORY_DOMAIN_COUNT; ++i ) {
+	for ( uint32_t i = 0; i < static_cast<uint32_t>( SIRMemoryDomain::SIR_MEMORY_DOMAIN_COUNT ); ++i ) {
 		m_nDomainCommittedBytes[i] = 0;
 		m_nDomainMetadataCommittedBytes[i] = 0;
 		m_nDomainPeakCommittedBytes[i] = 0;
@@ -250,10 +250,10 @@ void SIRMemoryManager::shutdown( void )
 }
 
 SIRMemorySegment *SIRMemoryManager::createSegment( const char *pszName, uint64_t nBytes, uint64_t nCommitLimitBytes,
-                                                   sirMemoryDomain_t eDomain )
+                                                   SIRMemoryDomain eDomain )
 {
 	std::lock_guard<SIRMutex> lock( m_Mutex );
-	if ( m_pBase == nullptr || pszName == nullptr || eDomain >= SIR_MEMORY_DOMAIN_COUNT || m_nSegmentCount == m_nMaxSegments ) {
+	if ( m_pBase == nullptr || pszName == nullptr || static_cast<uint32_t>( eDomain ) >= static_cast<uint32_t>( SIRMemoryDomain::SIR_MEMORY_DOMAIN_COUNT ) || m_nSegmentCount == m_nMaxSegments ) {
 		return nullptr;
 	}
 
@@ -283,7 +283,7 @@ SIRMemorySegment *SIRMemoryManager::createSegment( const char *pszName, uint64_t
 
 	// Both bitmaps are allocated atomically from the metadata bump allocator.
 	// A second allocation failure must not strand the first bitmap's storage.
-	uint64_t *pBits = ( ( uint64_t * )( allocateMetadataLocked( nWords * 2 * sizeof( uint64_t ), alignof( uint64_t ), eDomain ) ) );
+	uint64_t *pBits = static_cast<uint64_t *>(  allocateMetadataLocked( nWords * 2 * sizeof( uint64_t ), alignof( uint64_t ), eDomain )  );
 	if ( pBits == nullptr ) {
 		return nullptr;
 	}
@@ -302,7 +302,7 @@ SIRMemorySegment *SIRMemoryManager::createSegment( const char *pszName, uint64_t
 	pSegment->m_nPageCount = nPages;
 	pSegment->m_eDomain = eDomain;
 	uint32_t iName = 0;
-	const uint32_t nNameCapacity = ( uint32_t )sizeof( pSegment->m_szName );
+	const uint32_t nNameCapacity = static_cast<uint32_t>(sizeof( pSegment->m_szName ));
 	for ( ; iName + 1 < nNameCapacity && pszName[iName] != '\0'; ++iName ) {
 		pSegment->m_szName[iName] = pszName[iName];
 	}
@@ -313,43 +313,43 @@ SIRMemorySegment *SIRMemoryManager::createSegment( const char *pszName, uint64_t
 	return pSegment;
 }
 
-bool SIRMemoryManager::setDomainCommitLimit( sirMemoryDomain_t eDomain, uint64_t nLimitBytes )
+bool SIRMemoryManager::setDomainCommitLimit( SIRMemoryDomain eDomain, uint64_t nLimitBytes )
 {
 	std::lock_guard<SIRMutex> lock( m_Mutex );
-	if ( m_pBase == nullptr || eDomain >= SIR_MEMORY_DOMAIN_COUNT || nLimitBytes == 0 || ( nLimitBytes % m_nPageSize ) != 0 ) {
+	if ( m_pBase == nullptr || static_cast<uint32_t>( eDomain ) >= static_cast<uint32_t>( SIRMemoryDomain::SIR_MEMORY_DOMAIN_COUNT ) || nLimitBytes == 0 || ( nLimitBytes % m_nPageSize ) != 0 ) {
 		return false;
 	}
-	const uint64_t nUsed = m_nDomainCommittedBytes[eDomain] + m_nDomainMetadataCommittedBytes[eDomain];
+	const uint64_t nUsed = m_nDomainCommittedBytes[static_cast<size_t>( eDomain )] + m_nDomainMetadataCommittedBytes[static_cast<size_t>( eDomain )];
 	if ( nLimitBytes < nUsed ) {
 		return false;
 	}
-	m_nDomainCommitLimits[eDomain] = nLimitBytes;
-	if ( nUsed > m_nDomainPeakCommittedBytes[eDomain] ) {
-		m_nDomainPeakCommittedBytes[eDomain] = nUsed;
+	m_nDomainCommitLimits[static_cast<size_t>( eDomain )] = nLimitBytes;
+	if ( nUsed > m_nDomainPeakCommittedBytes[static_cast<size_t>( eDomain )] ) {
+		m_nDomainPeakCommittedBytes[static_cast<size_t>( eDomain )] = nUsed;
 	}
 	return true;
 }
 
-sirMemoryDomainStats_t SIRMemoryManager::getDomainStats( sirMemoryDomain_t eDomain ) const
+sirMemoryDomainStats_t SIRMemoryManager::getDomainStats( SIRMemoryDomain eDomain ) const
 {
 	std::lock_guard<SIRMutex> lock( m_Mutex );
-	if ( eDomain >= SIR_MEMORY_DOMAIN_COUNT || m_pBase == nullptr ) {
+	if ( static_cast<uint32_t>( eDomain ) >= static_cast<uint32_t>( SIRMemoryDomain::SIR_MEMORY_DOMAIN_COUNT ) || m_pBase == nullptr ) {
 		return {};
 	}
-	return { m_nDomainCommittedBytes[eDomain] + m_nDomainMetadataCommittedBytes[eDomain], m_nDomainPeakCommittedBytes[eDomain],
-	         m_nDomainCommitLimits[eDomain] };
+	return { m_nDomainCommittedBytes[static_cast<size_t>( eDomain )] + m_nDomainMetadataCommittedBytes[static_cast<size_t>( eDomain )], m_nDomainPeakCommittedBytes[static_cast<size_t>( eDomain )],
+	         m_nDomainCommitLimits[static_cast<size_t>( eDomain )] };
 }
 
-void *SIRMemoryManager::allocateMetadata( uint64_t nBytes, uint64_t nAlignment, sirMemoryDomain_t eDomain )
+void *SIRMemoryManager::allocateMetadata( uint64_t nBytes, uint64_t nAlignment, SIRMemoryDomain eDomain )
 {
 	std::lock_guard<SIRMutex> lock( m_Mutex );
 	return allocateMetadataLocked( nBytes, nAlignment, eDomain );
 }
 
-void *SIRMemoryManager::allocateRecyclableMetadataPage( sirMemoryDomain_t eDomain )
+void *SIRMemoryManager::allocateRecyclableMetadataPage( SIRMemoryDomain eDomain )
 {
 	std::lock_guard<SIRMutex> lock( m_Mutex );
-	if ( m_pBase == nullptr || m_pRecyclableStates == nullptr || eDomain >= SIR_MEMORY_DOMAIN_COUNT ) {
+	if ( m_pBase == nullptr || m_pRecyclableStates == nullptr || static_cast<uint32_t>( eDomain ) >= static_cast<uint32_t>( SIRMemoryDomain::SIR_MEMORY_DOMAIN_COUNT ) ) {
 		return nullptr;
 	}
 	const uint64_t nPageCount = m_nMetadataBytes / m_nPageSize;
@@ -368,11 +368,11 @@ void *SIRMemoryManager::allocateRecyclableMetadataPage( sirMemoryDomain_t eDomai
 		nIndex = ( m_nRecyclableFloor / m_nPageSize ) - 1;
 		m_nRecyclableFloor -= m_nPageSize;
 	}
-	const uint64_t nDomainUsed = m_nDomainCommittedBytes[eDomain] + m_nDomainMetadataCommittedBytes[eDomain];
+	const uint64_t nDomainUsed = m_nDomainCommittedBytes[static_cast<size_t>( eDomain )] + m_nDomainMetadataCommittedBytes[static_cast<size_t>( eDomain )];
 	if ( m_nPageSize > m_nCommitBudgetBytes - m_nCommittedBytes ||
-	     ( m_nDomainCommitLimits[eDomain] != 0 && m_nPageSize > m_nDomainCommitLimits[eDomain] - nDomainUsed ) ) {
+	     ( m_nDomainCommitLimits[static_cast<size_t>( eDomain )] != 0 && m_nPageSize > m_nDomainCommitLimits[static_cast<size_t>( eDomain )] - nDomainUsed ) ) {
 		++m_nCommitDeniedCount;
-		recordTraceLocked( SIR_MEMORY_TRACE_DENIED, m_nPageSize, UINT32_MAX );
+		recordTraceLocked( static_cast<uint32_t>( SIRMemoryTraceType::SIR_MEMORY_TRACE_DENIED ), m_nPageSize, UINT32_MAX );
 		if ( bNewPage ) {
 			m_nRecyclableFloor += m_nPageSize;
 		} else {
@@ -389,67 +389,67 @@ void *SIRMemoryManager::allocateRecyclableMetadataPage( sirMemoryDomain_t eDomai
 		}
 		return nullptr;
 	}
-	std::memset( pPage, 0, ( ( size_t )( m_nPageSize ) ) );
-	m_pRecyclableStates[nIndex] = ( ( uint8_t )( 2 + eDomain ) );
+	std::memset( pPage, 0, static_cast<size_t>( m_nPageSize ) );
+	m_pRecyclableStates[nIndex] = static_cast<uint8_t>( 2 + static_cast<uint32_t>( eDomain ) );
 	m_nRecyclableCommittedBytes += m_nPageSize;
 	m_nRecyclableUsedBytes += m_nPageSize;
-	m_nDomainMetadataCommittedBytes[eDomain] += m_nPageSize;
+	m_nDomainMetadataCommittedBytes[static_cast<size_t>( eDomain )] += m_nPageSize;
 	m_nCommittedBytes += m_nPageSize;
 	if ( m_nCommittedBytes > m_nPeakCommittedBytes ) {
 		m_nPeakCommittedBytes = m_nCommittedBytes;
 	}
-	const uint64_t nDomainPeak = m_nDomainCommittedBytes[eDomain] + m_nDomainMetadataCommittedBytes[eDomain];
-	if ( nDomainPeak > m_nDomainPeakCommittedBytes[eDomain] ) {
-		m_nDomainPeakCommittedBytes[eDomain] = nDomainPeak;
+	const uint64_t nDomainPeak = m_nDomainCommittedBytes[static_cast<size_t>( eDomain )] + m_nDomainMetadataCommittedBytes[static_cast<size_t>( eDomain )];
+	if ( nDomainPeak > m_nDomainPeakCommittedBytes[static_cast<size_t>( eDomain )] ) {
+		m_nDomainPeakCommittedBytes[static_cast<size_t>( eDomain )] = nDomainPeak;
 	}
 	++m_nCommitCallCount;
-	recordTraceLocked( SIR_MEMORY_TRACE_METADATA, m_nPageSize, UINT32_MAX );
+	recordTraceLocked( static_cast<uint32_t>( SIRMemoryTraceType::SIR_MEMORY_TRACE_METADATA ), m_nPageSize, UINT32_MAX );
 	return pPage;
 }
 
-bool SIRMemoryManager::releaseRecyclableMetadataPage( void *pPage, sirMemoryDomain_t eDomain )
+bool SIRMemoryManager::releaseRecyclableMetadataPage( void *pPage, SIRMemoryDomain eDomain )
 {
 	std::lock_guard<SIRMutex> lock( m_Mutex );
-	if ( m_pBase == nullptr || pPage == nullptr || eDomain >= SIR_MEMORY_DOMAIN_COUNT ) {
+	if ( m_pBase == nullptr || pPage == nullptr || static_cast<uint32_t>( eDomain ) >= static_cast<uint32_t>( SIRMemoryDomain::SIR_MEMORY_DOMAIN_COUNT ) ) {
 		return false;
 	}
-	const uintptr_t nAddress = ( ( uintptr_t )( pPage ) );
-	const uintptr_t nBase = ( ( uintptr_t )( m_pBase ) );
+	const uintptr_t nAddress = reinterpret_cast<uintptr_t>(pPage);
+	const uintptr_t nBase = reinterpret_cast<uintptr_t>(m_pBase);
 	if ( nAddress < nBase || nAddress - nBase < m_nRecyclableFloor || nAddress - nBase >= m_nMetadataBytes ||
 	     ( nAddress - nBase ) % m_nPageSize != 0 ) {
 		return false;
 	}
 	const uint64_t nIndex = ( nAddress - nBase ) / m_nPageSize;
-	if ( m_pRecyclableStates[nIndex] != 2 + eDomain || !SIRVirtualMemory::decommit( pPage, m_nPageSize ) ) {
+	if ( m_pRecyclableStates[nIndex] != 2 + static_cast<uint32_t>( eDomain ) || !SIRVirtualMemory::decommit( pPage, m_nPageSize ) ) {
 		return false;
 	}
 	m_pRecyclableStates[nIndex] = 1;
 	m_nRecyclableUsedBytes -= m_nPageSize;
 	m_nRecyclableCommittedBytes -= m_nPageSize;
-	m_nDomainMetadataCommittedBytes[eDomain] -= m_nPageSize;
+	m_nDomainMetadataCommittedBytes[static_cast<size_t>( eDomain )] -= m_nPageSize;
 	m_nCommittedBytes -= m_nPageSize;
 	m_nDecommittedBytes += m_nPageSize;
 	++m_nDecommitCallCount;
-	recordTraceLocked( SIR_MEMORY_TRACE_DECOMMIT, m_nPageSize, UINT32_MAX );
+	recordTraceLocked( static_cast<uint32_t>( SIRMemoryTraceType::SIR_MEMORY_TRACE_DECOMMIT ), m_nPageSize, UINT32_MAX );
 	return true;
 }
 
-void *SIRMemoryManager::allocateMetadataLocked( uint64_t nBytes, uint64_t nAlignment, sirMemoryDomain_t eDomain )
+void *SIRMemoryManager::allocateMetadataLocked( uint64_t nBytes, uint64_t nAlignment, SIRMemoryDomain eDomain )
 {
-	if ( m_pBase == nullptr || nBytes == 0 || eDomain >= SIR_MEMORY_DOMAIN_COUNT || !sirIsPowerOfTwo( nAlignment ) ) {
+	if ( m_pBase == nullptr || nBytes == 0 || static_cast<uint32_t>( eDomain ) >= static_cast<uint32_t>( SIRMemoryDomain::SIR_MEMORY_DOMAIN_COUNT ) || !sirIsPowerOfTwo( nAlignment ) ) {
 		return nullptr;
 	}
 
-	const uintptr_t nCurrent = ( ( uintptr_t )( m_pBase ) ) + m_nMetadataOffset;
+	const uintptr_t nCurrent = reinterpret_cast<uintptr_t>(m_pBase) + m_nMetadataOffset;
 	uint64_t nAlignedAddress = 0;
 	if ( !sirAlignUpChecked( nCurrent, nAlignment, &nAlignedAddress ) ) {
 		return nullptr;
 	}
-	if ( nAlignedAddress < ( ( uintptr_t )( m_pBase ) ) ) {
+	if ( nAlignedAddress < reinterpret_cast<uintptr_t>(m_pBase) ) {
 		return nullptr;
 	}
 
-	const uint64_t nAlignedOffset = nAlignedAddress - ( ( uintptr_t )( m_pBase ) );
+	const uint64_t nAlignedOffset = nAlignedAddress - reinterpret_cast<uintptr_t>(m_pBase);
 	if ( nAlignedOffset > m_nRecyclableFloor || nBytes > m_nRecyclableFloor - nAlignedOffset ) {
 		return nullptr;
 	}
@@ -463,11 +463,11 @@ void *SIRMemoryManager::allocateMetadataLocked( uint64_t nBytes, uint64_t nAlign
 	if ( nNewCommittedBytes > m_nMetadataCommittedBytes ) {
 		const uint64_t nAdditionalBytes = nNewCommittedBytes - m_nMetadataCommittedBytes;
 		if ( nAdditionalBytes > m_nCommitBudgetBytes - m_nCommittedBytes ||
-		     ( m_nDomainCommitLimits[eDomain] != 0 &&
+		     ( m_nDomainCommitLimits[static_cast<size_t>( eDomain )] != 0 &&
 		       nAdditionalBytes >
-		           m_nDomainCommitLimits[eDomain] - ( m_nDomainCommittedBytes[eDomain] + m_nDomainMetadataCommittedBytes[eDomain] ) ) ) {
+		           m_nDomainCommitLimits[static_cast<size_t>( eDomain )] - ( m_nDomainCommittedBytes[static_cast<size_t>( eDomain )] + m_nDomainMetadataCommittedBytes[static_cast<size_t>( eDomain )] ) ) ) {
 			++m_nCommitDeniedCount;
-			recordTraceLocked( SIR_MEMORY_TRACE_DENIED, nAdditionalBytes, UINT32_MAX );
+			recordTraceLocked( static_cast<uint32_t>( SIRMemoryTraceType::SIR_MEMORY_TRACE_DENIED ), nAdditionalBytes, UINT32_MAX );
 			return nullptr;
 		}
 		if ( !SIRVirtualMemory::commit( m_pBase + m_nMetadataCommittedBytes, nAdditionalBytes ) ) {
@@ -475,10 +475,10 @@ void *SIRMemoryManager::allocateMetadataLocked( uint64_t nBytes, uint64_t nAlign
 		}
 		++m_nCommitCallCount;
 		m_nMetadataCommittedBytes = nNewCommittedBytes;
-		m_nDomainMetadataCommittedBytes[eDomain] += nAdditionalBytes;
-		const uint64_t nUsed = m_nDomainMetadataCommittedBytes[eDomain] + m_nDomainCommittedBytes[eDomain];
-		if ( nUsed > m_nDomainPeakCommittedBytes[eDomain] ) {
-			m_nDomainPeakCommittedBytes[eDomain] = nUsed;
+		m_nDomainMetadataCommittedBytes[static_cast<size_t>( eDomain )] += nAdditionalBytes;
+		const uint64_t nUsed = m_nDomainMetadataCommittedBytes[static_cast<size_t>( eDomain )] + m_nDomainCommittedBytes[static_cast<size_t>( eDomain )];
+		if ( nUsed > m_nDomainPeakCommittedBytes[static_cast<size_t>( eDomain )] ) {
+			m_nDomainPeakCommittedBytes[static_cast<size_t>( eDomain )] = nUsed;
 		}
 		m_nCommittedBytes += nAdditionalBytes;
 		if ( m_nCommittedBytes > m_nPeakCommittedBytes ) {
@@ -487,9 +487,9 @@ void *SIRMemoryManager::allocateMetadataLocked( uint64_t nBytes, uint64_t nAlign
 	}
 
 	m_nMetadataOffset = nEndOffset;
-	recordTraceLocked( SIR_MEMORY_TRACE_METADATA, nBytes, UINT32_MAX );
+	recordTraceLocked( static_cast<uint32_t>( SIRMemoryTraceType::SIR_MEMORY_TRACE_METADATA ), nBytes, UINT32_MAX );
 	void *pMemory = m_pBase + nAlignedOffset;
-	std::memset( pMemory, 0, ( ( size_t )( nBytes ) ) );
+	std::memset( pMemory, 0, static_cast<size_t>( nBytes ) );
 	return pMemory;
 }
 
@@ -501,7 +501,7 @@ static uint32_t sirCountBits64( uint64_t nBits )
 	nBits -= ( nBits >> 1 ) & 0x5555555555555555ull;
 	nBits = ( nBits & 0x3333333333333333ull ) + ( ( nBits >> 2 ) & 0x3333333333333333ull );
 	nBits = ( nBits + ( nBits >> 4 ) ) & 0x0f0f0f0f0f0f0f0full;
-	return ( ( uint32_t )( ( nBits * 0x0101010101010101ull ) >> 56 ) );
+	return static_cast<uint32_t>(  ( nBits * 0x0101010101010101ull ) >> 56  );
 }
 
 static uint64_t sirLowMask64( uint32_t nBits )
@@ -519,7 +519,7 @@ uint64_t SIRMemoryManager::countCommittedPages( const SIRMemorySegment *pSegment
 	const uint64_t nEndPage = nFirstPage + nPageCount;
 	const uint64_t nLastWord = ( nEndPage - 1 ) >> 6;
 	const uint64_t nFirstMask = ~0ull << ( nFirstPage & 63 );
-	const uint64_t nLastMask = sirLowMask64( ( ( uint32_t )( nEndPage & 63 ) ) );
+	const uint64_t nLastMask = sirLowMask64( ( static_cast<uint32_t>( nEndPage & 63 ) ) );
 	const uint64_t *pBits = pSegment->m_pCommittedBits;
 
 	if ( nFirstWord == nLastWord ) {
@@ -552,7 +552,7 @@ void SIRMemoryManager::markCommittedPages( SIRMemorySegment *pSegment, uint64_t 
 	const uint64_t nEndPage = nFirstPage + nPageCount;
 	const uint64_t nLastWord = ( nEndPage - 1 ) >> 6;
 	const uint64_t nFirstMask = ~0ull << ( nFirstPage & 63 );
-	const uint64_t nLastMask = sirLowMask64( ( ( uint32_t )( nEndPage & 63 ) ) );
+	const uint64_t nLastMask = sirLowMask64( ( static_cast<uint32_t>( nEndPage & 63 ) ) );
 	uint64_t *pBits = pSegment->m_pCommittedBits;
 
 	if ( nFirstWord == nLastWord ) {
@@ -586,13 +586,13 @@ bool SIRMemoryManager::commit( SIRMemorySegment *pSegment, uint64_t nOffset, uin
 		return true;
 	}
 
-	const uint32_t nDomain = pSegment->m_eDomain;
+	const uint32_t nDomain = static_cast<uint32_t>( pSegment->m_eDomain );
 	const uint64_t nDomainUsage = m_nDomainCommittedBytes[nDomain] + m_nDomainMetadataCommittedBytes[nDomain];
 	if ( nAdditionalBytes > m_nCommitBudgetBytes - m_nCommittedBytes ||
 	     nAdditionalBytes > pSegment->m_nCommitLimitBytes - pSegment->m_nCommittedBytes ||
 	     ( m_nDomainCommitLimits[nDomain] != 0 && nAdditionalBytes > m_nDomainCommitLimits[nDomain] - nDomainUsage ) ) {
 		++m_nCommitDeniedCount;
-		recordTraceLocked( SIR_MEMORY_TRACE_DENIED, nAdditionalBytes, ( ( uint32_t )( pSegment - m_pSegments ) ) );
+		recordTraceLocked( static_cast<uint32_t>( SIRMemoryTraceType::SIR_MEMORY_TRACE_DENIED ), nAdditionalBytes, ( static_cast<uint32_t>( pSegment - m_pSegments ) ) );
 		return false;
 	}
 
@@ -603,7 +603,7 @@ bool SIRMemoryManager::commit( SIRMemorySegment *pSegment, uint64_t nOffset, uin
 
 	clearPendingPages( pSegment, nFirst, nPages, true );
 	++m_nCommitCallCount;
-	recordTraceLocked( SIR_MEMORY_TRACE_COMMIT, nAdditionalBytes, ( ( uint32_t )( pSegment - m_pSegments ) ) );
+	recordTraceLocked( static_cast<uint32_t>( SIRMemoryTraceType::SIR_MEMORY_TRACE_COMMIT ), nAdditionalBytes, ( static_cast<uint32_t>( pSegment - m_pSegments ) ) );
 	markCommittedPages( pSegment, nFirst, nPages, true );
 	pSegment->m_nCommittedBytes += nAdditionalBytes;
 	m_nDomainCommittedBytes[nDomain] += nAdditionalBytes;
@@ -644,10 +644,10 @@ bool SIRMemoryManager::decommit( SIRMemorySegment *pSegment, uint64_t nOffset, u
 	const uint64_t nFreedBytes = nCommittedPages * m_nPageSize;
 	++m_nDecommitCallCount;
 	m_nDecommittedBytes += nFreedBytes;
-	recordTraceLocked( SIR_MEMORY_TRACE_DECOMMIT, nFreedBytes, ( ( uint32_t )( pSegment - m_pSegments ) ) );
+	recordTraceLocked( static_cast<uint32_t>( SIRMemoryTraceType::SIR_MEMORY_TRACE_DECOMMIT ), nFreedBytes, ( static_cast<uint32_t>( pSegment - m_pSegments ) ) );
 	markCommittedPages( pSegment, nFirst, nPages, false );
 	pSegment->m_nCommittedBytes -= nFreedBytes;
-	m_nDomainCommittedBytes[pSegment->m_eDomain] -= nFreedBytes;
+	m_nDomainCommittedBytes[static_cast<size_t>( pSegment->m_eDomain )] -= nFreedBytes;
 	m_nCommittedBytes -= nFreedBytes;
 	return true;
 }
@@ -693,7 +693,7 @@ uint64_t SIRMemoryManager::getPageSize( void ) const
 SIRMemorySegment::SIRMemorySegment( void )
     : m_pManager( nullptr ), m_pBase( nullptr ), m_pCommittedBits( nullptr ), m_pPendingDecommitBits( nullptr ), m_nRetirementOwnerId( 0 ),
       m_nRetirementOwnerGeneration( 0 ), m_nReservedBytes( 0 ), m_nCommittedBytes( 0 ), m_nCommitLimitBytes( 0 ), m_nPageCount( 0 ),
-      m_eDomain( SIR_MEMORY_DOMAIN_GODOT ), m_szName{}
+      m_eDomain( SIRMemoryDomain::SIR_MEMORY_DOMAIN_GODOT ), m_szName{}
 {
 }
 
@@ -727,7 +727,7 @@ uint64_t SIRMemorySegment::getCommitLimitBytes( void ) const
 	return m_nCommitLimitBytes;
 }
 
-sirMemoryDomain_t SIRMemorySegment::getDomain( void ) const
+SIRMemoryDomain SIRMemorySegment::getDomain( void ) const
 {
 	return m_eDomain;
 }
@@ -857,7 +857,7 @@ bool SIRMemoryManager::cancelRetiredRange( SIRMemorySegment *pSegment, uint64_t 
 sirPageDrainReport_t SIRMemoryManager::drainPendingDecommits( uint64_t nMaxBytes )
 {
 	std::lock_guard<SIRMutex> lock( m_Mutex );
-	sirPageDrainReport_t report = {};
+	sirPageDrainReport_t report {};
 	if ( m_pBase == nullptr || nMaxBytes < m_nPageSize || m_nPendingDecommitBytes == 0 ) {
 		report.nRemainingPendingBytes = m_nPendingDecommitBytes;
 		return report;
@@ -895,11 +895,11 @@ sirPageDrainReport_t SIRMemoryManager::drainPendingDecommits( uint64_t nMaxBytes
 			markCommittedPages( pSegment, nFirst, nRunPages, false );
 			m_nPendingDecommitBytes -= nBytes;
 			pSegment->m_nCommittedBytes -= nBytes;
-			m_nDomainCommittedBytes[pSegment->m_eDomain] -= nBytes;
+			m_nDomainCommittedBytes[static_cast<size_t>( pSegment->m_eDomain )] -= nBytes;
 			m_nCommittedBytes -= nBytes;
 			m_nDecommittedBytes += nBytes;
 			++m_nDecommitCallCount;
-			recordTraceLocked( SIR_MEMORY_TRACE_DECOMMIT, nBytes, iSegment );
+			recordTraceLocked( static_cast<uint32_t>( SIRMemoryTraceType::SIR_MEMORY_TRACE_DECOMMIT ), nBytes, iSegment );
 			report.nDecommittedBytes += nBytes;
 			++report.nCompletedRuns;
 			nRemaining -= nBytes;
@@ -947,8 +947,8 @@ bool SIRMemoryManager::initTraceBuffer( uint32_t nEntries )
 	if ( m_pTrace != nullptr || m_pBase == nullptr ) {
 		return false;
 	}
-	m_pTrace = ( ( sirMemoryTraceEvent_t * )( allocateMetadataLocked( ( ( uint64_t )( nEntries ) ) * sizeof( sirMemoryTraceEvent_t ),
-	                                                                  alignof( sirMemoryTraceEvent_t ), SIR_MEMORY_DOMAIN_CORE ) ) );
+	m_pTrace = ( ( sirMemoryTraceEvent_t * )( allocateMetadataLocked( static_cast<uint64_t>( nEntries ) * sizeof( sirMemoryTraceEvent_t ),
+	                                                                  alignof( sirMemoryTraceEvent_t ), SIRMemoryDomain::SIR_MEMORY_DOMAIN_CORE ) ) );
 	if ( m_pTrace == nullptr ) {
 		return false;
 	}

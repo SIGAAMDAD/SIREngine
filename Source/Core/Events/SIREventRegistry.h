@@ -14,8 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIREVENTREGISTRY_H__
-#define __SIRENGINE_SIREVENTREGISTRY_H__
+#ifndef __SIR_EVENTREGISTRY_H__
+#define __SIR_EVENTREGISTRY_H__
 
 #include <Core/SIRPCH.h>
 
@@ -67,4 +67,4 @@ private:
 	uint32_t m_nCount;
 };
 
-#endif // __SIRENGINE_SIREVENTREGISTRY_H__
+#endif // __SIR_EVENTREGISTRY_H__

@@ -31,126 +31,127 @@ static bool sirEditorCodecReservedZero( const sirPropertyValue_t& value ) noexce
 	return true;
 }
 
-sirEditorScalarResult_t sirEditorDecodeScalar( const char *pszText, size_t nBytes, sirPropertyKind_t eKind,
+SIREditorScalarResult sirEditorDecodeScalar( const char *pszText, size_t nBytes, SIRPropertyKind eKind,
                                                sirPropertyValue_t *pOutValue ) noexcept
 {
 	if ( pszText == nullptr || pOutValue == nullptr || nBytes == 0 || nBytes > 256 ) {
-		return SIR_EDITOR_SCALAR_INVALID_ARGUMENT;
+		return SIREditorScalarResult::SIR_EDITOR_SCALAR_INVALID_ARGUMENT;
 	}
-	sirPropertyValue_t parsed = {};
+	sirPropertyValue_t parsed {};
 	parsed.eKind = eKind;
 	const char *pFirst = pszText;
 	const char *pLast = pszText + nBytes;
-	if ( eKind == SIR_PROPERTY_BOOL ) {
+	if ( eKind == SIRPropertyKind::SIR_PROPERTY_BOOL ) {
 		if ( nBytes == 4 && memcmp( pszText, "true", 4 ) == 0 ) {
 			parsed.nPayload = 1;
 		} else if ( nBytes == 5 && memcmp( pszText, "false", 5 ) == 0 ) {
 			parsed.nPayload = 0;
 		} else {
-			return SIR_EDITOR_SCALAR_INVALID_TEXT;
+			return SIREditorScalarResult::SIR_EDITOR_SCALAR_INVALID_TEXT;
 		}
-	} else if ( eKind == SIR_PROPERTY_INT64 ) {
+	} else if ( eKind == SIRPropertyKind::SIR_PROPERTY_INT64 ) {
 		int64_t nValue = 0;
 		if ( *pFirst == '+' && nBytes > 1 ) {
 			++pFirst;
 			if ( *pFirst == '-' || *pFirst == '+' ) {
-				return SIR_EDITOR_SCALAR_INVALID_TEXT;
+				return SIREditorScalarResult::SIR_EDITOR_SCALAR_INVALID_TEXT;
 			}
 		}
 		const std::from_chars_result result = std::from_chars( pFirst, pLast, nValue, 10 );
 		if ( result.ec != std::errc{} || result.ptr != pLast ) {
-			return SIR_EDITOR_SCALAR_INVALID_TEXT;
+			return SIREditorScalarResult::SIR_EDITOR_SCALAR_INVALID_TEXT;
 		}
 		memcpy( &parsed.nPayload, &nValue, sizeof( nValue ) );
-	} else if ( eKind == SIR_PROPERTY_UINT64 ) {
+	} else if ( eKind == SIRPropertyKind::SIR_PROPERTY_UINT64 ) {
 		uint64_t nValue = 0;
 		if ( *pFirst == '+' && nBytes > 1 ) {
 			++pFirst;
 			if ( *pFirst == '-' || *pFirst == '+' ) {
-				return SIR_EDITOR_SCALAR_INVALID_TEXT;
+				return SIREditorScalarResult::SIR_EDITOR_SCALAR_INVALID_TEXT;
 			}
 		}
 		const std::from_chars_result result = std::from_chars( pFirst, pLast, nValue, 10 );
 		if ( result.ec != std::errc{} || result.ptr != pLast ) {
-			return SIR_EDITOR_SCALAR_INVALID_TEXT;
+			return SIREditorScalarResult::SIR_EDITOR_SCALAR_INVALID_TEXT;
 		}
 		parsed.nPayload = nValue;
-	} else if ( eKind == SIR_PROPERTY_REAL64 ) {
+	} else if ( eKind == SIRPropertyKind::SIR_PROPERTY_REAL64 ) {
 		double fValue = 0;
 		if ( *pFirst == '+' && nBytes > 1 ) {
 			++pFirst;
 			if ( *pFirst == '-' || *pFirst == '+' ) {
-				return SIR_EDITOR_SCALAR_INVALID_TEXT;
+				return SIREditorScalarResult::SIR_EDITOR_SCALAR_INVALID_TEXT;
 			}
 		}
 		const std::from_chars_result result = std::from_chars( pFirst, pLast, fValue, std::chars_format::general );
 		if ( result.ec != std::errc{} || result.ptr != pLast || !std::isfinite( fValue ) ) {
-			return SIR_EDITOR_SCALAR_INVALID_TEXT;
+			return SIREditorScalarResult::SIR_EDITOR_SCALAR_INVALID_TEXT;
 		}
 		memcpy( &parsed.nPayload, &fValue, sizeof( fValue ) );
 	} else {
-		return SIR_EDITOR_SCALAR_UNSUPPORTED_KIND;
+		return SIREditorScalarResult::SIR_EDITOR_SCALAR_UNSUPPORTED_KIND;
 	}
 	*pOutValue = parsed;
-	return SIR_EDITOR_SCALAR_OK;
+	return SIREditorScalarResult::SIR_EDITOR_SCALAR_OK;
 }
 
-sirEditorScalarResult_t sirEditorEncodeScalar( const sirPropertyValue_t& value, char *pszOutput, size_t nCapacity,
+SIREditorScalarResult sirEditorEncodeScalar( const sirPropertyValue_t& value, char *pszOutput, size_t nCapacity,
                                                size_t *pOutBytes ) noexcept
 {
 	if ( pOutBytes == nullptr || ( pszOutput == nullptr && nCapacity != 0 ) ) {
-		return SIR_EDITOR_SCALAR_INVALID_ARGUMENT;
+		return SIREditorScalarResult::SIR_EDITOR_SCALAR_INVALID_ARGUMENT;
 	}
 	*pOutBytes = 0;
 	if ( !sirEditorCodecReservedZero( value ) ) {
-		return SIR_EDITOR_SCALAR_INVALID_ARGUMENT;
+		return SIREditorScalarResult::SIR_EDITOR_SCALAR_INVALID_ARGUMENT;
 	}
-	char szEncoded[128] = {};
+	char szEncoded[128];
+	memset( szEncoded, 0, sizeof( szEncoded ) );
 	size_t nBytes = 0;
-	if ( value.eKind == SIR_PROPERTY_BOOL ) {
+	if ( value.eKind == SIRPropertyKind::SIR_PROPERTY_BOOL ) {
 		if ( value.nPayload > 1 ) {
-			return SIR_EDITOR_SCALAR_INVALID_ARGUMENT;
+			return SIREditorScalarResult::SIR_EDITOR_SCALAR_INVALID_ARGUMENT;
 		}
 		const char *pszBoolean = value.nPayload == 0 ? "false" : "true";
 		nBytes = value.nPayload == 0 ? 5 : 4;
 		memcpy( szEncoded, pszBoolean, nBytes );
-	} else if ( value.eKind == SIR_PROPERTY_INT64 ) {
+	} else if ( value.eKind == SIRPropertyKind::SIR_PROPERTY_INT64 ) {
 		int64_t nValue = 0;
 		memcpy( &nValue, &value.nPayload, sizeof( nValue ) );
 		const std::to_chars_result result = std::to_chars( szEncoded, szEncoded + sizeof( szEncoded ) - 1, nValue );
 		if ( result.ec != std::errc{} ) {
-			return SIR_EDITOR_SCALAR_OUT_OF_CAPACITY;
+			return SIREditorScalarResult::SIR_EDITOR_SCALAR_OUT_OF_CAPACITY;
 		}
-		nBytes = ( size_t )( result.ptr - szEncoded );
-	} else if ( value.eKind == SIR_PROPERTY_UINT64 ) {
+		nBytes = static_cast<size_t>( result.ptr - szEncoded );
+	} else if ( value.eKind == SIRPropertyKind::SIR_PROPERTY_UINT64 ) {
 		const std::to_chars_result result = std::to_chars( szEncoded, szEncoded + sizeof( szEncoded ) - 1, value.nPayload );
 		if ( result.ec != std::errc{} ) {
-			return SIR_EDITOR_SCALAR_OUT_OF_CAPACITY;
+			return SIREditorScalarResult::SIR_EDITOR_SCALAR_OUT_OF_CAPACITY;
 		}
-		nBytes = ( size_t )( result.ptr - szEncoded );
-	} else if ( value.eKind == SIR_PROPERTY_REAL64 ) {
+		nBytes = static_cast<size_t>( result.ptr - szEncoded );
+	} else if ( value.eKind == SIRPropertyKind::SIR_PROPERTY_REAL64 ) {
 		double fValue = 0;
 		memcpy( &fValue, &value.nPayload, sizeof( fValue ) );
 		if ( !std::isfinite( fValue ) ) {
-			return SIR_EDITOR_SCALAR_INVALID_ARGUMENT;
+			return SIREditorScalarResult::SIR_EDITOR_SCALAR_INVALID_ARGUMENT;
 		}
 		const std::to_chars_result result = std::to_chars( szEncoded, szEncoded + sizeof( szEncoded ) - 1, fValue,
 		                                                   std::chars_format::general, std::numeric_limits<double>::max_digits10 );
 		if ( result.ec != std::errc{} ) {
-			return SIR_EDITOR_SCALAR_OUT_OF_CAPACITY;
+			return SIREditorScalarResult::SIR_EDITOR_SCALAR_OUT_OF_CAPACITY;
 		}
-		nBytes = ( size_t )( result.ptr - szEncoded );
+		nBytes = static_cast<size_t>( result.ptr - szEncoded );
 	} else {
-		return SIR_EDITOR_SCALAR_UNSUPPORTED_KIND;
+		return SIREditorScalarResult::SIR_EDITOR_SCALAR_UNSUPPORTED_KIND;
 	}
 	*pOutBytes = nBytes;
 	if ( pszOutput == nullptr && nCapacity == 0 ) {
-		return SIR_EDITOR_SCALAR_OK;
+		return SIREditorScalarResult::SIR_EDITOR_SCALAR_OK;
 	}
 	if ( nCapacity <= nBytes ) {
-		return SIR_EDITOR_SCALAR_OUT_OF_CAPACITY;
+		return SIREditorScalarResult::SIR_EDITOR_SCALAR_OUT_OF_CAPACITY;
 	}
 	memcpy( pszOutput, szEncoded, nBytes );
 	pszOutput[nBytes] = '\0';
-	return SIR_EDITOR_SCALAR_OK;
+	return SIREditorScalarResult::SIR_EDITOR_SCALAR_OK;
 }

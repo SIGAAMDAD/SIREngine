@@ -12,8 +12,8 @@ express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIRPLATFORMNATIVEWINDOW_H__
-#define __SIRENGINE_SIRPLATFORMNATIVEWINDOW_H__
+#ifndef __SIR_PLATFORMNATIVEWINDOW_H__
+#define __SIR_PLATFORMNATIVEWINDOW_H__
 
 #include <Core/SIRPCH.h>
 
@@ -25,12 +25,11 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/Platform/Window/SIRWindowTypes.h>
 
-typedef enum sirLinuxDisplayKind_e : uint32_t
-{
+enum class SIRLinuxDisplayKind : uint32_t {
 	SIR_LINUX_DISPLAY_NONE = 0,
 	SIR_LINUX_DISPLAY_X11 = 1,
 	SIR_LINUX_DISPLAY_WAYLAND = 2
-} sirLinuxDisplayKind_t;
+};
 
 // Borrowed views, valid only while the SIRWindowSystem lease is held.
 // Neither structure may outlive that lease or close its native resources.
@@ -46,7 +45,7 @@ typedef struct sirLinuxNativeWindow_s
 	uintptr_t nDisplay;
 	uintptr_t nSurface;
 	uint64_t nWindowGeneration;
-	sirLinuxDisplayKind_t eDisplayType;
+	SIRLinuxDisplayKind eDisplayType;
 	uint32_t nReserved;
 } sirLinuxNativeWindow_t;
 
@@ -59,4 +58,4 @@ static_assert( sizeof( sirWindowsNativeWindow_t ) == 24, "Windows window view AB
 static_assert( sizeof( sirLinuxNativeWindow_t ) == 32, "Linux window view ABI" );
 static_assert( __is_trivially_copyable( sirLinuxNativeWindow_t ), "Native window view must be POD" );
 
-#endif // __SIRENGINE_SIRPLATFORMNATIVEWINDOW_H__
+#endif // __SIR_PLATFORMNATIVEWINDOW_H__

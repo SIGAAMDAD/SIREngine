@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRPAGEDARRAY_H__
-#define __SIRENGINE_SIRPAGEDARRAY_H__
+#ifndef __SIR_PAGEDARRAY_H__
+#define __SIR_PAGEDARRAY_H__
 
 #include <Core/SIRPCH.h>
 
@@ -59,24 +59,24 @@ public:
 	}
 	SIRReadOnlyVectorView<T> getPageView( uint32_t iPage ) const noexcept
 	{
-		if ( iPage >= m_pages.getSize() || ( uint64_t )iPage * PAGE_ELEMENTS >= m_nSize ) {
+		if ( iPage >= m_pages.getSize() || static_cast<uint64_t>(iPage) * PAGE_ELEMENTS >= m_nSize ) {
 			return {};
 		}
 		const uint32_t nRemaining = m_nSize - iPage * PAGE_ELEMENTS;
 		return { m_pages[iPage], nRemaining < PAGE_ELEMENTS ? nRemaining : PAGE_ELEMENTS };
 	}
-	sirContainerResult_t tryAppendRange( const T *pValues, uint32_t nCount )
+	SIRContainerResult tryAppendRange( const T *pValues, uint32_t nCount )
 	{
 		if ( nCount > UINT32_MAX - m_nSize || ( nCount != 0 && pValues == nullptr ) ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		for ( uint32_t i = 0; i < nCount; ++i ) {
-			const sirContainerResult_t eResult = tryEmplaceBack( pValues[i] );
-			if ( eResult != SIR_CONTAINER_OK ) {
+			const SIRContainerResult eResult = tryEmplaceBack( pValues[i] );
+			if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 				return eResult;
 			}
 		}
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 	uint32_t getPageCount( void ) const noexcept
 	{
@@ -93,28 +93,28 @@ public:
 	sirContainerFootprint_t getFootprint( void ) const noexcept
 	{
 		const sirContainerFootprint_t index = m_pages.getFootprint();
-		return { 0, index.nLiveDomainBytes + ( uint64_t )m_pages.getSize() * PAGE_ELEMENTS * sizeof( T ), 0, 0,
-		         ( uint64_t )m_nSize * sizeof( T ) };
+		return { 0, index.nLiveDomainBytes + static_cast<uint64_t>(m_pages.getSize() * PAGE_ELEMENTS * sizeof( T )), 0, 0,
+		         static_cast<uint64_t>(m_nSize * sizeof(  T  )) };
 	}
 
 	template <typename... Args>
-	sirContainerResult_t tryEmplaceBack( Args&&...args )
+	SIRContainerResult tryEmplaceBack( Args&&...args )
 	{
 		if ( m_nSize == UINT32_MAX ) {
-			return SIR_CONTAINER_SIZE_OVERFLOW;
+			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
 		if ( m_nSize / PAGE_ELEMENTS == m_pages.getSize() ) {
 			size_t nBytes = 0;
 			if ( !SIRRawStorage::checkedMultiply( PAGE_ELEMENTS, sizeof( T ), &nBytes ) ) {
-				return SIR_CONTAINER_SIZE_OVERFLOW;
+				return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 			}
 			void *pMemory = nullptr;
-			sirContainerResult_t eResult = SIRRawStorage::tryAllocate( m_pAllocator, nBytes, alignof( T ), &pMemory );
-			if ( eResult != SIR_CONTAINER_OK ) {
+			SIRContainerResult eResult = SIRRawStorage::tryAllocate( m_pAllocator, nBytes, alignof( T ), &pMemory );
+			if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 				return eResult;
 			}
-			eResult = m_pages.tryPushBack( ( T * )pMemory );
-			if ( eResult != SIR_CONTAINER_OK ) {
+			eResult = m_pages.tryPushBack( static_cast<T *>(pMemory) );
+			if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 				SIRRawStorage::deallocate( m_pAllocator, pMemory, nBytes, alignof( T ) );
 				return eResult;
 			}
@@ -122,7 +122,7 @@ public:
 		T *pSlot = m_pages[m_nSize / PAGE_ELEMENTS] + m_nSize % PAGE_ELEMENTS;
 		new ( pSlot ) T( std::forward<Args>( args )... );
 		++m_nSize;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
 	// Traverse one page at a time to avoid a directory lookup and index
@@ -155,24 +155,24 @@ public:
 		}
 	}
 
-	sirContainerResult_t tryPopBack( void ) noexcept
+	SIRContainerResult tryPopBack( void ) noexcept
 	{
 		if ( m_nSize == 0 ) {
-			return SIR_CONTAINER_EMPTY;
+			return SIRContainerResult::SIR_CONTAINER_EMPTY;
 		}
 		--m_nSize;
 		m_pages[m_nSize / PAGE_ELEMENTS][m_nSize % PAGE_ELEMENTS].~T();
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 	// Free empty tail pages without relocating any live elements.
 	// A failed directory shrink leaves an intact, smaller live page set.
-	sirContainerResult_t tryShrinkToFit( void )
+	SIRContainerResult tryShrinkToFit( void )
 	{
 		uint32_t nRequiredPages = m_nSize / PAGE_ELEMENTS;
 		if ( m_nSize % PAGE_ELEMENTS != 0 ) {
 			++nRequiredPages;
 		}
-		const size_t nPageBytes = ( size_t )PAGE_ELEMENTS * sizeof( T );
+		const size_t nPageBytes = static_cast<size_t>(PAGE_ELEMENTS * sizeof(  T  ));
 		while ( m_pages.getSize() > nRequiredPages ) {
 			uint32_t iLast = m_pages.getSize() - 1;
 			T *pUnused = m_pages[iLast];
@@ -192,7 +192,7 @@ public:
 	void clearAndRelease( void ) noexcept
 	{
 		clear();
-		const size_t nPageBytes = ( size_t )PAGE_ELEMENTS * sizeof( T );
+		const size_t nPageBytes = static_cast<size_t>(PAGE_ELEMENTS * sizeof(  T  ));
 		for ( uint32_t iPage = 0; iPage < m_pages.getSize(); ++iPage ) {
 			SIRRawStorage::deallocate( m_pAllocator, m_pages[iPage], nPageBytes, alignof( T ) );
 		}
@@ -200,4 +200,4 @@ public:
 	}
 };
 
-#endif // __SIRENGINE_SIRPAGEDARRAY_H__
+#endif // __SIR_PAGEDARRAY_H__

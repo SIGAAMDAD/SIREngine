@@ -14,8 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIREVENTSCHEDULER_H__
-#define __SIRENGINE_SIREVENTSCHEDULER_H__
+#ifndef __SIR_EVENTSCHEDULER_H__
+#define __SIR_EVENTSCHEDULER_H__
 
 #include <Core/SIRPCH.h>
 
@@ -30,13 +30,12 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <stdint.h>
 #include <type_traits>
 
-typedef enum sirEventTimerState_e : uint8_t
-{
+enum class SIREventTimerState : uint8_t {
 	SIR_EVENT_TIMER_FREE = 0,
 	SIR_EVENT_TIMER_QUEUED = 1,
 	SIR_EVENT_TIMER_INVOKING = 2,
 	SIR_EVENT_TIMER_CANCELLED = 3
-} sirEventTimerState_t;
+};
 
 template <typename TPayload>
 struct sirEventSchedulerSlot_s
@@ -50,7 +49,7 @@ struct sirEventSchedulerSlot_s
 	uint32_t nGeneration = 0;
 	uint32_t nHeapIndex = 0;
 	uint32_t nNextFree = 0;
-	sirEventTimerState_t nState = SIR_EVENT_TIMER_FREE;
+	SIREventTimerState nState = SIREventTimerState::SIR_EVENT_TIMER_FREE;
 };
 
 // Owner-thread min-heap, O(1) free-list allocation, O(log N) cancellation.
@@ -89,11 +88,11 @@ public:
 		slot.nDue = nNow + nDelay;
 		slot.nInterval = nInterval;
 		slot.nOrder = m_nSequence++;
-		slot.nState = SIR_EVENT_TIMER_QUEUED;
+		slot.nState = SIREventTimerState::SIR_EVENT_TIMER_QUEUED;
 		handle = { this, nIndex, slot.nGeneration };
 		if ( nDelay == 0 ) {
 			// Preserve NomadFramework's immediate, nonrecurring schedule semantics.
-			slot.nState = SIR_EVENT_TIMER_INVOKING;
+			slot.nState = SIREventTimerState::SIR_EVENT_TIMER_INVOKING;
 			slot.pCallback( slot.pContext, slot.payload );
 			release( nIndex );
 			return true;
@@ -108,11 +107,11 @@ public:
 			return false;
 		}
 		sirEventSchedulerSlot_s<TPayload>& slot = m_Slots[handle.nSlot];
-		if ( slot.nGeneration != handle.nGeneration || slot.nState == SIR_EVENT_TIMER_FREE || slot.nState == SIR_EVENT_TIMER_CANCELLED ) {
+		if ( slot.nGeneration != handle.nGeneration || slot.nState == SIREventTimerState::SIR_EVENT_TIMER_FREE || slot.nState == SIREventTimerState::SIR_EVENT_TIMER_CANCELLED ) {
 			return false;
 		}
-		if ( slot.nState == SIR_EVENT_TIMER_INVOKING ) {
-			slot.nState = SIR_EVENT_TIMER_CANCELLED;
+		if ( slot.nState == SIREventTimerState::SIR_EVENT_TIMER_INVOKING ) {
+			slot.nState = SIREventTimerState::SIR_EVENT_TIMER_CANCELLED;
 		} else {
 			heapRemove( slot.nHeapIndex );
 			release( handle.nSlot );
@@ -135,10 +134,10 @@ public:
 			}
 			heapRemove( 0 );
 			const uint64_t nPreviousDue = slot.nDue;
-			slot.nState = SIR_EVENT_TIMER_INVOKING;
+			slot.nState = SIREventTimerState::SIR_EVENT_TIMER_INVOKING;
 			slot.pCallback( slot.pContext, slot.payload );
 			++nDelivered;
-			if ( slot.nState == SIR_EVENT_TIMER_INVOKING && slot.nInterval != 0 && nPreviousDue < UINT64_MAX ) {
+			if ( slot.nState == SIREventTimerState::SIR_EVENT_TIMER_INVOKING && slot.nInterval != 0 && nPreviousDue < UINT64_MAX ) {
 				const uint64_t nInterval = slot.nInterval;
 				slot.nDue = nPreviousDue > UINT64_MAX - nInterval ? UINT64_MAX : nPreviousDue + nInterval;
 				if ( slot.nDue <= nNow ) {
@@ -148,7 +147,7 @@ public:
 					release( nIndex );
 				} else {
 					slot.nOrder = m_nSequence++;
-					slot.nState = SIR_EVENT_TIMER_QUEUED;
+					slot.nState = SIREventTimerState::SIR_EVENT_TIMER_QUEUED;
 					heapPush( nIndex );
 				}
 			} else {
@@ -163,19 +162,19 @@ public:
 	{
 		// Cannot reclaim an in-flight callback's slot until it returns.
 		for ( uint32_t i = 1; i <= Capacity; ++i ) {
-			if ( m_Slots[i].nState == SIR_EVENT_TIMER_QUEUED ) {
-				m_Slots[i].nState = SIR_EVENT_TIMER_FREE;
+			if ( m_Slots[i].nState == SIREventTimerState::SIR_EVENT_TIMER_QUEUED ) {
+				m_Slots[i].nState = SIREventTimerState::SIR_EVENT_TIMER_FREE;
 				if ( ++m_Slots[i].nGeneration == 0 ) {
 					++m_Slots[i].nGeneration;
 				}
-			} else if ( m_Slots[i].nState == SIR_EVENT_TIMER_INVOKING ) {
-				m_Slots[i].nState = SIR_EVENT_TIMER_CANCELLED;
+			} else if ( m_Slots[i].nState == SIREventTimerState::SIR_EVENT_TIMER_INVOKING ) {
+				m_Slots[i].nState = SIREventTimerState::SIR_EVENT_TIMER_CANCELLED;
 			}
 		}
 		m_Heap.clear();
 		m_nFreeHead = 0;
 		for ( uint32_t i = Capacity; i > 0; --i ) {
-			if ( m_Slots[i].nState == SIR_EVENT_TIMER_FREE ) {
+			if ( m_Slots[i].nState == SIREventTimerState::SIR_EVENT_TIMER_FREE ) {
 				m_Slots[i].nNextFree = m_nFreeHead;
 				m_nFreeHead = i;
 			}
@@ -233,16 +232,16 @@ private:
 	{
 		// Free-list admission guarantees that the bounded heap has space.
 		const uint32_t nPosition = m_Heap.getSize();
-		const sirContainerResult_t eResult = m_Heap.tryPushBack( nIndex );
-		assert( eResult == SIR_CONTAINER_OK );
-		( void )eResult;
+		const SIRContainerResult eResult = m_Heap.tryPushBack( nIndex );
+		assert( eResult == SIRContainerResult::SIR_CONTAINER_OK );
+		static_cast<void>(eResult);
 		m_Slots[nIndex].nHeapIndex = nPosition;
 		siftUp( nPosition );
 	}
 	void heapRemove( uint32_t nPosition ) noexcept
 	{
 		const uint32_t nLast = m_Heap[m_Heap.getSize() - 1];
-		( void )m_Heap.tryPopBack();
+		static_cast<void>(m_Heap.tryPopBack());
 		if ( nPosition != m_Heap.getSize() ) {
 			m_Heap[nPosition] = nLast;
 			m_Slots[nLast].nHeapIndex = nPosition;
@@ -256,7 +255,7 @@ private:
 	void release( uint32_t nIndex ) noexcept
 	{
 		sirEventSchedulerSlot_s<TPayload>& slot = m_Slots[nIndex];
-		slot.nState = SIR_EVENT_TIMER_FREE;
+		slot.nState = SIREventTimerState::SIR_EVENT_TIMER_FREE;
 		if ( ++slot.nGeneration == 0 ) {
 			++slot.nGeneration;
 		}
@@ -272,4 +271,4 @@ private:
 	bool m_bPumping;
 };
 
-#endif // __SIRENGINE_SIREVENTSCHEDULER_H__
+#endif // __SIR_EVENTSCHEDULER_H__

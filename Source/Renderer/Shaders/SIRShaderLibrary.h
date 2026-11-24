@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSHADERLIBRARY_H__
-#define __SIRENGINE_SIRSHADERLIBRARY_H__
+#ifndef __SIR_SHADERLIBRARY_H__
+#define __SIR_SHADERLIBRARY_H__
 
 #include <Core/SIRPCH.h>
 
@@ -37,7 +37,7 @@ typedef struct sirShaderLibraryContext_s
 
 typedef struct sirShaderResolveStageRequest_s
 {
-	sirShaderPass_t ePass;
+	SIRShaderPass ePass;
 	uint32_t nStageMask;
 	sirShaderPackageValidation_t validation;
 } sirShaderResolveStageRequest_t;
@@ -75,4 +75,4 @@ SIRResourceResult sirShaderPinResolvedStage( const sirShaderLibraryContext_t& co
                                              uint32_t nProviderId, sirShaderStagePins_t *pOut ) noexcept;
 SIRResourceResult sirShaderReleaseStagePins( const SIRResourceGraph& graph, sirShaderStagePins_t *pPins ) noexcept;
 
-#endif // __SIRENGINE_SIRSHADERLIBRARY_H__
+#endif // __SIR_SHADERLIBRARY_H__

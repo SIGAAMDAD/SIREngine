@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIREDITORSCENEDOCUMENT_H__
-#define __SIRENGINE_SIREDITORSCENEDOCUMENT_H__
+#ifndef __SIR_EDITORSCENEDOCUMENT_H__
+#define __SIR_EDITORSCENEDOCUMENT_H__
 
 #include <Core/SIRPCH.h>
 #include <Core/Objects/SIRObjectRegistry.h>
@@ -25,8 +25,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-typedef enum sirEditorResult_e : uint8_t
-{
+enum class SIREditorResult : uint8_t {
 	SIR_EDITOR_OK = 0,
 	SIR_EDITOR_INVALID_ARGUMENT = 1,
 	SIR_EDITOR_NOT_INITIALIZED = 2,
@@ -40,7 +39,7 @@ typedef enum sirEditorResult_e : uint8_t
 	SIR_EDITOR_NO_HISTORY = 10,
 	SIR_EDITOR_REVISION_EXHAUSTED = 11,
 	SIR_EDITOR_INVALID_PROPERTY = 12
-} sirEditorResult_t;
+};
 
 typedef struct sirEditorNode_s
 {
@@ -73,16 +72,15 @@ typedef struct sirEditorPropertyDelta_s
 	uint32_t iSlot;
 } sirEditorPropertyDelta_t;
 
-typedef enum sirEditorMutationType_e : uint8_t
-{
+enum class SIREditorMutationType : uint8_t {
 	SIR_EDITOR_MUTATION_UPSERT = 1,
 	SIR_EDITOR_MUTATION_REMOVE = 2
-} sirEditorMutationType_t;
+};
 
 typedef struct sirEditorMutation_s
 {
 	sirEditorNode_t node;
-	sirEditorMutationType_t eType;
+	SIREditorMutationType eType;
 } sirEditorMutation_t;
 
 typedef struct sirEditorDelta_s
@@ -146,23 +144,23 @@ public:
 	bool canUndo( void ) const noexcept;
 	bool canRedo( void ) const noexcept;
 
-	sirEditorResult_t initialize( const sirEditorDocumentStorage_t& storage ) noexcept;
+	SIREditorResult initialize( const sirEditorDocumentStorage_t& storage ) noexcept;
 	void shutdown( void ) noexcept;
-	sirEditorResult_t setPropertyRegistry( const SIRObjectRegistry *pRegistry ) noexcept;
-	sirEditorResult_t beginEdit( uint64_t nExpectedRevision ) noexcept;
-	sirEditorResult_t queueUpsert( const sirEditorNode_t& node ) noexcept;
-	sirEditorResult_t queueRemove( uint64_t nId ) noexcept;
-	sirEditorResult_t queueSetProperty( const sirEditorProperty_t& property ) noexcept;
-	sirEditorResult_t queueRemoveProperty( uint64_t nNodeId, uint32_t nPropertyId ) noexcept;
-	sirEditorResult_t commitEdit( void ) noexcept;
-	sirEditorResult_t cancelEdit( void ) noexcept;
-	sirEditorResult_t undo( void ) noexcept;
-	sirEditorResult_t redo( void ) noexcept;
-	sirEditorResult_t findNode( uint64_t nId, sirEditorNode_t *pOutNode ) const noexcept;
-	sirEditorResult_t findProperty( uint64_t nNodeId, uint32_t nPropertyId, sirPropertyValue_t *pOutValue ) const noexcept;
-	sirEditorResult_t copySnapshot( sirEditorNode_t *pOutNodes, uint32_t nCapacity, uint32_t *pOutCount,
+	SIREditorResult setPropertyRegistry( const SIRObjectRegistry *pRegistry ) noexcept;
+	SIREditorResult beginEdit( uint64_t nExpectedRevision ) noexcept;
+	SIREditorResult queueUpsert( const sirEditorNode_t& node ) noexcept;
+	SIREditorResult queueRemove( uint64_t nId ) noexcept;
+	SIREditorResult queueSetProperty( const sirEditorProperty_t& property ) noexcept;
+	SIREditorResult queueRemoveProperty( uint64_t nNodeId, uint32_t nPropertyId ) noexcept;
+	SIREditorResult commitEdit( void ) noexcept;
+	SIREditorResult cancelEdit( void ) noexcept;
+	SIREditorResult undo( void ) noexcept;
+	SIREditorResult redo( void ) noexcept;
+	SIREditorResult findNode( uint64_t nId, sirEditorNode_t *pOutNode ) const noexcept;
+	SIREditorResult findProperty( uint64_t nNodeId, uint32_t nPropertyId, sirPropertyValue_t *pOutValue ) const noexcept;
+	SIREditorResult copySnapshot( sirEditorNode_t *pOutNodes, uint32_t nCapacity, uint32_t *pOutCount,
 	                                uint64_t *pOutRevision ) const noexcept;
-	sirEditorResult_t copyPropertySnapshot( sirEditorProperty_t *pOut, uint32_t nCapacity, uint32_t *pOutCount ) const noexcept;
+	SIREditorResult copyPropertySnapshot( sirEditorProperty_t *pOut, uint32_t nCapacity, uint32_t *pOutCount ) const noexcept;
 
 protected:
 private:
@@ -181,12 +179,12 @@ private:
 
 	uint32_t findSlot( const sirEditorNode_t *pNodes, uint64_t nId ) const noexcept;
 	uint32_t findPropertySlot( const sirEditorProperty_t *pProperties, uint64_t nNodeId, uint32_t nPropertyId ) const noexcept;
-	sirEditorResult_t applyPending( uint32_t iMutation, sirEditorDelta_t *pDelta ) noexcept;
-	sirEditorResult_t applyPendingProperty( uint32_t iMutation ) noexcept;
-	sirEditorResult_t discardOrphanedProperties( void ) noexcept;
-	sirEditorResult_t buildValidatedIndex( const sirEditorNode_t *pNodes ) noexcept;
+	SIREditorResult applyPending( uint32_t iMutation, sirEditorDelta_t *pDelta ) noexcept;
+	SIREditorResult applyPendingProperty( uint32_t iMutation ) noexcept;
+	SIREditorResult discardOrphanedProperties( void ) noexcept;
+	SIREditorResult buildValidatedIndex( const sirEditorNode_t *pNodes ) noexcept;
 	uint32_t indexedSlot( uint64_t nId ) const noexcept;
-	sirEditorResult_t applyHistoryFrame( bool bUndo ) noexcept;
+	SIREditorResult applyHistoryFrame( bool bUndo ) noexcept;
 };
 
-#endif // __SIRENGINE_SIREDITORSCENEDOCUMENT_H__
+#endif // __SIR_EDITORSCENEDOCUMENT_H__

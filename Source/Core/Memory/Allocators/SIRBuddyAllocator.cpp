@@ -17,7 +17,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Memory/Allocators/SIRBuddyAllocator.h>
 #include <Core/Memory/SIRMemoryManager.h>
 #include <Core/Memory/SIRMemorySegment.h>
-#include <Core/Memory/SIRMemoryUtils.h>
+#include <Core/SIRMath.h>
 
 #include <cstring>
 #include <limits>
@@ -71,12 +71,12 @@ bool SIRBuddyAllocator::init( SIRMemorySegment *pSegment, uint64_t nMinimumBlock
 	}
 
 	uint8_t *pMetadata =
-	    ( ( uint8_t * )( pSegment->getManager()->allocateMetadata( nMetadataBytes, alignof( uint64_t ), pSegment->getDomain() ) ) );
+	    ( static_cast<uint8_t *>(  pSegment->getManager()->allocateMetadata( nMetadataBytes, alignof( uint64_t ), pSegment->getDomain() )  ) );
 	if ( pMetadata == nullptr ) {
 		return false;
 	}
 
-	const uint32_t nLeaves = ( ( uint32_t )( nCapacity / nMinimum ) );
+	const uint32_t nLeaves = static_cast<uint32_t>( nCapacity / nMinimum );
 	uint8_t nRootOrder = 0;
 	for ( uint32_t nRemaining = nLeaves; nRemaining > 1; nRemaining >>= 1 ) {
 		++nRootOrder;
@@ -85,16 +85,16 @@ bool SIRBuddyAllocator::init( SIRMemorySegment *pSegment, uint64_t nMinimumBlock
 	m_pSegment = pSegment;
 	m_pFreeOrders = pMetadata;
 #ifdef SIR_BUDDY_EXPERIMENT_PACKED_ORDERS
-	const uint64_t nFreeBytes = ( 10 * ( ( uint64_t )( nLeaves ) ) + 7 ) / 8;
+	const uint64_t nFreeBytes = ( 10 * static_cast<uint64_t>( nLeaves ) + 7 ) / 8;
 #else
-	const uint64_t nFreeBytes = 2 * ( ( uint64_t )( nLeaves ) );
+	const uint64_t nFreeBytes = 2 * static_cast<uint64_t>( nLeaves );
 #endif
 	m_pAllocatedOrders = pMetadata + nFreeBytes;
 	m_pCommitTree = m_pAllocatedOrders + nLeaves;
-	const uint64_t nTreeBytes = ( ( ( uint64_t )( nLeaves ) ) + 1 ) / 2;
-	const uintptr_t nBitsetStart = ( ( uintptr_t )( m_pCommitTree ) ) + nTreeBytes;
+	const uint64_t nTreeBytes = ( static_cast<uint64_t>( nLeaves ) + 1 ) / 2;
+	const uintptr_t nBitsetStart = reinterpret_cast<uintptr_t>(m_pCommitTree) + nTreeBytes;
 	const uintptr_t nAlignedBitset = SIR_ALIGN_UP( nBitsetStart, 8ull );
-	m_pCommittedLeafBits = ( ( uint64_t * )( nAlignedBitset ) );
+	m_pCommittedLeafBits = reinterpret_cast<uint64_t *>( nAlignedBitset );
 	m_nMinBlockBytes = nMinimum;
 	m_nLeafCount = nLeaves;
 	m_nRootOrder = nRootOrder;
@@ -103,7 +103,7 @@ bool SIRBuddyAllocator::init( SIRMemorySegment *pSegment, uint64_t nMinimumBlock
 	uint32_t nNodesAtLevel = 1;
 	for ( int32_t nOrder = nRootOrder; nOrder >= 0; --nOrder ) {
 		for ( uint32_t i = 0; i < nNodesAtLevel; ++i ) {
-			writeFreeOrder( nFirst + i, ( ( uint8_t )( nOrder ) ) );
+			writeFreeOrder( nFirst + i, static_cast<uint8_t>( nOrder ) );
 		}
 		nFirst += nNodesAtLevel;
 		nNodesAtLevel <<= 1;
@@ -149,8 +149,8 @@ void *SIRBuddyAllocator::alloc( uint64_t nBytes, uint64_t nAlignment )
 
 	// A single minimum-block allocation needs only one packed-bit read.
 	// Larger allocations consult the lazy two-bit commitment tree.
-	const uint32_t nFirstLeaf = ( ( uint32_t )( nOffset / m_nMinBlockBytes ) );
-	const uint32_t nLeafCount = ( ( uint32_t )( nBlockBytes / m_nMinBlockBytes ) );
+	const uint32_t nFirstLeaf = static_cast<uint32_t>( nOffset / m_nMinBlockBytes );
+	const uint32_t nLeafCount = static_cast<uint32_t>( nBlockBytes / m_nMinBlockBytes );
 	bool bWarm = false;
 	if ( nOrder <= 6 ) {
 		// Aligned buddy blocks of <=64 leaves never cross a bitmap word.
@@ -173,7 +173,7 @@ void *SIRBuddyAllocator::alloc( uint64_t nBytes, uint64_t nAlignment )
 	updateParent( nNode, nOrder );
 	m_nAllocatedBytes += nBlockBytes;
 	++m_nAllocationCount;
-	return ( ( uint8_t * )( m_pSegment->getBase() ) ) + nOffset;
+	return ( static_cast<uint8_t *>(  m_pSegment->getBase()  ) ) + nOffset;
 }
 
 uint64_t SIRBuddyAllocator::getUsableSize( const void *pMemory ) const
@@ -181,8 +181,8 @@ uint64_t SIRBuddyAllocator::getUsableSize( const void *pMemory ) const
 	if ( m_pSegment == nullptr || pMemory == nullptr ) {
 		return 0;
 	}
-	const uintptr_t nBase = ( ( uintptr_t )( m_pSegment->getBase() ) );
-	const uintptr_t nUser = ( ( uintptr_t )( pMemory ) );
+	const uintptr_t nBase = reinterpret_cast<uintptr_t>(m_pSegment->getBase());
+	const uintptr_t nUser = reinterpret_cast<uintptr_t>(pMemory);
 	if ( nUser < nBase || nUser - nBase >= m_pSegment->getReservedBytes() ) {
 		return 0;
 	}
@@ -190,7 +190,7 @@ uint64_t SIRBuddyAllocator::getUsableSize( const void *pMemory ) const
 	if ( ( nOffset % m_nMinBlockBytes ) != 0 ) {
 		return 0;
 	}
-	const uint32_t nIndex = ( ( uint32_t )( nOffset / m_nMinBlockBytes ) );
+	const uint32_t nIndex = static_cast<uint32_t>( nOffset / m_nMinBlockBytes );
 	const uint8_t nOrder = m_pAllocatedOrders[nIndex];
 	if ( nOrder > m_nRootOrder ) {
 		return 0;
@@ -205,8 +205,8 @@ bool SIRBuddyAllocator::free( void *pMemory )
 		return false;
 	}
 
-	const uintptr_t nBase = ( ( uintptr_t )( m_pSegment->getBase() ) );
-	const uintptr_t nAddress = ( ( uintptr_t )( pMemory ) );
+	const uintptr_t nBase = reinterpret_cast<uintptr_t>(m_pSegment->getBase());
+	const uintptr_t nAddress = reinterpret_cast<uintptr_t>(pMemory);
 	if ( nAddress < nBase || nAddress - nBase >= m_pSegment->getReservedBytes() ) {
 		return false;
 	}
@@ -216,7 +216,7 @@ bool SIRBuddyAllocator::free( void *pMemory )
 		return false;
 	}
 
-	const uint32_t nLeafIndex = ( ( uint32_t )( nOffset / m_nMinBlockBytes ) );
+	const uint32_t nLeafIndex = static_cast<uint32_t>( nOffset / m_nMinBlockBytes );
 	const uint8_t nOrder = m_pAllocatedOrders[nLeafIndex];
 	if ( nOrder == SIR_BUDDY_FULL || nOrder > m_nRootOrder ) {
 		return false;
@@ -228,7 +228,7 @@ bool SIRBuddyAllocator::free( void *pMemory )
 	}
 
 	const uint8_t nDepth = m_nRootOrder - nOrder;
-	const uint32_t nNode = ( 1u << nDepth ) + ( ( uint32_t )( nOffset / nBlockBytes ) );
+	const uint32_t nNode = ( 1u << nDepth ) + ( static_cast<uint32_t>( nOffset / nBlockBytes ) );
 	if ( readFreeOrder( nNode ) != SIR_BUDDY_FULL ) {
 		return false;
 	}
@@ -244,14 +244,14 @@ bool SIRBuddyAllocator::free( void *pMemory )
 uint8_t SIRBuddyAllocator::readFreeOrder( uint32_t nNode ) const
 {
 #ifdef SIR_BUDDY_EXPERIMENT_PACKED_ORDERS
-	const uint64_t nBit = ( ( uint64_t )( nNode ) ) * 5;
+	const uint64_t nBit = static_cast<uint64_t>( nNode ) * 5;
 	const uint64_t nByte = nBit >> 3;
-	const uint32_t nShift = ( ( uint32_t )( nBit & 7 ) );
+	const uint32_t nShift = static_cast<uint32_t>( nBit & 7 );
 	uint16_t nValue = m_pFreeOrders[nByte];
 	if ( nShift > 3 ) {
-		nValue |= ( ( uint16_t )( m_pFreeOrders[nByte + 1] ) ) << 8;
+		nValue |= ( static_cast<uint16_t>( m_pFreeOrders[nByte + 1] ) ) << 8;
 	}
-	const uint8_t nPacked = ( ( uint8_t )( ( nValue >> nShift ) & 31 ) );
+	const uint8_t nPacked = static_cast<uint8_t>(  ( nValue >> nShift ) & 31  );
 	return nPacked == 31 ? SIR_BUDDY_FULL : nPacked;
 #else
 	return m_pFreeOrders[nNode];
@@ -261,19 +261,19 @@ uint8_t SIRBuddyAllocator::readFreeOrder( uint32_t nNode ) const
 void SIRBuddyAllocator::writeFreeOrder( uint32_t nNode, uint8_t nOrder )
 {
 #ifdef SIR_BUDDY_EXPERIMENT_PACKED_ORDERS
-	const uint64_t nBit = ( ( uint64_t )( nNode ) ) * 5;
+	const uint64_t nBit = static_cast<uint64_t>( nNode ) * 5;
 	const uint64_t nByte = nBit >> 3;
-	const uint32_t nShift = ( ( uint32_t )( nBit & 7 ) );
-	const uint16_t nMask = ( ( uint16_t )( 31u << nShift ) );
-	const uint16_t nOrderBits = ( ( uint16_t )( ( nOrder == SIR_BUDDY_FULL ? 31u : nOrder ) << nShift ) );
+	const uint32_t nShift = static_cast<uint32_t>( nBit & 7 );
+	const uint16_t nMask = static_cast<uint16_t>( 31u << nShift );
+	const uint16_t nOrderBits = static_cast<uint16_t>(  ( nOrder == SIR_BUDDY_FULL ? 31u : nOrder ) << nShift  );
 	uint16_t nValue = m_pFreeOrders[nByte];
 	if ( nShift > 3 ) {
-		nValue |= ( ( uint16_t )( m_pFreeOrders[nByte + 1] ) ) << 8;
+		nValue |= ( static_cast<uint16_t>( m_pFreeOrders[nByte + 1] ) ) << 8;
 	}
-	nValue = ( ( uint16_t )( ( nValue & ~nMask ) | nOrderBits ) );
-	m_pFreeOrders[nByte] = ( ( uint8_t )( nValue ) );
+	nValue = static_cast<uint16_t>(  ( nValue & ~nMask ) | nOrderBits  );
+	m_pFreeOrders[nByte] = static_cast<uint8_t>( nValue );
 	if ( nShift > 3 ) {
-		m_pFreeOrders[nByte + 1] = ( ( uint8_t )( nValue >> 8 ) );
+		m_pFreeOrders[nByte + 1] = static_cast<uint8_t>( nValue >> 8 );
 	}
 #else
 	m_pFreeOrders[nNode] = nOrder;
@@ -310,15 +310,15 @@ void SIRBuddyAllocator::updateParent( uint32_t nNode, uint8_t nChildOrder )
 uint8_t SIRBuddyAllocator::readCommitState( uint32_t nNode ) const
 {
 	const uint32_t nBit = nNode * 2;
-	return ( ( uint8_t )( ( m_pCommitTree[nBit / 8] >> ( nBit % 8 ) ) & 3u ) );
+	return static_cast<uint8_t>(  ( m_pCommitTree[nBit / 8] >> ( nBit % 8 ) ) & 3u  );
 }
 
 void SIRBuddyAllocator::writeCommitState( uint32_t nNode, uint8_t nState )
 {
 	const uint32_t nBit = nNode * 2;
-	const uint8_t nMask = ( ( uint8_t )( 3u << ( nBit % 8 ) ) );
+	const uint8_t nMask = static_cast<uint8_t>(  3u << ( nBit % 8 )  );
 	uint8_t& nWord = m_pCommitTree[nBit / 8];
-	nWord = ( ( uint8_t )( ( nWord & ~nMask ) | ( nState << ( nBit % 8 ) ) ) );
+	nWord = static_cast<uint8_t>(  ( nWord & ~nMask ) | ( nState << ( nBit % 8 ) )  );
 }
 
 uint8_t SIRBuddyAllocator::effectiveCommitState( uint32_t nNode ) const
@@ -391,7 +391,7 @@ bool SIRBuddyAllocator::trimNode( uint32_t nNode, uint8_t nOrder, uint64_t nOffs
 			return false;
 		}
 		setCommitState( nNode, SIR_COMMIT_NONE );
-		setLeafCommitRange( ( ( uint32_t )( nOffset / m_nMinBlockBytes ) ), ( ( uint32_t )( nBlockBytes / m_nMinBlockBytes ) ), false );
+		setLeafCommitRange( ( static_cast<uint32_t>( nOffset / m_nMinBlockBytes ) ), ( static_cast<uint32_t>( nBlockBytes / m_nMinBlockBytes ) ), false );
 		return true;
 	}
 	if ( nOrder == 0 ) {

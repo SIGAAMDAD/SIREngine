@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRVIRTUALTEXTUREPACKAGE_H__
-#define __SIRENGINE_SIRVIRTUALTEXTUREPACKAGE_H__
+#ifndef __SIR_VIRTUALTEXTUREPACKAGE_H__
+#define __SIR_VIRTUALTEXTUREPACKAGE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -47,15 +47,14 @@ static constexpr uint32_t SIR_VT_PACK_FLAG_OUTER_COMPRESSION = 1U << 3;
 static constexpr uint32_t SIR_VT_PACK_FLAG_QUALITY_VIEWS = 1U << 4;
 static constexpr uint32_t SIR_VT_PACK_FLAG_FAMILY_MAP = 1U << 5;
 
-typedef enum sirVirtualTexturePhysicalFamily_e : uint32_t
-{
+enum class SIRVirtualTexturePhysicalFamily : uint32_t {
 	SIR_VT_PHYSICAL_BC1 = 0,
 	SIR_VT_PHYSICAL_BC7 = 1,
 	SIR_VT_PHYSICAL_BC5 = 2,
 	SIR_VT_PHYSICAL_R8 = 3,
 	SIR_VT_PHYSICAL_R16 = 4,
 	SIR_VT_PHYSICAL_COUNT = 5
-} sirVirtualTexturePhysicalFamily_t;
+};
 
 typedef struct sirVirtualTexturePackHeader_s
 {
@@ -210,8 +209,7 @@ typedef struct sirVirtualTexturePackSpan_s
 	uint64_t nFileOffset;
 } sirVirtualTexturePackSpan_t;
 
-typedef enum sirVirtualTexturePackDirectory_e : uint32_t
-{
+enum class SIRVirtualTexturePackDirectory : uint32_t {
 	SIR_VT_PACK_ALLOCATIONS = 0,
 	SIR_VT_PACK_ALLOCATION_KEYS,
 	SIR_VT_PACK_CHANNEL_ALLOCATIONS,
@@ -223,7 +221,7 @@ typedef enum sirVirtualTexturePackDirectory_e : uint32_t
 	SIR_VT_PACK_FAMILIES,
 	SIR_VT_PACK_PAYLOAD_DATA,
 	SIR_VT_PACK_DIRECTORY_COUNT
-} sirVirtualTexturePackDirectory_t;
+};
 
 typedef struct sirVirtualTexturePackInput_s
 {
@@ -236,7 +234,7 @@ typedef struct sirVirtualTexturePackInput_s
 typedef struct sirVirtualTexturePackView_s
 {
 	sirVirtualTexturePackHeader_t header;
-	sirVirtualTexturePackSpan_t szDirectories[SIR_VT_PACK_DIRECTORY_COUNT];
+	sirVirtualTexturePackSpan_t szDirectories[SIRVirtualTexturePackDirectory::SIR_VT_PACK_DIRECTORY_COUNT];
 	bool bMetadataOnly;
 } sirVirtualTexturePackView_t;
 
@@ -269,7 +267,7 @@ static_assert( sizeof( sirVirtualTexturePackFamilyRecord_t ) == 8, "Terrain3D V1
 
 uint64_t sirVTPackHash64( const void *pBytes, uint64_t nBytes ) noexcept;
 uint32_t sirVTPackChecksum32( const void *pBytes, uint64_t nBytes ) noexcept;
-uint32_t sirVTPackPhysicalTileBytes( sirVirtualTexturePhysicalFamily_t eFamily ) noexcept;
+uint32_t sirVTPackPhysicalTileBytes( SIRVirtualTexturePhysicalFamily eFamily ) noexcept;
 // Structural inspection only; per-record semantic validation is a separate port stage.
 // Borrowed views require the package bytes to remain alive; metadata-only views
 // expose only the directories, never a payload-data pointer.
@@ -277,4 +275,4 @@ bool sirVTPackOpenDirectories( const sirVirtualTexturePackInput_t& input, sirVir
 // Ported verbatim in behavior from terrain_3d_vt_compact_tail_layout.h.
 bool sirVTPlaceCompactTail( const sirVirtualTextureTailRequest_t& request, sirVirtualTextureTailPlacement_t *pPlacement ) noexcept;
 
-#endif // __SIRENGINE_SIRVIRTUALTEXTUREPACKAGE_H__
+#endif // __SIR_VIRTUALTEXTUREPACKAGE_H__

@@ -14,6 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Core/Platform/SIRSyncAdvanced.h>
+#include <atomic>
 #include <Core/Platform/SIRPlatformUtils.h>
 #include <Core/Platform/SIRScopedLock.h>
 #include <Core/Platform/SIRThread.h>
@@ -115,7 +116,7 @@ typedef struct sirMCSOrderTest_s
 {
 	SIRMCSLock *pLock;
 	sirMCSNode_t node;
-	SIRAtomic<uint32_t> *pNextOutput;
+	std::atomic<uint32_t> *pNextOutput;
 	uint32_t *pOutput;
 	uint32_t nIdentity;
 } sirMCSOrderTest_t;
@@ -124,7 +125,7 @@ static void orderedMCSWorker( void *pUserData )
 {
 	sirMCSOrderTest_t *pTest = ( sirMCSOrderTest_t * )pUserData;
 	pTest->pLock->lock( pTest->node );
-	const uint32_t iOutput = pTest->pNextOutput->fetchAdd( 1 );
+	const uint32_t iOutput = pTest->pNextOutput->fetch_add( 1 );
 	pTest->pOutput[iOutput] = pTest->nIdentity;
 	pTest->pLock->unlock( pTest->node );
 }
@@ -133,7 +134,7 @@ static void testMCSOrderedHandoff( void )
 {
 	SIRMCSLock lock;
 	sirMCSNode_t owner;
-	SIRAtomic<uint32_t> nextOutput( 0 );
+	std::atomic<uint32_t> nextOutput( 0 );
 	uint32_t output[2] = {};
 	sirMCSOrderTest_t first;
 	sirMCSOrderTest_t second;
@@ -151,11 +152,11 @@ static void testMCSOrderedHandoff( void )
 
 	lock.lock( owner );
 	SIR_TEST( firstThread.start( orderedMCSWorker, &first ) );
-	while ( owner.pNext.load( SIR_MEMORY_ORDER_ACQUIRE ) == nullptr ) {
+	while ( owner.pNext.load( std::memory_order_acquire ) == nullptr ) {
 		SIRPlatformUtils::yieldThread();
 	}
 	SIR_TEST( secondThread.start( orderedMCSWorker, &second ) );
-	while ( first.node.pNext.load( SIR_MEMORY_ORDER_ACQUIRE ) == nullptr ) {
+	while ( first.node.pNext.load( std::memory_order_acquire ) == nullptr ) {
 		SIRPlatformUtils::yieldThread();
 	}
 	lock.unlock( owner );
@@ -170,7 +171,7 @@ static void testMCSOrderedHandoff( void )
 typedef struct sirAdaptiveTest_s
 {
 	SIRAdaptiveMutex *pMutex;
-	SIRAtomic<uint32_t> *pStarted;
+	std::atomic<uint32_t> *pStarted;
 	uint32_t *pCount;
 	uint32_t nIterations;
 } sirAdaptiveTest_t;
@@ -178,7 +179,7 @@ typedef struct sirAdaptiveTest_s
 static void adaptiveWorker( void *pUserData )
 {
 	sirAdaptiveTest_t *pTest = ( sirAdaptiveTest_t * )pUserData;
-	pTest->pStarted->fetchAdd( 1, SIR_MEMORY_ORDER_RELEASE );
+	pTest->pStarted->fetch_add( 1, std::memory_order_release );
 
 	for ( uint32_t iIteration = 0; iIteration < pTest->nIterations; ++iIteration ) {
 		SIRScopedLock<SIRAdaptiveMutex> guard( *pTest->pMutex );
@@ -191,7 +192,7 @@ static void testAdaptiveMutex( void )
 	constexpr uint32_t N_THREADS = 6;
 	constexpr uint32_t N_ITERATIONS = 5000;
 	SIRAdaptiveMutex mutex;
-	SIRAtomic<uint32_t> started( 0 );
+	std::atomic<uint32_t> started( 0 );
 	SIRThread workers[N_THREADS];
 	uint32_t nCount = 0;
 	sirAdaptiveTest_t context = { &mutex, &started, &nCount, N_ITERATIONS };
@@ -201,7 +202,7 @@ static void testAdaptiveMutex( void )
 	for ( uint32_t iThread = 0; iThread < N_THREADS; ++iThread ) {
 		SIR_TEST( workers[iThread].start( adaptiveWorker, &context ) );
 	}
-	while ( started.load( SIR_MEMORY_ORDER_ACQUIRE ) != N_THREADS ) {
+	while ( started.load( std::memory_order_acquire ) != N_THREADS ) {
 		SIRPlatformUtils::yieldThread();
 	}
 	SIRPlatformUtils::sleepThread( 3 );
@@ -218,9 +219,9 @@ static void testAdaptiveMutex( void )
 typedef struct sirReadWriteTest_s
 {
 	SIRReadWriteMutex lock;
-	SIRAtomic<uint32_t> activeReaders;
-	SIRAtomic<uint32_t> activeWriters;
-	SIRAtomic<uint32_t> errors;
+	std::atomic<uint32_t> activeReaders;
+	std::atomic<uint32_t> activeWriters;
+	std::atomic<uint32_t> errors;
 	uint32_t nValue = 0;
 } sirReadWriteTest_t;
 
@@ -229,11 +230,11 @@ static void readerWorker( void *pUserData )
 	sirReadWriteTest_t *pTest = ( sirReadWriteTest_t * )pUserData;
 	for ( uint32_t iIteration = 0; iIteration < 4000; ++iIteration ) {
 		SIRReadScopedLock guard( pTest->lock );
-		pTest->activeReaders.fetchAdd( 1, SIR_MEMORY_ORDER_SEQUENTIAL );
+		pTest->activeReaders.fetch_add( 1, std::memory_order_seq_cst );
 		if ( pTest->activeWriters.load() != 0 || pTest->nValue > 8000 ) {
-			pTest->errors.fetchAdd( 1 );
+			pTest->errors.fetch_add( 1 );
 		}
-		pTest->activeReaders.fetchSub( 1, SIR_MEMORY_ORDER_SEQUENTIAL );
+		pTest->activeReaders.fetch_sub( 1, std::memory_order_seq_cst );
 	}
 }
 
@@ -242,12 +243,12 @@ static void writerWorker( void *pUserData )
 	sirReadWriteTest_t *pTest = ( sirReadWriteTest_t * )pUserData;
 	for ( uint32_t iIteration = 0; iIteration < 4000; ++iIteration ) {
 		SIRScopedLock<SIRReadWriteMutex> guard( pTest->lock );
-		pTest->activeWriters.fetchAdd( 1, SIR_MEMORY_ORDER_SEQUENTIAL );
+		pTest->activeWriters.fetch_add( 1, std::memory_order_seq_cst );
 		if ( pTest->activeReaders.load() != 0 || pTest->activeWriters.load() != 1 ) {
-			pTest->errors.fetchAdd( 1 );
+			pTest->errors.fetch_add( 1 );
 		}
 		++pTest->nValue;
-		pTest->activeWriters.fetchSub( 1, SIR_MEMORY_ORDER_SEQUENTIAL );
+		pTest->activeWriters.fetch_sub( 1, std::memory_order_seq_cst );
 	}
 }
 
@@ -289,16 +290,16 @@ static void testReadWriteMutex( void )
 typedef struct sirBlockedReaderTest_s
 {
 	SIRReadWriteMutex *pLock;
-	SIRAtomic<uint32_t> *pStarted;
-	SIRAtomic<uint32_t> *pCompleted;
+	std::atomic<uint32_t> *pStarted;
+	std::atomic<uint32_t> *pCompleted;
 } sirBlockedReaderTest_t;
 
 static void blockedReaderWorker( void *pUserData )
 {
 	sirBlockedReaderTest_t *pTest = ( sirBlockedReaderTest_t * )pUserData;
-	pTest->pStarted->fetchAdd( 1, SIR_MEMORY_ORDER_RELEASE );
+	pTest->pStarted->fetch_add( 1, std::memory_order_release );
 	pTest->pLock->lockRead();
-	pTest->pCompleted->fetchAdd( 1, SIR_MEMORY_ORDER_RELEASE );
+	pTest->pCompleted->fetch_add( 1, std::memory_order_release );
 	pTest->pLock->unlockRead();
 }
 
@@ -309,8 +310,8 @@ static void testReadWriteSleepingReaders( void )
 
 	for ( uint32_t iRound = 0; iRound < N_ROUNDS; ++iRound ) {
 		SIRReadWriteMutex lock;
-		SIRAtomic<uint32_t> started( 0 );
-		SIRAtomic<uint32_t> completed( 0 );
+		std::atomic<uint32_t> started( 0 );
+		std::atomic<uint32_t> completed( 0 );
 		SIRThread readers[N_READERS];
 		sirBlockedReaderTest_t test = { &lock, &started, &completed };
 
@@ -318,7 +319,7 @@ static void testReadWriteSleepingReaders( void )
 		for ( uint32_t iReader = 0; iReader < N_READERS; ++iReader ) {
 			SIR_TEST( readers[iReader].start( blockedReaderWorker, &test ) );
 		}
-		while ( started.load( SIR_MEMORY_ORDER_ACQUIRE ) != N_READERS ) {
+		while ( started.load( std::memory_order_acquire ) != N_READERS ) {
 			SIRPlatformUtils::yieldThread();
 		}
 		SIRPlatformUtils::sleepThread( 1 );
@@ -335,29 +336,29 @@ static void testReadWriteSleepingReaders( void )
 typedef struct sirWriterPreferenceTest_s
 {
 	SIRReadWriteMutex *pLock;
-	SIRAtomic<bool> *pStarted;
-	SIRAtomic<bool> *pAcquired;
+	std::atomic<bool> *pStarted;
+	std::atomic<bool> *pAcquired;
 } sirWriterPreferenceTest_t;
 
 static void writerPreferenceWorker( void *pUserData )
 {
 	sirWriterPreferenceTest_t *pTest = ( sirWriterPreferenceTest_t * )pUserData;
-	pTest->pStarted->store( true, SIR_MEMORY_ORDER_RELEASE );
+	pTest->pStarted->store( true, std::memory_order_release );
 	pTest->pLock->lock();
-	pTest->pAcquired->store( true, SIR_MEMORY_ORDER_RELEASE );
+	pTest->pAcquired->store( true, std::memory_order_release );
 	pTest->pLock->unlock();
 }
 
 static void testReadWriteWriterPreference( void )
 {
 	SIRReadWriteMutex lock;
-	SIRAtomic<bool> started( false );
-	SIRAtomic<bool> acquired( false );
+	std::atomic<bool> started( false );
+	std::atomic<bool> acquired( false );
 	SIRThread writer;
 	sirWriterPreferenceTest_t context = { &lock, &started, &acquired };
 	lock.lockRead();
 	SIR_TEST( writer.start( writerPreferenceWorker, &context ) );
-	while ( !started.load( SIR_MEMORY_ORDER_ACQUIRE ) ) {
+	while ( !started.load( std::memory_order_acquire ) ) {
 		SIRPlatformUtils::yieldThread();
 	}
 
@@ -377,15 +378,15 @@ static void testReadWriteWriterPreference( void )
 	lock.unlockRead();
 	SIR_TEST( writer.join() );
 	SIR_TEST( bRejected );
-	SIR_TEST( acquired.load( SIR_MEMORY_ORDER_ACQUIRE ) );
+	SIR_TEST( acquired.load( std::memory_order_acquire ) );
 }
 
 typedef struct sirReadMostlyTest_s
 {
 	SIRReadMostlyMutex lock;
-	SIRAtomic<uint32_t> activeReaders;
-	SIRAtomic<uint32_t> activeWriters;
-	SIRAtomic<uint32_t> errors;
+	std::atomic<uint32_t> activeReaders;
+	std::atomic<uint32_t> activeWriters;
+	std::atomic<uint32_t> errors;
 	uint32_t nValue = 0;
 } sirReadMostlyTest_t;
 
@@ -394,11 +395,11 @@ static void readMostlyReaderWorker( void *pUserData )
 	sirReadMostlyTest_t *pTest = ( sirReadMostlyTest_t * )pUserData;
 	for ( uint32_t iIteration = 0; iIteration < 5000; ++iIteration ) {
 		SIRReadMostlyScopedLock guard( pTest->lock );
-		pTest->activeReaders.fetchAdd( 1 );
+		pTest->activeReaders.fetch_add( 1 );
 		if ( pTest->activeWriters.load() != 0 || pTest->nValue > 10000 ) {
-			pTest->errors.fetchAdd( 1 );
+			pTest->errors.fetch_add( 1 );
 		}
-		pTest->activeReaders.fetchSub( 1 );
+		pTest->activeReaders.fetch_sub( 1 );
 	}
 }
 
@@ -407,12 +408,12 @@ static void readMostlyWriterWorker( void *pUserData )
 	sirReadMostlyTest_t *pTest = ( sirReadMostlyTest_t * )pUserData;
 	for ( uint32_t iIteration = 0; iIteration < 5000; ++iIteration ) {
 		SIRScopedLock<SIRReadMostlyMutex> guard( pTest->lock );
-		pTest->activeWriters.fetchAdd( 1 );
+		pTest->activeWriters.fetch_add( 1 );
 		if ( pTest->activeReaders.load() != 0 || pTest->activeWriters.load() != 1 ) {
-			pTest->errors.fetchAdd( 1 );
+			pTest->errors.fetch_add( 1 );
 		}
 		++pTest->nValue;
-		pTest->activeWriters.fetchSub( 1 );
+		pTest->activeWriters.fetch_sub( 1 );
 	}
 }
 
@@ -452,16 +453,16 @@ static void testReadMostlyMutex( void )
 typedef struct sirReadMostlyBlockTest_s
 {
 	SIRReadMostlyMutex *pLock;
-	SIRAtomic<uint32_t> *pStarted;
-	SIRAtomic<uint32_t> *pCompleted;
+	std::atomic<uint32_t> *pStarted;
+	std::atomic<uint32_t> *pCompleted;
 } sirReadMostlyBlockTest_t;
 
 static void readMostlyBlockedWorker( void *pUserData )
 {
 	sirReadMostlyBlockTest_t *pTest = ( sirReadMostlyBlockTest_t * )pUserData;
-	pTest->pStarted->fetchAdd( 1, SIR_MEMORY_ORDER_RELEASE );
+	pTest->pStarted->fetch_add( 1, std::memory_order_release );
 	pTest->pLock->lockRead();
-	pTest->pCompleted->fetchAdd( 1 );
+	pTest->pCompleted->fetch_add( 1 );
 	pTest->pLock->unlockRead();
 }
 
@@ -472,8 +473,8 @@ static void testReadMostlyBlockedWakeup( void )
 
 	for ( uint32_t iRound = 0; iRound < N_ROUNDS; ++iRound ) {
 		SIRReadMostlyMutex lock;
-		SIRAtomic<uint32_t> started( 0 );
-		SIRAtomic<uint32_t> completed( 0 );
+		std::atomic<uint32_t> started( 0 );
+		std::atomic<uint32_t> completed( 0 );
 		SIRThread readers[N_READERS];
 		sirReadMostlyBlockTest_t context = { &lock, &started, &completed };
 
@@ -481,7 +482,7 @@ static void testReadMostlyBlockedWakeup( void )
 		for ( uint32_t iReader = 0; iReader < N_READERS; ++iReader ) {
 			SIR_TEST( readers[iReader].start( readMostlyBlockedWorker, &context ) );
 		}
-		while ( started.load( SIR_MEMORY_ORDER_ACQUIRE ) != N_READERS ) {
+		while ( started.load( std::memory_order_acquire ) != N_READERS ) {
 			SIRPlatformUtils::yieldThread();
 		}
 		SIRPlatformUtils::sleepThread( 1 );
@@ -498,29 +499,29 @@ static void testReadMostlyBlockedWakeup( void )
 typedef struct sirReadMostlyWriterPreference_s
 {
 	SIRReadMostlyMutex *pLock;
-	SIRAtomic<bool> *pStarted;
-	SIRAtomic<bool> *pAcquired;
+	std::atomic<bool> *pStarted;
+	std::atomic<bool> *pAcquired;
 } sirReadMostlyWriterPreference_t;
 
 static void readMostlyPreferenceWorker( void *pUserData )
 {
 	sirReadMostlyWriterPreference_t *pTest = ( sirReadMostlyWriterPreference_t * )pUserData;
-	pTest->pStarted->store( true, SIR_MEMORY_ORDER_RELEASE );
+	pTest->pStarted->store( true, std::memory_order_release );
 	pTest->pLock->lock();
-	pTest->pAcquired->store( true, SIR_MEMORY_ORDER_RELEASE );
+	pTest->pAcquired->store( true, std::memory_order_release );
 	pTest->pLock->unlock();
 }
 
 static void testReadMostlyWriterPreference( void )
 {
 	SIRReadMostlyMutex lock;
-	SIRAtomic<bool> started( false );
-	SIRAtomic<bool> acquired( false );
+	std::atomic<bool> started( false );
+	std::atomic<bool> acquired( false );
 	SIRThread writer;
 	sirReadMostlyWriterPreference_t context = { &lock, &started, &acquired };
 	lock.lockRead();
 	SIR_TEST( writer.start( readMostlyPreferenceWorker, &context ) );
-	while ( !started.load( SIR_MEMORY_ORDER_ACQUIRE ) ) {
+	while ( !started.load( std::memory_order_acquire ) ) {
 		SIRPlatformUtils::yieldThread();
 	}
 
@@ -537,20 +538,20 @@ static void testReadMostlyWriterPreference( void )
 	lock.unlockRead();
 	SIR_TEST( writer.join() );
 	SIR_TEST( bRejected );
-	SIR_TEST( acquired.load( SIR_MEMORY_ORDER_ACQUIRE ) );
+	SIR_TEST( acquired.load( std::memory_order_acquire ) );
 }
 
 typedef struct sirEventTest_s
 {
 	SIRCountDownEvent *pEvent;
-	SIRAtomic<bool> *pStart;
-	SIRAtomic<uint32_t> *pAwakened;
+	std::atomic<bool> *pStart;
+	std::atomic<uint32_t> *pAwakened;
 } sirEventTest_t;
 
 static void eventProducer( void *pUserData )
 {
 	sirEventTest_t *pTest = ( sirEventTest_t * )pUserData;
-	while ( !pTest->pStart->load( SIR_MEMORY_ORDER_ACQUIRE ) ) {
+	while ( !pTest->pStart->load( std::memory_order_acquire ) ) {
 		SIRPlatformUtils::cpuRelax();
 	}
 	pTest->pEvent->countDown();
@@ -560,15 +561,15 @@ static void eventWaiter( void *pUserData )
 {
 	sirEventTest_t *pTest = ( sirEventTest_t * )pUserData;
 	pTest->pEvent->wait();
-	pTest->pAwakened->fetchAdd( 1 );
+	pTest->pAwakened->fetch_add( 1 );
 }
 
 static void testCountDownEvent( void )
 {
 	constexpr uint32_t N_PRODUCERS = 6;
 	SIRCountDownEvent event( N_PRODUCERS );
-	SIRAtomic<bool> start( false );
-	SIRAtomic<uint32_t> awakened( 0 );
+	std::atomic<bool> start( false );
+	std::atomic<uint32_t> awakened( 0 );
 	SIRThread producers[N_PRODUCERS];
 	SIRThread waiters[3];
 	sirEventTest_t context = { &event, &start, &awakened };
@@ -581,7 +582,7 @@ static void testCountDownEvent( void )
 		SIR_TEST( producers[iProducer].start( eventProducer, &context ) );
 	}
 	SIR_TEST( awakened.load() == 0 );
-	start.store( true, SIR_MEMORY_ORDER_RELEASE );
+	start.store( true, std::memory_order_release );
 	event.wait();
 	for ( uint32_t iProducer = 0; iProducer < N_PRODUCERS; ++iProducer ) {
 		SIR_TEST( producers[iProducer].join() );
@@ -604,7 +605,7 @@ typedef struct sirEventPublicationTest_s
 {
 	SIRCountDownEvent *pEvent;
 	uint32_t *pValues;
-	SIRAtomic<uint32_t> *pErrors;
+	std::atomic<uint32_t> *pErrors;
 	uint32_t iProducer;
 } sirEventPublicationTest_t;
 
@@ -620,11 +621,11 @@ static void eventPublicationWaiter( void *pUserData )
 	sirEventPublicationTest_t *pTest = ( sirEventPublicationTest_t * )pUserData;
 	pTest->pEvent->wait();
 	if ( !pTest->pEvent->isComplete() ) {
-		pTest->pErrors->fetchAdd( 1 );
+		pTest->pErrors->fetch_add( 1 );
 	}
 	for ( uint32_t iProducer = 0; iProducer < 4; ++iProducer ) {
 		if ( pTest->pValues[iProducer] != iProducer + 100 ) {
-			pTest->pErrors->fetchAdd( 1 );
+			pTest->pErrors->fetch_add( 1 );
 		}
 	}
 }
@@ -637,7 +638,7 @@ static void testCountDownEventPublication( void )
 
 	for ( uint32_t iRound = 0; iRound < N_ROUNDS; ++iRound ) {
 		SIRCountDownEvent event( N_PRODUCERS );
-		SIRAtomic<uint32_t> errors( 0 );
+		std::atomic<uint32_t> errors( 0 );
 		uint32_t values[N_PRODUCERS] = {};
 		SIRThread producers[N_PRODUCERS];
 		SIRThread waiters[N_WAITERS];
@@ -677,9 +678,9 @@ static void testCountDownEventPublication( void )
 typedef struct sirBarrierTest_s
 {
 	SIRBarrier *pBarrier;
-	SIRAtomic<uint32_t> *pCounts;
-	SIRAtomic<uint32_t> *pLeaders;
-	SIRAtomic<uint32_t> *pErrors;
+	std::atomic<uint32_t> *pCounts;
+	std::atomic<uint32_t> *pLeaders;
+	std::atomic<uint32_t> *pErrors;
 	uint32_t nThreads;
 	uint32_t nRounds;
 } sirBarrierTest_t;
@@ -688,15 +689,15 @@ static void barrierWorker( void *pUserData )
 {
 	sirBarrierTest_t *pTest = ( sirBarrierTest_t * )pUserData;
 	for ( uint32_t iRound = 0; iRound < pTest->nRounds; ++iRound ) {
-		pTest->pCounts[iRound].fetchAdd( 1, SIR_MEMORY_ORDER_SEQUENTIAL );
+		pTest->pCounts[iRound].fetch_add( 1, std::memory_order_seq_cst );
 		if ( pTest->pBarrier->arriveAndWait() ) {
-			pTest->pLeaders->fetchAdd( 1 );
+			pTest->pLeaders->fetch_add( 1 );
 		}
-		if ( pTest->pCounts[iRound].load( SIR_MEMORY_ORDER_ACQUIRE ) != pTest->nThreads ) {
-			pTest->pErrors->fetchAdd( 1 );
+		if ( pTest->pCounts[iRound].load( std::memory_order_acquire ) != pTest->nThreads ) {
+			pTest->pErrors->fetch_add( 1 );
 		}
 		if ( pTest->pBarrier->arriveAndWait() ) {
-			pTest->pLeaders->fetchAdd( 1 );
+			pTest->pLeaders->fetch_add( 1 );
 		}
 	}
 }
@@ -706,9 +707,9 @@ static void testBarrier( void )
 	constexpr uint32_t N_THREADS = 5;
 	constexpr uint32_t N_ROUNDS = 200;
 	SIRBarrier barrier( N_THREADS );
-	SIRAtomic<uint32_t> counts[N_ROUNDS];
-	SIRAtomic<uint32_t> leaders( 0 );
-	SIRAtomic<uint32_t> errors( 0 );
+	std::atomic<uint32_t> counts[N_ROUNDS];
+	std::atomic<uint32_t> leaders( 0 );
+	std::atomic<uint32_t> errors( 0 );
 	SIRThread workers[N_THREADS];
 	sirBarrierTest_t context = { &barrier, counts, &leaders, &errors, N_THREADS, N_ROUNDS };
 
@@ -767,9 +768,9 @@ static void testShortMetadataMutex( void )
 typedef struct sirSingleWriterTest_s
 {
 	SIRSingleWriterReadMostlyMutex *pMutex;
-	SIRAtomic<uint32_t> *pActiveReaders;
-	SIRAtomic<uint32_t> *pWriterActive;
-	SIRAtomic<uint32_t> *pErrors;
+	std::atomic<uint32_t> *pActiveReaders;
+	std::atomic<uint32_t> *pWriterActive;
+	std::atomic<uint32_t> *pErrors;
 	uint32_t nIterations;
 } sirSingleWriterTest_t;
 
@@ -778,12 +779,12 @@ static void singleWriterReadWorker( void *pUserData )
 	sirSingleWriterTest_t *pTest = ( sirSingleWriterTest_t * )pUserData;
 	for ( uint32_t iIteration = 0; iIteration < pTest->nIterations; ++iIteration ) {
 		pTest->pMutex->lockRead();
-		pTest->pActiveReaders->fetchAdd( 1, SIR_MEMORY_ORDER_SEQUENTIAL );
-		if ( pTest->pWriterActive->load( SIR_MEMORY_ORDER_SEQUENTIAL ) != 0 ) {
-			pTest->pErrors->fetchAdd( 1 );
+		pTest->pActiveReaders->fetch_add( 1, std::memory_order_seq_cst );
+		if ( pTest->pWriterActive->load( std::memory_order_seq_cst ) != 0 ) {
+			pTest->pErrors->fetch_add( 1 );
 		}
 		SIRPlatformUtils::cpuRelax();
-		pTest->pActiveReaders->fetchSub( 1, SIR_MEMORY_ORDER_SEQUENTIAL );
+		pTest->pActiveReaders->fetch_sub( 1, std::memory_order_seq_cst );
 		pTest->pMutex->unlockRead();
 	}
 }
@@ -793,12 +794,12 @@ static void singleWriterWriteWorker( void *pUserData )
 	sirSingleWriterTest_t *pTest = ( sirSingleWriterTest_t * )pUserData;
 	for ( uint32_t iIteration = 0; iIteration < pTest->nIterations; ++iIteration ) {
 		pTest->pMutex->lock();
-		pTest->pWriterActive->store( 1, SIR_MEMORY_ORDER_SEQUENTIAL );
-		if ( pTest->pActiveReaders->load( SIR_MEMORY_ORDER_SEQUENTIAL ) != 0 ) {
-			pTest->pErrors->fetchAdd( 1 );
+		pTest->pWriterActive->store( 1, std::memory_order_seq_cst );
+		if ( pTest->pActiveReaders->load( std::memory_order_seq_cst ) != 0 ) {
+			pTest->pErrors->fetch_add( 1 );
 		}
 		SIRPlatformUtils::cpuRelax();
-		pTest->pWriterActive->store( 0, SIR_MEMORY_ORDER_SEQUENTIAL );
+		pTest->pWriterActive->store( 0, std::memory_order_seq_cst );
 		pTest->pMutex->unlock();
 	}
 }
@@ -808,9 +809,9 @@ static void testSingleWriterReadMostlyMutex( void )
 	constexpr uint32_t N_READERS = 4;
 	constexpr uint32_t N_ROUNDS = 6000;
 	SIRSingleWriterReadMostlyMutex mutex;
-	SIRAtomic<uint32_t> nReaders( 0 );
-	SIRAtomic<uint32_t> nWriterActive( 0 );
-	SIRAtomic<uint32_t> nErrors( 0 );
+	std::atomic<uint32_t> nReaders( 0 );
+	std::atomic<uint32_t> nWriterActive( 0 );
+	std::atomic<uint32_t> nErrors( 0 );
 	sirSingleWriterTest_t context = { &mutex, &nReaders, &nWriterActive, &nErrors, N_ROUNDS };
 	SIRThread readers[N_READERS];
 	SIRThread writer;

@@ -12,8 +12,8 @@ express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIRWAYLANDINPUTBRIDGE_H__
-#define __SIRENGINE_SIRWAYLANDINPUTBRIDGE_H__
+#ifndef __SIR_WAYLANDINPUTBRIDGE_H__
+#define __SIR_WAYLANDINPUTBRIDGE_H__
 #include <Core/SIRPCH.h>
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -40,7 +40,7 @@ public:
 	SIRWaylandInputBridge( void ) noexcept = default;
 	~SIRWaylandInputBridge( void ) noexcept override;
 
-	sirInputBackendId_t id( void ) const noexcept override;
+	SIRInputBackendId id( void ) const noexcept override;
 	void sample( SIRInputService& service ) noexcept override;
 	void resynchronize( SIRInputService& service ) noexcept override;
 	bool vibrate( sirInputDeviceId_t hDevice, uint16_t nLeft, uint16_t nRight ) noexcept override;
@@ -52,8 +52,8 @@ public:
 	bool beginFrame( void ) noexcept;
 	bool isBound( void ) const noexcept;
 	void setTextEnabled( bool bEnabled ) noexcept;
-	bool setCursorMode( sirInputCursorMode_t eMode ) noexcept;
-	sirInputCursorMode_t cursorMode( void ) const noexcept;
+	bool setCursorMode( SIRInputCursorMode eMode ) noexcept;
+	SIRInputCursorMode cursorMode( void ) const noexcept;
 	void unbind( void ) noexcept;
 
 protected:
@@ -109,8 +109,8 @@ private:
 	xkb_context *m_pXkbContext = nullptr;
 	xkb_keymap *m_pKeymap = nullptr;
 	xkb_state *m_pKeyState = nullptr;
-	sirInputDeviceId_t m_hKeyboard = {};
-	sirInputDeviceId_t m_hPointer = {};
+	sirInputDeviceId_t m_hKeyboard {};
+	sirInputDeviceId_t m_hPointer {};
 	uint32_t m_nWindowCount = 0;
 	int32_t m_nLastX = 0;
 	int32_t m_nLastY = 0;
@@ -119,7 +119,7 @@ private:
 	int32_t m_nWheelRemainder[2] = {};
 	int32_t m_nRelativeRemainderX = 0;
 	int32_t m_nRelativeRemainderY = 0;
-	sirInputCursorMode_t m_eCursorMode = SIR_INPUT_CURSOR_FREE;
+	SIRInputCursorMode m_eCursorMode = SIRInputCursorMode::SIR_INPUT_CURSOR_FREE;
 	bool m_bPointerLocked = false;
 	bool m_bHavePointerPosition = false;
 	bool m_bKeyboardDevice = false;
@@ -128,4 +128,4 @@ private:
 	bool m_bKeyboardResyncPending = false;
 	bool m_bPointerResyncPending = false;
 };
-#endif // __SIRENGINE_SIRWAYLANDINPUTBRIDGE_H__
+#endif // __SIR_WAYLANDINPUTBRIDGE_H__

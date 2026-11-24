@@ -16,7 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/Memory/Allocators/SIRLinearAllocator.h>
 #include <Core/Memory/SIRMemorySegment.h>
-#include <Core/Memory/SIRMemoryUtils.h>
+#include <Core/SIRMath.h>
 
 #include <cstdint>
 #include <limits>
@@ -40,8 +40,8 @@ bool SIRLinearAllocator::init( SIRMemorySegment *pSegment, uint64_t nCommitIncre
 	}
 
 	uint64_t nIncrement = 0;
-	if ( !SIR_IS_POWER_OF_TWO( nPageSize ) || ( uint64_t )( nPageSize ) > UINTPTR_MAX ||
-	     ( uint64_t )( nCommitIncrementBytes != 0 ? nCommitIncrementBytes : nPageSize ) > UINTPTR_MAX - ( ( uint64_t )( nPageSize )-1 ) ) {
+	if ( !SIR_IS_POWER_OF_TWO( nPageSize ) || static_cast<uint64_t>( nPageSize ) > UINTPTR_MAX ||
+	     static_cast<uint64_t>( nCommitIncrementBytes != 0 ? nCommitIncrementBytes : nPageSize ) > UINTPTR_MAX - ( static_cast<uint64_t>( nPageSize )-1 ) ) {
 		return false;
 	}
 	nIncrement = SIR_ALIGN_UP( nCommitIncrementBytes != 0 ? nCommitIncrementBytes : nPageSize, nPageSize );
@@ -58,14 +58,14 @@ void *SIRLinearAllocator::alloc( uint64_t nBytes, uint64_t nAlignment )
 		return nullptr;
 	}
 
-	const uintptr_t nBase = ( ( uintptr_t )( m_pSegment->getBase() ) );
+	const uintptr_t nBase = reinterpret_cast<uintptr_t>(m_pSegment->getBase());
 	if ( m_nUsedBytes > ( std::numeric_limits<uintptr_t>::max )() - nBase ) {
 		return nullptr;
 	}
 
 	uint64_t nAlignedAddress = 0;
-	if ( !SIR_IS_POWER_OF_TWO( nAlignment ) || ( uint64_t )( nAlignment ) > UINTPTR_MAX ||
-	     ( uint64_t )( nBase + m_nUsedBytes ) > UINTPTR_MAX - ( ( uint64_t )( nAlignment )-1 ) ) {
+	if ( !SIR_IS_POWER_OF_TWO( nAlignment ) || static_cast<uint64_t>( nAlignment ) > UINTPTR_MAX ||
+	     static_cast<uint64_t>( nBase + m_nUsedBytes ) > UINTPTR_MAX - ( static_cast<uint64_t>( nAlignment )-1 ) ) {
 		return nullptr;
 	}
 	nAlignedAddress = SIR_ALIGN_UP( nBase + m_nUsedBytes, nAlignment );
@@ -84,7 +84,7 @@ void *SIRLinearAllocator::alloc( uint64_t nBytes, uint64_t nAlignment )
 	}
 
 	m_nUsedBytes = nNewUsed;
-	return ( ( void * )( ( ( uintptr_t )( nAlignedAddress ) ) ) );
+	return ( ( void * )static_cast<uintptr_t>( nAlignedAddress ) );
 }
 
 bool SIRLinearAllocator::precommit( uint64_t nBytes )
@@ -112,8 +112,8 @@ bool SIRLinearAllocator::precommit( uint64_t nBytes )
 		                                                             : nRoundValue + nPadding;
 	}
 	if ( nTarget > m_nCapacity ) {
-		if ( !SIR_IS_POWER_OF_TWO( m_pSegment->getPageSize() ) || ( uint64_t )( m_pSegment->getPageSize() ) > UINTPTR_MAX ||
-		     ( uint64_t )( nBytes ) > UINTPTR_MAX - ( ( uint64_t )( m_pSegment->getPageSize() ) - 1 ) ) {
+		if ( !SIR_IS_POWER_OF_TWO( m_pSegment->getPageSize() ) || static_cast<uint64_t>(  m_pSegment->getPageSize()  ) > UINTPTR_MAX ||
+		     static_cast<uint64_t>( nBytes ) > UINTPTR_MAX - ( ( uint64_t )( m_pSegment->getPageSize() ) - 1 ) ) {
 			return false;
 		}
 		nTarget = SIR_ALIGN_UP( nBytes, m_pSegment->getPageSize() );
@@ -194,8 +194,8 @@ bool SIRLinearAllocator::trimTo( uint64_t nKeepBytes )
 	}
 
 	uint64_t nKeepAligned = 0;
-	if ( !SIR_IS_POWER_OF_TWO( m_pSegment->getPageSize() ) || ( uint64_t )( m_pSegment->getPageSize() ) > UINTPTR_MAX ||
-	     ( uint64_t )( nKeepBytes ) > UINTPTR_MAX - ( ( uint64_t )( m_pSegment->getPageSize() ) - 1 ) ) {
+	if ( !SIR_IS_POWER_OF_TWO( m_pSegment->getPageSize() ) || static_cast<uint64_t>(  m_pSegment->getPageSize()  ) > UINTPTR_MAX ||
+	     static_cast<uint64_t>( nKeepBytes ) > UINTPTR_MAX - ( ( uint64_t )( m_pSegment->getPageSize() ) - 1 ) ) {
 		return false;
 	}
 	nKeepAligned = SIR_ALIGN_UP( nKeepBytes, m_pSegment->getPageSize() );

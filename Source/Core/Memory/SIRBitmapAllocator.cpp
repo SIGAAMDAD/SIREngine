@@ -18,7 +18,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Memory/SIRMemoryManager.h>
 #include <Core/Memory/SIRMemorySegment.h>
 
-#include <Core/Memory/SIRMemoryUtils.h>
+#include <Core/SIRMath.h>
 SIRBitmapAllocator::SIRBitmapAllocator( void )
     : m_pSegment( nullptr ), m_pBase( nullptr ), m_pLevels{}, m_nLevelWords{}, m_nCommittedBytes( 0 ), m_nCommitIncrementBytes( 0 ),
       m_nLevels( 0 ), m_nStride( 0 ), m_nCapacitySlots( 0 ), m_nActiveSlots( 0 ), m_nFreeSlots( 0 ), m_nLiveSlots( 0 ),
@@ -33,16 +33,16 @@ uint32_t SIRBitmapAllocator::findSetBit( uint64_t nWord )
 #if defined( _M_X64 )
 	_BitScanForward64( &nBit, nWord );
 #else
-	if ( ( ( uint32_t )( nWord ) ) != 0 ) {
-		_BitScanForward( &nBit, ( ( uint32_t )( nWord ) ) );
+	if ( static_cast<uint32_t>( nWord ) != 0 ) {
+		_BitScanForward( &nBit, static_cast<uint32_t>( nWord ) );
 	} else {
-		_BitScanForward( &nBit, ( ( uint32_t )( nWord >> 32 ) ) );
+		_BitScanForward( &nBit, ( static_cast<uint32_t>( nWord >> 32 ) ) );
 		nBit += 32;
 	}
 #endif
-	return ( ( uint32_t )( nBit ) );
+	return static_cast<uint32_t>( nBit );
 #else
-	return ( ( uint32_t )( __builtin_ctzll( nWord ) ) );
+	return static_cast<uint32_t>(  __builtin_ctzll( nWord )  );
 #endif
 }
 
@@ -53,16 +53,16 @@ uint32_t SIRBitmapAllocator::highestSetBit( uint64_t nWord )
 #if defined( _M_X64 )
 	_BitScanReverse64( &nBit, nWord );
 #else
-	if ( ( ( uint32_t )( nWord >> 32 ) ) != 0 ) {
-		_BitScanReverse( &nBit, ( ( uint32_t )( nWord >> 32 ) ) );
+	if ( ( static_cast<uint32_t>( nWord >> 32 ) ) != 0 ) {
+		_BitScanReverse( &nBit, ( static_cast<uint32_t>( nWord >> 32 ) ) );
 		nBit += 32;
 	} else {
-		_BitScanReverse( &nBit, ( ( uint32_t )( nWord ) ) );
+		_BitScanReverse( &nBit, static_cast<uint32_t>( nWord ) );
 	}
 #endif
-	return ( ( uint32_t )( nBit ) );
+	return static_cast<uint32_t>( nBit );
 #else
-	return 63u - ( ( uint32_t )( __builtin_clzll( nWord ) ) );
+	return 63u - ( static_cast<uint32_t>(  __builtin_clzll( nWord )  ) );
 #endif
 }
 
@@ -73,8 +73,8 @@ uint64_t SIRBitmapAllocator::getRequiredMetadataBytes( uint64_t nSegmentBytes, u
 	}
 	uint64_t nStride = 0;
 	const uint64_t nMinimum = nObjectBytes > nAlignment ? nObjectBytes : nAlignment;
-	if ( !SIR_IS_POWER_OF_TWO( nAlignment ) || ( uint64_t )( nAlignment ) > UINTPTR_MAX ||
-	     ( uint64_t )( nMinimum ) > UINTPTR_MAX - ( ( uint64_t )( nAlignment )-1 ) ) {
+	if ( !SIR_IS_POWER_OF_TWO( nAlignment ) || static_cast<uint64_t>( nAlignment ) > UINTPTR_MAX ||
+	     static_cast<uint64_t>( nMinimum ) > UINTPTR_MAX - ( static_cast<uint64_t>( nAlignment )-1 ) ) {
 		return 0;
 	}
 	nStride = SIR_ALIGN_UP( nMinimum, nAlignment );
@@ -100,8 +100,8 @@ bool SIRBitmapAllocator::init( SIRMemorySegment *pSegment, uint32_t nObjectBytes
 		return false;
 	}
 	uint64_t nStride = 0;
-	if ( !SIR_IS_POWER_OF_TWO( nAlignment ) || ( uint64_t )( nAlignment ) > UINTPTR_MAX ||
-	     ( uint64_t )( nObjectBytes > nAlignment ? nObjectBytes : nAlignment ) > UINTPTR_MAX - ( ( uint64_t )( nAlignment )-1 ) ) {
+	if ( !SIR_IS_POWER_OF_TWO( nAlignment ) || static_cast<uint64_t>( nAlignment ) > UINTPTR_MAX ||
+	     static_cast<uint64_t>( nObjectBytes > nAlignment ? nObjectBytes : nAlignment ) > UINTPTR_MAX - ( static_cast<uint64_t>( nAlignment )-1 ) ) {
 		return false;
 	}
 	nStride = SIR_ALIGN_UP( nObjectBytes > nAlignment ? nObjectBytes : nAlignment, nAlignment );
@@ -131,7 +131,8 @@ bool SIRBitmapAllocator::init( SIRMemorySegment *pSegment, uint32_t nObjectBytes
 	}
 	uint32_t nCount = 0;
 	uint64_t nWords = SIR_ROUND_UP_MULTIPLE( nSlots, 64ull ) / 64;
-	uint64_t nWordCounts[SIR_BITMAP_LEVELS] = {};
+	uint64_t nWordCounts[SIR_BITMAP_LEVELS];
+	memset( nWordCounts, 0, sizeof( nWordCounts ) );
 	do {
 		if ( nCount == SIR_BITMAP_LEVELS || nWords > UINT32_MAX ) {
 			return false;
@@ -146,20 +147,20 @@ bool SIRBitmapAllocator::init( SIRMemorySegment *pSegment, uint32_t nObjectBytes
 	}
 	uint64_t *pArrays[SIR_BITMAP_LEVELS] = {};
 	for ( uint32_t i = 0; i < nCount; ++i ) {
-		pArrays[i] = ( ( uint64_t * )( pManager->allocateMetadata( nWordCounts[i] * sizeof( uint64_t ), alignof( uint64_t ) ) ) );
+		pArrays[i] = static_cast<uint64_t *>(  pManager->allocateMetadata( nWordCounts[i] * sizeof( uint64_t ), alignof( uint64_t ) )  );
 		if ( pArrays[i] == nullptr ) {
 			return false;
 		}
 	}
 	m_pSegment = pSegment;
-	m_pBase = ( ( uint8_t * )( pSegment->getBase() ) );
+	m_pBase = static_cast<uint8_t *>(  pSegment->getBase()  );
 	for ( uint32_t i = 0; i < nCount; ++i ) {
 		m_pLevels[i] = pArrays[i];
-		m_nLevelWords[i] = ( ( uint32_t )( nWordCounts[i] ) );
+		m_nLevelWords[i] = static_cast<uint32_t>( nWordCounts[i] );
 	}
 	m_nLevels = nCount;
-	m_nStride = ( ( uint32_t )( nStride ) );
-	m_nCapacitySlots = ( ( uint32_t )( nSlots ) );
+	m_nStride = static_cast<uint32_t>( nStride );
+	m_nCapacitySlots = static_cast<uint32_t>( nSlots );
 	m_nCommitIncrementBytes = nRoundedIncrement;
 	return true;
 }
@@ -187,9 +188,9 @@ void SIRBitmapAllocator::changeFreeRange( uint32_t nBegin, uint32_t nEnd, bool b
 {
 	uint64_t nStart = nBegin;
 	while ( nStart < nEnd ) {
-		const uint32_t nWordIndex = ( ( uint32_t )( nStart >> 6 ) );
-		const uint32_t nBit = ( ( uint32_t )( nStart & 63 ) );
-		const uint32_t nCount = ( ( uint32_t )( ( nEnd - nStart ) < ( 64 - nBit ) ? ( nEnd - nStart ) : ( 64 - nBit ) ) );
+		const uint32_t nWordIndex = static_cast<uint32_t>( nStart >> 6 );
+		const uint32_t nBit = static_cast<uint32_t>( nStart & 63 );
+		const uint32_t nCount = static_cast<uint32_t>(  ( nEnd - nStart ) < ( 64 - nBit ) ? ( nEnd - nStart ) : ( 64 - nBit )  );
 		const uint64_t nMask = ( nCount == 64 ? UINT64_MAX : ( ( 1ull << nCount ) - 1 ) ) << nBit;
 		uint64_t& nWord = m_pLevels[0][nWordIndex];
 		const bool bWasEmpty = nWord == 0;
@@ -230,7 +231,7 @@ bool SIRBitmapAllocator::grow( uint32_t nMinimumSlots )
 	if ( m_pSegment == nullptr || nMinimumSlots > m_nCapacitySlots ) {
 		return false;
 	}
-	const uint64_t nTargetBytes = ( ( uint64_t )( nMinimumSlots ) ) * m_nStride;
+	const uint64_t nTargetBytes = static_cast<uint64_t>( nMinimumSlots ) * m_nStride;
 	uint64_t nCommitEnd = 0;
 	{
 		const uint64_t nRoundValue = nTargetBytes;
@@ -247,8 +248,8 @@ bool SIRBitmapAllocator::grow( uint32_t nMinimumSlots )
 		                                                                : nRoundValue + nPadding;
 	}
 	if ( nCommitEnd > m_pSegment->getReservedBytes() ) {
-		if ( !SIR_IS_POWER_OF_TWO( m_pSegment->getPageSize() ) || ( uint64_t )( m_pSegment->getPageSize() ) > UINTPTR_MAX ||
-		     ( uint64_t )( nTargetBytes ) > UINTPTR_MAX - ( ( uint64_t )( m_pSegment->getPageSize() ) - 1 ) ) {
+		if ( !SIR_IS_POWER_OF_TWO( m_pSegment->getPageSize() ) || static_cast<uint64_t>(  m_pSegment->getPageSize()  ) > UINTPTR_MAX ||
+		     static_cast<uint64_t>( nTargetBytes ) > UINTPTR_MAX - ( ( uint64_t )( m_pSegment->getPageSize() ) - 1 ) ) {
 			return false;
 		}
 		nCommitEnd = SIR_ALIGN_UP( nTargetBytes, m_pSegment->getPageSize() );
@@ -267,12 +268,12 @@ bool SIRBitmapAllocator::grow( uint32_t nMinimumSlots )
 		nActivated = m_nCapacitySlots;
 	}
 	const uint32_t nOldActive = m_nActiveSlots;
-	changeFreeRange( nOldActive, ( ( uint32_t )( nActivated ) ), true );
+	changeFreeRange( nOldActive, static_cast<uint32_t>( nActivated ), true );
 	if ( m_nHotWord == UINT32_MAX ) {
 		m_nHotWord = nOldActive >> 6;
 	}
-	m_nFreeSlots += ( ( uint32_t )( nActivated ) ) - nOldActive;
-	m_nActiveSlots = ( ( uint32_t )( nActivated ) );
+	m_nFreeSlots += static_cast<uint32_t>( nActivated ) - nOldActive;
+	m_nActiveSlots = static_cast<uint32_t>( nActivated );
 	m_nCommittedBytes = nCommitEnd;
 	return true;
 }
@@ -318,7 +319,7 @@ void *SIRBitmapAllocator::alloc( void )
 	}
 	--m_nFreeSlots;
 	++m_nLiveSlots;
-	return m_pBase + ( ( uint64_t )( nIndex ) ) * m_nStride;
+	return m_pBase + static_cast<uint64_t>( nIndex ) * m_nStride;
 }
 
 bool SIRBitmapAllocator::free( void *pMemory )
@@ -326,8 +327,8 @@ bool SIRBitmapAllocator::free( void *pMemory )
 	if ( m_pSegment == nullptr || pMemory == nullptr || m_nLiveSlots == 0 ) {
 		return false;
 	}
-	const uintptr_t nBase = ( ( uintptr_t )( m_pBase ) );
-	const uintptr_t nPtr = ( ( uintptr_t )( pMemory ) );
+	const uintptr_t nBase = reinterpret_cast<uintptr_t>(m_pBase);
+	const uintptr_t nPtr = reinterpret_cast<uintptr_t>(pMemory);
 	if ( nPtr < nBase ) {
 		return false;
 	}
@@ -335,7 +336,7 @@ bool SIRBitmapAllocator::free( void *pMemory )
 	if ( nDelta % m_nStride != 0 || nDelta / m_nStride >= m_nActiveSlots ) {
 		return false;
 	}
-	const uint32_t nIndex = ( ( uint32_t )( nDelta / m_nStride ) );
+	const uint32_t nIndex = static_cast<uint32_t>( nDelta / m_nStride );
 	if ( isFree( nIndex ) ) {
 		return false;
 	}
@@ -364,11 +365,11 @@ bool SIRBitmapAllocator::trimUnusedPages( void )
 		}
 	}
 	uint64_t nEnd = 0;
-	if ( !SIR_IS_POWER_OF_TWO( m_pSegment->getPageSize() ) || ( uint64_t )( m_pSegment->getPageSize() ) > UINTPTR_MAX ||
-	     ( uint64_t )( ( ( uint64_t )( nRequired ) ) * m_nStride ) > UINTPTR_MAX - ( ( uint64_t )( m_pSegment->getPageSize() ) - 1 ) ) {
+	if ( !SIR_IS_POWER_OF_TWO( m_pSegment->getPageSize() ) || static_cast<uint64_t>(  m_pSegment->getPageSize()  ) > UINTPTR_MAX ||
+	     ( uint64_t )( static_cast<uint64_t>( nRequired ) * m_nStride ) > UINTPTR_MAX - ( ( uint64_t )( m_pSegment->getPageSize() ) - 1 ) ) {
 		return false;
 	}
-	nEnd = SIR_ALIGN_UP( ( ( uint64_t )( nRequired ) ) * m_nStride, m_pSegment->getPageSize() );
+	nEnd = SIR_ALIGN_UP( static_cast<uint64_t>( nRequired ) * m_nStride, m_pSegment->getPageSize() );
 	if ( nEnd == m_nCommittedBytes ) {
 		return true;
 	}
@@ -379,9 +380,9 @@ bool SIRBitmapAllocator::trimUnusedPages( void )
 	if ( nNewActive > m_nCapacitySlots ) {
 		nNewActive = m_nCapacitySlots;
 	}
-	changeFreeRange( ( ( uint32_t )( nNewActive ) ), m_nActiveSlots, false );
-	m_nFreeSlots -= m_nActiveSlots - ( ( uint32_t )( nNewActive ) );
-	m_nActiveSlots = ( ( uint32_t )( nNewActive ) );
+	changeFreeRange( static_cast<uint32_t>( nNewActive ), m_nActiveSlots, false );
+	m_nFreeSlots -= m_nActiveSlots - static_cast<uint32_t>( nNewActive );
+	m_nActiveSlots = static_cast<uint32_t>( nNewActive );
 	if ( m_nHotWord != UINT32_MAX && ( m_nHotWord >= ( m_nActiveSlots + 63ull ) / 64 || m_pLevels[0][m_nHotWord] == 0 ) ) {
 		m_nHotWord = UINT32_MAX;
 	}

@@ -36,7 +36,7 @@ static bool workerReadExact( uint8_t *pData, uint32_t nBytes ) noexcept
 		if ( nRead == 0 ) {
 			return false;
 		}
-		nOffset += ( uint32_t )nRead;
+		nOffset += static_cast<uint32_t>(nRead);
 	}
 	return true;
 }
@@ -48,8 +48,8 @@ int main( int nArguments, char **pszArguments )
 		return 2;
 	}
 #if defined( _WIN32 )
-	( void )_setmode( _fileno( stdin ), _O_BINARY );
-	( void )_setmode( _fileno( stdout ), _O_BINARY );
+	static_cast<void>(_setmode)( _fileno( stdin ), _O_BINARY );
+	static_cast<void>(_setmode)( _fileno( stdout ), _O_BINARY );
 	HMODULE hLibrary = LoadLibraryA( pszArguments[3] );
 	const auto pGetAPI =
 	    ( sirScriptOptimizerGetBackendAPI_t )( hLibrary != nullptr ? GetProcAddress( hLibrary, SIR_SCRIPT_OPT_BACKEND_ENTRYPOINT )
@@ -57,7 +57,7 @@ int main( int nArguments, char **pszArguments )
 #else
 	void *hLibrary = dlopen( pszArguments[3], RTLD_NOW | RTLD_LOCAL );
 	const auto pGetAPI =
-	    ( sirScriptOptimizerGetBackendAPI_t )( hLibrary != nullptr ? dlsym( hLibrary, SIR_SCRIPT_OPT_BACKEND_ENTRYPOINT ) : nullptr );
+	    reinterpret_cast<sirScriptOptimizerGetBackendAPI_t>(  hLibrary != nullptr ? dlsym( hLibrary, SIR_SCRIPT_OPT_BACKEND_ENTRYPOINT ) : nullptr  );
 #endif
 	if ( pGetAPI == nullptr ) {
 		fprintf( stderr, "SIRScriptOptimizerWorker: compiler backend unavailable\n" );
@@ -70,28 +70,30 @@ int main( int nArguments, char **pszArguments )
 	SIRScriptOptimizerInputStore inputs;
 	SIRScriptArtifactCache cache;
 	SIRScriptOptimizerWorker worker;
-	if ( inputs.configure( pszArguments[1], 64 * 1024 * 1024, 65536 ) != SIR_SCRIPT_OK ||
-	     cache.configure( pszArguments[2], 64 * 1024 * 1024 ) != SIR_SCRIPT_OK ||
-	     worker.configure( &inputs, &cache, *pBackend, 64 * 1024 * 1024 ) != SIR_SCRIPT_OK ) {
+	if ( inputs.configure( pszArguments[1], 64 * 1024 * 1024, 65536 ) != SIRScriptResult::SIR_SCRIPT_OK ||
+	     cache.configure( pszArguments[2], 64 * 1024 * 1024 ) != SIRScriptResult::SIR_SCRIPT_OK ||
+	     worker.configure( &inputs, &cache, *pBackend, 64 * 1024 * 1024 ) != SIRScriptResult::SIR_SCRIPT_OK ) {
 		fprintf( stderr, "SIRScriptOptimizerWorker: invalid configuration\n" );
 		return 5;
 	}
 	setvbuf( stdout, nullptr, _IONBF, 0 );
 	for ( ;; ) {
-		uint8_t szWire[SIRScriptOptimizationProtocol::REQUEST_BYTES] = {};
+		uint8_t szWire[SIRScriptOptimizationProtocol::REQUEST_BYTES];
+		memset( szWire, 0, sizeof( szWire ) );
 		if ( !workerReadExact( szWire, sizeof( szWire ) ) ) {
 			return ferror( stdin ) ? 6 : 0;
 		}
-		sirScriptOptimizationRequest_t request = {};
-		if ( SIRScriptOptimizationProtocol::decodeRequest( szWire, sizeof( szWire ), &request ) != SIR_SCRIPT_OK ) {
+		sirScriptOptimizationRequest_t request {};
+		if ( SIRScriptOptimizationProtocol::decodeRequest( szWire, sizeof( szWire ), &request ) != SIRScriptResult::SIR_SCRIPT_OK ) {
 			return 7;
 		}
-		sirScriptOptimizationReply_t reply = {};
-		if ( worker.process( request, &reply ) != SIR_SCRIPT_OK ) {
+		sirScriptOptimizationReply_t reply {};
+		if ( worker.process( request, &reply ) != SIRScriptResult::SIR_SCRIPT_OK ) {
 			return 8;
 		}
-		uint8_t szReply[SIRScriptOptimizationProtocol::REPLY_BYTES] = {};
-		if ( SIRScriptOptimizationProtocol::encodeReply( reply, szReply ) != SIR_SCRIPT_OK ||
+		uint8_t szReply[SIRScriptOptimizationProtocol::REPLY_BYTES];
+		memset( szReply, 0, sizeof( szReply ) );
+		if ( SIRScriptOptimizationProtocol::encodeReply( reply, szReply ) != SIRScriptResult::SIR_SCRIPT_OK ||
 		     fwrite( szReply, 1, sizeof( szReply ), stdout ) != sizeof( szReply ) ) {
 			return 9;
 		}

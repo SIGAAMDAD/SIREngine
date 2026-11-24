@@ -13,10 +13,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRRENDERCOMMANDLIST_H__
-#define __SIRENGINE_SIRRENDERCOMMANDLIST_H__
+#ifndef __SIR_RENDER_COMMAND_LIST_H__
+#define __SIR_RENDER_COMMAND_LIST_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -28,6 +28,12 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 // Canonical command recorder remains SIRGraphicsCommandList. Avoid adding a
 // second virtual command recording hierarchy.
-using SIRRenderCommandList = SIRGraphicsCommandList;
+class SIRRenderCommandList
+{
+public:
+	constexpr explicit SIRRenderCommandList( void ) noexcept;
 
-#endif // __SIRENGINE_SIRRENDERCOMMANDLIST_H__
+protected:
+};
+
+#endif // __SIR_RENDER_COMMAND_LIST_H__

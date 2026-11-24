@@ -12,8 +12,8 @@ express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIRMESHPACKSCHEMA_H__
-#define __SIRENGINE_SIRMESHPACKSCHEMA_H__
+#ifndef __SIR_MESHPACKSCHEMA_H__
+#define __SIR_MESHPACKSCHEMA_H__
 
 #include <Core/SIRPCH.h>
 
@@ -44,8 +44,7 @@ static constexpr uint64_t SIR_MESH_PACK_CLUSTER_BYTES = 48;
 static constexpr uint64_t SIR_MESH_PACK_PAGE_BYTES = 48;
 static constexpr uint64_t SIR_MESH_PACK_COLLISION_BYTES = 48;
 
-typedef enum sirMeshPackResult_e : uint8_t
-{
+enum class SIRMeshPackResult : uint8_t {
 	SIR_MESH_PACK_OK = 0,
 	SIR_MESH_PACK_INVALID_ARGUMENT,
 	SIR_MESH_PACK_UNSUPPORTED_VERSION,
@@ -53,7 +52,7 @@ typedef enum sirMeshPackResult_e : uint8_t
 	SIR_MESH_PACK_INVALID_FORMAT,
 	SIR_MESH_PACK_BAD_DIGEST,
 	SIR_MESH_PACK_OUT_OF_CAPACITY
-} sirMeshPackResult_t;
+};
 
 typedef struct sirMeshPackGroup_s
 {
@@ -145,20 +144,20 @@ public:
 	uint32_t getPageCount( void ) const noexcept;
 
 	static uint64_t requiredBytes( const sirMeshPackDesc_t& desc ) noexcept;
-	static sirMeshPackResult_t write( const sirMeshPackDesc_t& desc, uint8_t *pBytes, uint64_t nCapacity ) noexcept;
-	sirMeshPackResult_t open( const void *pBytes, uint64_t nBytes ) noexcept;
+	static SIRMeshPackResult write( const sirMeshPackDesc_t& desc, uint8_t *pBytes, uint64_t nCapacity ) noexcept;
+	SIRMeshPackResult open( const void *pBytes, uint64_t nBytes ) noexcept;
 	void reset( void ) noexcept;
-	sirMeshPackResult_t groupAt( uint32_t iGroup, sirMeshPackGroup_t *pGroup ) const noexcept;
-	sirMeshPackResult_t clusterAt( uint32_t iCluster, sirMeshPackCluster_t *pCluster ) const noexcept;
-	sirMeshPackResult_t pageAt( uint32_t iPage, sirMeshPackPage_t *pPage ) const noexcept;
-	sirMeshPackResult_t collisionAt( uint32_t iCollision, sirMeshPackCollision_t *pCollision ) const noexcept;
+	SIRMeshPackResult groupAt( uint32_t iGroup, sirMeshPackGroup_t *pGroup ) const noexcept;
+	SIRMeshPackResult clusterAt( uint32_t iCluster, sirMeshPackCluster_t *pCluster ) const noexcept;
+	SIRMeshPackResult pageAt( uint32_t iPage, sirMeshPackPage_t *pPage ) const noexcept;
+	SIRMeshPackResult collisionAt( uint32_t iCollision, sirMeshPackCollision_t *pCollision ) const noexcept;
 	// Bind an opened immutable manifest to its canonical SIRPack resource
 	// and check each logical chunk without allocating or publishing state.
-	sirMeshPackResult_t validateResource( const sirPackResource_t& resource ) const noexcept;
-	sirMeshPackResult_t validateChunk( uint32_t iLogicalChunk, const sirPackChunk_t& chunk ) const noexcept;
-	sirMeshPackResult_t verifyPage( uint32_t iPage, const void *pBytes, uint64_t nBytes ) const noexcept;
-	sirMeshPackResult_t verifyCollision( uint32_t iCollision, const void *pBytes, uint64_t nBytes ) const noexcept;
-	sirMeshPackResult_t decodeVertex( const sirMeshPackVertexQuery_t& query, sirMeshPackVertex_t *pVertex ) const noexcept;
+	SIRMeshPackResult validateResource( const sirPackResource_t& resource ) const noexcept;
+	SIRMeshPackResult validateChunk( uint32_t iLogicalChunk, const sirPackChunk_t& chunk ) const noexcept;
+	SIRMeshPackResult verifyPage( uint32_t iPage, const void *pBytes, uint64_t nBytes ) const noexcept;
+	SIRMeshPackResult verifyCollision( uint32_t iCollision, const void *pBytes, uint64_t nBytes ) const noexcept;
+	SIRMeshPackResult decodeVertex( const sirMeshPackVertexQuery_t& query, sirMeshPackVertex_t *pVertex ) const noexcept;
 
 protected:
 private:
@@ -171,4 +170,4 @@ private:
 	uint32_t m_nCollisions;
 };
 
-#endif // __SIRENGINE_SIRMESHPACKSCHEMA_H__
+#endif // __SIR_MESHPACKSCHEMA_H__

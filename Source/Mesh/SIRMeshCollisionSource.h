@@ -12,8 +12,8 @@ express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIRMESHCOLLISIONSOURCE_H__
-#define __SIRENGINE_SIRMESHCOLLISIONSOURCE_H__
+#ifndef __SIR_MESHCOLLISIONSOURCE_H__
+#define __SIR_MESHCOLLISIONSOURCE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -74,17 +74,17 @@ public:
 	uint32_t getTriangleCount( void ) const noexcept;
 	const sirMeshKey_t& getSourceKey( void ) const noexcept;
 
-	sirMeshResult_t initialize( SIRMeshCache& cache, sirMeshHandle_t handle, const sirMeshCollisionProfile_t& profile ) noexcept;
-	sirMeshResult_t acquireInstance( void ) noexcept;
-	sirMeshResult_t releaseInstance( void ) noexcept;
-	sirMeshResult_t getTriangle( uint32_t nTriangle, sirMeshCollisionTriangle_t *pOut ) const noexcept;
-	sirMeshResult_t raycast( const sirMeshCollisionRay_t& ray, sirMeshCollisionHit_t *pHit ) const noexcept;
-	sirMeshResult_t raycastTriangle( const sirMeshCollisionRay_t& ray, uint32_t nTriangle, sirMeshCollisionHit_t *pHit ) const noexcept;
-	sirMeshResult_t shutdown( void ) noexcept;
+	SIRMeshResult initialize( SIRMeshCache& cache, sirMeshHandle_t handle, const sirMeshCollisionProfile_t& profile ) noexcept;
+	SIRMeshResult acquireInstance( void ) noexcept;
+	SIRMeshResult releaseInstance( void ) noexcept;
+	SIRMeshResult getTriangle( uint32_t nTriangle, sirMeshCollisionTriangle_t *pOut ) const noexcept;
+	SIRMeshResult raycast( const sirMeshCollisionRay_t& ray, sirMeshCollisionHit_t *pHit ) const noexcept;
+	SIRMeshResult raycastTriangle( const sirMeshCollisionRay_t& ray, uint32_t nTriangle, sirMeshCollisionHit_t *pHit ) const noexcept;
+	SIRMeshResult shutdown( void ) noexcept;
 
 protected:
 private:
-	sirMeshResult_t raycastRange( const sirMeshCollisionRay_t& ray, uint32_t nStart, uint32_t nCount,
+	SIRMeshResult raycastRange( const sirMeshCollisionRay_t& ray, uint32_t nStart, uint32_t nCount,
 	                              sirMeshCollisionHit_t *pHit ) const noexcept;
 
 	SIRMeshCache *m_pCache;
@@ -95,4 +95,4 @@ private:
 	bool m_bReady;
 };
 
-#endif // __SIRENGINE_SIRMESHCOLLISIONSOURCE_H__
+#endif // __SIR_MESHCOLLISIONSOURCE_H__

@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRGLFRAMEBUFFERS_H__
-#define __SIRENGINE_SIRGLFRAMEBUFFERS_H__
+#ifndef __SIR_GLFRAMEBUFFERS_H__
+#define __SIR_GLFRAMEBUFFERS_H__
 
 #include <Core/SIRPCH.h>
 
@@ -44,14 +44,14 @@ typedef struct sirGLFramebufferDesc_s
 	uint32_t nColorMip;
 	uint32_t nDepthName;
 	uint32_t nDepthMip;
-	sirGraphicsFormat_t eColorFormat;
-	sirGraphicsFormat_t eDepthFormat;
+	SIRGraphicsFormat eColorFormat;
+	SIRGraphicsFormat eDepthFormat;
 } sirGLFramebufferDesc_t;
 
-sirGraphicsResult_t sirGLLoadFramebufferDispatch( sirGLProcedureLookup_t pLookup, void *pContext,
+SIRGraphicsResult sirGLLoadFramebufferDispatch( sirGLProcedureLookup_t pLookup, void *pContext,
                                                   sirGLFramebufferDispatch_t *pAPI ) noexcept;
-sirGraphicsResult_t sirGLCreateNativeFramebuffer( const sirGLFramebufferDispatch_t *pAPI, const sirGLFramebufferDesc_t *pDesc,
+SIRGraphicsResult sirGLCreateNativeFramebuffer( const sirGLFramebufferDispatch_t *pAPI, const sirGLFramebufferDesc_t *pDesc,
                                                   uint32_t *pName ) noexcept;
-sirGraphicsResult_t sirGLDeleteNativeFramebuffer( const sirGLFramebufferDispatch_t *pAPI, uint32_t nName ) noexcept;
+SIRGraphicsResult sirGLDeleteNativeFramebuffer( const sirGLFramebufferDispatch_t *pAPI, uint32_t nName ) noexcept;
 
-#endif // __SIRENGINE_SIRGLFRAMEBUFFERS_H__
+#endif // __SIR_GLFRAMEBUFFERS_H__

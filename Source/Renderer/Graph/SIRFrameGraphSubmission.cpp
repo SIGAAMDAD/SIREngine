@@ -15,37 +15,38 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Renderer/Graph/SIRFrameGraphSubmission.h>
 
-sirGraphicsResult_t SIRFrameGraph::buildSubmissionPlan( const sirFrameGraphCompiled_t& compiled,
+SIRGraphicsResult SIRFrameGraph::buildSubmissionPlan( const sirFrameGraphCompiled_t& compiled,
 														sirFrameGraphSubmissionPlan_t *pPlan ) const noexcept
 {
 	if ( pPlan == nullptr ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	memset( pPlan, 0, sizeof( *pPlan ) );
 	if ( compiled.pOwner != this || compiled.nOwnerIdentity != m_nIdentity || compiled.nRevision != m_nRevision ||
 		 compiled.nOriginalPassCount != m_nPassCount || compiled.nPassCount > m_nPassCount ||
 		 compiled.nTransitionCount > SIR_FRAMEGRAPH_MAX_TRANSITIONS || compiled.nDependencyCount > SIR_FRAMEGRAPH_MAX_DEPENDENCIES ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 
-	uint32_t szOrder[SIR_FRAMEGRAPH_MAX_PASSES] = {};
+	uint32_t szOrder[SIR_FRAMEGRAPH_MAX_PASSES];
+	memset( szOrder, 0, sizeof( szOrder ) );
 	for ( uint32_t iPass = 0; iPass < m_nPassCount; ++iPass ) {
 		szOrder[iPass] = SIR_FRAMEGRAPH_INVALID_INDEX;
 	}
 	for ( uint32_t iOrder = 0; iOrder < compiled.nPassCount; ++iOrder ) {
 		const uint32_t iPass = compiled.szPassOrder[iOrder];
 		if ( iPass >= m_nPassCount || !compiled.szLivePasses[iPass] || szOrder[iPass] != SIR_FRAMEGRAPH_INVALID_INDEX ) {
-			return SIR_GRAPHICS_INVALID_ARGUMENT;
+			return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
 		szOrder[iPass] = iOrder;
 	}
 	for ( uint32_t iPass = 0; iPass < m_nPassCount; ++iPass ) {
 		if ( ( szOrder[iPass] != SIR_FRAMEGRAPH_INVALID_INDEX ) != ( compiled.szLivePasses[iPass] != 0 ) ) {
-			return SIR_GRAPHICS_INVALID_ARGUMENT;
+			return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
 	}
 
-	sirFrameGraphSubmissionPlan_t staged = {};
+	sirFrameGraphSubmissionPlan_t staged {};
 	staged.nPassCount = compiled.nPassCount;
 	for ( uint32_t iOrder = 0; iOrder < compiled.nPassCount; ++iOrder ) {
 		const uint32_t iPass = compiled.szPassOrder[iOrder];
@@ -63,7 +64,7 @@ sirGraphicsResult_t SIRFrameGraph::buildSubmissionPlan( const sirFrameGraphCompi
 				   ( transition.nBeforePass >= m_nPassCount || szOrder[transition.nBeforePass] == SIR_FRAMEGRAPH_INVALID_INDEX ||
 					 szOrder[transition.nBeforePass] >= szOrder[transition.nAfterPass] ||
 					 transition.eFromQueue != m_szPasses[transition.nBeforePass].eQueue ) ) ) {
-				return SIR_GRAPHICS_INVALID_ARGUMENT;
+				return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 			}
 			if ( transition.nAfterPass == iPass ) {
 				staged.szBarrierIndices[staged.nBarrierCount++] = iTransition;
@@ -77,7 +78,7 @@ sirGraphicsResult_t SIRFrameGraph::buildSubmissionPlan( const sirFrameGraphCompi
 				 szOrder[dependency.nAfterPass] == SIR_FRAMEGRAPH_INVALID_INDEX ||
 				 szOrder[dependency.nBeforePass] >= szOrder[dependency.nAfterPass] ||
 				 dependency.bCrossQueue != ( m_szPasses[dependency.nBeforePass].eQueue != m_szPasses[dependency.nAfterPass].eQueue ) ) {
-				return SIR_GRAPHICS_INVALID_ARGUMENT;
+				return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 			}
 			if ( dependency.nAfterPass == iPass && dependency.bCrossQueue ) {
 				bool bAlreadyWaited = false;
@@ -99,8 +100,8 @@ sirGraphicsResult_t SIRFrameGraph::buildSubmissionPlan( const sirFrameGraphCompi
 		}
 	}
 	if ( staged.nBarrierCount != compiled.nTransitionCount ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	*pPlan = staged;
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }

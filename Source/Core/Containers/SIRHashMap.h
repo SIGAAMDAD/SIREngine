@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRHASHMAP_H__
-#define __SIRENGINE_SIRHASHMAP_H__
+#ifndef __SIR_HASHMAP_H__
+#define __SIR_HASHMAP_H__
 
 #include <Core/SIRPCH.h>
 
@@ -34,4 +34,4 @@ public:
 	using SIRFlatHashMap<K, V, Hash, Equal>::SIRFlatHashMap;
 };
 
-#endif // __SIRENGINE_SIRHASHMAP_H__
+#endif // __SIR_HASHMAP_H__

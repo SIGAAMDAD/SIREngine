@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRFMODMIXERBACKEND_H__
-#define __SIRENGINE_SIRFMODMIXERBACKEND_H__
+#ifndef __SIR_FMODMIXERBACKEND_H__
+#define __SIR_FMODMIXERBACKEND_H__
 
 #include <Core/SIRPCH.h>
 
@@ -42,11 +42,10 @@ typedef struct sirFMODMixerNativeOps_s
 	int32_t ( *setVCAVolume )( void *pUserData, void *pVCA, float fVolume ) noexcept;
 } sirFMODMixerNativeOps_t;
 
-typedef enum sirFMODMixerControlKind_e : uint8_t
-{
+enum class SIRFMODMixerControlKind : uint8_t {
 	SIR_FMOD_MIXER_BUS = 1,
 	SIR_FMOD_MIXER_VCA = 2
-} sirFMODMixerControlKind_t;
+};
 
 typedef struct sirFMODMixerControl_s
 {
@@ -54,7 +53,7 @@ typedef struct sirFMODMixerControl_s
 	uint64_t nPackageId;
 	void *pNative;
 	SIRFMODBankStore *pBankStore;
-	sirFMODMixerControlKind_t eKind;
+	SIRFMODMixerControlKind eKind;
 	uint8_t nReserved[7];
 } sirFMODMixerControl_t;
 
@@ -65,7 +64,7 @@ class SIRFMODMixerBackend
 private:
 	SIRFMODContext *m_pContext = nullptr;
 	const sirContainerAllocator_t *m_pAllocator = nullptr;
-	sirFMODMixerNativeOps_t m_Ops = {};
+	sirFMODMixerNativeOps_t m_Ops {};
 	sirFMODMixerControl_t *m_pControls = nullptr;
 	uint64_t m_nContextEpoch = 0;
 	uint32_t m_nCapacity = 0;
@@ -75,9 +74,9 @@ private:
 
 	bool isReady( void ) const noexcept;
 	bool findControl( uint64_t nControlId, uint32_t& iIndex ) const noexcept;
-	sirAudioResult_t registerControl( uint64_t nControlId, const char *szPath, sirFMODMixerControlKind_t eKind,
+	SIRAudioResult registerControl( uint64_t nControlId, const char *szPath, SIRFMODMixerControlKind eKind,
 	                                  SIRFMODBankStore *pBankStore = nullptr, uint64_t nPackageId = 0 ) noexcept;
-	sirAudioResult_t setVolume( uint64_t nControlId, float fVolume, sirFMODMixerControlKind_t eKind ) noexcept;
+	SIRAudioResult setVolume( uint64_t nControlId, float fVolume, SIRFMODMixerControlKind eKind ) noexcept;
 
 public:
 	SIRFMODMixerBackend( void ) noexcept = default;
@@ -85,20 +84,20 @@ public:
 	SIRFMODMixerBackend( const SIRFMODMixerBackend& ) = delete;
 	SIRFMODMixerBackend& operator=( const SIRFMODMixerBackend& ) = delete;
 
-	sirAudioResult_t configure( SIRFMODContext *pContext, const sirContainerAllocator_t *pAllocator, const sirFMODMixerNativeOps_t& ops,
+	SIRAudioResult configure( SIRFMODContext *pContext, const sirContainerAllocator_t *pAllocator, const sirFMODMixerNativeOps_t& ops,
 	                            uint32_t nMaxControls ) noexcept;
-	sirAudioResult_t initialize( void ) noexcept;
+	SIRAudioResult initialize( void ) noexcept;
 	void shutdown( void ) noexcept;
-	sirAudioResult_t registerBus( uint64_t nControlId, const char *szPath ) noexcept;
-	sirAudioResult_t registerVCA( uint64_t nControlId, const char *szPath ) noexcept;
-	sirAudioResult_t registerBusFromBank( uint64_t nControlId, uint64_t nPackageId, SIRFMODBankStore *pBankStore,
+	SIRAudioResult registerBus( uint64_t nControlId, const char *szPath ) noexcept;
+	SIRAudioResult registerVCA( uint64_t nControlId, const char *szPath ) noexcept;
+	SIRAudioResult registerBusFromBank( uint64_t nControlId, uint64_t nPackageId, SIRFMODBankStore *pBankStore,
 	                                      const char *szPath ) noexcept;
-	sirAudioResult_t registerVCAFromBank( uint64_t nControlId, uint64_t nPackageId, SIRFMODBankStore *pBankStore,
+	SIRAudioResult registerVCAFromBank( uint64_t nControlId, uint64_t nPackageId, SIRFMODBankStore *pBankStore,
 	                                      const char *szPath ) noexcept;
-	sirAudioResult_t unregisterControl( uint64_t nControlId ) noexcept;
-	sirAudioResult_t setBusVolume( uint64_t nControlId, float fVolume ) noexcept;
-	sirAudioResult_t setBusMute( uint64_t nControlId, bool bMute ) noexcept;
-	sirAudioResult_t setVCAVolume( uint64_t nControlId, float fVolume ) noexcept;
+	SIRAudioResult unregisterControl( uint64_t nControlId ) noexcept;
+	SIRAudioResult setBusVolume( uint64_t nControlId, float fVolume ) noexcept;
+	SIRAudioResult setBusMute( uint64_t nControlId, bool bMute ) noexcept;
+	SIRAudioResult setVCAVolume( uint64_t nControlId, float fVolume ) noexcept;
 	uint32_t getControlCount( void ) const noexcept;
 	bool isBoundTo( const SIRFMODContext *pContext ) const noexcept;
 	int32_t getLastNativeResult( void ) const noexcept;
@@ -106,4 +105,4 @@ public:
 
 sirFMODMixerNativeOps_t sirGetFMODMixerNativeOps( void ) noexcept;
 
-#endif // __SIRENGINE_SIRFMODMIXERBACKEND_H__
+#endif // __SIR_FMODMIXERBACKEND_H__

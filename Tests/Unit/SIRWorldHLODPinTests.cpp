@@ -95,7 +95,7 @@ int main( void )
 	const sirWorldHLODGRDGInput_t snapshot = { &graph, &scope, szNodes, szReady, 3, 9, 13 };
 	sirWorldHLODResidency_t szResidency[3] = {};
 	const sirWorldHLODGRDGOutput_t ready = { szResidency, 3 };
-	SIR_HLOD_CHECK( sirWorldHLODSnapshotGRDG( snapshot, ready ) == SIR_WORLD_HLOD_OK );
+	SIR_HLOD_CHECK( sirWorldHLODSnapshotGRDG( snapshot, ready ) == SIRWorldHLODResult::SIR_WORLD_HLOD_OK );
 	float szErrors[] = { 50.0f, 0.0f, 0.0f };
 	sirWorldHLODScratch_t szCutScratch[3] = {};
 	uint32_t szSelected[3] = {};
@@ -104,7 +104,7 @@ int main( void )
 	uint32_t nDemands = 0;
 	const sirWorldHLODInput_t cutInput = { szNodes, szResidency, szErrors, 3, 9, 10.0f };
 	sirWorldHLODOutput_t cut = { szCutScratch, 3, szSelected, 3, &nSelected, szDemands, 3, &nDemands };
-	SIR_HLOD_CHECK( sirWorldHLODPlan( cutInput, cut ) == SIR_WORLD_HLOD_OK );
+	SIR_HLOD_CHECK( sirWorldHLODPlan( cutInput, cut ) == SIRWorldHLODResult::SIR_WORLD_HLOD_OK );
 	SIR_HLOD_CHECK( nSelected == 2 && szSelected[0] == 1 && szSelected[1] == 2 && nDemands == 0 );
 
 	SIRResourcePinHandle szPins[2] = { { 99, 99 }, { 99, 99 } };

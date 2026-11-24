@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRQUEUE_H__
-#define __SIRENGINE_SIRQUEUE_H__
+#ifndef __SIR_QUEUE_H__
+#define __SIR_QUEUE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -38,7 +38,7 @@ public:
 	explicit SIRQueue( const sirContainerAllocator_t *pAllocator ) noexcept : m_ring( pAllocator )
 	{
 	}
-	sirContainerResult_t tryInitialize( uint32_t nCapacity ) noexcept
+	SIRContainerResult tryInitialize( uint32_t nCapacity ) noexcept
 	{
 		return m_ring.tryInitialize( nCapacity );
 	}
@@ -59,27 +59,27 @@ public:
 		return m_ring.front();
 	}
 	template <typename... Args>
-	sirContainerResult_t tryEmplace( Args&&...args )
+	SIRContainerResult tryEmplace( Args&&...args )
 	{
 		return m_ring.tryEmplaceBack( std::forward<Args>( args )... );
 	}
-	sirContainerResult_t tryPush( const T& value )
+	SIRContainerResult tryPush( const T& value )
 	{
 		return m_ring.tryPushBack( value );
 	}
-	sirContainerResult_t tryPush( T&& value )
+	SIRContainerResult tryPush( T&& value )
 	{
 		return m_ring.tryPushBack( std::move( value ) );
 	}
-	sirContainerResult_t tryPushMany( const T *pItems, uint32_t nCount ) noexcept
+	SIRContainerResult tryPushMany( const T *pItems, uint32_t nCount ) noexcept
 	{
 		return m_ring.tryPushBackMany( pItems, nCount );
 	}
-	sirContainerResult_t tryPopMany( T *pOutput, uint32_t nCount ) noexcept
+	SIRContainerResult tryPopMany( T *pOutput, uint32_t nCount ) noexcept
 	{
 		return m_ring.tryPopFrontMany( pOutput, nCount );
 	}
-	sirContainerResult_t tryPop( void ) noexcept
+	SIRContainerResult tryPop( void ) noexcept
 	{
 		return m_ring.tryPopFront();
 	}
@@ -93,4 +93,4 @@ public:
 	}
 };
 
-#endif // __SIRENGINE_SIRQUEUE_H__
+#endif // __SIR_QUEUE_H__

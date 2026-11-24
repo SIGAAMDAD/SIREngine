@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSCRIPTCODEMANAGER_H__
-#define __SIRENGINE_SIRSCRIPTCODEMANAGER_H__
+#ifndef __SIR_SCRIPTCODEMANAGER_H__
+#define __SIR_SCRIPTCODEMANAGER_H__
 
 #include <Core/SIRPCH.h>
 
@@ -84,13 +84,13 @@ public:
 	SIRScriptCodeManager( const SIRScriptCodeManager& ) = delete;
 	SIRScriptCodeManager& operator=( const SIRScriptCodeManager& ) = delete;
 
-	sirScriptResult_t configure( uint64_t nTargetId, const sirScriptProgramSourceAPI_t& provider ) noexcept;
-	sirScriptResult_t stage( const sirScriptCodeArtifact_t& artifact, sirScriptCodeHandle_t *pHandle ) noexcept;
-	sirScriptResult_t activate( sirScriptCodeHandle_t handle ) noexcept;
-	sirScriptResult_t discard( sirScriptCodeHandle_t handle ) noexcept;
-	sirScriptResult_t retire( sirScriptCodeHandle_t handle ) noexcept;
-	sirScriptResult_t activeRevision( uint64_t nBackendId, uint64_t nProgramId, uint64_t *pRevision ) const noexcept;
-	sirScriptResult_t shutdown( void ) noexcept;
+	SIRScriptResult configure( uint64_t nTargetId, const sirScriptProgramSourceAPI_t& provider ) noexcept;
+	SIRScriptResult stage( const sirScriptCodeArtifact_t& artifact, sirScriptCodeHandle_t *pHandle ) noexcept;
+	SIRScriptResult activate( sirScriptCodeHandle_t handle ) noexcept;
+	SIRScriptResult discard( sirScriptCodeHandle_t handle ) noexcept;
+	SIRScriptResult retire( sirScriptCodeHandle_t handle ) noexcept;
+	SIRScriptResult activeRevision( uint64_t nBackendId, uint64_t nProgramId, uint64_t *pRevision ) const noexcept;
+	SIRScriptResult shutdown( void ) noexcept;
 	sirScriptCodeStats_t stats( void ) const noexcept;
 	sirScriptProgramSourceAPI_t makeProgramSourceAPI( void ) noexcept;
 
@@ -100,12 +100,12 @@ private:
 
 	static uint32_t nextGeneration( uint32_t nGeneration ) noexcept;
 	static bool validView( const sirScriptProgramView_t& view, const sirScriptCodeArtifact_t& artifact ) noexcept;
-	static sirScriptResult_t acquireThunk( void *pUser, uint64_t nBackendId, uint64_t nProgramId, uint64_t nRevision,
+	static SIRScriptResult acquireThunk( void *pUser, uint64_t nBackendId, uint64_t nProgramId, uint64_t nRevision,
 	                                       sirScriptProgramView_t *pView, uint64_t *pToken ) noexcept;
 	static void releaseThunk( void *pUser, uint64_t nToken ) noexcept;
 	bool isOwnerThread( void ) const noexcept;
 	int32_t resolve( sirScriptCodeHandle_t handle ) const noexcept;
-	sirScriptResult_t acquire( uint64_t nBackendId, uint64_t nProgramId, uint64_t nRevision, sirScriptProgramView_t *pView,
+	SIRScriptResult acquire( uint64_t nBackendId, uint64_t nProgramId, uint64_t nRevision, sirScriptProgramView_t *pView,
 	                           uint64_t *pToken ) noexcept;
 	void release( uint64_t nToken ) noexcept;
 	void destroySlot( uint32_t iSlot ) noexcept;
@@ -119,4 +119,4 @@ private:
 	bool m_bInProvider;
 };
 
-#endif // __SIRENGINE_SIRSCRIPTCODEMANAGER_H__
+#endif // __SIR_SCRIPTCODEMANAGER_H__

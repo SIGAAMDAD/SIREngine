@@ -19,9 +19,9 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 uint64_t SIRPlatformTime::getMonotonicNanoseconds( void ) noexcept
 {
-	timespec time = {};
+	timespec time {};
 	if ( clock_gettime( CLOCK_MONOTONIC, &time ) != 0 ) {
 		return 0;
 	}
-	return ( uint64_t )time.tv_sec * UINT64_C( 1000000000 ) + ( uint64_t )time.tv_nsec;
+	return static_cast<uint64_t>(time.tv_sec) * UINT64_C( 1000000000 ) + static_cast<uint64_t>(time.tv_nsec);
 }

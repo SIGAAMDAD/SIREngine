@@ -29,31 +29,31 @@ public:
 	{
 	}
 
-	sirContainerResult_t tryBuild( const Entry *pEntries, uint32_t nCount )
+	SIRContainerResult tryBuild( const Entry *pEntries, uint32_t nCount )
 	{
 		if ( nCount != 0 && pEntries == nullptr ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		if ( nCount > UINT32_MAX / 2 - 1 ) {
-			return SIR_CONTAINER_SIZE_OVERFLOW;
+			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
 		uint32_t nCapacity = 8;
 		while ( nCapacity < nCount * 2 ) {
 			if ( nCapacity > UINT32_MAX / 2 ) {
-				return SIR_CONTAINER_SIZE_OVERFLOW;
+				return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 			}
 			nCapacity *= 2;
 		}
 		SIRVector<std::optional<Entry>> staged( m_pAllocator );
-		sirContainerResult_t eResult = staged.tryResize( nCapacity );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		SIRContainerResult eResult = staged.tryResize( nCapacity );
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		for ( uint32_t iEntry = 0; iEntry < nCount; ++iEntry ) {
-			uint32_t iSlot = ( uint32_t )m_hash( pEntries[iEntry].key ) & ( nCapacity - 1 );
+			uint32_t iSlot = static_cast<uint32_t>(m_hash( pEntries[iEntry].key ) & ( nCapacity - 1 ));
 			while ( staged[iSlot].has_value() ) {
 				if ( m_equal( staged[iSlot]->key, pEntries[iEntry].key ) ) {
-					return SIR_CONTAINER_INVALID_ARGUMENT;
+					return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 				}
 				iSlot = ( iSlot + 1 ) & ( nCapacity - 1 );
 			}
@@ -61,7 +61,7 @@ public:
 		}
 		m_slots = std::move( staged );
 		m_nSize = nCount;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 	const V *find( const K& key ) const
 	{
@@ -69,7 +69,7 @@ public:
 			return nullptr;
 		}
 		const uint32_t nCapacity = m_slots.getSize();
-		uint32_t iSlot = ( uint32_t )m_hash( key ) & ( nCapacity - 1 );
+		uint32_t iSlot = static_cast<uint32_t>(m_hash( key ) & ( nCapacity - 1 ));
 		for ( uint32_t nProbe = 0; nProbe < nCapacity; ++nProbe ) {
 			if ( !m_slots[iSlot].has_value() ) {
 				return nullptr;

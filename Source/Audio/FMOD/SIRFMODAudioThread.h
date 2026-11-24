@@ -13,10 +13,11 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRFMODAUDIOTHREAD_H__
-#define __SIRENGINE_SIRFMODAUDIOTHREAD_H__
+#ifndef __SIR_FMODAUDIOTHREAD_H__
+#define __SIR_FMODAUDIOTHREAD_H__
 
 #include <Core/SIRPCH.h>
+#include <atomic>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -30,8 +31,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <condition_variable>
 #include <mutex>
 
-typedef enum sirFMODThreadOperation_e : uint8_t
-{
+enum class SIRFMODThreadOperation : uint8_t {
 	SIR_FMOD_THREAD_LOAD_PACKAGE = 1,
 	SIR_FMOD_THREAD_RELEASE_PACKAGE = 2,
 	SIR_FMOD_THREAD_COLLECT_UNUSED = 3,
@@ -51,12 +51,12 @@ typedef enum sirFMODThreadOperation_e : uint8_t
 	SIR_FMOD_THREAD_STOP_SNAPSHOT = 17,
 	SIR_FMOD_THREAD_QUERY_PLAYBACK = 18,
 	SIR_FMOD_THREAD_QUERY_SAMPLE = 19
-} sirFMODThreadOperation_t;
+};
 
 typedef struct sirFMODThreadRequest_s
 {
-	sirFMODThreadOperation_t eOperation;
-	sirAudioStopMode_t eStopMode;
+	SIRFMODThreadOperation eOperation;
+	SIRAudioStopMode eStopMode;
 	uint8_t bFlag;
 	uint8_t nReserved[5];
 	uint64_t nId;
@@ -72,9 +72,9 @@ typedef struct sirFMODThreadResult_s
 {
 	uint64_t nTicket;
 	sirAudioPlayingHandle_t hPlaying;
-	sirAudioResult_t eResult;
-	sirAudioPlaybackState_t ePlaybackState;
-	sirFMODSampleState_t eSampleState;
+	SIRAudioResult eResult;
+	SIRAudioPlaybackState ePlaybackState;
+	SIRFMODSampleState eSampleState;
 	uint8_t nReserved;
 	uint32_t nValue;
 } sirFMODThreadResult_t;
@@ -89,10 +89,10 @@ typedef struct sirFMODAudioThreadConfig_s
 
 typedef struct sirFMODThreadSlot_s
 {
-	SIRAtomic<uint32_t> nState;
-	SIRAtomic<uint64_t> nCancelTicket;
-	SIRAtomic<uint64_t> nTicket;
-	SIRAtomic<uint8_t> nOperation;
+	std::atomic<uint32_t> nState;
+	std::atomic<uint64_t> nCancelTicket;
+	std::atomic<uint64_t> nTicket;
+	std::atomic<uint8_t> nOperation;
 	uint32_t nGeneration;
 	sirFMODThreadRequest_t request;
 	sirFMODThreadResult_t result;
@@ -111,17 +111,17 @@ private:
 	SIRAudioQueue<sirAudioCompletion_t> m_Lifecycle;
 	sirFMODThreadSlot_t *m_pSlots = nullptr;
 	const sirContainerAllocator_t *m_pAllocator = nullptr;
-	sirFMODAudioThreadConfig_t m_Config = {};
-	SIRAtomic<uint32_t> m_nState;
-	SIRAtomic<uint32_t> m_nActiveClients;
-	SIRAtomic<uint32_t> m_nNextSlot;
-	SIRAtomic<uint32_t> m_nWakes;
-	SIRAtomic<uint32_t> m_nDroppedLifecycle;
-	SIRAtomic<uint32_t> m_nAutoRecoveries;
-	SIRAtomic<uint32_t> m_nAutoRecoveryFailures;
-	SIRAtomic<uint32_t> m_nWorkerResult;
-	SIRAtomic<uint8_t> m_bAccepting;
-	SIRAtomic<uint8_t> m_bStop;
+	sirFMODAudioThreadConfig_t m_Config {};
+	std::atomic<uint32_t> m_nState;
+	std::atomic<uint32_t> m_nActiveClients;
+	std::atomic<uint32_t> m_nNextSlot;
+	std::atomic<uint32_t> m_nWakes;
+	std::atomic<uint32_t> m_nDroppedLifecycle;
+	std::atomic<uint32_t> m_nAutoRecoveries;
+	std::atomic<uint32_t> m_nAutoRecoveryFailures;
+	std::atomic<uint32_t> m_nWorkerResult;
+	std::atomic<uint8_t> m_bAccepting;
+	std::atomic<uint8_t> m_bStop;
 	uint32_t m_nCapacity = 0;
 	std::mutex m_WaitMutex;
 	std::condition_variable m_WaitCondition;
@@ -130,7 +130,7 @@ private:
 	void leaveClient( void ) noexcept;
 	void releaseStorage( void ) noexcept;
 	void complete( uint64_t nTicket, const sirFMODThreadResult_t& result ) noexcept;
-	sirAudioResult_t execute( const sirFMODThreadRequest_t& request, sirFMODThreadResult_t& result ) noexcept;
+	SIRAudioResult execute( const sirFMODThreadRequest_t& request, sirFMODThreadResult_t& result ) noexcept;
 	void threadMain( void ) noexcept;
 	static void threadCallback( void *pContext );
 	static void lifecycleCallback( void *pContext, const sirAudioCompletion_t *pCompletion ) noexcept;
@@ -141,11 +141,11 @@ public:
 	SIRFMODAudioThread( const SIRFMODAudioThread& ) = delete;
 	SIRFMODAudioThread& operator=( const SIRFMODAudioThread& ) = delete;
 
-	sirAudioResult_t start( const sirFMODAudioThreadConfig_t& config ) noexcept;
-	sirAudioResult_t shutdown( void ) noexcept;
-	sirAudioResult_t submit( const sirFMODThreadRequest_t& request, uint64_t& nTicket ) noexcept;
-	sirAudioResult_t cancel( uint64_t nTicket ) noexcept;
-	sirAudioResult_t poll( uint64_t nTicket, sirFMODThreadResult_t& result ) noexcept;
+	SIRAudioResult start( const sirFMODAudioThreadConfig_t& config ) noexcept;
+	SIRAudioResult shutdown( void ) noexcept;
+	SIRAudioResult submit( const sirFMODThreadRequest_t& request, uint64_t& nTicket ) noexcept;
+	SIRAudioResult cancel( uint64_t nTicket ) noexcept;
+	SIRAudioResult poll( uint64_t nTicket, sirFMODThreadResult_t& result ) noexcept;
 	bool pollLifecycle( sirAudioCompletion_t& completion ) noexcept;
 	bool isReady( void ) const noexcept;
 	uint32_t getDroppedLifecycleCount( void ) const noexcept;
@@ -155,4 +155,4 @@ public:
 	sirFMODMemoryBudgetStats_t getEngineMemoryStats( void ) noexcept;
 	sirFMODMemoryBudgetStats_t getNativeMemoryStats( void ) noexcept;
 };
-#endif // __SIRENGINE_SIRFMODAUDIOTHREAD_H__
+#endif // __SIR_FMODAUDIOTHREAD_H__

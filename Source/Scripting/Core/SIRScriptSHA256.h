@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSCRIPTSHA256_H__
-#define __SIRENGINE_SIRSCRIPTSHA256_H__
+#ifndef __SIR_SCRIPTSHA256_H__
+#define __SIR_SCRIPTSHA256_H__
 
 #include <Core/SIRPCH.h>
 
@@ -33,4 +33,4 @@ public:
 	static void digest( const void *pData, uint64_t nBytes, uint8_t szDigest[32] ) noexcept;
 };
 
-#endif // __SIRENGINE_SIRSCRIPTSHA256_H__
+#endif // __SIR_SCRIPTSHA256_H__

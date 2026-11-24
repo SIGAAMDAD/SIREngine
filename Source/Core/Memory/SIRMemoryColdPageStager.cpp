@@ -27,8 +27,8 @@ bool SIRMemoryColdPageStager::init( SIRMemoryManager *pManager, uint32_t nCapaci
 	if ( m_pRanges != nullptr || pManager == nullptr || nCapacity == 0 ) {
 		return false;
 	}
-	const uint64_t nBytes = ( ( uint64_t )( nCapacity ) ) * sizeof( sirStageRange_t );
-	sirStageRange_t *pRanges = ( ( sirStageRange_t * )( pManager->allocateMetadata( nBytes, alignof( sirStageRange_t ) ) ) );
+	const uint64_t nBytes = static_cast<uint64_t>( nCapacity ) * sizeof( sirStageRange_t );
+	sirStageRange_t *pRanges = static_cast<sirStageRange_t *>(  pManager->allocateMetadata( nBytes, alignof( sirStageRange_t ) )  );
 	if ( pRanges == nullptr ) {
 		return false;
 	}

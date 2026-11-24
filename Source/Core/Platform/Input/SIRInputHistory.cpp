@@ -37,7 +37,7 @@ uint64_t SIRInputHistory::oldestTick( void ) const noexcept
 
 uint64_t SIRInputHistory::newestTick( void ) const noexcept
 {
-	return m_nCount == 0 ? 0 : m_pStorage[( uint32_t )( ( ( uint64_t )m_nHead + m_nCount - 1 ) % m_nCapacity )].nTick;
+	return m_nCount == 0 ? 0 : m_pStorage[( uint32_t )( ( static_cast<uint64_t>(m_nHead) + m_nCount - 1 ) % m_nCapacity )].nTick;
 }
 
 bool SIRInputHistory::initialize( sirInputReplayFrame_t *pStorage, uint32_t nCapacity ) noexcept
@@ -63,7 +63,7 @@ bool SIRInputHistory::append( const sirInputReplayFrame_t& frame ) noexcept
 			return false;
 		}
 	}
-	const uint32_t iSlot = ( uint32_t )( ( ( uint64_t )m_nHead + m_nCount ) % m_nCapacity );
+	const uint32_t iSlot = ( uint32_t )( ( static_cast<uint64_t>(m_nHead) + m_nCount ) % m_nCapacity );
 	m_pStorage[iSlot] = frame;
 	if ( m_nCount == m_nCapacity ) {
 		m_nHead = ( m_nHead + 1 ) % m_nCapacity;
@@ -78,7 +78,7 @@ bool SIRInputHistory::read( uint64_t nTick, sirInputReplayFrame_t *pOut ) const 
 	if ( pOut == nullptr || m_nCount == 0 || nTick < oldestTick() || nTick > newestTick() ) {
 		return false;
 	}
-	const uint32_t iSlot = ( uint32_t )( ( ( uint64_t )m_nHead + ( nTick - oldestTick() ) ) % m_nCapacity );
+	const uint32_t iSlot = ( uint32_t )( ( static_cast<uint64_t>(m_nHead) + ( nTick - oldestTick() ) ) % m_nCapacity );
 	*pOut = m_pStorage[iSlot];
 	return true;
 }
@@ -88,7 +88,7 @@ bool SIRInputHistory::rewindFrom( uint64_t nTick ) noexcept
 	if ( m_nCount == 0 || nTick < oldestTick() || ( newestTick() != UINT64_MAX && nTick > newestTick() + 1 ) ) {
 		return false;
 	}
-	m_nCount = ( uint32_t )( nTick - oldestTick() );
+	m_nCount = static_cast<uint32_t>(  nTick - oldestTick()  );
 	if ( m_nCount == 0 ) {
 		m_nHead = 0;
 	}
@@ -101,14 +101,14 @@ bool SIRInputHistory::replaceFrom( const sirInputReplayFrame_t& frame ) noexcept
 		return false;
 	}
 	// The validated replacement tick is inside the contiguous ring, so rewinding cannot fail.
-	( void )rewindFrom( frame.nTick );
+	static_cast<void>(rewindFrom( frame.nTick ));
 	return append( frame );
 }
 
 static void sirHistoryHashInteger( uint64_t *pHash, uint64_t nValue, uint32_t nBytes ) noexcept
 {
 	for ( uint32_t i = 0; i < nBytes; ++i ) {
-		*pHash = ( *pHash ^ ( uint8_t )( nValue >> ( i * 8 ) ) ) * UINT64_C( 1099511628211 );
+		*pHash = ( *pHash ^ static_cast<uint8_t>(  nValue >> ( i * 8 )  ) ) * UINT64_C( 1099511628211 );
 	}
 }
 
@@ -124,7 +124,7 @@ bool SIRInputHistory::hashFrame( const sirInputReplayFrame_t& frame, uint64_t *p
 		const sirInputActionState_t& state = frame.actions[i];
 		sirHistoryHashInteger( &nHash, state.nActionId, 4 );
 		sirHistoryHashInteger( &nHash, state.nUser, 4 );
-		sirHistoryHashInteger( &nHash, ( uint32_t )state.nValue, 4 );
+		sirHistoryHashInteger( &nHash, static_cast<uint32_t>(state.nValue), 4 );
 		sirHistoryHashInteger( &nHash, state.nTransitions, 4 );
 		const uint8_t nFlags = ( state.bHeld ? 1 : 0 ) | ( state.bPressed ? 2 : 0 ) | ( state.bReleased ? 4 : 0 );
 		sirHistoryHashInteger( &nHash, nFlags, 1 );
@@ -138,7 +138,7 @@ bool SIRInputHistory::digest( uint64_t nTick, uint64_t *pOut ) const noexcept
 	if ( pOut == nullptr || m_nCount == 0 || nTick < oldestTick() || nTick > newestTick() ) {
 		return false;
 	}
-	const uint32_t iSlot = ( uint32_t )( ( ( uint64_t )m_nHead + ( nTick - oldestTick() ) ) % m_nCapacity );
+	const uint32_t iSlot = ( uint32_t )( ( static_cast<uint64_t>(m_nHead) + ( nTick - oldestTick() ) ) % m_nCapacity );
 	return hashFrame( m_pStorage[iSlot], pOut );
 }
 

@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRD3D11HANDLES_H__
-#define __SIRENGINE_SIRD3D11HANDLES_H__
+#ifndef __SIR_D3_D11_HANDLES_H__
+#define __SIR_D3_D11_HANDLES_H__
 
 #include <Core/SIRPCH.h>
 
@@ -30,8 +30,8 @@ typedef struct sirD3D11ObjectInfo_s
 {
 	void *pNativeObject;
 	uint64_t nSizeBytes;
-	sirGraphicsHandleType_t eType;
-	sirGraphicsMemoryClass_t eMemory;
+	SIRGraphicsHandleType eType;
+	SIRGraphicsMemoryClass eMemory;
 } sirD3D11ObjectInfo_t;
 
 typedef struct sirD3D11ObjectSlot_s
@@ -55,9 +55,9 @@ public:
 	uint32_t getActiveCount( void ) const noexcept;
 	uint64_t getAllocatedBytes( void ) const noexcept;
 
-	sirGraphicsResult_t create( const sirD3D11ObjectInfo_t& object, sirGraphicsHandle_t *pHandle ) noexcept;
-	sirGraphicsResult_t lookup( sirGraphicsHandle_t handle, sirD3D11ObjectSlot_t **ppSlot ) noexcept;
-	sirGraphicsResult_t destroy( sirGraphicsHandle_t handle, void **ppNativeObject ) noexcept;
+	SIRGraphicsResult create( const sirD3D11ObjectInfo_t& object, sirGraphicsHandle_t *pHandle ) noexcept;
+	SIRGraphicsResult lookup( sirGraphicsHandle_t handle, sirD3D11ObjectSlot_t **ppSlot ) noexcept;
+	SIRGraphicsResult destroy( sirGraphicsHandle_t handle, void **ppNativeObject ) noexcept;
 	sirD3D11ObjectSlot_t *getSlot( uint32_t nIndex ) noexcept;
 	void clear( void ) noexcept;
 
@@ -69,4 +69,4 @@ private:
 	uint64_t m_nAllocatedBytes = 0;
 };
 
-#endif // __SIRENGINE_SIRD3D11HANDLES_H__
+#endif // __SIR_D3_D11_HANDLES_H__

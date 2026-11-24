@@ -8,8 +8,8 @@ License, v2. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIRD3D9BARRIERS_H__
-#define __SIRENGINE_SIRD3D9BARRIERS_H__
+#ifndef __SIR_D3_D9_BARRIERS_H__
+#define __SIR_D3_D9_BARRIERS_H__
 #include <Core/SIRPCH.h>
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
 #pragma once
@@ -18,7 +18,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 // Validate serial execution-state transitions before recording native commands.
 // Returns whether the transition requires clearing native read bindings.
-sirGraphicsResult_t sirD3D9ValidateSerialBarrier( const sirGraphicsBarrier_t *pBarrier, uint32_t nMipLevels, uint32_t nArrayLayers,
+SIRGraphicsResult sirD3D9ValidateSerialBarrier( const sirGraphicsBarrier_t *pBarrier, uint32_t nMipLevels, uint32_t nArrayLayers,
                                                   bool *pUnbind ) noexcept;
 
-#endif // __SIRENGINE_SIRD3D9BARRIERS_H__
+#endif // __SIR_D3_D9_BARRIERS_H__

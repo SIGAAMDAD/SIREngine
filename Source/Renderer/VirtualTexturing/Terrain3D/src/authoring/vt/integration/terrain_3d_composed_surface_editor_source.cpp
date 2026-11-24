@@ -541,7 +541,7 @@ bool t3d_comp_surf_cook_editor_candidate_cold( const PackedByteArray& rPack, Ter
 	t3dComposedSurfaceColdCookResult_t cooked{};
 	rResult.m_nPages = request.m_nPageCount;
 	if ( !t3d_composed_surface_cook_source_pack_cold( request, cooked ) ) {
-		( void )publication.rollback();
+		static_cast<void>(publication.rollback());
 		rResult.m_error = String( "candidate_cook_failed_status=" ) + String::num_int64( cooked.m_status );
 		rResult.m_nReusedPages = 0u;
 		return false;
@@ -555,7 +555,7 @@ bool t3d_comp_surf_cook_editor_candidate_cold( const PackedByteArray& rPack, Ter
 	     !t3d_comp_surf_validate_sidecar_bytes( committed.ptr(), size_t( committed.size() ), true ) ||
 	     !t3d_comp_surf_open_sidecar_cold( committed.ptr(), uint64_t( committed.size() ), identity, verified ) ||
 	     verified.m_header.m_nPageCount != request.m_nPageCount ) {
-		( void )publication.rollback();
+		static_cast<void>(publication.rollback());
 		rResult.m_error = "candidate_reopen_or_crc_failed";
 		rResult.m_nReusedPages = 0u;
 		return false;
@@ -567,20 +567,20 @@ bool t3d_comp_surf_cook_editor_candidate_cold( const PackedByteArray& rPack, Ter
 		uint32_t index = 0u;
 		if ( !t3d_comp_surf_find_page( verified, page.m_nRegionKey, page.m_nMip, page.m_nPageX, page.m_nPageY, page.m_nCompositionRevision,
 		                               index ) ) {
-			( void )publication.rollback();
+			static_cast<void>(publication.rollback());
 			rResult.m_error = "candidate_missing_or_stale_mip_page";
 			rResult.m_nReusedPages = 0u;
 			return false;
 		}
 	}
 	if ( !t3d_comp_surf_editor_current( &context, context.m_nTerrainRevision, context.m_nMaterialRevision, context.m_nTopologyRevision ) ) {
-		( void )publication.rollback();
+		static_cast<void>(publication.rollback());
 		rResult.m_error = "source_changed_before_candidate_acceptance";
 		rResult.m_nReusedPages = 0u;
 		return false;
 	}
 	if ( publication.publish() != OK ) {
-		( void )publication.rollback();
+		static_cast<void>(publication.rollback());
 		rResult.m_error = String( "candidate_publish_failed: " ) + publication.getError();
 		rResult.m_nReusedPages = 0u;
 		return false;

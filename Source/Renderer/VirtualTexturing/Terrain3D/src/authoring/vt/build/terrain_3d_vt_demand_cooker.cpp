@@ -48,7 +48,7 @@ bool t3d_vt_demand_cook_asset_sidecar_cold( const Terrain3DData& rData, const Re
 		return false;
 	}
 	t3dVTPackBaselineView_t pack{};
-	if ( !t3d_vt_pack_open_baseline_view( rFinalPackage.ptr(), ( uint64_t )rFinalPackage.size(), pack ) || pack.m_pHeader == nullptr ||
+	if ( !t3d_vt_pack_open_baseline_view( rFinalPackage.ptr(), static_cast<uint64_t>(rFinalPackage.size(), pack )) || pack.m_pHeader == nullptr ||
 	     pack.m_pHeader->m_nContentSignature == 0u ) {
 		rError = "Final VT package is invalid";
 		return false;
@@ -62,7 +62,7 @@ bool t3d_vt_demand_cook_asset_sidecar_cold( const Terrain3DData& rData, const Re
 	std::sort( ordered.begin(), ordered.end(), []( const Vector2i& a, const Vector2i& b ) { return a.x != b.x ? a.x < b.x : a.y < b.y; } );
 	std::vector<t3dVTDemandCell_t> cells;
 	std::vector<t3dVTDemandStableMaterialRecord_t> records;
-	const uint32_t nTerrainMaterials = ( uint32_t )MIN( rAssets->getTextureCount(), T3D_MAX_TEXTURE_ASSETS );
+	const uint32_t nTerrainMaterials = static_cast<uint32_t>(MIN( rAssets->getTextureCount(), T3D_MAX_TEXTURE_ASSETS ));
 	for ( const Vector2i& location : ordered ) {
 		uint32_t counts[T3D_MAX_TEXTURE_ASSETS]{};
 		uint32_t nCoverageTotal = 0u;
@@ -77,7 +77,7 @@ bool t3d_vt_demand_cook_asset_sidecar_cold( const Terrain3DData& rData, const Re
 				// Full authored control coverage; samples represent 128 m cells exactly.
 				for ( uint32_t texel = 0u; texel < T3D_REGION_SIZE * T3D_REGION_SIZE; ++texel ) {
 					uint32_t word = 0u;
-					memcpy( &word, data + ( size_t )texel * 4u, 4u );
+					memcpy( &word, data + static_cast<size_t>(texel) * 4u, 4u );
 					if ( t3dIsHole( word ) ) {
 						continue;
 					}
@@ -117,7 +117,7 @@ bool t3d_vt_demand_cook_asset_sidecar_cold( const Terrain3DData& rData, const Re
 			item.nStableMaterialKey = key;
 			item.Footprint.nMip = 0u;
 			item.Footprint.nCoverage =
-			    ( uint16_t )MAX( 1u, MIN( 65535u, ( uint32_t )( ( uint64_t )coverage * 65535u / MAX( 1u, nCoverageTotal ) ) ) );
+			    static_cast<uint16_t>(MAX( 1u, MIN( 65535u, ( uint32_t )( static_cast<uint64_t>(coverage) * 65535u / MAX( 1u, nCoverageTotal ) ) ) ));
 			item.Footprint.nUvMaxX = item.Footprint.nUvMaxY = 65535u;
 			item.Footprint.nViewMask = 255u;
 			item.nFlags = incomplete ? 1u : 0u;
@@ -127,7 +127,7 @@ bool t3d_vt_demand_cook_asset_sidecar_cold( const Terrain3DData& rData, const Re
 		const int mapX = location.x + T3D_REGION_MAP_SIZE / 2;
 		const int mapZ = location.y + T3D_REGION_MAP_SIZE / 2;
 		if ( mapX >= 0 && mapX < T3D_REGION_MAP_SIZE && mapZ >= 0 && mapZ < T3D_REGION_MAP_SIZE ) {
-			append( t3d_vt_terrain_region_stable_key( ( uint32_t )( mapZ * T3D_REGION_MAP_SIZE + mapX ) ), nCoverageTotal );
+			append( t3d_vt_terrain_region_stable_key( static_cast<uint32_t>( mapZ * T3D_REGION_MAP_SIZE + mapX ) ), nCoverageTotal );
 		}
 		for ( uint32_t m = 0u; m < nTerrainMaterials; ++m ) {
 			if ( counts[m] != 0u ) {
@@ -152,8 +152,8 @@ bool t3d_vt_demand_cook_asset_sidecar_cold( const Terrain3DData& rData, const Re
 		t3dVTDemandCell_t cell{};
 		cell.nX = location.x;
 		cell.nZ = location.y;
-		cell.nFirstRecord = ( uint32_t )records.size();
-		cell.nCount = ( uint16_t )local.size();
+		cell.nFirstRecord = static_cast<uint32_t>(records.size());
+		cell.nCount = static_cast<uint16_t>(local.size());
 		cells.push_back( cell );
 		records.insert( records.end(), local.begin(), local.end() );
 	}
@@ -164,20 +164,20 @@ bool t3d_vt_demand_cook_asset_sidecar_cold( const Terrain3DData& rData, const Re
 		return true;
 	}
 	const CharString utf8 = rPath.utf8();
-	const uint64_t nAssetHash = t3d_vt_demand_hash( ( const uint8_t * )utf8.get_data(), ( uint64_t )utf8.length() );
+	const uint64_t nAssetHash = t3d_vt_demand_hash( static_cast<const uint8_t *>(utf8.get_data(), static_cast<uint64_t>(utf8.length() )));
 	std::vector<uint8_t> output;
-	if ( !t3d_vt_demand_write_stable_material( cells.data(), ( uint32_t )cells.size(), records.data(), ( uint32_t )records.size(),
+	if ( !t3d_vt_demand_write_stable_material( cells.data(), static_cast<uint32_t>(cells.size(), records.data(), static_cast<uint32_t>(records.size())),
 	                                           pack.m_pHeader->m_nContentSignature, nAssetHash, output ) ) {
 		rError = "Serialized T3VD v2 failed round-trip validation";
 		return false;
 	}
-	rSidecar.resize( ( int )output.size() );
+	rSidecar.resize( static_cast<int>(output.size() ));
 	memcpy( rSidecar.ptrw(), output.data(), output.size() );
 	// Opt-in authoring-only GPU cook; v2 always remains the canonical fallback.
 	// Failure (including no Vulkan device) cannot destroy an otherwise sound
 	// v2/VT package publication and cannot leak a partially encoded v1 file.
 	ProjectSettings *const settings = ProjectSettings::get_singleton();
-	const bool tryGpu = settings && ( bool )settings->get_setting( "terrain3d/vt_gpu_visibility_cook_enabled", false );
+	const bool tryGpu = settings && static_cast<bool>(settings->get_setting( "terrain3d/vt_gpu_visibility_cook_enabled", false ));
 	if ( tryGpu && pV1Sidecar && pV1Path ) {
 		std::vector<uint64_t> keys;
 		keys.reserve( pack.m_pHeader->m_nAllocationCount );
@@ -186,14 +186,14 @@ bool t3d_vt_demand_cook_asset_sidecar_cold( const Terrain3DData& rData, const Re
 		PackedByteArray candidate;
 		t3dVTVisibilityAggregateStats_t stats{};
 		String gpuError;
-		if ( t3d_vt_visibility_cook_cold( rData, keys.data(), ( uint32_t )keys.size(), pack.m_pHeader->m_nContentSignature, nAssetHash,
+		if ( t3d_vt_visibility_cook_cold( rData, keys.data(), static_cast<uint32_t>(keys.size()), pack.m_pHeader->m_nContentSignature, nAssetHash,
 		                                  candidate, stats, gpuError ) &&
 		     !candidate.is_empty() ) {
 			// Never replace the v2 sidecar during the T03/T04 transition.
 			*pV1Path = rPath + String( ".v1" );
 			*pV1Sidecar = candidate;
-			UtilityFunctions::print( "T3VD v1 GPU histogram: ", ( int64_t )stats.m_nCells, " cells, ", ( int64_t )stats.m_nProbes,
-			                         " probes, ", ( int64_t )stats.m_nRecords, " records, ", ( int64_t )stats.m_nPartialCells,
+			UtilityFunctions::print( "T3VD v1 GPU histogram: ", static_cast<int64_t>(stats.m_nCells), " cells, ", static_cast<int64_t>(stats.m_nProbes),
+			                         " probes, ", static_cast<int64_t>(stats.m_nRecords), " records, ", static_cast<int64_t>(stats.m_nPartialCells),
 			                         " partial cells" );
 		} else {
 			UtilityFunctions::push_warning( "T3VD v1 GPU cook fell back to v2: ", gpuError );
@@ -250,22 +250,22 @@ bool t3d_vt_demand_publish_triplet_cold( const String& packagePath, const Packed
 	}
 	if ( fallback.stagePacked( demand ) != OK ) {
 		error = fallback.getError();
-		( void )pack.rollback();
+		static_cast<void>(pack.rollback());
 		return false;
 	}
 	if ( hasV1 && hist.stagePacked( v1 ) != OK ) {
 		error = hist.getError();
-		( void )fallback.rollback();
-		( void )pack.rollback();
+		static_cast<void>(fallback.rollback());
+		static_cast<void>(pack.rollback());
 		return false;
 	}
 	if ( pack.publish() != OK || fallback.publish() != OK || ( hasV1 && hist.publish() != OK ) ) {
 		error = hasV1 && !hist.getError().is_empty() ? hist.getError()
 		                                             : ( !fallback.getError().is_empty() ? fallback.getError() : pack.getError() );
 		if ( hasV1 )
-			( void )hist.rollback();
-		( void )fallback.rollback();
-		( void )pack.rollback();
+			static_cast<void>(hist.rollback());
+		static_cast<void>(fallback.rollback());
+		static_cast<void>(pack.rollback());
 		return false;
 	}
 	// All three new files are visible before backups are cleaned.
@@ -302,21 +302,21 @@ bool t3d_vt_demand_publish_quartet_cold( const String& packagePath, const Packed
 	}
 	if ( surf.stagePacked( surface ) != OK ) {
 		error = surf.getError();
-		( void )pack.rollback();
+		static_cast<void>(pack.rollback());
 		return false;
 	}
 	if ( hasDemand && fallback.stagePacked( demand ) != OK ) {
 		error = fallback.getError();
-		( void )surf.rollback();
-		( void )pack.rollback();
+		static_cast<void>(surf.rollback());
+		static_cast<void>(pack.rollback());
 		return false;
 	}
 	if ( hasV1 && hist.stagePacked( v1 ) != OK ) {
 		error = hist.getError();
 		if ( hasDemand )
-			( void )fallback.rollback();
-		( void )surf.rollback();
-		( void )pack.rollback();
+			static_cast<void>(fallback.rollback());
+		static_cast<void>(surf.rollback());
+		static_cast<void>(pack.rollback());
 		return false;
 	}
 	if ( pack.publish() != OK || surf.publish() != OK || ( hasDemand && fallback.publish() != OK ) || ( hasV1 && hist.publish() != OK ) ) {
@@ -325,11 +325,11 @@ bool t3d_vt_demand_publish_quartet_cold( const String& packagePath, const Packed
 		                                                     ? fallback.getError()
 		                                                     : ( !surf.getError().is_empty() ? surf.getError() : pack.getError() ) );
 		if ( hasV1 )
-			( void )hist.rollback();
+			static_cast<void>(hist.rollback());
 		if ( hasDemand )
-			( void )fallback.rollback();
-		( void )surf.rollback();
-		( void )pack.rollback();
+			static_cast<void>(fallback.rollback());
+		static_cast<void>(surf.rollback());
+		static_cast<void>(pack.rollback());
 		return false;
 	}
 	const Error eHist = hasV1 ? hist.commit() : OK;

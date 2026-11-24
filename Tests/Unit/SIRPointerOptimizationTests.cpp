@@ -13,18 +13,19 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#include <Core/Memory/SIRUniquePtr.h>
-#include <Core/Memory/SIRObserverPtr.h>
-#include <Core/Memory/SIRNotNullPtr.h>
-#include <Core/Memory/SIROffsetPtr.h>
-#include <Core/Memory/SIRSelfRelativePtr.h>
+#include <Core/Memory/Pointers/SIRUniquePtr.h>
+#include <atomic>
+#include <Core/Memory/Pointers/SIRObserverPtr.h>
+#include <Core/Memory/Pointers/SIRNotNullPtr.h>
+#include <Core/Memory/Pointers/SIROffsetPtr.h>
+#include <Core/Memory/Pointers/SIRSelfRelativePtr.h>
 #include <string.h>
-#include <Core/Memory/SIRSharedPtr.h>
-#include <Core/Memory/SIRHazardPtr.h>
-#include <Core/Memory/SIRRCUPtr.h>
-#include <Core/Memory/SIRDeferredPtr.h>
-#include <Core/Memory/SIRFenceRetiredPtr.h>
-#include <Core/Memory/SIRArenaPtr.h>
+#include <Core/Memory/Pointers/SIRSharedPtr.h>
+#include <Core/Memory/Pointers/SIRHazardPtr.h>
+#include <Core/Memory/Pointers/SIRRCUPtr.h>
+#include <Core/Memory/Pointers/SIRDeferredPtr.h>
+#include <Core/Memory/Pointers/SIRFenceRetiredPtr.h>
+#include <Core/Memory/Pointers/SIRArenaPtr.h>
 #include <Core/Platform/SIRThread.h>
 
 #include <stdint.h>
@@ -226,7 +227,7 @@ static void testDestroyCallback( void *pContext, void * ) noexcept
 static void testHazardReuseAndExhaustion( void )
 {
 	SIRHazardDomain empty( nullptr, 0 );
-	SIRAtomic<int *> source( nullptr );
+	std::atomic<int *> source( nullptr );
 	SIRHazardPtr<int> guard;
 	SIR_OPT_CHECK( !guard.protect( empty, source ) );
 
@@ -266,7 +267,7 @@ static void testHazardReuseAndExhaustion( void )
 static void testRCUReuseAndExhaustion( void )
 {
 	SIRRCUDomain empty( nullptr, 0 );
-	SIRAtomic<int *> source( nullptr );
+	std::atomic<int *> source( nullptr );
 	SIRRCUPtr<int> guard;
 	SIR_OPT_CHECK( !guard.read( empty, source ) );
 
@@ -347,8 +348,8 @@ static void testFenceBatchAndOutOfOrder( void )
 typedef struct sirHazardStressState_s
 {
 	SIRHazardDomain *pDomain;
-	SIRAtomic<int *> *pSource;
-	SIRAtomic<uint32_t> *pFailureCount;
+	std::atomic<int *> *pSource;
+	std::atomic<uint32_t> *pFailureCount;
 } sirHazardStressState_t;
 
 static void hazardStressWorker( void *pUserData )
@@ -361,7 +362,7 @@ static void hazardStressWorker( void *pUserData )
 			bProtected = ptr.protect( *pState->pDomain, *pState->pSource );
 		}
 		if ( !bProtected || ptr.get() == nullptr || *ptr.get() != 77 ) {
-			pState->pFailureCount->fetchAdd( 1 );
+			pState->pFailureCount->fetch_add( 1 );
 		}
 	}
 }
@@ -369,8 +370,8 @@ static void hazardStressWorker( void *pUserData )
 static void testHazardConcurrentClaim( void )
 {
 	int nValue = 77;
-	SIRAtomic<int *> source( &nValue );
-	SIRAtomic<uint32_t> failures( 0 );
+	std::atomic<int *> source( &nValue );
+	std::atomic<uint32_t> failures( 0 );
 	SIRHazardRecord records[8];
 	SIRHazardDomain domain( records, 8 );
 	sirHazardStressState_t state = { &domain, &source, &failures };

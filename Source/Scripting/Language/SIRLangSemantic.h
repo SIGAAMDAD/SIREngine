@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRLANGSEMANTIC_H__
-#define __SIRENGINE_SIRLANGSEMANTIC_H__
+#ifndef __SIR_LANGSEMANTIC_H__
+#define __SIR_LANGSEMANTIC_H__
 
 #include <Core/SIRPCH.h>
 
@@ -29,8 +29,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 constexpr uint32_t SIR_LANG_INVALID_INDEX = UINT32_MAX;
 constexpr uint32_t SIR_LANG_MAX_SEMANTIC_DEPTH = 128;
 
-typedef enum sirLangSemanticError_e : uint8_t
-{
+enum class SIRLangSemanticError : uint8_t {
 	SIR_LANG_SEMANTIC_OK = 0,
 	SIR_LANG_SEMANTIC_INVALID_INPUT,
 	SIR_LANG_SEMANTIC_CAPACITY,
@@ -45,10 +44,9 @@ typedef enum sirLangSemanticError_e : uint8_t
 	SIR_LANG_SEMANTIC_INVALID_RETURN,
 	SIR_LANG_SEMANTIC_UNKNOWN_FIELD,
 	SIR_LANG_SEMANTIC_DEPTH_LIMIT
-} sirLangSemanticError_t;
+};
 
-typedef enum sirLangSymbolKind_e : uint8_t
-{
+enum class SIRLangSymbolKind : uint8_t {
 	SIR_LANG_SYMBOL_TYPE = 0,
 	SIR_LANG_SYMBOL_BEHAVIOR,
 	SIR_LANG_SYMBOL_FUNCTION,
@@ -56,10 +54,9 @@ typedef enum sirLangSymbolKind_e : uint8_t
 	SIR_LANG_SYMBOL_FIELD,
 	SIR_LANG_SYMBOL_PARAMETER,
 	SIR_LANG_SYMBOL_LOCAL
-} sirLangSymbolKind_t;
+};
 
-typedef enum sirLangValueKind_e : uint8_t
-{
+enum class SIRLangValueKind : uint8_t {
 	SIR_LANG_VALUE_UNKNOWN = 0,
 	SIR_LANG_VALUE_VOID,
 	SIR_LANG_VALUE_BOOL,
@@ -77,7 +74,7 @@ typedef enum sirLangValueKind_e : uint8_t
 	SIR_LANG_VALUE_ATOM,
 	SIR_LANG_VALUE_OTHER,
 	SIR_LANG_VALUE_FUNCTION
-} sirLangValueKind_t;
+};
 
 typedef struct sirLangSemanticSymbol_s
 {
@@ -85,13 +82,13 @@ typedef struct sirLangSemanticSymbol_s
 	uint32_t iDeclarationNode;
 	uint32_t iScopeNode;
 	uint32_t iTypeNode;
-	sirLangSymbolKind_t eKind;
-	sirLangValueKind_t eValue;
+	SIRLangSymbolKind eKind;
+	SIRLangValueKind eValue;
 } sirLangSemanticSymbol_t;
 
 typedef struct sirLangSemanticDiagnostic_s
 {
-	sirLangSemanticError_t eError;
+	SIRLangSemanticError eError;
 	uint32_t iNode;
 	uint32_t nOffset;
 	uint32_t nLine;
@@ -103,15 +100,15 @@ typedef struct sirLangSemanticDiagnostic_s
 typedef struct sirLangExternalSymbol_s
 {
 	const char *pszName;
-	sirLangSymbolKind_t eKind;
-	sirLangValueKind_t eValue;
+	SIRLangSymbolKind eKind;
+	SIRLangValueKind eValue;
 } sirLangExternalSymbol_t;
 
 typedef struct sirLangResolvedReference_s
 {
 	uint32_t iUseNode;
 	uint32_t iDeclarationNode; // UINT32_MAX for a registered external/intrinsic.
-	sirLangValueKind_t eValue;
+	SIRLangValueKind eValue;
 } sirLangResolvedReference_t;
 
 typedef struct sirLangSemanticOutput_s
@@ -135,6 +132,6 @@ typedef struct sirLangSemanticOutput_s
 // are caller-owned. A forward-declared type/function can be resolved within
 // its lexical scope; local variables become visible only after declaration.
 // This stage validates types and local expressions, not native effect safety.
-sirLangSemanticError_t SIRLangAnalyze( const sirLangSyntaxTree_t *pTree, sirLangSemanticOutput_t *pOutput ) noexcept;
+SIRLangSemanticError SIRLangAnalyze( const sirLangSyntaxTree_t *pTree, sirLangSemanticOutput_t *pOutput ) noexcept;
 
-#endif // __SIRENGINE_SIRLANGSEMANTIC_H__
+#endif // __SIR_LANGSEMANTIC_H__

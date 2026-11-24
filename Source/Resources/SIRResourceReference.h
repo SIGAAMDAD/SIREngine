@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef SIRENGINE_SIRRESOURCEREFERENCE_H
-#define SIRENGINE_SIRRESOURCEREFERENCE_H
+#ifndef __SIR_RESOURCEREFERENCE_H__
+#define __SIR_RESOURCEREFERENCE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -35,4 +35,4 @@ SIRResourceResult SIRResourceAcquireReference( SIRResourceGraph& rGraph, SIRReso
 void SIRResourceReleaseReference( SIRResourceGraph& rGraph, SIRResourceHandle hResource ) noexcept;
 bool SIRResourceIsReferenceAlive( const SIRResourceGraph& rGraph, SIRResourceHandle hResource ) noexcept;
 
-#endif // SIRENGINE_SIRRESOURCEREFERENCE_H
+#endif // __SIR_RESOURCEREFERENCE_H__

@@ -96,7 +96,7 @@ uint64_t SIRConfigBudget::getRejectedAllocations( void ) const noexcept
 
 void *SIRConfigBudget::allocate( void *pContext, size_t nBytes, size_t nAlignment ) noexcept
 {
-	SIRConfigBudget *pBudget = ( SIRConfigBudget * )pContext;
+	SIRConfigBudget *pBudget = static_cast<SIRConfigBudget *>(pContext);
 	if ( pBudget == nullptr || pBudget->m_pBacking == nullptr ) {
 		return nullptr;
 	}
@@ -122,9 +122,9 @@ void *SIRConfigBudget::allocate( void *pContext, size_t nBytes, size_t nAlignmen
 		return nullptr;
 	}
 
-	const uintptr_t nStart = ( uintptr_t )pBase + sizeof( sirConfigAllocationHeader_t );
-	const uintptr_t nAligned = ( nStart + nEffectiveAlignment - 1 ) & ~( ( uintptr_t )nEffectiveAlignment - 1 );
-	sirConfigAllocationHeader_t *pHeader = ( sirConfigAllocationHeader_t * )( nAligned - sizeof( sirConfigAllocationHeader_t ) );
+	const uintptr_t nStart = reinterpret_cast<uintptr_t>(pBase) + sizeof( sirConfigAllocationHeader_t );
+	const uintptr_t nAligned = ( nStart + nEffectiveAlignment - 1 ) & ~( static_cast<uintptr_t>(nEffectiveAlignment) - 1 );
+	sirConfigAllocationHeader_t *pHeader = reinterpret_cast<sirConfigAllocationHeader_t *>(  nAligned - sizeof( sirConfigAllocationHeader_t )  );
 	pHeader->pOwner = pBudget;
 	pHeader->pBase = pBase;
 	pHeader->nTotalBytes = nTotal;
@@ -137,7 +137,7 @@ void *SIRConfigBudget::allocate( void *pContext, size_t nBytes, size_t nAlignmen
 		pBudget->m_nPeak = pBudget->m_nLive;
 	}
 
-	return ( void * )nAligned;
+	return reinterpret_cast<void *>(nAligned);
 }
 
 void SIRConfigBudget::deallocate( void *pContext, void *pMemory, size_t nBytes, size_t nAlignment ) noexcept
@@ -146,14 +146,14 @@ void SIRConfigBudget::deallocate( void *pContext, void *pMemory, size_t nBytes, 
 		return;
 	}
 
-	SIRConfigBudget *pBudget = ( SIRConfigBudget * )pContext;
+	SIRConfigBudget *pBudget = static_cast<SIRConfigBudget *>(pContext);
 	if ( pBudget == nullptr || pBudget->m_pBacking == nullptr ) {
 		assert( false );
 		return;
 	}
 
 	sirConfigAllocationHeader_t *pHeader =
-	    ( sirConfigAllocationHeader_t * )( ( uint8_t * )pMemory - sizeof( sirConfigAllocationHeader_t ) );
+	    ( sirConfigAllocationHeader_t * )( static_cast<uint8_t *>(pMemory) - sizeof(  sirConfigAllocationHeader_t  ) );
 	if ( pHeader->pOwner != pBudget || pHeader->nUserBytes != nBytes || pHeader->nUserAlignment != nAlignment ) {
 		assert( false );
 		return;

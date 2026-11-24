@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRREGISTRATIONCATALOG_H__
-#define __SIRENGINE_SIRREGISTRATIONCATALOG_H__
+#ifndef __SIR_REGISTRATIONCATALOG_H__
+#define __SIR_REGISTRATIONCATALOG_H__
 
 #include <Core/SIRPCH.h>
 #include <Core/Registration/SIRRegistrationStringBridge.h>
@@ -25,11 +25,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-typedef enum sirRegistrationKind_e : uint8_t
-{
+enum class SIRRegistrationKind : uint8_t {
 	SIR_REGISTRATION_COMMAND = 1,
 	SIR_REGISTRATION_CVAR = 2
-} sirRegistrationKind_t;
+};
 
 // Callbacks are module-owned and must be kept loaded through their execution leases.
 typedef void ( *sirRegistrationCallback_t )( void *pContext, const void *pInvocation, const void *pArguments ) noexcept;
@@ -61,7 +60,7 @@ typedef struct sirRegistrationEntry_s
 	uint32_t nGeneration;
 	sirRegistrationCallback_t pfnCallback;
 	void *pContext;
-	sirRegistrationKind_t eKind;
+	SIRRegistrationKind eKind;
 	bool bActive;
 	bool bCooked;
 } sirRegistrationEntry_t;
@@ -87,12 +86,12 @@ typedef struct sirRegistrationCatalogInit_s
 typedef struct sirRegistrationDynamicDesc_s
 {
 	sirRegistrationNameRequest_t name;
-	sirRegistrationKind_t eKind;
+	SIRRegistrationKind eKind;
 	uint64_t nBindingId;
 	uint32_t nSchemaId;
 	uint32_t nFlags;
 	uint32_t nCapabilities;
-	sirCVarType_t eType;
+	SIRCVarType eType;
 	sirRegistrationCallback_t pfnCallback;
 	void *pContext;
 } sirRegistrationDynamicDesc_t;
@@ -112,21 +111,21 @@ public:
 	uint32_t getCount( void ) const noexcept;
 	uint32_t getCapacity( void ) const noexcept;
 	uint32_t getCookedCount( void ) const noexcept;
-	sirRegistrationResult_t getEntry( sirRegistrationHandle_t handle, const sirRegistrationEntry_t **ppEntry ) const noexcept;
-	sirRegistrationResult_t getAtIndex( uint32_t iEntry, const sirRegistrationEntry_t **ppEntry,
+	SIRRegistrationResult getEntry( sirRegistrationHandle_t handle, const sirRegistrationEntry_t **ppEntry ) const noexcept;
+	SIRRegistrationResult getAtIndex( uint32_t iEntry, const sirRegistrationEntry_t **ppEntry,
 	                                    sirRegistrationHandle_t *pHandle ) const noexcept;
 
-	sirRegistrationResult_t initialize( SIRStringPool& pool, const sirRegistrationCatalogInit_t& init ) noexcept;
-	sirRegistrationResult_t find( const char *pszName, size_t nNameBytes, sirRegistrationHandle_t *pHandle ) const noexcept;
-	sirRegistrationResult_t registerDynamic( const sirRegistrationDynamicDesc_t& desc, sirRegistrationHandle_t *pHandle ) noexcept;
-	sirRegistrationResult_t unregisterDynamic( sirRegistrationHandle_t handle ) noexcept;
+	SIRRegistrationResult initialize( SIRStringPool& pool, const sirRegistrationCatalogInit_t& init ) noexcept;
+	SIRRegistrationResult find( const char *pszName, size_t nNameBytes, sirRegistrationHandle_t *pHandle ) const noexcept;
+	SIRRegistrationResult registerDynamic( const sirRegistrationDynamicDesc_t& desc, sirRegistrationHandle_t *pHandle ) noexcept;
+	SIRRegistrationResult unregisterDynamic( sirRegistrationHandle_t handle ) noexcept;
 	uint32_t unregisterModule( uint32_t nOwnerId ) noexcept;
 	void shutdown( void ) noexcept;
 
 protected:
 private:
-	sirRegistrationResult_t loadNames( const sirRegistrationCatalogInit_t& init, SIRStringPool& pool, uint32_t nNames ) noexcept;
-	sirRegistrationResult_t loadDescriptors( const sirRegistrationCatalogInit_t& init, uint32_t nNames ) noexcept;
+	SIRRegistrationResult loadNames( const sirRegistrationCatalogInit_t& init, SIRStringPool& pool, uint32_t nNames ) noexcept;
+	SIRRegistrationResult loadDescriptors( const sirRegistrationCatalogInit_t& init, uint32_t nNames ) noexcept;
 	bool isNameOccupied( SIRStringAtom atom ) const noexcept;
 
 	SIRStringPool *m_pPool;
@@ -139,4 +138,4 @@ private:
 	bool m_bInitialized;
 };
 
-#endif // __SIRENGINE_SIRREGISTRATIONCATALOG_H__
+#endif // __SIR_REGISTRATIONCATALOG_H__

@@ -17,7 +17,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Platform/SIRFileLock.h>
 #include <Scripting/Core/SIRScriptSHA256.h>
 
-#include <Core/Platform/SIRAtomic.h>
+#include <atomic>
 #include <stdio.h>
 #include <string.h>
 #if defined( _WIN32 )
@@ -33,19 +33,19 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 static constexpr char s_szCacheMagic[8] = { 'S', 'I', 'R', 'C', 'A', 'S', '0', '1' };
 static constexpr uint32_t s_nCacheVersion = 1;
-static SIRAtomic<uint64_t> s_nCacheTempSerial( 1 );
+static std::atomic<uint64_t> s_nCacheTempSerial( 1 );
 
 static void scriptWriteLE32( uint8_t *pData, uint32_t nValue ) noexcept
 {
 	for ( uint32_t iByte = 0; iByte < 4; ++iByte ) {
-		pData[iByte] = ( uint8_t )( nValue >> ( iByte * 8 ) );
+		pData[iByte] = static_cast<uint8_t>(  nValue >> ( iByte * 8 )  );
 	}
 }
 
 static void scriptWriteLE64( uint8_t *pData, uint64_t nValue ) noexcept
 {
 	for ( uint32_t iByte = 0; iByte < 8; ++iByte ) {
-		pData[iByte] = ( uint8_t )( nValue >> ( iByte * 8 ) );
+		pData[iByte] = static_cast<uint8_t>(  nValue >> ( iByte * 8 )  );
 	}
 }
 
@@ -53,7 +53,7 @@ static uint32_t scriptReadLE32( const uint8_t *pData ) noexcept
 {
 	uint32_t nValue = 0;
 	for ( uint32_t iByte = 0; iByte < 4; ++iByte ) {
-		nValue |= ( uint32_t )pData[iByte] << ( iByte * 8 );
+		nValue |= static_cast<uint32_t>(pData[iByte]) << ( iByte * 8 );
 	}
 	return nValue;
 }
@@ -62,7 +62,7 @@ static uint64_t scriptReadLE64( const uint8_t *pData ) noexcept
 {
 	uint64_t nValue = 0;
 	for ( uint32_t iByte = 0; iByte < 8; ++iByte ) {
-		nValue |= ( uint64_t )pData[iByte] << ( iByte * 8 );
+		nValue |= static_cast<uint64_t>(pData[iByte]) << ( iByte * 8 );
 	}
 	return nValue;
 }
@@ -87,7 +87,7 @@ static bool scriptWriteDurable( FILE *pFile, const uint8_t *pBytes, size_t nByte
 static bool scriptCommitFile( const char *szTemp, const char *szFinal, const char *szRoot ) noexcept
 {
 #if defined( _WIN32 )
-	( void )szRoot;
+	static_cast<void>(szRoot);
 	return MoveFileExA( szTemp, szFinal, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH ) != 0;
 #else
 	if ( rename( szTemp, szFinal ) != 0 ) {
@@ -98,7 +98,7 @@ static bool scriptCommitFile( const char *szTemp, const char *szFinal, const cha
 		return false;
 	}
 	const bool bDurable = fsync( nDir ) == 0;
-	( void )close( nDir );
+	static_cast<void>(close( nDir ));
 	return bDurable;
 #endif
 }
@@ -112,7 +112,7 @@ static FILE *scriptCreateExclusive( const char *szTemp ) noexcept
 	}
 	FILE *pFile = _fdopen( nFd, "wb" );
 	if ( pFile == nullptr ) {
-		( void )_close( nFd );
+		static_cast<void>(_close( nFd ));
 	}
 #else
 	const int nFd = open( szTemp, O_WRONLY | O_CREAT | O_EXCL, 0600 );
@@ -121,7 +121,7 @@ static FILE *scriptCreateExclusive( const char *szTemp ) noexcept
 	}
 	FILE *pFile = fdopen( nFd, "wb" );
 	if ( pFile == nullptr ) {
-		( void )close( nFd );
+		static_cast<void>(close( nFd ));
 	}
 #endif
 	return pFile;
@@ -135,7 +135,7 @@ static bool scriptMakeCacheLockPath( const char *pszArtifact, char *pszOutput, s
 		return false;
 	}
 	const int nLength = snprintf( pszOutput, nCapacity, "%s.lock", pszArtifact );
-	return nLength > 0 && ( size_t )nLength < nCapacity;
+	return nLength > 0 && static_cast<size_t>(nLength) < nCapacity;
 }
 
 SIRScriptArtifactCache::SIRScriptArtifactCache( void ) noexcept
@@ -157,33 +157,33 @@ bool SIRScriptArtifactCache::validKey( const sirScriptCacheKey_t& key ) const no
 	return nCombined != 0;
 }
 
-sirScriptResult_t SIRScriptArtifactCache::configure( const char *szRoot, uint64_t nMaximumArtifactBytes ) noexcept
+SIRScriptResult SIRScriptArtifactCache::configure( const char *szRoot, uint64_t nMaximumArtifactBytes ) noexcept
 {
 	if ( !isOwnerThread() ) {
-		return SIR_SCRIPT_BUSY;
+		return SIRScriptResult::SIR_SCRIPT_BUSY;
 	}
 	if ( m_nMaximumArtifactBytes != 0 ) {
-		return SIR_SCRIPT_WRONG_STATE;
+		return SIRScriptResult::SIR_SCRIPT_WRONG_STATE;
 	}
 	if ( szRoot == nullptr || nMaximumArtifactBytes == 0 || nMaximumArtifactBytes > UINT32_MAX ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 	const size_t nLength = strlen( szRoot );
 	if ( nLength == 0 || nLength >= MAX_PATH_BYTES - 140 ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 	memcpy( m_szRoot, szRoot, nLength + 1 );
 	m_nMaximumArtifactBytes = nMaximumArtifactBytes;
-	return SIR_SCRIPT_OK;
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
-sirScriptResult_t SIRScriptArtifactCache::makeKey( const void *pCanonicalRecipe, uint64_t nRecipeBytes, sirScriptCacheKey_t *pKey ) noexcept
+SIRScriptResult SIRScriptArtifactCache::makeKey( const void *pCanonicalRecipe, uint64_t nRecipeBytes, sirScriptCacheKey_t *pKey ) noexcept
 {
 	if ( pCanonicalRecipe == nullptr || nRecipeBytes == 0 || pKey == nullptr || nRecipeBytes > UINT32_MAX ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 	SIRScriptSHA256::digest( pCanonicalRecipe, nRecipeBytes, pKey->szDigest );
-	return SIR_SCRIPT_OK;
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
 bool SIRScriptArtifactCache::formatPath( const sirScriptCacheKey_t& key, char szPath[MAX_PATH_BYTES] ) const noexcept
@@ -262,153 +262,164 @@ bool SIRScriptArtifactCache::sameDescriptor( const sirScriptCachedArtifact_t& a,
 	       memcmp( a.key.szDigest, b.key.szDigest, 32 ) == 0 && memcmp( a.szPayloadDigest, b.szPayloadDigest, 32 ) == 0;
 }
 
-sirScriptResult_t SIRScriptArtifactCache::store( const sirScriptCodeArtifact_t& artifact, sirScriptCacheKey_t key, const void *pBytes,
+SIRScriptResult SIRScriptArtifactCache::store( const sirScriptCodeArtifact_t& artifact, sirScriptCacheKey_t key, const void *pBytes,
                                                  uint64_t nBytes, uint32_t nAlignment, sirScriptCachedArtifact_t *pDescriptor ) noexcept
 {
 	if ( !isOwnerThread() ) {
-		return SIR_SCRIPT_BUSY;
+		return SIRScriptResult::SIR_SCRIPT_BUSY;
 	}
 	if ( pBytes == nullptr || pDescriptor == nullptr || m_nMaximumArtifactBytes == 0 ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
-	sirScriptCachedArtifact_t next = {};
+	sirScriptCachedArtifact_t next {};
 	next.artifact = artifact;
 	next.key = key;
 	next.nBytes = nBytes;
 	next.nAlignment = nAlignment;
 	if ( !validDescriptor( next ) ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 	SIRScriptSHA256::digest( pBytes, nBytes, next.szPayloadDigest );
-	char szFinal[MAX_PATH_BYTES] = {};
+	char szFinal[MAX_PATH_BYTES];
+	memset( szFinal, 0, sizeof( szFinal ) );
 	if ( !formatPath( key, szFinal ) ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 
 	// A build-recipe key cannot silently change its output or target metadata.
 	// Keep the entire validation-and-replacement transaction under one OS lock.
-	char szLockPath[MAX_PATH_BYTES] = {};
+	char szLockPath[MAX_PATH_BYTES];
+	memset( szLockPath, 0, sizeof( szLockPath ) );
 	if ( !scriptMakeCacheLockPath( szFinal, szLockPath, sizeof( szLockPath ) ) ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 	SIRFileLock lock( szLockPath );
 	if ( !lock.isLocked() ) {
-		return SIR_SCRIPT_BACKEND_FAILURE;
+		return SIRScriptResult::SIR_SCRIPT_BACKEND_FAILURE;
 	}
 	FILE *pExisting = fopen( szFinal, "rb" );
 	if ( pExisting != nullptr ) {
-		uint8_t szHeader[HEADER_BYTES] = {};
-		sirScriptCachedArtifact_t old = {};
+		uint8_t szHeader[HEADER_BYTES];
+		memset( szHeader, 0, sizeof( szHeader ) );
+		sirScriptCachedArtifact_t old {};
 		if ( fread( szHeader, 1, HEADER_BYTES, pExisting ) == HEADER_BYTES && decodeHeader( szHeader, &old ) && validDescriptor( old ) ) {
 			const bool bSame = sameDescriptor( old, next );
 			bool bBytesMatch = bSame;
-			uint8_t szRead[4096] = {};
+			uint8_t szRead[4096];
+			memset( szRead, 0, sizeof( szRead ) );
 			uint64_t nExamined = 0;
 			while ( bBytesMatch && nExamined < nBytes ) {
-				const size_t nNext = nBytes - nExamined < sizeof( szRead ) ? ( size_t )( nBytes - nExamined ) : sizeof( szRead );
+				const size_t nNext = nBytes - nExamined < sizeof( szRead ) ? static_cast<size_t>( nBytes - nExamined ) : sizeof( szRead );
 				const size_t nRead = fread( szRead, 1, nNext, pExisting );
-				bBytesMatch = nRead == nNext && memcmp( szRead, ( const uint8_t * )pBytes + nExamined, nNext ) == 0;
+				bBytesMatch = nRead == nNext && memcmp( szRead, static_cast<const uint8_t *>(pBytes) + nExamined, nNext ) == 0;
 				nExamined += nNext;
 			}
 			if ( bBytesMatch ) {
 				bBytesMatch = fgetc( pExisting ) == EOF && !ferror( pExisting );
 			}
-			( void )fclose( pExisting );
+			static_cast<void>(fclose( pExisting ));
 			if ( bBytesMatch ) {
 				*pDescriptor = next;
-				return SIR_SCRIPT_DUPLICATE;
+				return SIRScriptResult::SIR_SCRIPT_DUPLICATE;
 			}
-			return SIR_SCRIPT_TYPE_MISMATCH;
+			return SIRScriptResult::SIR_SCRIPT_TYPE_MISMATCH;
 		}
-		( void )fclose( pExisting );
+		static_cast<void>(fclose( pExisting ));
 		// An incomplete or malformed prior write can be replaced atomically.
 	}
 
-	char szTemp[MAX_PATH_BYTES] = {};
+	char szTemp[MAX_PATH_BYTES];
+	memset( szTemp, 0, sizeof( szTemp ) );
 #if defined( _WIN32 )
-	const uint64_t nPID = ( uint64_t )_getpid();
+	const uint64_t nPID = static_cast<uint64_t>(_getpid());
 #else
-	const uint64_t nPID = ( uint64_t )getpid();
+	const uint64_t nPID = static_cast<uint64_t>(getpid());
 #endif
-	const uint64_t nSerial = s_nCacheTempSerial.fetchAdd( 1, SIR_MEMORY_ORDER_RELAXED );
+	const uint64_t nSerial = s_nCacheTempSerial.fetch_add( 1, std::memory_order_relaxed );
 	if ( snprintf( szTemp, sizeof( szTemp ), "%s.tmp.%llu.%llu", szFinal, ( unsigned long long )nPID, ( unsigned long long )nSerial ) >=
-	     ( int )sizeof( szTemp ) ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+	     static_cast<int>(sizeof( szTemp ) )) {
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 	FILE *pFile = scriptCreateExclusive( szTemp );
 	if ( pFile == nullptr ) {
-		return SIR_SCRIPT_BACKEND_FAILURE;
+		return SIRScriptResult::SIR_SCRIPT_BACKEND_FAILURE;
 	}
-	uint8_t szHeader[HEADER_BYTES] = {};
+	uint8_t szHeader[HEADER_BYTES];
+	memset( szHeader, 0, sizeof( szHeader ) );
 	encodeHeader( next, szHeader );
 	const bool bHeader = fwrite( szHeader, 1, HEADER_BYTES, pFile ) == HEADER_BYTES;
-	const bool bWritten = bHeader && scriptWriteDurable( pFile, ( const uint8_t * )pBytes, ( size_t )nBytes );
+	const bool bWritten = bHeader && scriptWriteDurable( pFile, static_cast<const uint8_t *>(pBytes), static_cast<size_t>(nBytes) );
 	const bool bClosed = fclose( pFile ) == 0;
 	if ( !bWritten || !bClosed ) {
-		( void )remove( szTemp );
-		return SIR_SCRIPT_BACKEND_FAILURE;
+		static_cast<void>(remove( szTemp ));
+		return SIRScriptResult::SIR_SCRIPT_BACKEND_FAILURE;
 	}
 	if ( !scriptCommitFile( szTemp, szFinal, m_szRoot ) ) {
-		( void )remove( szTemp );
-		return SIR_SCRIPT_BACKEND_FAILURE;
+		static_cast<void>(remove( szTemp ));
+		return SIRScriptResult::SIR_SCRIPT_BACKEND_FAILURE;
 	}
 	*pDescriptor = next;
-	return SIR_SCRIPT_OK;
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
-sirScriptResult_t SIRScriptArtifactCache::fetch( const sirScriptCachedArtifact_t& descriptor, void *pOutput,
+SIRScriptResult SIRScriptArtifactCache::fetch( const sirScriptCachedArtifact_t& descriptor, void *pOutput,
                                                  uint64_t nCapacity ) const noexcept
 {
 	if ( !isOwnerThread() ) {
-		return SIR_SCRIPT_BUSY;
+		return SIRScriptResult::SIR_SCRIPT_BUSY;
 	}
 	if ( !validDescriptor( descriptor ) || pOutput == nullptr || nCapacity < descriptor.nBytes ||
-	     ( ( uintptr_t )pOutput & ( descriptor.nAlignment - 1 ) ) != 0 ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+	     ( reinterpret_cast<uintptr_t>(pOutput) & ( descriptor.nAlignment - 1 ) ) != 0 ) {
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
-	char szPath[MAX_PATH_BYTES] = {};
+	char szPath[MAX_PATH_BYTES];
+	memset( szPath, 0, sizeof( szPath ) );
 	if ( !formatPath( descriptor.key, szPath ) ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 	FILE *pFile = fopen( szPath, "rb" );
 	if ( pFile == nullptr ) {
-		return SIR_SCRIPT_NOT_FOUND;
+		return SIRScriptResult::SIR_SCRIPT_NOT_FOUND;
 	}
-	uint8_t szHeader[HEADER_BYTES] = {};
-	sirScriptCachedArtifact_t found = {};
+	uint8_t szHeader[HEADER_BYTES];
+	memset( szHeader, 0, sizeof( szHeader ) );
+	sirScriptCachedArtifact_t found {};
 	const bool bHeader = fread( szHeader, 1, HEADER_BYTES, pFile ) == HEADER_BYTES && decodeHeader( szHeader, &found );
 	if ( !bHeader || !sameDescriptor( descriptor, found ) ) {
-		( void )fclose( pFile );
-		return SIR_SCRIPT_TYPE_MISMATCH;
+		static_cast<void>(fclose( pFile ));
+		return SIRScriptResult::SIR_SCRIPT_TYPE_MISMATCH;
 	}
-	const bool bRead = fread( pOutput, 1, ( size_t )found.nBytes, pFile ) == found.nBytes;
+	const bool bRead = fread( pOutput, 1, static_cast<size_t>(found.nBytes), pFile ) == found.nBytes;
 	const int nExtra = fgetc( pFile );
 	const bool bClean = !ferror( pFile ) && nExtra == EOF;
-	( void )fclose( pFile );
+	static_cast<void>(fclose( pFile ));
 	if ( !bRead || !bClean ) {
-		return SIR_SCRIPT_TYPE_MISMATCH;
+		return SIRScriptResult::SIR_SCRIPT_TYPE_MISMATCH;
 	}
-	uint8_t szDigest[32] = {};
+	uint8_t szDigest[32];
+	memset( szDigest, 0, sizeof( szDigest ) );
 	SIRScriptSHA256::digest( pOutput, found.nBytes, szDigest );
-	return memcmp( szDigest, found.szPayloadDigest, sizeof( szDigest ) ) == 0 ? SIR_SCRIPT_OK : SIR_SCRIPT_TYPE_MISMATCH;
+	return memcmp( szDigest, found.szPayloadDigest, sizeof( szDigest ) ) == 0 ? SIRScriptResult::SIR_SCRIPT_OK : SIRScriptResult::SIR_SCRIPT_TYPE_MISMATCH;
 }
 
-sirScriptResult_t SIRScriptArtifactCache::erase( sirScriptCacheKey_t key ) noexcept
+SIRScriptResult SIRScriptArtifactCache::erase( sirScriptCacheKey_t key ) noexcept
 {
 	if ( !isOwnerThread() ) {
-		return SIR_SCRIPT_BUSY;
+		return SIRScriptResult::SIR_SCRIPT_BUSY;
 	}
-	char szPath[MAX_PATH_BYTES] = {};
+	char szPath[MAX_PATH_BYTES];
+	memset( szPath, 0, sizeof( szPath ) );
 	if ( !formatPath( key, szPath ) ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
-	char szLockPath[MAX_PATH_BYTES] = {};
+	char szLockPath[MAX_PATH_BYTES];
+	memset( szLockPath, 0, sizeof( szLockPath ) );
 	if ( !scriptMakeCacheLockPath( szPath, szLockPath, sizeof( szLockPath ) ) ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 	SIRFileLock lock( szLockPath );
 	if ( !lock.isLocked() ) {
-		return SIR_SCRIPT_BACKEND_FAILURE;
+		return SIRScriptResult::SIR_SCRIPT_BACKEND_FAILURE;
 	}
-	return remove( szPath ) == 0 ? SIR_SCRIPT_OK : SIR_SCRIPT_NOT_FOUND;
+	return remove( szPath ) == 0 ? SIRScriptResult::SIR_SCRIPT_OK : SIRScriptResult::SIR_SCRIPT_NOT_FOUND;
 }

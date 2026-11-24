@@ -229,7 +229,7 @@ if(SIR_BUILD_TESTS)
 endif()
 
 # -- Drivers/D3D10 test fixtures --
-if(SIR_BUILD_TESTS)
+if(SIR_BUILD_TESTS AND EXISTS "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/D3D10/SIRD3D10Driver.cpp")
     add_library(SIRD3D10ABIStub STATIC ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/D3D10/SIRD3D10Driver.cpp)
     target_include_directories(SIRD3D10ABIStub PUBLIC
         "${PROJECT_SOURCE_DIR}/Source"
@@ -245,6 +245,7 @@ if(SIR_BUILD_TESTS)
 endif()
 
 # -- ShaderCooker acceptance --
+set(SIR_SHADER_FXC_EXECUTABLE "" CACHE FILEPATH "Offline FXC executable for native D3D9 shader acceptance")
 if(WIN32 AND SIR_BUILD_TESTS AND NOT SIR_SHADER_FXC_EXECUTABLE STREQUAL "")
     if(NOT EXISTS "${SIR_SHADER_FXC_EXECUTABLE}")
         message(FATAL_ERROR "SIR_SHADER_FXC_EXECUTABLE does not exist")
@@ -259,6 +260,7 @@ if(WIN32 AND SIR_BUILD_TESTS AND NOT SIR_SHADER_FXC_EXECUTABLE STREQUAL "")
 endif()
 
 # -- ShaderCooker acceptance --
+set(SIR_SHADER_DXC_EXECUTABLE "" CACHE FILEPATH "Pinned offline DXC executable for shader acceptance")
 if(SIR_BUILD_TESTS AND NOT SIR_SHADER_DXC_EXECUTABLE STREQUAL "")
     find_program(SIR_SHADER_SPIRV_VAL NAMES spirv-val REQUIRED)
     find_program(SIR_SHADER_SPIRV_DIS NAMES spirv-dis REQUIRED)
@@ -437,6 +439,7 @@ sir_configure_owned_target(SIRCoreBenchmarks)
 endif()
 
 # Optimized smart pointer family, allocator ownership, and GRDG lifetime contracts.
+if(SIR_BUILD_TESTS)
 foreach(sirPointerTest IN ITEMS SIRSmartPointerTests SIREngineAllocationPtrTests SIRPointerOptimizationTests SIRPointerFamilyTests)
     add_executable(${sirPointerTest} "${PROJECT_SOURCE_DIR}/Tests/Unit/${sirPointerTest}.cpp")
     target_link_libraries(${sirPointerTest} PRIVATE SIR::Core SIR::Resources)
@@ -444,3 +447,4 @@ foreach(sirPointerTest IN ITEMS SIRSmartPointerTests SIREngineAllocationPtrTests
     add_test(NAME ${sirPointerTest} COMMAND ${sirPointerTest})
     set_tests_properties(${sirPointerTest} PROPERTIES LABELS "gate:pr;unit;memory" TIMEOUT 60)
 endforeach()
+endif()

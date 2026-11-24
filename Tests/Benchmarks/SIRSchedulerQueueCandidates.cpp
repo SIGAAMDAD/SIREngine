@@ -14,6 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include "SIRSchedulerQueueCandidates.h"
+#include <atomic>
 
 #include <limits.h>
 #include <new>

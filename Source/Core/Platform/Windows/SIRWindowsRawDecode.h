@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRWINDOWSRAWDECODE_H__
-#define __SIRENGINE_SIRWINDOWSRAWDECODE_H__
+#ifndef __SIR_WINDOWSRAWDECODE_H__
+#define __SIR_WINDOWSRAWDECODE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -35,4 +35,4 @@ class SIRInputService;
 bool sirInputDecodeWindowsRawRecord( SIRInputService& service, const RAWINPUT& input ) noexcept;
 bool sirInputDecodeWindowsRawBatch( SIRInputService& service, const RAWINPUT *pRecords, uint32_t nCount, uint32_t nCapacityBytes ) noexcept;
 
-#endif // __SIRENGINE_SIRWINDOWSRAWDECODE_H__
+#endif // __SIR_WINDOWSRAWDECODE_H__

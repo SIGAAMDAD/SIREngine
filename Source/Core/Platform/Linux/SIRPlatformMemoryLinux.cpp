@@ -29,15 +29,18 @@ static bool readFile( const char *szPath, char *szBuffer, size_t nCapacity ) noe
 	if ( szPath == nullptr || szBuffer == nullptr || nCapacity < 2 ) {
 		return false;
 	}
+
 	const int nFile = open( szPath, O_RDONLY | O_CLOEXEC );
 	if ( nFile < 0 ) {
 		return false;
 	}
+
 	const ssize_t nRead = read( nFile, szBuffer, nCapacity - 1 );
 	const int nClose = close( nFile );
 	if ( nRead <= 0 || nClose != 0 ) {
 		return false;
 	}
+
 	szBuffer[nRead] = '\0';
 	return true;
 }
@@ -66,7 +69,7 @@ static bool parseKibField( const char *szData, const char *szKey, uint64_t *pByt
 			if ( pEnd[0] != 'k' || pEnd[1] != 'B' ) {
 				return false;
 			}
-			*pBytes = ( uint64_t )nKib * 1024U;
+			*pBytes = static_cast<uint64_t>(nKib) * 1024U;
 			return true;
 		}
 		const char *pEnd = strchr( pLine, '\n' );
@@ -96,7 +99,7 @@ static bool readUnsignedFile( const char *szPath, uint64_t *pNumber ) noexcept
 	if ( *pEnd != '\0' ) {
 		return false;
 	}
-	*pNumber = ( uint64_t )nValue;
+	*pNumber = static_cast<uint64_t>(nValue);
 	return true;
 }
 
@@ -105,25 +108,25 @@ bool SIRPlatformMemory::querySystem( sirSystemMemoryStats_t *pStats ) noexcept
 	if ( pStats == nullptr ) {
 		return false;
 	}
-	struct sysinfo system = {};
+	struct sysinfo system {};
 	char szMeminfo[16384];
 	if ( sysinfo( &system ) != 0 || !readFile( "/proc/meminfo", szMeminfo, sizeof( szMeminfo ) ) ) {
 		return false;
 	}
 
-	sirSystemMemoryStats_t stats = {};
-	stats.nTotalPhysicalBytes = ( uint64_t )system.totalram * system.mem_unit;
-	stats.nAvailablePhysicalBytes = ( uint64_t )system.freeram * system.mem_unit;
-	stats.nTotalSwapBytes = ( uint64_t )system.totalswap * system.mem_unit;
-	stats.nAvailableSwapBytes = ( uint64_t )system.freeswap * system.mem_unit;
-	stats.nValidFields |= SIR_SYSTEM_MEMORY_SWAP;
+	sirSystemMemoryStats_t stats {};
+	stats.nTotalPhysicalBytes = static_cast<uint64_t>(system.totalram) * system.mem_unit;
+	stats.nAvailablePhysicalBytes = static_cast<uint64_t>(system.freeram) * system.mem_unit;
+	stats.nTotalSwapBytes = static_cast<uint64_t>(system.totalswap) * system.mem_unit;
+	stats.nAvailableSwapBytes = static_cast<uint64_t>(system.freeswap) * system.mem_unit;
+	stats.nValidFields |= static_cast<uint32_t>( SIRSystemMemoryField::SIR_SYSTEM_MEMORY_SWAP );
 	uint64_t nAvailable = 0;
 	if ( parseKibField( szMeminfo, "MemAvailable:", &nAvailable ) ) {
 		stats.nAvailablePhysicalBytes = nAvailable;
 	}
 	if ( parseKibField( szMeminfo, "CommitLimit:", &stats.nCommitLimitBytes ) &&
 	     parseKibField( szMeminfo, "Committed_AS:", &stats.nCommittedBytes ) ) {
-		stats.nValidFields |= SIR_SYSTEM_MEMORY_COMMIT;
+		stats.nValidFields |= static_cast<uint32_t>( SIRSystemMemoryField::SIR_SYSTEM_MEMORY_COMMIT );
 	}
 
 	// The common /sys/fs/cgroup root is trustworthy for the process only when
@@ -135,12 +138,12 @@ bool SIRPlatformMemory::querySystem( sirSystemMemoryStats_t *pStats ) noexcept
 		uint64_t nGroupLimit = 0;
 		if ( readUnsignedFile( "/sys/fs/cgroup/memory.max", &nGroupLimit ) && nGroupLimit != 0 && nGroupLimit != UINT64_MAX ) {
 			stats.nGroupMemoryLimitBytes = nGroupLimit;
-			stats.nValidFields |= SIR_SYSTEM_MEMORY_GROUP_LIMIT;
+			stats.nValidFields |= static_cast<uint32_t>( SIRSystemMemoryField::SIR_SYSTEM_MEMORY_GROUP_LIMIT );
 		}
 		uint64_t nGroupUsage = 0;
 		if ( readUnsignedFile( "/sys/fs/cgroup/memory.current", &nGroupUsage ) ) {
 			stats.nGroupMemoryUsageBytes = nGroupUsage;
-			stats.nValidFields |= SIR_SYSTEM_MEMORY_GROUP_USAGE;
+			stats.nValidFields |= static_cast<uint32_t>( SIRSystemMemoryField::SIR_SYSTEM_MEMORY_GROUP_USAGE );
 		}
 	}
 	*pStats = stats;
@@ -156,25 +159,25 @@ bool SIRPlatformMemory::queryProcess( sirProcessMemoryStats_t *pStats ) noexcept
 	if ( !readFile( "/proc/self/status", szStatus, sizeof( szStatus ) ) ) {
 		return false;
 	}
-	sirProcessMemoryStats_t stats = {};
+	sirProcessMemoryStats_t stats {};
 	if ( parseKibField( szStatus, "VmRSS:", &stats.nResidentBytes ) ) {
-		stats.nValidFields |= SIR_PROCESS_MEMORY_RESIDENT;
+		stats.nValidFields |= static_cast<uint32_t>( SIRProcessMemoryField::SIR_PROCESS_MEMORY_RESIDENT );
 	}
 	if ( parseKibField( szStatus, "VmHWM:", &stats.nPeakResidentBytes ) ) {
-		stats.nValidFields |= SIR_PROCESS_MEMORY_PEAK_RESIDENT;
+		stats.nValidFields |= static_cast<uint32_t>( SIRProcessMemoryField::SIR_PROCESS_MEMORY_PEAK_RESIDENT );
 	}
 	if ( parseKibField( szStatus, "VmSize:", &stats.nVirtualAddressBytes ) ) {
-		stats.nValidFields |= SIR_PROCESS_MEMORY_VIRTUAL_ADDRESS;
+		stats.nValidFields |= static_cast<uint32_t>( SIRProcessMemoryField::SIR_PROCESS_MEMORY_VIRTUAL_ADDRESS );
 	}
 	if ( parseKibField( szStatus, "RssAnon:", &stats.nAnonymousResidentBytes ) ) {
-		stats.nValidFields |= SIR_PROCESS_MEMORY_ANONYMOUS_RESIDENT;
+		stats.nValidFields |= static_cast<uint32_t>( SIRProcessMemoryField::SIR_PROCESS_MEMORY_ANONYMOUS_RESIDENT );
 	}
-	struct rusage usage = {};
+	struct rusage usage {};
 	if ( getrusage( RUSAGE_SELF, &usage ) == 0 ) {
-		stats.nPageFaultCount = ( uint64_t )usage.ru_minflt + ( uint64_t )usage.ru_majflt;
-		stats.nValidFields |= SIR_PROCESS_MEMORY_PAGE_FAULTS;
+		stats.nPageFaultCount = static_cast<uint64_t>(usage.ru_minflt) + static_cast<uint64_t>(usage.ru_majflt);
+		stats.nValidFields |= static_cast<uint32_t>( SIRProcessMemoryField::SIR_PROCESS_MEMORY_PAGE_FAULTS );
 	}
-	if ( ( stats.nValidFields & SIR_PROCESS_MEMORY_RESIDENT ) == 0 ) {
+	if ( ( stats.nValidFields & static_cast<uint32_t>( SIRProcessMemoryField::SIR_PROCESS_MEMORY_RESIDENT ) ) == 0 ) {
 		return false;
 	}
 	*pStats = stats;

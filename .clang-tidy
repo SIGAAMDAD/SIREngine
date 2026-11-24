@@ -25,14 +25,13 @@ WarningsAsErrors: >-
   modernize-use-override,
   modernize-use-equals-delete
 HeaderFilterRegex: '.*[/\\](Source|Tests|Tools)[/\\].*'
-ExcludeHeaderFilterRegex: '(^|[/\\])(ThirdParty|Vendor|External|out)[/\\]'
 FormatStyle: file
 CheckOptions:
   readability-identifier-naming.ClassCase: CamelCase
   readability-identifier-naming.ClassPrefix: 'SIR'
   readability-identifier-naming.StructIgnoredRegexp: ".*"
   readability-identifier-naming.EnumCase: CamelCase
-  readability-identifier-naming.EnumPrefix: 'sir'
+  readability-identifier-naming.EnumPrefix: 'SIR'
   readability-identifier-naming.EnumConstantCase: UPPER_CASE
   readability-identifier-naming.EnumConstantPrefix: 'SIR_'
   readability-identifier-naming.PrivateMemberPrefix: 'm_'

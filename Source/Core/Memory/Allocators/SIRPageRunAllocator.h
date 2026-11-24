@@ -14,8 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRPAGERUNALLOCATOR_H__
-#define __SIRENGINE_SIRPAGERUNALLOCATOR_H__
+#ifndef __SIR_PAGERUNALLOCATOR_H__
+#define __SIR_PAGERUNALLOCATOR_H__
 
 #include <Core/SIRPCH.h>
 
@@ -67,4 +67,4 @@ private:
 	uint64_t m_nAllocatedBytes;
 };
 
-#endif // __SIRENGINE_SIRPAGERUNALLOCATOR_H__
+#endif // __SIR_PAGERUNALLOCATOR_H__

@@ -14,8 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRRECLAIMABLESIZECLASSALLOCATOR_H__
-#define __SIRENGINE_SIRRECLAIMABLESIZECLASSALLOCATOR_H__
+#ifndef __SIR_RECLAIMABLESIZECLASSALLOCATOR_H__
+#define __SIR_RECLAIMABLESIZECLASSALLOCATOR_H__
 
 #include <Core/SIRPCH.h>
 
@@ -70,4 +70,4 @@ private:
 	bool m_bAdaptive;
 };
 
-#endif // __SIRENGINE_SIRRECLAIMABLESIZECLASSALLOCATOR_H__
+#endif // __SIR_RECLAIMABLESIZECLASSALLOCATOR_H__

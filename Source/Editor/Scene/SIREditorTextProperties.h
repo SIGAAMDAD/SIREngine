@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIREDITORTEXTPROPERTIES_H__
-#define __SIRENGINE_SIREDITORTEXTPROPERTIES_H__
+#ifndef __SIR_EDITORTEXTPROPERTIES_H__
+#define __SIR_EDITORTEXTPROPERTIES_H__
 
 #include <Core/SIRPCH.h>
 
@@ -26,15 +26,14 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Editor/Scene/SIREditorTextScene.h>
 
-typedef enum sirEditorTextPropertyResult_e : uint8_t
-{
+enum class SIREditorTextPropertyResult : uint8_t {
 	SIR_EDITOR_PROPERTY_OK = 0,
 	SIR_EDITOR_PROPERTY_INVALID_ARGUMENT = 1,
 	SIR_EDITOR_PROPERTY_INVALID_SOURCE = 2,
 	SIR_EDITOR_PROPERTY_MALFORMED_VALUE = 3,
 	SIR_EDITOR_PROPERTY_OUT_OF_CAPACITY = 4,
 	SIR_EDITOR_PROPERTY_TOO_MANY = 5
-} sirEditorTextPropertyResult_t;
+};
 
 typedef struct sirEditorTextProperty_s
 {
@@ -58,8 +57,8 @@ typedef struct sirEditorTextPropertyIndex_s
 // parsing, mutation, or heap allocations. Offsets borrow the retained .tscn
 // source. A null output/capacity zero first pass measures the exact count.
 // A failed scan publishes zero entries and identifies the offending line.
-sirEditorTextPropertyResult_t sirEditorScanNodeTextProperties( const char *pszSource, size_t nSourceBytes,
+SIREditorTextPropertyResult sirEditorScanNodeTextProperties( const char *pszSource, size_t nSourceBytes,
                                                                const sirEditorTextSceneIndex_t& scene,
                                                                sirEditorTextPropertyIndex_t *pIndex ) noexcept;
 
-#endif // __SIRENGINE_SIREDITORTEXTPROPERTIES_H__
+#endif // __SIR_EDITORTEXTPROPERTIES_H__

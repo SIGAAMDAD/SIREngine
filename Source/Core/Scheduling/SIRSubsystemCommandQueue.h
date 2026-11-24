@@ -12,8 +12,8 @@ express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIRSUBSYSTEMCOMMANDQUEUE_H__
-#define __SIRENGINE_SIRSUBSYSTEMCOMMANDQUEUE_H__
+#ifndef __SIR_SUBSYSTEMCOMMANDQUEUE_H__
+#define __SIR_SUBSYSTEMCOMMANDQUEUE_H__
 #include <Core/SIRPCH.h>
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
 #pragma once
@@ -108,4 +108,4 @@ private:
 	uint32_t m_nCount;
 	uint64_t m_nNextSequence;
 };
-#endif // __SIRENGINE_SIRSUBSYSTEMCOMMANDQUEUE_H__
+#endif // __SIR_SUBSYSTEMCOMMANDQUEUE_H__

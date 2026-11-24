@@ -9,8 +9,8 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRGRAPHICSMODERNRHI_H__
-#define __SIRENGINE_SIRGRAPHICSMODERNRHI_H__
+#ifndef __SIR_GRAPHICSMODERNRHI_H__
+#define __SIR_GRAPHICSMODERNRHI_H__
 
 #include <Renderer/SIRGraphicsDriverABI.h>
 #include <Renderer/SIRRenderingDevice.h>
@@ -75,7 +75,7 @@ typedef struct sirModernBufferCopy_s
 typedef struct sirModernBatch_s
 {
 	uint32_t nDeviceGeneration;
-	sirGraphicsQueue_t eQueue;
+	SIRGraphicsQueue eQueue;
 	const sirGraphicsBarrier_t *pBarriers;
 	uint32_t nBarrierCount;
 	const sirGraphicsRenderPass_t *pPass;
@@ -95,7 +95,7 @@ typedef struct sirModernBatch_s
 class SIRModernPipelineCompiler
 {
 public:
-	static sirGraphicsResult_t validate( const sirGraphicsPipelineDesc_t& pipeline,
+	static SIRGraphicsResult validate( const sirGraphicsPipelineDesc_t& pipeline,
 	                                     const sirGraphicsABIPipelineModelCaps_t& caps ) noexcept;
 
 protected:
@@ -105,9 +105,9 @@ private:
 class SIRModernResourcePlanner
 {
 public:
-	static sirGraphicsResult_t validateHandle( sirGraphicsHandle_t hHandle, sirGraphicsHandleType_t eType, uint32_t nGeneration ) noexcept;
-	static sirGraphicsResult_t validateBarriers( const sirModernBatch_t& batch ) noexcept;
-	static sirGraphicsResult_t validateCopies( const sirModernBatch_t& batch ) noexcept;
+	static SIRGraphicsResult validateHandle( sirGraphicsHandle_t hHandle, SIRGraphicsHandleType eType, uint32_t nGeneration ) noexcept;
+	static SIRGraphicsResult validateBarriers( const sirModernBatch_t& batch ) noexcept;
+	static SIRGraphicsResult validateCopies( const sirModernBatch_t& batch ) noexcept;
 
 protected:
 private:
@@ -116,7 +116,7 @@ private:
 class SIRModernBindingCompiler
 {
 public:
-	static sirGraphicsResult_t validate( const sirModernBinding_t *pBindings, uint32_t nCount, uint32_t nGeneration ) noexcept;
+	static SIRGraphicsResult validate( const sirModernBinding_t *pBindings, uint32_t nCount, uint32_t nGeneration ) noexcept;
 
 protected:
 private:
@@ -125,7 +125,7 @@ private:
 class SIRModernDrawCompiler
 {
 public:
-	static sirGraphicsResult_t validate( const sirModernDraw_t& draw, uint32_t nGeneration ) noexcept;
+	static SIRGraphicsResult validate( const sirModernDraw_t& draw, uint32_t nGeneration ) noexcept;
 
 protected:
 private:
@@ -134,7 +134,7 @@ private:
 class SIRModernSynchronizationPlanner
 {
 public:
-	static sirGraphicsResult_t validateQueue( const sirModernBatch_t& batch, const sirGraphicsABIPipelineModelCaps_t& caps ) noexcept;
+	static SIRGraphicsResult validateQueue( const sirModernBatch_t& batch, const sirGraphicsABIPipelineModelCaps_t& caps ) noexcept;
 
 protected:
 private:
@@ -143,14 +143,14 @@ private:
 class SIRGraphicsModernRHI
 {
 public:
-	static sirGraphicsResult_t admit( const sirModernBatch_t& batch, const sirGraphicsABIPipelineModelCaps_t& caps ) noexcept;
-	static sirGraphicsResult_t record( const sirModernBatch_t& batch, SIRGraphicsCommandList& commands,
+	static SIRGraphicsResult admit( const sirModernBatch_t& batch, const sirGraphicsABIPipelineModelCaps_t& caps ) noexcept;
+	static SIRGraphicsResult record( const sirModernBatch_t& batch, SIRGraphicsCommandList& commands,
 	                                   const sirGraphicsABIPipelineModelCaps_t& caps ) noexcept;
-	static sirGraphicsResult_t execute( const sirModernBatch_t& batch, SIRRenderingDevice& device,
+	static SIRGraphicsResult execute( const sirModernBatch_t& batch, SIRRenderingDevice& device,
 	                                    sirGraphicsCompletion_t *pCompletion ) noexcept;
 
 protected:
 private:
 };
 
-#endif // __SIRENGINE_SIRGRAPHICSMODERNRHI_H__
+#endif // __SIR_GRAPHICSMODERNRHI_H__

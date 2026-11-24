@@ -37,7 +37,7 @@ static bool sirWorldHLODWantsChildren( const sirWorldHLODInput_t& input, const s
 	       input.pProjectedError[iNode] > pHistory->fCoarsenProjectedError;
 }
 
-static sirWorldHLODResult_t sirWorldHLODPlanInternal( const sirWorldHLODInput_t& input, sirWorldHLODOutput_t& output,
+static SIRWorldHLODResult sirWorldHLODPlanInternal( const sirWorldHLODInput_t& input, sirWorldHLODOutput_t& output,
                                                       const sirWorldHLODHistory_t *pHistory ) noexcept
 {
 	if ( input.pNodes == nullptr || input.pResidency == nullptr || input.pProjectedError == nullptr || output.pScratch == nullptr ||
@@ -45,8 +45,8 @@ static sirWorldHLODResult_t sirWorldHLODPlanInternal( const sirWorldHLODInput_t&
 	     output.nScratchCapacity < input.nNodeCount || input.nWorldGeneration == 0 || !isfinite( input.fMaxProjectedError ) ||
 	     input.fMaxProjectedError < 0.0f || ( output.pSelectedNodes == nullptr && output.nSelectedCapacity != 0 ) ||
 	     ( output.pDemands == nullptr && output.nDemandCapacity != 0 ) ||
-	     ( size_t )input.nNodeCount > SIZE_MAX / sizeof( sirWorldHLODScratch_t ) ) {
-		return SIR_WORLD_HLOD_INVALID_ARGUMENT;
+	     static_cast<size_t>(input.nNodeCount) > SIZE_MAX / sizeof( sirWorldHLODScratch_t ) ) {
+		return SIRWorldHLODResult::SIR_WORLD_HLOD_INVALID_ARGUMENT;
 	}
 
 	memset( output.pScratch, 0, sizeof( sirWorldHLODScratch_t ) * input.nNodeCount );
@@ -54,29 +54,29 @@ static sirWorldHLODResult_t sirWorldHLODPlanInternal( const sirWorldHLODInput_t&
 		const sirWorldHLODNode_t& node = input.pNodes[iNode];
 		if ( !isfinite( input.pProjectedError[iNode] ) || input.pProjectedError[iNode] < 0.0f || node.nSourceRevision == 0 ||
 		     node.keyGeometry.m_nAssetId == 0 || node.keyGeometry.m_nTypeId == 0 ) {
-			return SIR_WORLD_HLOD_INVALID_HIERARCHY;
+			return SIRWorldHLODResult::SIR_WORLD_HLOD_INVALID_HIERARCHY;
 		}
 		if ( node.nChildCount == 0 ) {
 			if ( node.nFirstChild != 0 ) {
-				return SIR_WORLD_HLOD_INVALID_HIERARCHY;
+				return SIRWorldHLODResult::SIR_WORLD_HLOD_INVALID_HIERARCHY;
 			}
 			continue;
 		}
 		if ( node.nFirstChild <= iNode || node.nFirstChild >= input.nNodeCount || node.nChildCount > input.nNodeCount - node.nFirstChild ) {
-			return SIR_WORLD_HLOD_INVALID_HIERARCHY;
+			return SIRWorldHLODResult::SIR_WORLD_HLOD_INVALID_HIERARCHY;
 		}
 		for ( uint32_t iChild = node.nFirstChild; iChild < node.nFirstChild + node.nChildCount; ++iChild ) {
 			if ( ++output.pScratch[iChild].nParentReferences != 1 ) {
-				return SIR_WORLD_HLOD_INVALID_HIERARCHY;
+				return SIRWorldHLODResult::SIR_WORLD_HLOD_INVALID_HIERARCHY;
 			}
 		}
 	}
 	if ( output.pScratch[0].nParentReferences != 0 ) {
-		return SIR_WORLD_HLOD_INVALID_HIERARCHY;
+		return SIRWorldHLODResult::SIR_WORLD_HLOD_INVALID_HIERARCHY;
 	}
 	for ( uint32_t iNode = 1; iNode < input.nNodeCount; ++iNode ) {
 		if ( output.pScratch[iNode].nParentReferences != 1 ) {
-			return SIR_WORLD_HLOD_INVALID_HIERARCHY;
+			return SIRWorldHLODResult::SIR_WORLD_HLOD_INVALID_HIERARCHY;
 		}
 	}
 
@@ -95,7 +95,7 @@ static sirWorldHLODResult_t sirWorldHLODPlanInternal( const sirWorldHLODInput_t&
 		output.pScratch[iNode].bUseChildren = bChildrenCover && ( sirWorldHLODWantsChildren( input, pHistory, iNode ) || !bReady );
 	}
 	if ( !output.pScratch[0].bCanCover ) {
-		return SIR_WORLD_HLOD_NO_RESIDENT_CUT;
+		return SIRWorldHLODResult::SIR_WORLD_HLOD_NO_RESIDENT_CUT;
 	}
 
 	// Only active coarse nodes can emit requests: missing child pages are prefetched,
@@ -126,10 +126,10 @@ static sirWorldHLODResult_t sirWorldHLODPlanInternal( const sirWorldHLODInput_t&
 		}
 	}
 	if ( nSelected > output.nSelectedCapacity || nDemands > output.nDemandCapacity ) {
-		return SIR_WORLD_HLOD_CAPACITY;
+		return SIRWorldHLODResult::SIR_WORLD_HLOD_CAPACITY;
 	}
 	if ( ( nSelected != 0 && output.pSelectedNodes == nullptr ) || ( nDemands != 0 && output.pDemands == nullptr ) ) {
-		return SIR_WORLD_HLOD_INVALID_ARGUMENT;
+		return SIRWorldHLODResult::SIR_WORLD_HLOD_INVALID_ARGUMENT;
 	}
 
 	uint32_t nWritten = 0;
@@ -145,20 +145,20 @@ static sirWorldHLODResult_t sirWorldHLODPlanInternal( const sirWorldHLODInput_t&
 	}
 	*output.pnSelectedCount = nWritten;
 	*output.pnDemandCount = nRequested;
-	return SIR_WORLD_HLOD_OK;
+	return SIRWorldHLODResult::SIR_WORLD_HLOD_OK;
 }
 
-sirWorldHLODResult_t sirWorldHLODPlan( const sirWorldHLODInput_t& input, sirWorldHLODOutput_t& output ) noexcept
+SIRWorldHLODResult sirWorldHLODPlan( const sirWorldHLODInput_t& input, sirWorldHLODOutput_t& output ) noexcept
 {
 	return sirWorldHLODPlanInternal( input, output, nullptr );
 }
 
-sirWorldHLODResult_t sirWorldHLODPlanHysteretic( const sirWorldHLODInput_t& input, const sirWorldHLODHistory_t& history,
+SIRWorldHLODResult sirWorldHLODPlanHysteretic( const sirWorldHLODInput_t& input, const sirWorldHLODHistory_t& history,
                                                  sirWorldHLODOutput_t& output ) noexcept
 {
 	if ( history.pPreviouslySplit == nullptr || history.nWorldGeneration == 0 || !isfinite( history.fCoarsenProjectedError ) ||
 	     history.fCoarsenProjectedError < 0.0f || history.fCoarsenProjectedError > input.fMaxProjectedError ) {
-		return SIR_WORLD_HLOD_INVALID_ARGUMENT;
+		return SIRWorldHLODResult::SIR_WORLD_HLOD_INVALID_ARGUMENT;
 	}
 	return sirWorldHLODPlanInternal( input, output, &history );
 }

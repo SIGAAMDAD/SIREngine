@@ -16,8 +16,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRCONTROLTREE_H__
-#define __SIRENGINE_SIRCONTROLTREE_H__
+#ifndef __SIR_CONTROL_TREE_H__
+#define __SIR_CONTROL_TREE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -27,28 +27,25 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-typedef enum sirUIResult_e : uint8_t
-{
+enum class SIRUIResult : uint8_t {
 	SIR_UI_OK = 0,
 	SIR_UI_INVALID_ARGUMENT = 1,
 	SIR_UI_NOT_INITIALIZED = 2,
 	SIR_UI_STALE_HANDLE = 3,
 	SIR_UI_OUT_OF_CAPACITY = 4,
 	SIR_UI_INVALID_LAYOUT = 5
-} sirUIResult_t;
+};
 
-typedef enum sirUILayout_e : uint8_t
-{
+enum class SIRUILayout : uint8_t {
 	SIR_UI_LAYOUT_ABSOLUTE = 0,
 	SIR_UI_LAYOUT_VERTICAL = 1
-} sirUILayout_t;
+};
 
-typedef enum sirUIInputType_e : uint8_t
-{
+enum class SIRUIInputType : uint8_t {
 	SIR_UI_INPUT_POINTER_DOWN = 1,
 	SIR_UI_INPUT_POINTER_MOVE = 2,
 	SIR_UI_INPUT_KEY_DOWN = 3
-} sirUIInputType_t;
+};
 
 typedef struct sirUIRect_s
 {
@@ -66,7 +63,7 @@ typedef struct sirUIHandle_s
 
 typedef struct sirUIInput_s
 {
-	sirUIInputType_t eType;
+	SIRUIInputType eType;
 	int32_t iX;
 	int32_t iY;
 	uint32_t nKey;
@@ -82,7 +79,7 @@ typedef struct sirUIControl_s
 	uint32_t iLastChild;
 	uint32_t iNextSibling;
 	uint32_t nGeneration;
-	sirUILayout_t eLayout;
+	SIRUILayout eLayout;
 	bool bLive;
 	bool bVisible;
 	bool bFocusable;
@@ -99,7 +96,7 @@ private:
 	uint32_t *m_pStack = nullptr;
 	uint32_t m_nCapacity = 0;
 	uint32_t m_nCount = 0;
-	sirUIHandle_t m_Focus = {};
+	sirUIHandle_t m_Focus {};
 	uint64_t m_nLayoutEpoch = 0;
 	uint64_t m_nPaintEpoch = 0;
 
@@ -108,21 +105,21 @@ private:
 	static sirUIRect_t intersection( const sirUIRect_t& a, const sirUIRect_t& b ) noexcept;
 
 public:
-	sirUIResult_t initialize( sirUIControl_t *pControls, uint32_t *pStack, uint32_t nCapacity ) noexcept;
+	SIRUIResult initialize( sirUIControl_t *pControls, uint32_t *pStack, uint32_t nCapacity ) noexcept;
 	void shutdown( void ) noexcept;
-	sirUIResult_t create( const sirUIHandle_t *pParent, const sirUIRect_t& requested, sirUILayout_t eLayout, bool bFocusable,
+	SIRUIResult create( const sirUIHandle_t *pParent, const sirUIRect_t& requested, SIRUILayout eLayout, bool bFocusable,
 	                      bool bClipChildren, sirUIHandle_t *pOutHandle ) noexcept;
-	sirUIResult_t remove( sirUIHandle_t handle ) noexcept;
-	sirUIResult_t setVisible( sirUIHandle_t handle, bool bVisible ) noexcept;
-	sirUIResult_t setRequestedRect( sirUIHandle_t handle, const sirUIRect_t& requested ) noexcept;
-	sirUIResult_t layout( const sirUIRect_t& viewport ) noexcept;
-	sirUIResult_t hitTest( int32_t iX, int32_t iY, sirUIHandle_t *pOutHandle ) noexcept;
-	sirUIResult_t dispatch( const sirUIInput_t& input, sirUIHandle_t *pTarget ) noexcept;
-	sirUIResult_t getBounds( sirUIHandle_t handle, sirUIRect_t *pOutBounds ) const noexcept;
+	SIRUIResult remove( sirUIHandle_t handle ) noexcept;
+	SIRUIResult setVisible( sirUIHandle_t handle, bool bVisible ) noexcept;
+	SIRUIResult setRequestedRect( sirUIHandle_t handle, const sirUIRect_t& requested ) noexcept;
+	SIRUIResult layout( const sirUIRect_t& viewport ) noexcept;
+	SIRUIResult hitTest( int32_t iX, int32_t iY, sirUIHandle_t *pOutHandle ) noexcept;
+	SIRUIResult dispatch( const sirUIInput_t& input, sirUIHandle_t *pTarget ) noexcept;
+	SIRUIResult getBounds( sirUIHandle_t handle, sirUIRect_t *pOutBounds ) const noexcept;
 	sirUIHandle_t getFocus( void ) const noexcept;
 	uint64_t getLayoutEpoch( void ) const noexcept;
 	uint64_t getPaintEpoch( void ) const noexcept;
 	uint32_t getCount( void ) const noexcept;
 };
 
-#endif // __SIRENGINE_SIRCONTROLTREE_H__
+#endif // __SIR_CONTROL_TREE_H__

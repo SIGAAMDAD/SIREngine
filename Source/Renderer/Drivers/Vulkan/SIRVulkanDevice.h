@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRVULKANDEVICE_H__
-#define __SIRENGINE_SIRVULKANDEVICE_H__
+#ifndef __SIR_VULKANDEVICE_H__
+#define __SIR_VULKANDEVICE_H__
 
 #include <Core/SIRPCH.h>
 #include <Renderer/SIRGraphicsTypes.h>
@@ -29,8 +29,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
 
-typedef enum sirVulkanResult_e : uint8_t
-{
+enum class SIRVulkanResult : uint8_t {
 	SIR_VULKAN_SUCCESS = 0,
 	SIR_VULKAN_INVALID_ARGUMENT,
 	SIR_VULKAN_INVALID_STATE,
@@ -41,7 +40,7 @@ typedef enum sirVulkanResult_e : uint8_t
 	SIR_VULKAN_ALLOCATION_FAILED,
 	SIR_VULKAN_BUSY,
 	SIR_VULKAN_TIMEOUT
-} sirVulkanResult_t;
+};
 
 typedef struct sirVulkanAdapterInfo_s
 {
@@ -153,16 +152,15 @@ typedef struct sirVulkanDescriptorSet_s
 // the driver. Full semantic validation remains the shader cooker's job.
 bool sirVulkanValidateSpirv( const void *pBytes, uint64_t nByteCount, const char *pszEntryPoint ) noexcept;
 
-typedef enum sirVulkanBufferPlacement_e : uint8_t
-{
+enum class SIRVulkanBufferPlacement : uint8_t {
 	SIR_VULKAN_BUFFER_GPU_LOCAL = 0,
 	SIR_VULKAN_BUFFER_CPU_UPLOAD,
 	SIR_VULKAN_BUFFER_CPU_READBACK,
 	SIR_VULKAN_BUFFER_GPU_UPLOAD
-} sirVulkanBufferPlacement_t;
+};
 
-bool sirVulkanPlacementHostVisible( sirVulkanBufferPlacement_t ePlacement ) noexcept;
-uint32_t sirVulkanPlacementPool( sirVulkanBufferPlacement_t ePlacement ) noexcept;
+bool sirVulkanPlacementHostVisible( SIRVulkanBufferPlacement ePlacement ) noexcept;
+uint32_t sirVulkanPlacementPool( SIRVulkanBufferPlacement ePlacement ) noexcept;
 bool sirVulkanMemoryTypeCompatible( uint32_t nPoolMemoryType, uint32_t nResourceMemoryTypes ) noexcept;
 void sirVulkanAdvanceMemoryPeak( uint64_t nCommittedBytes, uint64_t nAllocatedBytes, uint64_t *pPeakCommitted,
                                  uint64_t *pPeakAllocated ) noexcept;
@@ -179,7 +177,7 @@ typedef struct sirVulkanBuffer_s
 	bool bHostVisible;
 	void *pMappedData;
 	uint64_t nAllocationBytes;
-	sirVulkanBufferPlacement_t ePlacement;
+	SIRVulkanBufferPlacement ePlacement;
 } sirVulkanBuffer_t;
 
 typedef struct sirVulkanBufferCopy_s
@@ -192,7 +190,7 @@ typedef struct sirVulkanBufferCopy_s
 } sirVulkanBufferCopy_t;
 
 // Pure validation, independent of the Vulkan loader and physical device.
-sirVulkanResult_t sirVulkanValidateBufferCopies( const sirVulkanBufferCopy_t *pCopies, uint32_t nCount ) noexcept;
+SIRVulkanResult sirVulkanValidateBufferCopies( const sirVulkanBufferCopy_t *pCopies, uint32_t nCount ) noexcept;
 
 typedef struct sirVulkanImage_s
 {
@@ -279,8 +277,7 @@ typedef struct sirVulkanTextureTransfer_s
 	bool bBufferToImage;
 } sirVulkanTextureTransfer_t;
 
-typedef enum sirVulkanRecordedKind_e : uint8_t
-{
+enum class SIRVulkanRecordedKind : uint8_t {
 	SIR_VULKAN_RECORDED_BUFFER_COPY = 0,
 	SIR_VULKAN_RECORDED_TEXTURE_COPY,
 	SIR_VULKAN_RECORDED_IMAGE_BARRIER,
@@ -295,11 +292,11 @@ typedef enum sirVulkanRecordedKind_e : uint8_t
 	SIR_VULKAN_RECORDED_DRAW,
 	SIR_VULKAN_RECORDED_DRAW_INDEXED,
 	SIR_VULKAN_RECORDED_BIND_DESCRIPTOR_SET
-} sirVulkanRecordedKind_t;
+};
 
 typedef struct sirVulkanRecordedCommand_s
 {
-	sirVulkanRecordedKind_t eKind;
+	SIRVulkanRecordedKind eKind;
 	sirVulkanBufferCopy_t bufferCopy;
 	sirVulkanBufferBarrier_t bufferBarrier;
 	sirVulkanBuffer_t *pBuffer;
@@ -341,7 +338,7 @@ typedef struct sirVulkanRecordedCommand_s
 } sirVulkanRecordedCommand_t;
 
 // Pure ordered preflight: never mutates caller-owned VkImage state.
-sirVulkanResult_t sirVulkanValidateRecordedCommands( const sirVulkanRecordedCommand_t *pCommands, uint32_t nCount ) noexcept;
+SIRVulkanResult sirVulkanValidateRecordedCommands( const sirVulkanRecordedCommand_t *pCommands, uint32_t nCount ) noexcept;
 // Whether this command needs a transfer-stage memory dependency on an earlier buffer access.
 bool sirVulkanRecordedNeedsBufferBarrier( const sirVulkanRecordedCommand_t *pCommands, uint32_t nIndex ) noexcept;
 
@@ -349,7 +346,7 @@ bool sirVulkanRecordedNeedsBufferBarrier( const sirVulkanRecordedCommand_t *pCom
 // Independently validates the transfer's block-aligned buffer footprint.
 bool sirVulkanTextureTransferFootprint( const sirVulkanImage_t *pImage, const sirVulkanTextureTransfer_t& transfer,
                                         uint64_t *pBytes ) noexcept;
-sirVulkanResult_t sirVulkanValidateTextureTransfer( const sirVulkanBuffer_t *pBuffer, const sirVulkanImage_t *pImage,
+SIRVulkanResult sirVulkanValidateTextureTransfer( const sirVulkanBuffer_t *pBuffer, const sirVulkanImage_t *pImage,
                                                     const sirVulkanTextureTransfer_t& transfer ) noexcept;
 // Conservatively track initialization of an entire mip/layer, not merely a written region.
 bool sirVulkanTransferCoversSubresource( const sirVulkanImage_t *pImage, const sirVulkanTextureTransfer_t& transfer ) noexcept;
@@ -426,15 +423,15 @@ private:
 	uint32_t m_nLiveDescriptorSets = 0;
 	bool m_bReady;
 
-	sirVulkanResult_t initializeInstance( void ) noexcept;
+	SIRVulkanResult initializeInstance( void ) noexcept;
 	bool loadInstanceDispatch( void ) noexcept;
 	bool chooseAdapter( uint32_t nAdapterIndex ) noexcept;
 	bool initializeTransferQueue( void ) noexcept;
 	bool loadImageDispatch( void ) noexcept;
 	void destroyTransferQueue( void ) noexcept;
 	bool isBufferIdle( const sirVulkanBuffer_t *pBuffer ) const noexcept;
-	sirVulkanResult_t chooseResidentMemoryType( uint32_t *pMemoryType ) noexcept;
-	sirVulkanResult_t initializeSealedPools( const sirVulkanPoolBudget_t *pBudget ) noexcept;
+	SIRVulkanResult chooseResidentMemoryType( uint32_t *pMemoryType ) noexcept;
+	SIRVulkanResult initializeSealedPools( const sirVulkanPoolBudget_t *pBudget ) noexcept;
 	void destroySealedPools( void ) noexcept;
 	void updateMemoryHighWater( void ) noexcept;
 	bool isSealedMemoryType( const VkImageCreateInfo& info ) const noexcept;
@@ -447,48 +444,48 @@ public:
 	SIRVulkanDevice( const SIRVulkanDevice& ) = delete;
 	SIRVulkanDevice& operator=( const SIRVulkanDevice& ) = delete;
 
-	sirVulkanResult_t initialize( const sirVulkanPoolBudget_t *pBudget = nullptr, uint32_t nAdapterIndex = 0 ) noexcept;
-	sirVulkanResult_t probeAdapters( uint32_t nAdapterIndex, uint32_t *pCount, sirVulkanAdapterInfo_t *pAdapter ) noexcept;
+	SIRVulkanResult initialize( const sirVulkanPoolBudget_t *pBudget = nullptr, uint32_t nAdapterIndex = 0 ) noexcept;
+	SIRVulkanResult probeAdapters( uint32_t nAdapterIndex, uint32_t *pCount, sirVulkanAdapterInfo_t *pAdapter ) noexcept;
 	bool shutdown( void ) noexcept;
 	bool isReady( void ) const noexcept;
 	uint32_t getAdapterCount( void ) const noexcept;
 	bool queryAdapter( sirVulkanAdapterInfo_t *pAdapter ) const noexcept;
 	bool queryMemoryStats( sirVulkanMemoryStats_t *pStats ) const noexcept;
 
-	sirVulkanResult_t createRasterPipeline( const sirGraphicsPipelineDesc_t& desc, sirVulkanComputePipeline_t *pPipeline ) noexcept;
-	sirVulkanResult_t createDescriptorSet( const sirVulkanComputePipeline_t *pPipeline, uint32_t nSetIndex,
+	SIRVulkanResult createRasterPipeline( const sirGraphicsPipelineDesc_t& desc, sirVulkanComputePipeline_t *pPipeline ) noexcept;
+	SIRVulkanResult createDescriptorSet( const sirVulkanComputePipeline_t *pPipeline, uint32_t nSetIndex,
 	                                       sirVulkanDescriptorSet_t *pSet ) noexcept;
-	sirVulkanResult_t updateDescriptorSet( const sirVulkanDescriptorSet_t *pSet, const VkWriteDescriptorSet *pWrites,
+	SIRVulkanResult updateDescriptorSet( const sirVulkanDescriptorSet_t *pSet, const VkWriteDescriptorSet *pWrites,
 	                                       uint32_t nCount ) noexcept;
-	sirVulkanResult_t destroyDescriptorSet( sirVulkanDescriptorSet_t *pSet ) noexcept;
-	sirVulkanResult_t createComputePipeline( const void *pCode, uint64_t nCodeBytes, const char *pszEntryPoint,
+	SIRVulkanResult destroyDescriptorSet( sirVulkanDescriptorSet_t *pSet ) noexcept;
+	SIRVulkanResult createComputePipeline( const void *pCode, uint64_t nCodeBytes, const char *pszEntryPoint,
 	                                         sirVulkanComputePipeline_t *pPipeline ) noexcept;
-	sirVulkanResult_t destroyComputePipeline( sirVulkanComputePipeline_t *pPipeline ) noexcept;
-	sirVulkanResult_t createBuffer( uint64_t nBytes, VkBufferUsageFlags nUsage, bool bHostVisible, sirVulkanBuffer_t *pBuffer ) noexcept;
-	sirVulkanResult_t createBuffer( uint64_t nBytes, VkBufferUsageFlags nUsage, sirVulkanBufferPlacement_t ePlacement,
+	SIRVulkanResult destroyComputePipeline( sirVulkanComputePipeline_t *pPipeline ) noexcept;
+	SIRVulkanResult createBuffer( uint64_t nBytes, VkBufferUsageFlags nUsage, bool bHostVisible, sirVulkanBuffer_t *pBuffer ) noexcept;
+	SIRVulkanResult createBuffer( uint64_t nBytes, VkBufferUsageFlags nUsage, SIRVulkanBufferPlacement ePlacement,
 	                                sirVulkanBuffer_t *pBuffer ) noexcept;
-	sirVulkanResult_t writeBuffer( sirVulkanBuffer_t *pBuffer, uint64_t nOffset, const void *pData, uint64_t nBytes ) noexcept;
-	sirVulkanResult_t createImage( const VkImageCreateInfo& info, sirVulkanImage_t *pImage ) noexcept;
-	sirVulkanResult_t destroyImage( sirVulkanImage_t *pImage ) noexcept;
-	sirVulkanResult_t createImageView( const sirVulkanImage_t *pImage, const VkImageViewCreateInfo& info,
+	SIRVulkanResult writeBuffer( sirVulkanBuffer_t *pBuffer, uint64_t nOffset, const void *pData, uint64_t nBytes ) noexcept;
+	SIRVulkanResult createImage( const VkImageCreateInfo& info, sirVulkanImage_t *pImage ) noexcept;
+	SIRVulkanResult destroyImage( sirVulkanImage_t *pImage ) noexcept;
+	SIRVulkanResult createImageView( const sirVulkanImage_t *pImage, const VkImageViewCreateInfo& info,
 	                                   sirVulkanImageView_t *pView ) noexcept;
-	sirVulkanResult_t destroyImageView( sirVulkanImageView_t *pView ) noexcept;
-	sirVulkanResult_t createSampler( const VkSamplerCreateInfo& info, sirVulkanSampler_t *pSampler ) noexcept;
-	sirVulkanResult_t destroySampler( sirVulkanSampler_t *pSampler ) noexcept;
-	sirVulkanResult_t destroyIdleBuffer( sirVulkanBuffer_t *pBuffer ) noexcept;
-	sirVulkanResult_t readBuffer( sirVulkanBuffer_t *pBuffer, uint64_t nOffset, void *pData, uint64_t nBytes ) noexcept;
-	sirVulkanResult_t submitBufferCopy( sirVulkanBuffer_t *pSource, uint64_t nSourceOffset, sirVulkanBuffer_t *pDestination,
+	SIRVulkanResult destroyImageView( sirVulkanImageView_t *pView ) noexcept;
+	SIRVulkanResult createSampler( const VkSamplerCreateInfo& info, sirVulkanSampler_t *pSampler ) noexcept;
+	SIRVulkanResult destroySampler( sirVulkanSampler_t *pSampler ) noexcept;
+	SIRVulkanResult destroyIdleBuffer( sirVulkanBuffer_t *pBuffer ) noexcept;
+	SIRVulkanResult readBuffer( sirVulkanBuffer_t *pBuffer, uint64_t nOffset, void *pData, uint64_t nBytes ) noexcept;
+	SIRVulkanResult submitBufferCopy( sirVulkanBuffer_t *pSource, uint64_t nSourceOffset, sirVulkanBuffer_t *pDestination,
 	                                    uint64_t nDestinationOffset, uint64_t nBytes, sirVulkanCompletion_t *pCompletion ) noexcept;
-	sirVulkanResult_t submitRecordedCommands( const sirVulkanRecordedCommand_t *pCommands, uint32_t nCount,
+	SIRVulkanResult submitRecordedCommands( const sirVulkanRecordedCommand_t *pCommands, uint32_t nCount,
 	                                          sirVulkanCompletion_t *pCompletion ) noexcept;
-	sirVulkanResult_t submitBufferCopies( const sirVulkanBufferCopy_t *pCopies, uint32_t nCount,
+	SIRVulkanResult submitBufferCopies( const sirVulkanBufferCopy_t *pCopies, uint32_t nCount,
 	                                      sirVulkanCompletion_t *pCompletion ) noexcept;
-	sirVulkanResult_t submitImageBarrier( sirVulkanImage_t *pImage, const sirVulkanImageBarrier_t& barrier,
+	SIRVulkanResult submitImageBarrier( sirVulkanImage_t *pImage, const sirVulkanImageBarrier_t& barrier,
 	                                      sirVulkanCompletion_t *pCompletion ) noexcept;
-	sirVulkanResult_t submitBufferImageCopy( sirVulkanBuffer_t *pBuffer, sirVulkanImage_t *pImage,
+	SIRVulkanResult submitBufferImageCopy( sirVulkanBuffer_t *pBuffer, sirVulkanImage_t *pImage,
 	                                         const sirVulkanTextureTransfer_t& transfer, sirVulkanCompletion_t *pCompletion ) noexcept;
-	sirVulkanResult_t queryCompletion( const sirVulkanCompletion_t *pCompletion, bool *pComplete ) const noexcept;
-	sirVulkanResult_t waitCompletion( const sirVulkanCompletion_t *pCompletion, uint64_t nTimeoutNs ) const noexcept;
+	SIRVulkanResult queryCompletion( const sirVulkanCompletion_t *pCompletion, bool *pComplete ) const noexcept;
+	SIRVulkanResult waitCompletion( const sirVulkanCompletion_t *pCompletion, uint64_t nTimeoutNs ) const noexcept;
 };
 
-#endif // __SIRENGINE_SIRVULKANDEVICE_H__
+#endif // __SIR_VULKANDEVICE_H__

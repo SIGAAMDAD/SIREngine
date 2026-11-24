@@ -41,7 +41,7 @@ The old `tick()` and `fixedTick()` entry points remain synchronous for existing 
 
 ### State-publication lifetime proof
 
-The writer alone calls `beginWrite()` / `commitWrite()`. It may only write into a **closed slot with zero active pins**, never into the currently published slot. A publication opens its fully written slot and atomically stores a new 64-bit `(revision, slot)` token; the previously published slot is then closed for new readers. Readers load a token, increment its slot pin only if it is open, and re-read the token. They can dereference the state **only if both tokens match**. On mismatch, the pin is released and acquisition retries. A slot is reusable after it has been closed and every pin has drained; the revision prevents slot-index ABA. The protocol currently uses sequentially consistent `SIRAtomic` operations to keep the lifetime proof portable across Linux/Windows x64 and ARM64.
+The writer alone calls `beginWrite()` / `commitWrite()`. It may only write into a **closed slot with zero active pins**, never into the currently published slot. A publication opens its fully written slot and atomically stores a new 64-bit `(revision, slot)` token; the previously published slot is then closed for new readers. Readers load a token, increment its slot pin only if it is open, and re-read the token. They can dereference the state **only if both tokens match**. On mismatch, the pin is released and acquisition retries. A slot is reusable after it has been closed and every pin has drained; the revision prevents slot-index ABA. The protocol currently uses sequentially consistent `std::atomic` operations to keep the lifetime proof portable across Linux/Windows x64 and ARM64.
 
 A full projection uses `Capacity * sizeof(T)` storage; this is intended for *compact, trivially copyable public projections*, not copying a physics broadphase or the complete mutable world. The writer may be unable to publish when every non-current slot remains pinned; `beginWrite()` reports failure without overwriting readers. It never waits for a slow renderer or network consumer. The owning subsystem decides whether to defer, coalesce or drop its **new** revision.
 
@@ -67,7 +67,7 @@ At this baseline, `Source/Physics/` and `Source/Networking/` have not yet been i
 ### Validation required
 
 - Linux GCC and Clang C++17 builds; Windows x64/ARM64 Clang cross-builds; Windows x64 execution under Wine; native Windows testing remains a separate gate.
-- Repeated concurrent snapshot publication/read-lease retention, stale slot reuse and bounded exhaustion; `SIRAtomic` ordering under ThreadSanitizer.
+- Repeated concurrent snapshot publication/read-lease retention, stale slot reuse and bounded exhaustion; `std::atomic` ordering under ThreadSanitizer.
 - MPSC producer concurrency, target-tick filtering, full queue and output-boundary behavior.
 - Task graph write/read hazards, explicit edges, provider safe-point completion, failures/cancel and terminal release; legacy application lifecycle and input regression tests.
 - Optional frame-ahead throttling, catch-up limits, fixed-step progression and canceled-frame behavior.

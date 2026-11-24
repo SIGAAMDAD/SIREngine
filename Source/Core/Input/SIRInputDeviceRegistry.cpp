@@ -28,7 +28,7 @@ bool SIRInputDeviceRegistry::valid( sirInputDeviceId_t id ) const noexcept
 	return id.nSlot < SIR_INPUT_DEVICE_CAPACITY && m_Devices[id.nSlot].bConnected && m_Devices[id.nSlot].id.nGeneration == id.nGeneration;
 }
 
-bool SIRInputDeviceRegistry::resolve( sirInputBackendId_t eBackend, uint64_t nNativeId, sirInputDeviceId_t *pResult ) const noexcept
+bool SIRInputDeviceRegistry::resolve( SIRInputBackendId eBackend, uint64_t nNativeId, sirInputDeviceId_t *pResult ) const noexcept
 {
 	if ( pResult == nullptr ) {
 		return false;
@@ -45,10 +45,10 @@ bool SIRInputDeviceRegistry::resolve( sirInputBackendId_t eBackend, uint64_t nNa
 
 bool SIRInputDeviceRegistry::connect( const sirInputHardwareKey_t& key, sirInputDeviceId_t *pResult ) noexcept
 {
-	if ( pResult == nullptr || key.nNativeId == 0 || key.eBackend == 0 || key.eClass > SIR_INPUT_CONTROLLER ) {
+	if ( pResult == nullptr || key.nNativeId == 0 || key.eBackend == static_cast<SIRInputBackendId>( 0 ) || key.eClass > SIRInputDeviceClass::SIR_INPUT_CONTROLLER ) {
 		return false;
 	}
-	sirInputDeviceId_t unused = {};
+	sirInputDeviceId_t unused {};
 	if ( resolve( key.eBackend, key.nNativeId, &unused ) ) {
 		return false;
 	}
@@ -81,7 +81,7 @@ bool SIRInputDeviceRegistry::describe( sirInputDeviceId_t id, sirInputDeviceDesc
 	return true;
 }
 
-bool SIRInputDeviceRegistry::authorize( sirInputBackendId_t eSource, sirInputDeviceId_t id, sirInputDeviceClass_t *pClass ) const noexcept
+bool SIRInputDeviceRegistry::authorize( SIRInputBackendId eSource, sirInputDeviceId_t id, SIRInputDeviceClass *pClass ) const noexcept
 {
 	if ( pClass == nullptr || id.nSlot >= SIR_INPUT_DEVICE_CAPACITY ) {
 		return false;

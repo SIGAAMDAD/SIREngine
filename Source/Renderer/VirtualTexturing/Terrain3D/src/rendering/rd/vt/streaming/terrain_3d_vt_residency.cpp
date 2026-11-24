@@ -63,7 +63,7 @@ uint16_t t3d_vt_residency_category_reference_debug( const t3dVTDatabaseView_t& p
 		return T3D_VT_RESIDENCY_TERRAIN;
 	}
 	const uint16_t nCategory = pDatabase.pAllocations[Page.nAllocationId].nReserved0;
-	return nCategory < T3D_VT_RESIDENCY_CATEGORY_COUNT ? nCategory : ( uint16_t )T3D_VT_RESIDENCY_TERRAIN;
+	return nCategory < T3D_VT_RESIDENCY_CATEGORY_COUNT ? nCategory : static_cast<uint16_t>(T3D_VT_RESIDENCY_TERRAIN);
 }
 
 uint16_t t3d_vt_residency_temperature_reference_debug( const t3dVTResidencyState_t& pState, const t3dVTPhysicalSlot_t& pSlot,
@@ -88,11 +88,11 @@ uint16_t t3d_vt_residency_temperature_reference_debug( const t3dVTResidencyState
 bool t3d_vt_retirement_ready_reference_debug( const t3dVTResidencyState_t& pState, const t3dVTRetiredPageSet_t& pRetired,
                                               const uint32_t pFrameId )
 {
-	( void )pState;
+	static_cast<void>(pState);
 	if ( pRetired.nPhysicalSlot == T3D_VT_INVALID_SLOT ) {
 		return false;
 	}
-	return ( int32_t )( pFrameId - pRetired.nReleaseFrame ) >= 0;
+	return static_cast<int32_t>( pFrameId - pRetired.nReleaseFrame ) >= 0;
 }
 
 static const t3dVTPageFileRecord_t *t3d_vt_legacy_find_page( const t3dVTDatabaseView_t& pDatabase, uint32_t pVirtualPage )
@@ -112,9 +112,9 @@ uint64_t t3d_vt_compute_pack_bytes( const t3dVTPackSource_t& pSource )
 	}
 
 	uint64_t nOffset = sizeof( t3dVTFileHeader_t );
-	nOffset = t3dAlignUpOrZero<uint64_t>( nOffset + ( uint64_t )pSource.nAllocationCount * sizeof( t3dVTAllocationRecord_t ), 16u );
-	nOffset = t3dAlignUpOrZero<uint64_t>( nOffset + ( uint64_t )pSource.nPageCount * sizeof( t3dVTPageFileRecord_t ), 16u );
-	nOffset = t3dAlignUpOrZero<uint64_t>( nOffset + ( uint64_t )pSource.nPayloadCount * sizeof( t3dVTPayloadRecord_t ), 16u );
+	nOffset = t3dAlignUpOrZero<uint64_t>( nOffset + static_cast<uint64_t>(pSource.nAllocationCount) * sizeof( t3dVTAllocationRecord_t ), 16u );
+	nOffset = t3dAlignUpOrZero<uint64_t>( nOffset + static_cast<uint64_t>(pSource.nPageCount) * sizeof( t3dVTPageFileRecord_t ), 16u );
+	nOffset = t3dAlignUpOrZero<uint64_t>( nOffset + static_cast<uint64_t>(pSource.nPayloadCount) * sizeof( t3dVTPayloadRecord_t ), 16u );
 	if ( nOffset > UINT64_MAX - pSource.nPayloadDataBytes ) {
 		return 0u;
 	}
@@ -127,8 +127,8 @@ bool t3d_vt_write_pack_cold( const t3dVTPackSource_t& pSource, void *pDestinatio
 	if ( nRequired == 0u || pDestination == NULL || pDestinationBytes < nRequired || nRequired > SIZE_MAX ) {
 		return false;
 	}
-	uint8_t *const pOut = ( uint8_t * )pDestination;
-	memset( pOut, 0, ( size_t )nRequired );
+	uint8_t *const pOut = static_cast<uint8_t *>(pDestination);
+	memset( pOut, 0, static_cast<size_t>(nRequired) );
 	t3dVTFileHeader_t Header{};
 	Header.nMagic = T3D_VT_LEGACY_FILE_MAGIC;
 	Header.nVersion = T3D_VT_LEGACY_FILE_VERSION;
@@ -142,17 +142,17 @@ bool t3d_vt_write_pack_cold( const t3dVTPackSource_t& pSource, void *pDestinatio
 	Header.nPhysicalTexels = T3D_VT_PHYSICAL_TILE;
 	uint64_t nOffset = sizeof( t3dVTFileHeader_t );
 	Header.nAllocationOffset = nOffset;
-	memcpy( pOut + nOffset, pSource.pAllocations, ( size_t )pSource.nAllocationCount * sizeof( t3dVTAllocationRecord_t ) );
-	nOffset = t3dAlignUpOrZero<uint64_t>( nOffset + ( uint64_t )pSource.nAllocationCount * sizeof( t3dVTAllocationRecord_t ), 16u );
+	memcpy( pOut + nOffset, pSource.pAllocations, static_cast<size_t>(pSource.nAllocationCount) * sizeof( t3dVTAllocationRecord_t ) );
+	nOffset = t3dAlignUpOrZero<uint64_t>( nOffset + static_cast<uint64_t>(pSource.nAllocationCount) * sizeof( t3dVTAllocationRecord_t ), 16u );
 	Header.nPageOffset = nOffset;
-	memcpy( pOut + nOffset, pSource.pPages, ( size_t )pSource.nPageCount * sizeof( t3dVTPageFileRecord_t ) );
-	nOffset = t3dAlignUpOrZero<uint64_t>( nOffset + ( uint64_t )pSource.nPageCount * sizeof( t3dVTPageFileRecord_t ), 16u );
+	memcpy( pOut + nOffset, pSource.pPages, static_cast<size_t>(pSource.nPageCount) * sizeof( t3dVTPageFileRecord_t ) );
+	nOffset = t3dAlignUpOrZero<uint64_t>( nOffset + static_cast<uint64_t>(pSource.nPageCount) * sizeof( t3dVTPageFileRecord_t ), 16u );
 	Header.nPayloadDirectoryOffset = nOffset;
-	memcpy( pOut + nOffset, pSource.pPayloads, ( size_t )pSource.nPayloadCount * sizeof( t3dVTPayloadRecord_t ) );
-	nOffset = t3dAlignUpOrZero<uint64_t>( nOffset + ( uint64_t )pSource.nPayloadCount * sizeof( t3dVTPayloadRecord_t ), 16u );
+	memcpy( pOut + nOffset, pSource.pPayloads, static_cast<size_t>(pSource.nPayloadCount) * sizeof( t3dVTPayloadRecord_t ) );
+	nOffset = t3dAlignUpOrZero<uint64_t>( nOffset + static_cast<uint64_t>(pSource.nPayloadCount) * sizeof( t3dVTPayloadRecord_t ), 16u );
 	Header.nPayloadDataOffset = nOffset;
 	Header.nPayloadDataBytes = pSource.nPayloadDataBytes;
-	memcpy( pOut + nOffset, pSource.pPayloadData, ( size_t )pSource.nPayloadDataBytes );
+	memcpy( pOut + nOffset, pSource.pPayloadData, static_cast<size_t>(pSource.nPayloadDataBytes) );
 	Header.nContentSignature = t3dHashPublicationBytes( pOut + sizeof( Header ), nRequired - sizeof( Header ) );
 	memcpy( pOut, &Header, sizeof( Header ) );
 	return true;
@@ -164,7 +164,7 @@ bool t3d_vt_open_pack_cold( const void *pBytes, uint64_t pByteCount, t3dVTLegacy
 	if ( pBytes == NULL || pByteCount < sizeof( t3dVTFileHeader_t ) ) {
 		return false;
 	}
-	const uint8_t *const pData = ( const uint8_t * )pBytes;
+	const uint8_t *const pData = static_cast<const uint8_t *>(pBytes);
 	// Header bytes are serialized data, not a constructed header object.
 	t3dVTFileHeader_t Header{};
 	memcpy( &Header, pData, sizeof( Header ) );
@@ -175,10 +175,10 @@ bool t3d_vt_open_pack_cold( const void *pBytes, uint64_t pByteCount, t3dVTLegacy
 	     Header.nPayloadCount == 0u || Header.nPayloadDataBytes == 0u ) {
 		return false;
 	}
-	if ( !t3dByteRangeFits<uint64_t>( Header.nAllocationOffset, ( uint64_t )Header.nAllocationCount * sizeof( t3dVTAllocationRecord_t ),
+	if ( !t3dByteRangeFits<uint64_t>( Header.nAllocationOffset, static_cast<uint64_t>(Header.nAllocationCount) * sizeof( t3dVTAllocationRecord_t ),
 	                                  pByteCount ) ||
-	     !t3dByteRangeFits<uint64_t>( Header.nPageOffset, ( uint64_t )Header.nPageCount * sizeof( t3dVTPageFileRecord_t ), pByteCount ) ||
-	     !t3dByteRangeFits<uint64_t>( Header.nPayloadDirectoryOffset, ( uint64_t )Header.nPayloadCount * sizeof( t3dVTPayloadRecord_t ),
+	     !t3dByteRangeFits<uint64_t>( Header.nPageOffset, static_cast<uint64_t>(Header.nPageCount) * sizeof( t3dVTPageFileRecord_t ), pByteCount ) ||
+	     !t3dByteRangeFits<uint64_t>( Header.nPayloadDirectoryOffset, static_cast<uint64_t>(Header.nPayloadCount) * sizeof( t3dVTPayloadRecord_t ),
 	                                  pByteCount ) ||
 	     !t3dByteRangeFits<uint64_t>( Header.nPayloadDataOffset, Header.nPayloadDataBytes, pByteCount ) ||
 	     t3dHashPublicationBytes( pData + sizeof( Header ), pByteCount - sizeof( Header ) ) != Header.nContentSignature ) {
@@ -190,10 +190,10 @@ bool t3d_vt_open_pack_cold( const void *pBytes, uint64_t pByteCount, t3dVTLegacy
 	rStorage.Pages.resize( Header.nPageCount );
 	rStorage.Payloads.resize( Header.nPayloadCount );
 	memcpy( rStorage.Allocations.data(), pData + Header.nAllocationOffset,
-	        ( size_t )Header.nAllocationCount * sizeof( t3dVTAllocationRecord_t ) );
-	memcpy( rStorage.Pages.data(), pData + Header.nPageOffset, ( size_t )Header.nPageCount * sizeof( t3dVTPageFileRecord_t ) );
+	        static_cast<size_t>(Header.nAllocationCount) * sizeof( t3dVTAllocationRecord_t ) );
+	memcpy( rStorage.Pages.data(), pData + Header.nPageOffset, static_cast<size_t>(Header.nPageCount) * sizeof( t3dVTPageFileRecord_t ) );
 	memcpy( rStorage.Payloads.data(), pData + Header.nPayloadDirectoryOffset,
-	        ( size_t )Header.nPayloadCount * sizeof( t3dVTPayloadRecord_t ) );
+	        static_cast<size_t>(Header.nPayloadCount) * sizeof( t3dVTPayloadRecord_t ) );
 	for ( uint32_t i = 0u; i < Header.nPageCount; ++i ) {
 		const t3dVTPageFileRecord_t& Page = rStorage.Pages[i];
 		if ( Page.nVirtualPage != i || Page.nChannel >= T3D_VT_CHANNEL_COUNT || Page.nPayloadId >= Header.nPayloadCount ||
@@ -248,7 +248,7 @@ static bool t3d_vt_build_runtime_tables_cold( const t3dVTDatabaseView_t& pDataba
 			pBuffers.pAllocations[iAllocation] = Source;
 		}
 		memcpy( pBuffers.pTailMetadata, pDatabase.pRuntimeTailMetadata,
-		        ( size_t )pDatabase.nRuntimeTailCount * sizeof( t3dVTTailMetadata_t ) );
+		        static_cast<size_t>(pDatabase.nRuntimeTailCount) * sizeof( t3dVTTailMetadata_t ) );
 		rState.nAllocationCount = pDatabase.pHeader->nAllocationCount;
 		rState.nTailCount = pDatabase.nRuntimeTailCount;
 		return true;
@@ -273,15 +273,15 @@ static bool t3d_vt_build_runtime_tables_cold( const t3dVTDatabaseView_t& pDataba
 		memset( &Allocation, 0, sizeof( Allocation ) );
 		Allocation.m_nBaseVirtualPage = Legacy.nBaseVirtualPage;
 		Allocation.m_nPageCount = Legacy.nPageCount;
-		Allocation.m_nMip0WidthPages = ( uint16_t )Legacy.nMip0WidthPages;
-		Allocation.m_nMip0HeightPages = ( uint16_t )Legacy.nMip0HeightPages;
+		Allocation.m_nMip0WidthPages = static_cast<uint16_t>(Legacy.nMip0WidthPages);
+		Allocation.m_nMip0HeightPages = static_cast<uint16_t>(Legacy.nMip0HeightPages);
 		Allocation.m_nMipCount = Legacy.nMipCount;
 		Allocation.m_nFlags = T3D_VT_ALLOCATION_MATERIAL_UV | T3D_VT_ALLOCATION_SHIPPING_IMMUTABLE;
 		Allocation.m_nTailIndex = iAllocation;
 		Allocation.m_nGeneration = nGeneration;
 		Allocation.m_nContentId = iAllocation;
 		Allocation.m_nReserved =
-		    Legacy.nReserved0 < T3D_VT_RESIDENCY_CATEGORY_COUNT ? Legacy.nReserved0 : ( uint32_t )( T3D_VT_RESIDENCY_TERRAIN );
+		    Legacy.nReserved0 < T3D_VT_RESIDENCY_CATEGORY_COUNT ? Legacy.nReserved0 : static_cast<uint32_t>( T3D_VT_RESIDENCY_TERRAIN );
 
 		t3dVTTailMetadata_t& Tail = pBuffers.pTailMetadata[iAllocation];
 		memset( &Tail, 0, sizeof( Tail ) );
@@ -607,7 +607,7 @@ bool t3d_vt_resolve_allocation_page_reference_debug( const t3dVTResidencyState_t
 				rResult.m_nResolvedMip = Entry.nResolvedMip;
 				rResult.m_nFallbackDepth = nFallbackDepth;
 				rResult.m_nFlags =
-				    ( uint16_t )( T3D_VT_RESOLVE_PHYSICAL | ( nFallbackDepth ? ( uint16_t )( T3D_VT_RESOLVE_ANCESTOR ) : 0u ) );
+				    ( uint16_t )( T3D_VT_RESOLVE_PHYSICAL | ( nFallbackDepth ? static_cast<uint16_t>( T3D_VT_RESOLVE_ANCESTOR ) : 0u ) );
 				return true;
 			}
 		}
@@ -876,7 +876,7 @@ bool t3d_vt_begin_eviction_hot( t3dVTResidencyState_t& rState, uint32_t pPhysica
 	Slot.m_nFlags &= ( uint16_t )~( T3D_VT_SLOT_REFERENCED | T3D_VT_SLOT_HOT );
 	Slot.m_nFlags |= T3D_VT_SLOT_RETIRED;
 	const uint32_t nReleaseFrame = pFrameId + rState.Policy.nRetireDelayFrames;
-	Slot.m_nRetireFrame = ( uint16_t )( nReleaseFrame & 0xffffu );
+	Slot.m_nRetireFrame = static_cast<uint16_t>( nReleaseFrame & 0xffffu );
 	t3dVTRetiredPageSet_t& Retired = rState.Buffers.pRetiredPageSets[rState.nRetireTail];
 	Retired.nPhysicalSlot = pPhysicalSlot;
 	Retired.nVirtualPage = pVictimPage;
@@ -1089,18 +1089,18 @@ bool t3d_vt_allocation_page_id( const t3dVTAllocation_t& pAllocation, uint32_t p
 	uint32_t nHeight = pAllocation.m_nMip0HeightPages;
 	uint64_t nOffset = 0u;
 	for ( uint32_t i = 0u; i < pMip; ++i ) {
-		nOffset += ( uint64_t )nWidth * nHeight;
+		nOffset += static_cast<uint64_t>(nWidth) * nHeight;
 		nWidth = nWidth > 1u ? ( nWidth + 1u ) >> 1u : 1u;
 		nHeight = nHeight > 1u ? ( nHeight + 1u ) >> 1u : 1u;
 	}
 	if ( pPageX >= nWidth || pPageY >= nHeight ) {
 		return false;
 	}
-	const uint64_t nPage = ( uint64_t )pAllocation.m_nBaseVirtualPage + nOffset + ( uint64_t )pPageY * nWidth + pPageX;
-	if ( nPage >= ( uint64_t )pAllocation.m_nBaseVirtualPage + pAllocation.m_nPageCount || nPage > UINT32_MAX ) {
+	const uint64_t nPage = static_cast<uint64_t>(pAllocation.m_nBaseVirtualPage) + nOffset + static_cast<uint64_t>(pPageY) * nWidth + pPageX;
+	if ( nPage >= static_cast<uint64_t>(pAllocation.m_nBaseVirtualPage) + pAllocation.m_nPageCount || nPage > UINT32_MAX ) {
 		return false;
 	}
-	rVirtualPage = ( uint32_t )nPage;
+	rVirtualPage = static_cast<uint32_t>(nPage);
 	return true;
 }
 
@@ -1116,7 +1116,7 @@ bool t3d_vt_predict_page_rect_reference_debug( const t3dVTAllocation_t& pAllocat
 		return false;
 	}
 
-	uint32_t nMip = pWantedMip < pAllocation.m_nMipCount ? pWantedMip : ( uint32_t )pAllocation.m_nMipCount - 1u;
+	uint32_t nMip = pWantedMip < pAllocation.m_nMipCount ? pWantedMip : static_cast<uint32_t>(pAllocation.m_nMipCount) - 1u;
 	for ( ;; ) {
 		uint32_t nWidth = pAllocation.m_nMip0WidthPages;
 		uint32_t nHeight = pAllocation.m_nMip0HeightPages;
@@ -1135,10 +1135,10 @@ bool t3d_vt_predict_page_rect_reference_debug( const t3dVTAllocation_t& pAllocat
 		const float fClampedMaxU = fMaxU < 0.0f ? 0.0f : ( fMaxU > 1.0f ? 1.0f : fMaxU );
 		const float fClampedMinV = fMinV < 0.0f ? 0.0f : ( fMinV > 1.0f ? 1.0f : fMinV );
 		const float fClampedMaxV = fMaxV < 0.0f ? 0.0f : ( fMaxV > 1.0f ? 1.0f : fMaxV );
-		uint32_t nMinX = bFullU ? 0u : ( uint32_t )floorf( fClampedMinU * ( float )nWidth );
-		uint32_t nMaxX = bFullU ? nWidth - 1u : ( uint32_t )floorf( fClampedMaxU * ( float )nWidth );
-		uint32_t nMinY = bFullV ? 0u : ( uint32_t )floorf( fClampedMinV * ( float )nHeight );
-		uint32_t nMaxY = bFullV ? nHeight - 1u : ( uint32_t )floorf( fClampedMaxV * ( float )nHeight );
+		uint32_t nMinX = bFullU ? 0u : static_cast<uint32_t>(floorf( fClampedMinU * static_cast<float>(nWidth) ));
+		uint32_t nMaxX = bFullU ? nWidth - 1u : static_cast<uint32_t>(floorf( fClampedMaxU * static_cast<float>(nWidth) ));
+		uint32_t nMinY = bFullV ? 0u : static_cast<uint32_t>(floorf( fClampedMinV * static_cast<float>(nHeight) ));
+		uint32_t nMaxY = bFullV ? nHeight - 1u : static_cast<uint32_t>(floorf( fClampedMaxV * static_cast<float>(nHeight) ));
 		if ( nMinX >= nWidth ) {
 			nMinX = nWidth - 1u;
 		}
@@ -1161,14 +1161,14 @@ bool t3d_vt_predict_page_rect_reference_debug( const t3dVTAllocation_t& pAllocat
 			nMinY = nMaxY;
 			nMaxY = t;
 		}
-		const uint64_t nPages = ( uint64_t )( nMaxX - nMinX + 1u ) * ( uint64_t )( nMaxY - nMinY + 1u );
+		const uint64_t nPages = static_cast<uint64_t>( nMaxX - nMinX + 1u ) * static_cast<uint64_t>( nMaxY - nMinY + 1u );
 		if ( nPages <= pMaximumPages || nMip + 1u >= pAllocation.m_nMipCount ) {
 			rRect.nMip = nMip;
 			rRect.nMinPageX = nMinX;
 			rRect.nMinPageY = nMinY;
 			rRect.nMaxPageX = nMaxX;
 			rRect.nMaxPageY = nMaxY;
-			rRect.nPageCount = ( uint32_t )nPages;
+			rRect.nPageCount = static_cast<uint32_t>(nPages);
 			return nPages <= 0xffffffffull;
 		}
 		++nMip;

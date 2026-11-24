@@ -42,21 +42,21 @@ SIRFileLock::SIRFileLock( const char *pszLockPath ) noexcept : m_nHandle( -1 )
 		return;
 	}
 
-	OVERLAPPED overlapped = {};
+	OVERLAPPED overlapped {};
 	if ( LockFileEx( pHandle, LOCKFILE_EXCLUSIVE_LOCK, 0, 1, 0, &overlapped ) == FALSE ) {
-		( void )CloseHandle( pHandle );
+		static_cast<void>(CloseHandle( pHandle ));
 		return;
 	}
 
-	m_nHandle = ( intptr_t )pHandle;
+	m_nHandle = static_cast<intptr_t>(pHandle);
 }
 
 SIRFileLock::~SIRFileLock( void ) noexcept
 {
 	if ( m_nHandle != -1 ) {
-		OVERLAPPED overlapped = {};
-		( void )UnlockFileEx( ( HANDLE )m_nHandle, 0, 1, 0, &overlapped );
-		( void )CloseHandle( ( HANDLE )m_nHandle );
+		OVERLAPPED overlapped {};
+		static_cast<void>(UnlockFileEx( static_cast<HANDLE>(m_nHandle), 0, 1, 0, &overlapped ));
+		static_cast<void>(CloseHandle( static_cast<HANDLE>(m_nHandle) ));
 	}
 }
 

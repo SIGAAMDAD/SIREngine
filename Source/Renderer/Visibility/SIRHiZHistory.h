@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRHIZHISTORY_H__
-#define __SIRENGINE_SIRHIZHISTORY_H__
+#ifndef __SIR_HIZHISTORY_H__
+#define __SIR_HIZHISTORY_H__
 
 #include <Core/SIRPCH.h>
 
@@ -43,13 +43,13 @@ typedef struct sirHiZHistoryBacking_s
 
 // Requires a zero-initialized or fully retired backing; creates one R32F mip
 // pyramid. Does not modify the backing when allocation/validation fails.
-sirGraphicsResult_t sirHiZHistoryCreate( SIRRenderingDevice& device, const sirHiZDispatchPlan_t& plan, const sirVisibilityView_t& view,
+SIRGraphicsResult sirHiZHistoryCreate( SIRRenderingDevice& device, const sirHiZDispatchPlan_t& plan, const sirVisibilityView_t& view,
                                          sirHiZHistoryBacking_t *pBacking ) noexcept;
 
 // Called after the producer command list has been submitted and assigned an
 // actual completion token. Marks the texture eligible for future frames; the
 // returned completion must be waited upon by readers in their own submissions.
-sirGraphicsResult_t sirHiZHistoryPublish( sirHiZHistoryBacking_t *pBacking, const sirGraphicsCompletion_t& completion ) noexcept;
+SIRGraphicsResult sirHiZHistoryPublish( sirHiZHistoryBacking_t *pBacking, const sirGraphicsCompletion_t& completion ) noexcept;
 
 // Returns false without changing outputs if the camera/device/history is
 // invalid. The caller must include pWait in the GPU submission's wait set.
@@ -58,15 +58,15 @@ bool sirHiZHistoryTryRead( const sirHiZHistoryBacking_t& backing, const sirVisib
 
 // Record each submitted reader completion, including readers on other queues.
 // A repeated token on the same queue tracks the highest completion value.
-sirGraphicsResult_t sirHiZHistoryTrackRead( sirHiZHistoryBacking_t *pBacking, const sirGraphicsCompletion_t& completion ) noexcept;
+SIRGraphicsResult sirHiZHistoryTrackRead( sirHiZHistoryBacking_t *pBacking, const sirGraphicsCompletion_t& completion ) noexcept;
 
 // Invalidates the public texture handle immediately on SUCCESS. Native memory
 // is reclaimed by the device only after all registered queue fences complete.
 // BUSY and other errors preserve the backing for a subsequent retry.
-sirGraphicsResult_t sirHiZHistoryRetire( SIRRenderingDevice& device, sirHiZHistoryBacking_t *pBacking ) noexcept;
+SIRGraphicsResult sirHiZHistoryRetire( SIRRenderingDevice& device, sirHiZHistoryBacking_t *pBacking ) noexcept;
 
 // Only permitted after the previous device generation was irrecoverably lost.
 // Do not attempt native retirement on a replacement device's handle table.
-sirGraphicsResult_t sirHiZHistoryDiscardLost( sirHiZHistoryBacking_t *pBacking, uint32_t nReplacementGeneration ) noexcept;
+SIRGraphicsResult sirHiZHistoryDiscardLost( sirHiZHistoryBacking_t *pBacking, uint32_t nReplacementGeneration ) noexcept;
 
-#endif // __SIRENGINE_SIRHIZHISTORY_H__
+#endif // __SIR_HIZHISTORY_H__

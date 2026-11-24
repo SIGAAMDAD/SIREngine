@@ -28,7 +28,7 @@ static bool sirVTAdvancePackOffset( uint64_t *pOffset, uint64_t nCount, uint64_t
 	if ( nBytes > UINT64_MAX - ( SIR_VT_PACK_ALIGNMENT - 1U ) || *pOffset > UINT64_MAX - ( nBytes + ( SIR_VT_PACK_ALIGNMENT - 1U ) ) ) {
 		return false;
 	}
-	*pOffset = ( *pOffset + nBytes + ( SIR_VT_PACK_ALIGNMENT - 1U ) ) & ~( uint64_t )( SIR_VT_PACK_ALIGNMENT - 1U );
+	*pOffset = ( *pOffset + nBytes + ( SIR_VT_PACK_ALIGNMENT - 1U ) ) & ~static_cast<uint64_t>( SIR_VT_PACK_ALIGNMENT - 1U );
 	return true;
 }
 
@@ -84,8 +84,8 @@ bool sirVTMeasurePack( const sirVirtualTexturePackSource_t& source, uint64_t *pM
 
 static bool sirVTSourceNotOverlapping( const void *pSource, uint64_t nBytes, const void *pTarget, uint64_t nTargetBytes ) noexcept
 {
-	const uintptr_t nSource = ( uintptr_t )pSource;
-	const uintptr_t nTarget = ( uintptr_t )pTarget;
+	const uintptr_t nSource = reinterpret_cast<uintptr_t>(pSource);
+	const uintptr_t nTarget = reinterpret_cast<uintptr_t>(pTarget);
 	if ( nBytes > UINTPTR_MAX - nSource || nTargetBytes > UINTPTR_MAX - nTarget ) {
 		return false;
 	}
@@ -122,13 +122,13 @@ bool sirVTWritePack( const sirVirtualTexturePackSource_t& source, void *pDestina
 			return false;
 		}
 	}
-	uint8_t *pBytes = ( uint8_t * )pDestination;
+	uint8_t *pBytes = static_cast<uint8_t *>(pDestination);
 	if ( source.pPayloadData != pBytes + nMetadataBytes &&
 	     !sirVTSourceNotOverlapping( source.pPayloadData, source.nPayloadDataBytes, pDestination, nPackageBytes ) ) {
 		return false;
 	}
 
-	sirVirtualTexturePackHeader_t header = {};
+	sirVirtualTexturePackHeader_t header {};
 	header.nMagic = SIR_VT_PACK_MAGIC;
 	header.nVersion = SIR_VT_PACK_VERSION;
 	header.nHeaderBytes = SIR_VT_PACK_HEADER_BYTES;
@@ -175,7 +175,7 @@ bool sirVTWritePack( const sirVirtualTexturePackSource_t& source, void *pDestina
 
 	// Serial layout follows the donor writer exactly: records in frozen order,
 	// each table rounded up to 16 bytes and zero-filled between tables.
-	memset( pBytes, 0, ( size_t )nMetadataBytes );
+	memset( pBytes, 0, static_cast<size_t>(nMetadataBytes) );
 	uint64_t nOffset = SIR_VT_PACK_HEADER_BYTES;
 	uint64_t *szHeaderOffsets[] = { &header.nAllocationOffset,   &header.nAllocationKeyOffset,    &header.nChannelAllocationOffset,
 	                                &header.nPageOffset,         &header.nPayloadDirectoryOffset, &header.nClusterDirectoryOffset,
@@ -184,14 +184,14 @@ bool sirVTWritePack( const sirVirtualTexturePackSource_t& source, void *pDestina
 		*szHeaderOffsets[iDirectory] = nOffset;
 		const uint64_t nBytes = szCounts[iDirectory] * szStrides[iDirectory];
 		if ( nBytes != 0 ) {
-			memcpy( pBytes + nOffset, szSources[iDirectory], ( size_t )nBytes );
+			memcpy( pBytes + nOffset, szSources[iDirectory], static_cast<size_t>(nBytes) );
 		}
-		nOffset = ( nOffset + nBytes + ( SIR_VT_PACK_ALIGNMENT - 1U ) ) & ~( uint64_t )( SIR_VT_PACK_ALIGNMENT - 1U );
+		nOffset = ( nOffset + nBytes + ( SIR_VT_PACK_ALIGNMENT - 1U ) ) & ~static_cast<uint64_t>( SIR_VT_PACK_ALIGNMENT - 1U );
 	}
 	header.nPayloadDataOffset = nOffset;
 	header.nPayloadDataBytes = source.nPayloadDataBytes;
 	if ( source.pPayloadData != pBytes + nOffset ) {
-		memcpy( pBytes + nOffset, source.pPayloadData, ( size_t )source.nPayloadDataBytes );
+		memcpy( pBytes + nOffset, source.pPayloadData, static_cast<size_t>(source.nPayloadDataBytes) );
 	}
 	header.nContentSignature = sirVTPackHash64( pBytes + SIR_VT_PACK_HEADER_BYTES, nPackageBytes - SIR_VT_PACK_HEADER_BYTES );
 	header.nHeaderChecksum = 0;
@@ -199,7 +199,7 @@ bool sirVTWritePack( const sirVirtualTexturePackSource_t& source, void *pDestina
 	memcpy( pBytes, &header, sizeof( header ) );
 
 	const sirVirtualTexturePackInput_t input = { pBytes, nPackageBytes, nPackageBytes, false };
-	sirVirtualTexturePackView_t validated = {};
+	sirVirtualTexturePackView_t validated {};
 	if ( !sirVTPackOpenValidated( input, &validated ) ) {
 		return false;
 	}

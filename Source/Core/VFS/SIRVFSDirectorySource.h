@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRVFSDIRECTORYSOURCE_H__
-#define __SIRENGINE_SIRVFSDIRECTORYSOURCE_H__
+#ifndef __SIR_VFSDIRECTORYSOURCE_H__
+#define __SIR_VFSDIRECTORYSOURCE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -42,13 +42,13 @@ public:
 
 	bool isOpen( void ) const noexcept;
 
-	sirVFSResult_t bind( SIRVFSMountTable& table, sirVFSMountLease_t lease, const char *pszRootPath ) noexcept;
-	sirVFSResult_t openRead( SIRVFSFileHandleTable& files, sirVFSFileBorrow_t ticket, SIRPlatformFile *pFile ) noexcept;
-	sirVFSResult_t close( void ) noexcept;
+	SIRVFSResult bind( SIRVFSMountTable& table, sirVFSMountLease_t lease, const char *pszRootPath ) noexcept;
+	SIRVFSResult openRead( SIRVFSFileHandleTable& files, sirVFSFileBorrow_t ticket, SIRPlatformFile *pFile ) noexcept;
+	SIRVFSResult close( void ) noexcept;
 
 protected:
 private:
-	static sirVFSResult_t fileResult( sirFileResult_t eResult ) noexcept;
+	static SIRVFSResult fileResult( SIRFileResult eResult ) noexcept;
 
 	mutable SIRMutex m_Mutex;
 	SIRPlatformRootDirectory m_Root;
@@ -59,4 +59,4 @@ private:
 	bool m_bRetired;
 };
 
-#endif // __SIRENGINE_SIRVFSDIRECTORYSOURCE_H__
+#endif // __SIR_VFSDIRECTORYSOURCE_H__

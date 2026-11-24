@@ -8,8 +8,8 @@ License, v2. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIREDITORRESOURCEGRAPHBRIDGE_H__
-#define __SIRENGINE_SIREDITORRESOURCEGRAPHBRIDGE_H__
+#ifndef __SIR_EDITORRESOURCEGRAPHBRIDGE_H__
+#define __SIR_EDITORRESOURCEGRAPHBRIDGE_H__
 #include <Core/SIRPCH.h>
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -20,14 +20,13 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 #include <Resources/SIRResourceTypes.h>
 class SIRResourceGraph;
 
-typedef enum sirEditorGraphBridgeResult_e : uint8_t
-{
+enum class SIREditorGraphBridgeResult : uint8_t {
 	SIR_EDITOR_GRAPH_OK = 0,
 	SIR_EDITOR_GRAPH_INVALID_ARGUMENT = 1,
 	SIR_EDITOR_GRAPH_OUT_OF_CAPACITY = 2,
 	SIR_EDITOR_GRAPH_INVALID_CATALOG = 3,
 	SIR_EDITOR_GRAPH_REQUEST_FAILED = 4
-} sirEditorGraphBridgeResult_t;
+};
 
 typedef struct sirEditorResourceGraphRequest_s
 {
@@ -42,5 +41,5 @@ typedef struct sirEditorResourceGraphRequest_s
 // Request canonical resources from GRDG in catalog dependency order. This does
 // not own payloads or duplicate graph state. On failure nRequested identifies
 // the prefix already requested from GRDG, which remains graph-owned.
-sirEditorGraphBridgeResult_t sirEditorRequestCatalogResources( sirEditorResourceGraphRequest_t *pRequest ) noexcept;
-#endif // __SIRENGINE_SIREDITORRESOURCEGRAPHBRIDGE_H__
+SIREditorGraphBridgeResult sirEditorRequestCatalogResources( sirEditorResourceGraphRequest_t *pRequest ) noexcept;
+#endif // __SIR_EDITORRESOURCEGRAPHBRIDGE_H__

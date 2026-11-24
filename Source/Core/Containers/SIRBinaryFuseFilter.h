@@ -22,13 +22,13 @@ class SIRBinaryFuseFilter
 	}
 	static uint8_t fingerprint( uint64_t nValue ) noexcept
 	{
-		return ( uint8_t )mix( nValue ^ 0xaf9d527b6e37c1d5ull );
+		return static_cast<uint8_t>(mix( nValue ^ 0xaf9d527b6e37c1d5ull ));
 	}
 	static uint32_t index( uint64_t nValue, uint64_t nSeed, uint32_t iPart, uint32_t nSegmentSize, uint32_t nSegments ) noexcept
 	{
 		const uint64_t nHash = mix( nValue ^ nSeed );
-		const uint32_t iStart = ( uint32_t )( nHash % ( nSegments - 2 ) );
-		const uint32_t iOffset = ( uint32_t )mix( nHash ^ ( 0x9e3779b97f4a7c15ull * ( iPart + 1 ) ) ) & ( nSegmentSize - 1 );
+		const uint32_t iStart = static_cast<uint32_t>(  nHash % ( nSegments - 2 )  );
+		const uint32_t iOffset = static_cast<uint32_t>(mix( nHash ^ ( 0x9e3779b97f4a7c15ull * ( iPart + 1 ) ) ) & ( nSegmentSize - 1 ));
 		return ( iStart + iPart ) * nSegmentSize + iOffset;
 	}
 
@@ -36,17 +36,17 @@ public:
 	explicit SIRBinaryFuseFilter( const sirContainerAllocator_t *pAllocator ) : m_pAllocator( pAllocator ), m_fingerprints( pAllocator )
 	{
 	}
-	sirContainerResult_t tryBuild( const uint64_t *pValues, uint32_t nCount )
+	SIRContainerResult tryBuild( const uint64_t *pValues, uint32_t nCount )
 	{
 		if ( nCount != 0 && pValues == nullptr ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		if ( nCount > UINT32_MAX / 6 - 16 ) {
-			return SIR_CONTAINER_SIZE_OVERFLOW;
+			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
 		SIRVector<uint64_t> keys( m_pAllocator );
-		sirContainerResult_t eResult = keys.tryReserve( nCount );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		SIRContainerResult eResult = keys.tryReserve( nCount );
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		for ( uint32_t iIndex = 0; iIndex < nCount; ++iIndex ) {
@@ -57,18 +57,18 @@ public:
 		}
 		for ( uint32_t iIndex = 1; iIndex < nCount; ++iIndex ) {
 			if ( keys[iIndex - 1] == keys[iIndex] ) {
-				return SIR_CONTAINER_INVALID_ARGUMENT;
+				return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 			}
 		}
 		uint32_t nPart = 8;
 		while ( nPart < 256 && nCount / nPart > 10 ) {
 			nPart *= 2;
 		}
-		const uint64_t nSegmentsRequired = ( ( uint64_t )nCount * 13 / 10 + nPart - 1 ) / nPart + 2;
+		const uint64_t nSegmentsRequired = ( static_cast<uint64_t>(nCount) * 13 / 10 + nPart - 1 ) / nPart + 2;
 		if ( nSegmentsRequired > UINT32_MAX / nPart ) {
-			return SIR_CONTAINER_SIZE_OVERFLOW;
+			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
-		const uint32_t nSegments = ( uint32_t )( nSegmentsRequired < 3 ? 3 : nSegmentsRequired );
+		const uint32_t nSegments = static_cast<uint32_t>( nSegmentsRequired < 3 ? 3 : nSegmentsRequired );
 		const uint32_t nSlots = nPart * nSegments;
 		SIRVector<uint32_t> degree( m_pAllocator );
 		SIRVector<uint64_t> xors( m_pAllocator );
@@ -77,27 +77,27 @@ public:
 		SIRVector<uint32_t> peeledPositions( m_pAllocator );
 		SIRVector<uint8_t> tags( m_pAllocator );
 		eResult = degree.tryResize( nSlots );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		eResult = xors.tryResize( nSlots );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		eResult = stack.tryReserve( nSlots );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		eResult = peeledKeys.tryReserve( nCount );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		eResult = peeledPositions.tryReserve( nCount );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		eResult = tags.tryResize( nSlots );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		for ( uint32_t nAttempt = 0; nAttempt < 64; ++nAttempt ) {
@@ -163,9 +163,9 @@ public:
 			m_nPartSize = nPart;
 			m_nSegmentCount = nSegments;
 			m_nKeys = nCount;
-			return SIR_CONTAINER_OK;
+			return SIRContainerResult::SIR_CONTAINER_OK;
 		}
-		return SIR_CONTAINER_BUSY;
+		return SIRContainerResult::SIR_CONTAINER_BUSY;
 	}
 	bool mayContain( uint64_t nValue ) const noexcept
 	{

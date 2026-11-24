@@ -14,8 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRVIRTUALTEXTUREPACKFILESOURCE_H__
-#define __SIRENGINE_SIRVIRTUALTEXTUREPACKFILESOURCE_H__
+#ifndef __SIR_VIRTUALTEXTUREPACKFILESOURCE_H__
+#define __SIR_VIRTUALTEXTUREPACKFILESOURCE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -67,4 +67,4 @@ private:
 	uint64_t m_nPackageSignature;
 };
 
-#endif // __SIRENGINE_SIRVIRTUALTEXTUREPACKFILESOURCE_H__
+#endif // __SIR_VIRTUALTEXTUREPACKFILESOURCE_H__

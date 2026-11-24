@@ -19,7 +19,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 uint64_t sirVTPackHash64( const void *pBytes, uint64_t nBytes ) noexcept
 {
 	const uint64_t nSeed = UINT64_C( 1469598103934665603 );
-	const uint8_t *pInput = ( const uint8_t * )pBytes;
+	const uint8_t *pInput = static_cast<const uint8_t *>(pBytes);
 	if ( pInput == nullptr ) {
 		return nBytes == 0 ? nSeed : 0;
 	}
@@ -32,7 +32,7 @@ uint64_t sirVTPackHash64( const void *pBytes, uint64_t nBytes ) noexcept
 
 uint32_t sirVTPackChecksum32( const void *pBytes, uint64_t nBytes ) noexcept
 {
-	const uint8_t *pInput = ( const uint8_t * )pBytes;
+	const uint8_t *pInput = static_cast<const uint8_t *>(pBytes);
 	if ( pInput == nullptr && nBytes != 0 ) {
 		return 0;
 	}
@@ -47,18 +47,18 @@ uint32_t sirVTPackChecksum32( const void *pBytes, uint64_t nBytes ) noexcept
 	return ~nCrc;
 }
 
-uint32_t sirVTPackPhysicalTileBytes( sirVirtualTexturePhysicalFamily_t eFamily ) noexcept
+uint32_t sirVTPackPhysicalTileBytes( SIRVirtualTexturePhysicalFamily eFamily ) noexcept
 {
 	const uint32_t nBlocks = ( SIR_VT_PHYSICAL_TILE + 3U ) / 4U;
 	switch ( eFamily ) {
-	case SIR_VT_PHYSICAL_BC1:
+	case SIRVirtualTexturePhysicalFamily::SIR_VT_PHYSICAL_BC1:
 		return nBlocks * nBlocks * 8U;
-	case SIR_VT_PHYSICAL_BC7:
-	case SIR_VT_PHYSICAL_BC5:
+	case SIRVirtualTexturePhysicalFamily::SIR_VT_PHYSICAL_BC7:
+	case SIRVirtualTexturePhysicalFamily::SIR_VT_PHYSICAL_BC5:
 		return nBlocks * nBlocks * 16U;
-	case SIR_VT_PHYSICAL_R8:
+	case SIRVirtualTexturePhysicalFamily::SIR_VT_PHYSICAL_R8:
 		return SIR_VT_PHYSICAL_TILE * SIR_VT_PHYSICAL_TILE;
-	case SIR_VT_PHYSICAL_R16:
+	case SIRVirtualTexturePhysicalFamily::SIR_VT_PHYSICAL_R16:
 		return SIR_VT_PHYSICAL_TILE * SIR_VT_PHYSICAL_TILE * 2U;
 	default:
 		return 0;
@@ -80,11 +80,11 @@ bool sirVTPackOpenDirectories( const sirVirtualTexturePackInput_t& input, sirVir
 	// Terrain3D V1 writes native little-endian PODs. Do not reinterpret data on
 	// a host of unknown endianness or with unvalidated directory alignment.
 	const uint16_t nEndian = 1;
-	if ( *( const uint8_t * )&nEndian != 1 ) {
+	if ( *reinterpret_cast<const uint8_t *>(&nEndian) != 1 ) {
 		return false;
 	}
-	const uint8_t *pBytes = ( const uint8_t * )input.pBytes;
-	sirVirtualTexturePackHeader_t header = {};
+	const uint8_t *pBytes = static_cast<const uint8_t *>(input.pBytes);
+	sirVirtualTexturePackHeader_t header {};
 	memcpy( &header, pBytes, sizeof( header ) );
 	if ( header.nMagic != SIR_VT_PACK_MAGIC || header.nVersion != SIR_VT_PACK_VERSION || header.nHeaderBytes != SIR_VT_PACK_HEADER_BYTES ||
 	     header.nPackageBytes != input.nFileBytes || header.nAllocationCount == 0 ||
@@ -110,35 +110,35 @@ bool sirVTPackOpenDirectories( const sirVirtualTexturePackInput_t& input, sirVir
 		return false;
 	}
 
-	const uint64_t szOffsets[SIR_VT_PACK_DIRECTORY_COUNT] = {
+	const uint64_t szOffsets[SIRVirtualTexturePackDirectory::SIR_VT_PACK_DIRECTORY_COUNT] = {
 	    header.nAllocationOffset,       header.nAllocationKeyOffset,    header.nChannelAllocationOffset, header.nPageOffset,
 	    header.nPayloadDirectoryOffset, header.nClusterDirectoryOffset, header.nTailMetadataOffset,      header.nQualityViewOffset,
 	    header.nFormatFamilyOffset,     header.nPayloadDataOffset };
-	const uint64_t szBytes[SIR_VT_PACK_DIRECTORY_COUNT] = {
-	    ( uint64_t )header.nAllocationCount * sizeof( sirVirtualTexturePackAllocationRecord_t ),
-	    ( uint64_t )header.nAllocationCount * sizeof( sirVirtualTexturePackAllocationKey_t ),
-	    ( uint64_t )header.nChannelAllocationCount * sizeof( sirVirtualTexturePackChannelAllocation_t ),
-	    ( uint64_t )header.nPageCount * sizeof( sirVirtualTexturePackPageRecord_t ),
-	    ( uint64_t )header.nPayloadCount * sizeof( sirVirtualTexturePackPayloadRecord_t ),
-	    ( uint64_t )header.nClusterCount * sizeof( sirVirtualTexturePackClusterRecord_t ),
-	    ( uint64_t )header.nTailCount * sizeof( sirVirtualTexturePackTailRecord_t ),
-	    ( uint64_t )header.nQualityViewCount * sizeof( sirVirtualTexturePackQualityView_t ),
-	    ( uint64_t )header.nFormatFamilyCount * sizeof( sirVirtualTexturePackFamilyRecord_t ),
+	const uint64_t szBytes[SIRVirtualTexturePackDirectory::SIR_VT_PACK_DIRECTORY_COUNT] = {
+	    static_cast<uint64_t>(header.nAllocationCount) * sizeof( sirVirtualTexturePackAllocationRecord_t ),
+	    static_cast<uint64_t>(header.nAllocationCount) * sizeof( sirVirtualTexturePackAllocationKey_t ),
+	    static_cast<uint64_t>(header.nChannelAllocationCount) * sizeof( sirVirtualTexturePackChannelAllocation_t ),
+	    static_cast<uint64_t>(header.nPageCount) * sizeof( sirVirtualTexturePackPageRecord_t ),
+	    static_cast<uint64_t>(header.nPayloadCount) * sizeof( sirVirtualTexturePackPayloadRecord_t ),
+	    static_cast<uint64_t>(header.nClusterCount) * sizeof( sirVirtualTexturePackClusterRecord_t ),
+	    static_cast<uint64_t>(header.nTailCount) * sizeof( sirVirtualTexturePackTailRecord_t ),
+	    static_cast<uint64_t>(header.nQualityViewCount) * sizeof( sirVirtualTexturePackQualityView_t ),
+	    static_cast<uint64_t>(header.nFormatFamilyCount) * sizeof( sirVirtualTexturePackFamilyRecord_t ),
 	    header.nPayloadDataBytes };
 
-	sirVirtualTexturePackView_t candidate = {};
+	sirVirtualTexturePackView_t candidate {};
 	candidate.header = header;
 	candidate.bMetadataOnly = input.bMetadataOnly;
 	uint64_t nPreviousEnd = SIR_VT_PACK_HEADER_BYTES;
-	for ( uint32_t iDirectory = 0; iDirectory < SIR_VT_PACK_DIRECTORY_COUNT; ++iDirectory ) {
+	for ( uint32_t iDirectory = 0; iDirectory < SIRVirtualTexturePackDirectory::SIR_VT_PACK_DIRECTORY_COUNT; ++iDirectory ) {
 		const uint64_t nOffset = szOffsets[iDirectory];
 		const uint64_t nSize = szBytes[iDirectory];
 		if ( ( nOffset & ( SIR_VT_PACK_ALIGNMENT - 1U ) ) != 0 || nOffset < nPreviousEnd ||
 		     !sirVTPackRangeValid( nOffset, nSize, input.nFileBytes ) ||
-		     ( iDirectory == SIR_VT_PACK_ALLOCATIONS && nOffset != SIR_VT_PACK_HEADER_BYTES ) ) {
+		     ( iDirectory == SIRVirtualTexturePackDirectory::SIR_VT_PACK_ALLOCATIONS && nOffset != SIR_VT_PACK_HEADER_BYTES ) ) {
 			return false;
 		}
-		candidate.szDirectories[iDirectory] = { input.bMetadataOnly && iDirectory == SIR_VT_PACK_PAYLOAD_DATA ? nullptr : pBytes + nOffset,
+		candidate.szDirectories[iDirectory] = { input.bMetadataOnly && iDirectory == SIRVirtualTexturePackDirectory::SIR_VT_PACK_PAYLOAD_DATA ? nullptr : pBytes + nOffset,
 		                                        nSize, nOffset };
 		nPreviousEnd = nOffset + nSize;
 	}
@@ -169,13 +169,13 @@ bool sirVTPlaceCompactTail( const sirVirtualTextureTailRequest_t& request, sirVi
 	}
 	const uint32_t nHalfIndex = nNext;
 	const uint32_t nFullSlot = nHalfIndex >> 1U;
-	const uint64_t nY = ( uint64_t )( nFullSlot / request.nSlotsPerRow ) * request.nSlotHeight;
-	if ( nY > ( uint64_t )UINT32_MAX - request.nSlotHeight ) {
+	const uint64_t nY = static_cast<uint64_t>( nFullSlot / request.nSlotsPerRow ) * request.nSlotHeight;
+	if ( nY > static_cast<uint64_t>(UINT32_MAX) - request.nSlotHeight ) {
 		return false;
 	}
 	*pPlacement = { nNext + nCount,
 	                ( nFullSlot % request.nSlotsPerRow ) * request.nSlotWidth +
 	                    ( request.bCompact ? ( nHalfIndex & 1U ) * ( request.nSlotWidth >> 1U ) : 0U ),
-	                ( uint32_t )nY };
+	                static_cast<uint32_t>(nY) };
 	return true;
 }

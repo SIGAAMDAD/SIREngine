@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSCOPEDLOCK_H__
-#define __SIRENGINE_SIRSCOPEDLOCK_H__
+#ifndef __SIR_SCOPEDLOCK_H__
+#define __SIR_SCOPEDLOCK_H__
 
 #include <Core/SIRPCH.h>
 
@@ -92,4 +92,4 @@ SIRConditionalScopedLock<Lockable>::~SIRConditionalScopedLock() noexcept
 template <typename Lockable>
 SIRConditionalScopedLock( Lockable&, bool ) -> SIRConditionalScopedLock<Lockable>;
 
-#endif // __SIRENGINE_SIRSCOPEDLOCK_H__
+#endif // __SIR_SCOPEDLOCK_H__

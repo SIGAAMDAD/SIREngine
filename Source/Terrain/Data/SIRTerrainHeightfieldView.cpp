@@ -22,60 +22,60 @@ bool SIRTerrainHeightfieldView::isValidView( const sirTerrainR16View_t& view ) n
 	if ( !view.pSamples || !SIRTerrainHeightfieldCodec::isValidDescriptor( view.descriptor ) ) {
 		return false;
 	}
-	const size_t nResolution = ( size_t )view.descriptor.nResolution;
+	const size_t nResolution = static_cast<size_t>(view.descriptor.nResolution);
 	return view.nSampleBytes == nResolution * nResolution * sizeof( uint16_t );
 }
 
 float SIRTerrainHeightfieldView::decodeSample( const sirTerrainR16View_t& view, uint32_t nX, uint32_t nZ ) noexcept
 {
-	const size_t nOffset = ( ( size_t )nZ * view.descriptor.nResolution + nX ) * sizeof( uint16_t );
-	const uint16_t nValue = ( uint16_t )( ( uint16_t )view.pSamples[nOffset] | ( ( uint16_t )view.pSamples[nOffset + 1] << 8u ) );
-	const double fRange = ( double )view.descriptor.fMaxHeight - view.descriptor.fMinHeight;
-	return ( float )( ( double )view.descriptor.fMinHeight + fRange * ( ( double )nValue / 65535.0 ) );
+	const size_t nOffset = ( static_cast<size_t>(nZ) * view.descriptor.nResolution + nX ) * sizeof( uint16_t );
+	const uint16_t nValue = ( uint16_t )( static_cast<uint16_t>(view.pSamples[nOffset]) | ( static_cast<uint16_t>(view.pSamples[nOffset + 1]) << 8u ) );
+	const double fRange = static_cast<double>(view.descriptor.fMaxHeight) - view.descriptor.fMinHeight;
+	return ( float )( static_cast<double>(view.descriptor.fMinHeight) + fRange * ( static_cast<double>(nValue) / 65535.0 ) );
 }
 
-sirTerrainCodecResult_t SIRTerrainHeightfieldView::open( sirTerrainConstByteSpan_t input, sirTerrainR16View_t& view,
+SIRTerrainCodecResult SIRTerrainHeightfieldView::open( sirTerrainConstByteSpan_t input, sirTerrainR16View_t& view,
                                                          uint64_t nMinimumRevision ) noexcept
 {
-	sirTerrainRegionDescriptor_t descriptor = {};
-	const sirTerrainCodecResult_t eResult = SIRTerrainHeightfieldCodec::inspect( input, descriptor, nMinimumRevision );
-	if ( eResult != SIR_TERRAIN_CODEC_SUCCESS ) {
+	sirTerrainRegionDescriptor_t descriptor {};
+	const SIRTerrainCodecResult eResult = SIRTerrainHeightfieldCodec::inspect( input, descriptor, nMinimumRevision );
+	if ( eResult != SIRTerrainCodecResult::SIR_TERRAIN_CODEC_SUCCESS ) {
 		return eResult;
 	}
 	view.descriptor = descriptor;
 	view.pSamples = input.pData + SIRTerrainHeightfieldCodec::HEADER_BYTES;
 	view.nSampleBytes = input.nCapacity - SIRTerrainHeightfieldCodec::HEADER_BYTES;
-	return SIR_TERRAIN_CODEC_SUCCESS;
+	return SIRTerrainCodecResult::SIR_TERRAIN_CODEC_SUCCESS;
 }
 
-sirTerrainSampleResult_t SIRTerrainHeightfieldView::read( const sirTerrainR16View_t& view, uint32_t nX, uint32_t nZ,
+SIRTerrainSampleResult SIRTerrainHeightfieldView::read( const sirTerrainR16View_t& view, uint32_t nX, uint32_t nZ,
                                                           float& fHeight ) noexcept
 {
 	if ( !isValidView( view ) ) {
-		return SIR_TERRAIN_SAMPLE_INVALID_VIEW;
+		return SIRTerrainSampleResult::SIR_TERRAIN_SAMPLE_INVALID_VIEW;
 	}
 	if ( nX >= view.descriptor.nResolution || nZ >= view.descriptor.nResolution ) {
-		return SIR_TERRAIN_SAMPLE_OUT_OF_BOUNDS;
+		return SIRTerrainSampleResult::SIR_TERRAIN_SAMPLE_OUT_OF_BOUNDS;
 	}
 	fHeight = decodeSample( view, nX, nZ );
-	return SIR_TERRAIN_SAMPLE_SUCCESS;
+	return SIRTerrainSampleResult::SIR_TERRAIN_SAMPLE_SUCCESS;
 }
 
-sirTerrainSampleResult_t SIRTerrainHeightfieldView::sampleBilinear( const sirTerrainR16View_t& view, double fCellX, double fCellZ,
+SIRTerrainSampleResult SIRTerrainHeightfieldView::sampleBilinear( const sirTerrainR16View_t& view, double fCellX, double fCellZ,
                                                                     float& fHeight ) noexcept
 {
 	if ( !isValidView( view ) ) {
-		return SIR_TERRAIN_SAMPLE_INVALID_VIEW;
+		return SIRTerrainSampleResult::SIR_TERRAIN_SAMPLE_INVALID_VIEW;
 	}
 	if ( !isfinite( fCellX ) || !isfinite( fCellZ ) ) {
-		return SIR_TERRAIN_SAMPLE_INVALID_ARGUMENT;
+		return SIRTerrainSampleResult::SIR_TERRAIN_SAMPLE_INVALID_ARGUMENT;
 	}
-	const double fMaximum = ( double )( view.descriptor.nResolution - 1u );
+	const double fMaximum = static_cast<double>( view.descriptor.nResolution - 1u );
 	if ( fCellX < 0.0 || fCellZ < 0.0 || fCellX > fMaximum || fCellZ > fMaximum ) {
-		return SIR_TERRAIN_SAMPLE_OUT_OF_BOUNDS;
+		return SIRTerrainSampleResult::SIR_TERRAIN_SAMPLE_OUT_OF_BOUNDS;
 	}
-	const uint32_t nX0 = ( uint32_t )fCellX;
-	const uint32_t nZ0 = ( uint32_t )fCellZ;
+	const uint32_t nX0 = static_cast<uint32_t>(fCellX);
+	const uint32_t nZ0 = static_cast<uint32_t>(fCellZ);
 	const uint32_t nX1 = nX0 + ( nX0 < view.descriptor.nResolution - 1u ? 1u : 0u );
 	const uint32_t nZ1 = nZ0 + ( nZ0 < view.descriptor.nResolution - 1u ? 1u : 0u );
 	const double fX = fCellX - nX0;
@@ -86,6 +86,6 @@ sirTerrainSampleResult_t SIRTerrainHeightfieldView::sampleBilinear( const sirTer
 	const double fH11 = decodeSample( view, nX1, nZ1 );
 	const double fRow0 = fH00 + ( fH10 - fH00 ) * fX;
 	const double fRow1 = fH01 + ( fH11 - fH01 ) * fX;
-	fHeight = ( float )( fRow0 + ( fRow1 - fRow0 ) * fZ );
-	return SIR_TERRAIN_SAMPLE_SUCCESS;
+	fHeight = static_cast<float>(  fRow0 + ( fRow1 - fRow0 ) * fZ  );
+	return SIRTerrainSampleResult::SIR_TERRAIN_SAMPLE_SUCCESS;
 }

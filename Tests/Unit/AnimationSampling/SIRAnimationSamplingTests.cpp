@@ -13,6 +13,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 #include <Animation/Runtime/SIRAnimationSampler.h>
+#include <atomic>
 #include <Animation/Cooked/SIRAnimationCookedClipReader.h>
 #include <Animation/Runtime/SIRAnimationSIMD.h>
 #ifdef SIR_ANIM_WITH_JOBS
@@ -255,7 +256,7 @@ static void sirTestSchedulerBatch( void )
 	uint8_t bytes[4096] = {};
 	sirAnimationCookOutput_t output = { bytes, sizeof( bytes ), 0 };
 	assert( SIRAnimationCooker::cookClip( clip, &output ) == SIR_ANIM_COOK_OK );
-	SIRAtomic<uint32_t> generation( 3 );
+	std::atomic<uint32_t> generation( 3 );
 	sirAnimationCookKey_t scratch[2][2] = {};
 	uint32_t cursors[2][1] = {};
 	sirAnimationTransform_t poses[2] = {};
@@ -283,7 +284,7 @@ static void sirTestSchedulerBatch( void )
 	jobs[0].pose.nTransformCount = 0;
 	const sirAnimationSamplingBatch_t cancelled = { jobs, descriptors, handles, 1 };
 	assert( SIRAnimationSamplingJobs::submitBatch( scheduler, cancelled ) );
-	generation.store( 4, SIR_MEMORY_ORDER_RELEASE );
+	generation.store( 4, std::memory_order_release );
 	assert( scheduler.pumpCPU( 1 ) == 1 );
 	assert( scheduler.getState( handles[0] ) == SIR_TASK_FAILED );
 	assert( jobs[0].pose.nTransformCount == 0 );

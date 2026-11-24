@@ -24,14 +24,14 @@ constexpr uint32_t SIR_LANG_COOK_RECIPE_IMPORT_BYTES = 40;
 static void sirLangCookWrite32( uint8_t *pBytes, uint32_t nValue ) noexcept
 {
 	for ( uint32_t iByte = 0; iByte < 4; ++iByte ) {
-		pBytes[iByte] = ( uint8_t )( nValue >> ( iByte * 8 ) );
+		pBytes[iByte] = static_cast<uint8_t>(  nValue >> ( iByte * 8 )  );
 	}
 }
 
 static void sirLangCookWrite64( uint8_t *pBytes, uint64_t nValue ) noexcept
 {
 	for ( uint32_t iByte = 0; iByte < 8; ++iByte ) {
-		pBytes[iByte] = ( uint8_t )( nValue >> ( iByte * 8 ) );
+		pBytes[iByte] = static_cast<uint8_t>(  nValue >> ( iByte * 8 )  );
 	}
 }
 
@@ -44,14 +44,14 @@ static bool sirLangCookNonzeroDigest( const uint8_t szDigest[32] ) noexcept
 	return nAccumulated != 0;
 }
 
-sirScriptResult_t SIRLangMakeCookKey( const sirLangCookIdentity_t& identity, const sirLangCookImport_t *pImports, uint32_t nImportCount,
+SIRScriptResult SIRLangMakeCookKey( const sirLangCookIdentity_t& identity, const sirLangCookImport_t *pImports, uint32_t nImportCount,
                                       sirScriptCacheKey_t *pKey ) noexcept
 {
 	if ( pKey == nullptr || identity.nModuleId == 0 || identity.nSchemaId == 0 || identity.nLayoutDigest == 0 ||
 	     identity.nBindingDigest == 0 || identity.nTargetId == 0 || identity.nToolchainId == 0 ||
 	     nImportCount > SIR_LANG_COOK_RECIPE_MAX_IMPORTS || ( nImportCount != 0 && pImports == nullptr ) ||
 	     !sirLangCookNonzeroDigest( identity.szSourceDigest ) ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 
 	// Imports must be the unique, sorted transitive closure. The header's
@@ -61,12 +61,13 @@ sirScriptResult_t SIRLangMakeCookKey( const sirLangCookIdentity_t& identity, con
 		const sirLangCookImport_t& dependency = pImports[iImport];
 		if ( dependency.nModuleId <= nPreviousModule || dependency.nModuleId == identity.nModuleId ||
 		     !sirLangCookNonzeroDigest( dependency.szDigest ) ) {
-			return SIR_SCRIPT_INVALID_ARGUMENT;
+			return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 		}
 		nPreviousModule = dependency.nModuleId;
 	}
 
-	uint8_t szRecipe[SIR_LANG_COOK_RECIPE_HEADER_BYTES + SIR_LANG_COOK_RECIPE_IMPORT_BYTES * SIR_LANG_COOK_RECIPE_MAX_IMPORTS] = {};
+	uint8_t szRecipe[SIR_LANG_COOK_RECIPE_HEADER_BYTES + SIR_LANG_COOK_RECIPE_IMPORT_BYTES * SIR_LANG_COOK_RECIPE_MAX_IMPORTS];
+	memset( szRecipe, 0, sizeof( szRecipe ) );
 	memcpy( szRecipe, "SIRCRP01", 8 );
 	sirLangCookWrite32( szRecipe + 8, 1 );
 	sirLangCookWrite32( szRecipe + 12, SIR_LANG_VM_VERSION );
@@ -86,6 +87,6 @@ sirScriptResult_t SIRLangMakeCookKey( const sirLangCookIdentity_t& identity, con
 		memcpy( szRecipe + iOffset + 8, pImports[iImport].szDigest, 32 );
 	}
 
-	const uint64_t nRecipeBytes = SIR_LANG_COOK_RECIPE_HEADER_BYTES + ( uint64_t )nImportCount * SIR_LANG_COOK_RECIPE_IMPORT_BYTES;
+	const uint64_t nRecipeBytes = SIR_LANG_COOK_RECIPE_HEADER_BYTES + static_cast<uint64_t>(nImportCount) * SIR_LANG_COOK_RECIPE_IMPORT_BYTES;
 	return SIRScriptArtifactCache::makeKey( szRecipe, nRecipeBytes, pKey );
 }

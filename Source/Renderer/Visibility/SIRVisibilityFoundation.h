@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRVISIBILITYFOUNDATION_H__
-#define __SIRENGINE_SIRVISIBILITYFOUNDATION_H__
+#ifndef __SIR_VISIBILITYFOUNDATION_H__
+#define __SIR_VISIBILITYFOUNDATION_H__
 
 #include <Core/SIRPCH.h>
 
@@ -28,26 +28,24 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 // The reference implementation is reverse-Z and conservative. GPU pipelines
 // consume these same contracts; FrameGraph owns scheduling in a later phase.
-typedef enum sirVisibilityMode_e : uint8_t
-{
+enum class SIRVisibilityMode : uint8_t {
 	SIR_VISIBILITY_DISABLED = 0,
 	SIR_VISIBILITY_HIZ_TEMPORAL = 1,
 	SIR_VISIBILITY_HIZ_TWO_PHASE = 2,
 	SIR_VISIBILITY_HIERARCHICAL = 3,
 	SIR_VISIBILITY_AUTO = 4
-} sirVisibilityMode_t;
+};
 
-typedef enum sirVisibilityDepthConvention_e : uint8_t
-{
+enum class SIRVisibilityDepthConvention : uint8_t {
 	SIR_VISIBILITY_REVERSE_Z = 0,
 	SIR_VISIBILITY_FORWARD_Z = 1
-} sirVisibilityDepthConvention_t;
+};
 
 typedef struct sirVisibilityMethodDesc_s
 {
-	sirVisibilityMode_t eMode;
-	sirVisibilityDepthConvention_t eDepthConvention;
-	sirGraphicsFormat_t eDepthFormat;
+	SIRVisibilityMode eMode;
+	SIRVisibilityDepthConvention eDepthConvention;
+	SIRGraphicsFormat eDepthFormat;
 	uint32_t nMaximumCandidates;
 	uint32_t nMaximumDraws;
 } sirVisibilityMethodDesc_t;
@@ -64,8 +62,8 @@ typedef struct sirVisibilityView_s
 	uint32_t nWidth;
 	uint32_t nHeight;
 	uint32_t nSampleCount;
-	sirGraphicsFormat_t eDepthFormat;
-	sirVisibilityDepthConvention_t eDepthConvention;
+	SIRGraphicsFormat eDepthFormat;
+	SIRVisibilityDepthConvention eDepthConvention;
 	bool bCameraCut;
 } sirVisibilityView_t;
 
@@ -133,30 +131,30 @@ typedef struct sirVisibilityOutput_s
 
 // Requires COMPUTE | SHADER_STORAGE | INDIRECT_DRAW for GPU modes.
 // AUTO is resolved to an explicit mode before validation and execution.
-sirGraphicsResult_t sirVisibilityValidateMethod( const sirVisibilityMethodDesc_t& method,
+SIRGraphicsResult sirVisibilityValidateMethod( const sirVisibilityMethodDesc_t& method,
                                                  const sirGraphicsCapabilities_t& capabilities ) noexcept;
 bool sirVisibilityCanReuseHistory( const sirVisibilityView_t& previous, const sirVisibilityView_t& current ) noexcept;
 
 // Contiguous mip storage, including mip 0. The caller owns all memory.
-sirGraphicsResult_t sirHiZCalculateLayout( uint32_t nWidth, uint32_t nHeight, sirHiZLayout_t *pLayout ) noexcept;
-sirGraphicsResult_t sirHiZBuildReference( const sirHiZLayout_t& layout, const sirHiZSource_t& source, float *pOutput,
+SIRGraphicsResult sirHiZCalculateLayout( uint32_t nWidth, uint32_t nHeight, sirHiZLayout_t *pLayout ) noexcept;
+SIRGraphicsResult sirHiZBuildReference( const sirHiZLayout_t& layout, const sirHiZSource_t& source, float *pOutput,
                                           uint64_t nOutputTexels ) noexcept;
 
 // Rectangle uses half-open mip-0 pixel bounds. Any out-of-view rectangle
 // fails open. A result is occluded only when every covered pyramid texel
 // conclusively hides the candidate. This is a CPU correctness oracle.
-sirGraphicsResult_t sirHiZTestRectangle( const sirHiZLayout_t& layout, const float *pPyramid, uint64_t nPyramidTexels,
+SIRGraphicsResult sirHiZTestRectangle( const sirHiZLayout_t& layout, const float *pPyramid, uint64_t nPyramidTexels,
                                          sirHiZTest_t *pTest ) noexcept;
 
 // CPU reference for a complete culling/compaction cycle. Validates and counts
 // before publishing results; does not allocate or partially update the output.
-sirGraphicsResult_t sirVisibilityCullReference( const sirVisibilityCullDesc_t& desc, sirVisibilityOutput_t *pOutput ) noexcept;
+SIRGraphicsResult sirVisibilityCullReference( const sirVisibilityCullDesc_t& desc, sirVisibilityOutput_t *pOutput ) noexcept;
 
 // HIZ-00 v1: fixed-width modes, mip/index layout and shared CPU/GPU ABI.
 // Device residency, synchronization and serialized resource identity are
 // represented by later system contracts, not hidden in these reference PODs.
-static_assert( sizeof( sirVisibilityMode_t ) == 1, "visibility mode must be 8-bit" );
-static_assert( sizeof( sirVisibilityDepthConvention_t ) == 1, "visibility depth convention must be 8-bit" );
+static_assert( sizeof( SIRVisibilityMode ) == 1, "visibility mode must be 8-bit" );
+static_assert( sizeof( SIRVisibilityDepthConvention ) == 1, "visibility depth convention must be 8-bit" );
 static_assert( sizeof( sirVisibilityMethodDesc_t ) == 16, "visibility method ABI changed" );
 static_assert( sizeof( sirHiZMip_t ) == 16, "Hi-Z mip ABI changed" );
 static_assert( offsetof( sirHiZMip_t, nOffset ) == 0, "Hi-Z mip offset ABI changed" );
@@ -172,4 +170,4 @@ static_assert( sizeof( sirVisibilityCullDesc_t ) == 40, "64-bit visibility cull 
 static_assert( sizeof( sirVisibilityOutput_t ) == 32, "64-bit visibility output ABI changed" );
 #endif
 
-#endif // __SIRENGINE_SIRVISIBILITYFOUNDATION_H__
+#endif // __SIR_VISIBILITYFOUNDATION_H__

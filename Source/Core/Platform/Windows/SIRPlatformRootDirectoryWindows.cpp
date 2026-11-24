@@ -34,43 +34,43 @@ constexpr ULONG SIR_ROOT_DONT_REPARSE = 0x00001000UL;
 typedef NTSTATUS( NTAPI *sirRootNtCreateFile_t )( PHANDLE, ACCESS_MASK, POBJECT_ATTRIBUTES, PIO_STATUS_BLOCK, PLARGE_INTEGER, ULONG, ULONG,
                                                   ULONG, ULONG, PVOID, ULONG );
 
-static sirFileResult_t sirRootErrorWindows( DWORD nError ) noexcept
+static SIRFileResult sirRootErrorWindows( DWORD nError ) noexcept
 {
 	switch ( nError ) {
 	case ERROR_FILE_NOT_FOUND:
 	case ERROR_PATH_NOT_FOUND:
-		return SIR_FILE_NOT_FOUND;
+		return SIRFileResult::SIR_FILE_NOT_FOUND;
 	case ERROR_ACCESS_DENIED:
 	case ERROR_SHARING_VIOLATION:
 	case ERROR_CANT_ACCESS_FILE:
-		return SIR_FILE_ACCESS_DENIED;
+		return SIRFileResult::SIR_FILE_ACCESS_DENIED;
 	case ERROR_INVALID_NAME:
 	case ERROR_INVALID_PARAMETER:
-		return SIR_FILE_INVALID_ARGUMENT;
+		return SIRFileResult::SIR_FILE_INVALID_ARGUMENT;
 	case ERROR_FILENAME_EXCED_RANGE:
-		return SIR_FILE_OUT_OF_RANGE;
+		return SIRFileResult::SIR_FILE_OUT_OF_RANGE;
 	default:
-		return SIR_FILE_IO_ERROR;
+		return SIRFileResult::SIR_FILE_IO_ERROR;
 	}
 }
 
-static sirFileResult_t sirRootNativeErrorWindows( NTSTATUS nStatus ) noexcept
+static SIRFileResult sirRootNativeErrorWindows( NTSTATUS nStatus ) noexcept
 {
 	// NTSTATUS values are intentionally tested as numbers: the normal Windows
 	// SDK does not always make ntstatus.h constants available alongside Windows.h.
 	if ( nStatus == ( NTSTATUS )0xC0000034L || nStatus == ( NTSTATUS )0xC000003AL ) {
-		return SIR_FILE_NOT_FOUND;
+		return SIRFileResult::SIR_FILE_NOT_FOUND;
 	}
 	if ( nStatus == ( NTSTATUS )0xC0000022L || nStatus == ( NTSTATUS )0xC000050BL || nStatus == ( NTSTATUS )0xC000000DL ||
 	     nStatus == ( NTSTATUS )0xC0000103L || nStatus == ( NTSTATUS )0xC00000BAL ) {
-		return SIR_FILE_ACCESS_DENIED;
+		return SIRFileResult::SIR_FILE_ACCESS_DENIED;
 	}
-	return SIR_FILE_IO_ERROR;
+	return SIRFileResult::SIR_FILE_IO_ERROR;
 }
 
 static bool sirRootSafeAttributesWindows( HANDLE hObject, bool bDirectory ) noexcept
 {
-	FILE_ATTRIBUTE_TAG_INFO info = {};
+	FILE_ATTRIBUTE_TAG_INFO info {};
 	if ( !GetFileInformationByHandleEx( hObject, FileAttributeTagInfo, &info, sizeof( info ) ) ||
 	     ( info.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT ) != 0 ) {
 		return false;
@@ -85,7 +85,7 @@ SIRPlatformRootDirectory::SIRPlatformRootDirectory( void ) noexcept : m_nNativeD
 
 SIRPlatformRootDirectory::~SIRPlatformRootDirectory( void ) noexcept
 {
-	( void )close();
+	static_cast<void>(close());
 }
 
 bool SIRPlatformRootDirectory::isOpen( void ) const noexcept
@@ -93,14 +93,14 @@ bool SIRPlatformRootDirectory::isOpen( void ) const noexcept
 	return m_nNativeDirectory != UINTPTR_MAX;
 }
 
-sirFileResult_t SIRPlatformRootDirectory::openRoot( const char *pszRootPath ) noexcept
+SIRFileResult SIRPlatformRootDirectory::openRoot( const char *pszRootPath ) noexcept
 {
 	if ( isOpen() || pszRootPath == nullptr || pszRootPath[0] == '\0' ) {
-		return SIR_FILE_INVALID_ARGUMENT;
+		return SIRFileResult::SIR_FILE_INVALID_ARGUMENT;
 	}
 	wchar_t szRoot[32768];
 	if ( MultiByteToWideChar( CP_UTF8, MB_ERR_INVALID_CHARS, pszRootPath, -1, szRoot, 32768 ) == 0 ) {
-		return SIR_FILE_INVALID_ARGUMENT;
+		return SIRFileResult::SIR_FILE_INVALID_ARGUMENT;
 	}
 	HANDLE hRoot = CreateFileW( szRoot, FILE_TRAVERSE | FILE_READ_ATTRIBUTES | SYNCHRONIZE, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr,
 	                            OPEN_EXISTING, FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS, nullptr );
@@ -109,30 +109,30 @@ sirFileResult_t SIRPlatformRootDirectory::openRoot( const char *pszRootPath ) no
 	}
 	if ( !sirRootSafeAttributesWindows( hRoot, true ) ) {
 		CloseHandle( hRoot );
-		return SIR_FILE_ACCESS_DENIED;
+		return SIRFileResult::SIR_FILE_ACCESS_DENIED;
 	}
-	m_nNativeDirectory = ( uintptr_t )hRoot;
-	return SIR_FILE_OK;
+	m_nNativeDirectory = static_cast<uintptr_t>(hRoot);
+	return SIRFileResult::SIR_FILE_OK;
 }
 
-sirFileResult_t SIRPlatformRootDirectory::openRead( const char *pszRelativePath, SIRPlatformFile *pFile ) const noexcept
+SIRFileResult SIRPlatformRootDirectory::openRead( const char *pszRelativePath, SIRPlatformFile *pFile ) const noexcept
 {
 	if ( pFile == nullptr || pFile->isOpen() || !validRelative( pszRelativePath ) ) {
-		return SIR_FILE_INVALID_ARGUMENT;
+		return SIRFileResult::SIR_FILE_INVALID_ARGUMENT;
 	}
 	if ( !isOpen() ) {
-		return SIR_FILE_CLOSED;
+		return SIRFileResult::SIR_FILE_CLOSED;
 	}
 	HMODULE hNtdll = GetModuleHandleW( L"ntdll.dll" );
 	if ( hNtdll == nullptr ) {
-		return SIR_FILE_IO_ERROR;
+		return SIRFileResult::SIR_FILE_IO_ERROR;
 	}
-	const sirRootNtCreateFile_t pfnCreate = ( sirRootNtCreateFile_t )GetProcAddress( hNtdll, "NtCreateFile" );
+	const sirRootNtCreateFile_t pfnCreate = static_cast<sirRootNtCreateFile_t>(GetProcAddress( hNtdll, "NtCreateFile" ));
 	if ( pfnCreate == nullptr ) {
-		return SIR_FILE_IO_ERROR;
+		return SIRFileResult::SIR_FILE_IO_ERROR;
 	}
 
-	const HANDLE hRoot = ( HANDLE )m_nNativeDirectory;
+	const HANDLE hRoot = static_cast<HANDLE>(m_nNativeDirectory);
 	HANDLE hParent = hRoot;
 	uint32_t nStart = 0;
 	for ( uint32_t i = 0;; ++i ) {
@@ -150,19 +150,19 @@ sirFileResult_t SIRPlatformRootDirectory::openRead( const char *pszRelativePath,
 			if ( hParent != hRoot ) {
 				CloseHandle( hParent );
 			}
-			return SIR_FILE_INVALID_ARGUMENT;
+			return SIRFileResult::SIR_FILE_INVALID_ARGUMENT;
 		}
 
-		UNICODE_STRING component = {};
+		UNICODE_STRING component {};
 		component.Buffer = szWide;
-		component.Length = ( USHORT )( ( nWide - 1 ) * sizeof( wchar_t ) );
-		component.MaximumLength = ( USHORT )( nWide * sizeof( wchar_t ) );
-		OBJECT_ATTRIBUTES attributes = {};
+		component.Length = static_cast<USHORT>(  ( nWide - 1 ) * sizeof( wchar_t )  );
+		component.MaximumLength = static_cast<USHORT>(  nWide * sizeof( wchar_t )  );
+		OBJECT_ATTRIBUTES attributes {};
 		attributes.Length = sizeof( attributes );
 		attributes.RootDirectory = hParent;
 		attributes.ObjectName = &component;
 		attributes.Attributes = OBJ_CASE_INSENSITIVE | SIR_ROOT_DONT_REPARSE;
-		IO_STATUS_BLOCK io = {};
+		IO_STATUS_BLOCK io {};
 		HANDLE hChild = nullptr;
 		const ACCESS_MASK nAccess = ( bFinal ? FILE_READ_DATA : FILE_TRAVERSE ) | FILE_READ_ATTRIBUTES | SYNCHRONIZE;
 		const ULONG nOptions = SIR_ROOT_OPEN_REPARSE_POINT | ( bFinal ? SIR_ROOT_NON_DIRECTORY_FILE : SIR_ROOT_DIRECTORY_FILE );
@@ -178,25 +178,25 @@ sirFileResult_t SIRPlatformRootDirectory::openRead( const char *pszRelativePath,
 			if ( hChild != nullptr ) {
 				CloseHandle( hChild );
 			}
-			return SIR_FILE_ACCESS_DENIED;
+			return SIRFileResult::SIR_FILE_ACCESS_DENIED;
 		}
 		if ( bFinal ) {
-			pFile->m_nNativeHandle = ( uintptr_t )hChild;
-			pFile->m_nFlags = SIR_FILE_OPEN_READ;
+			pFile->m_nNativeHandle = static_cast<uintptr_t>(hChild);
+			pFile->m_nFlags = SIRFileOpenFlag::SIR_FILE_OPEN_READ;
 			pFile->m_nCursor = 0;
-			return SIR_FILE_OK;
+			return SIRFileResult::SIR_FILE_OK;
 		}
 		hParent = hChild;
 		nStart = i + 1;
 	}
 }
 
-sirFileResult_t SIRPlatformRootDirectory::close( void ) noexcept
+SIRFileResult SIRPlatformRootDirectory::close( void ) noexcept
 {
 	if ( !isOpen() ) {
-		return SIR_FILE_OK;
+		return SIRFileResult::SIR_FILE_OK;
 	}
-	HANDLE hRoot = ( HANDLE )m_nNativeDirectory;
+	HANDLE hRoot = static_cast<HANDLE>(m_nNativeDirectory);
 	m_nNativeDirectory = UINTPTR_MAX;
-	return CloseHandle( hRoot ) ? SIR_FILE_OK : sirRootErrorWindows( GetLastError() );
+	return CloseHandle( hRoot ) ? SIRFileResult::SIR_FILE_OK : sirRootErrorWindows( GetLastError() );
 }

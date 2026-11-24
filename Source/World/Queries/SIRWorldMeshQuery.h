@@ -12,8 +12,8 @@ express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIRWORLDMESHQUERY_H__
-#define __SIRENGINE_SIRWORLDMESHQUERY_H__
+#ifndef __SIR_WORLDMESHQUERY_H__
+#define __SIR_WORLDMESHQUERY_H__
 
 #include <Core/SIRPCH.h>
 
@@ -55,8 +55,7 @@ typedef struct sirWorldMeshHit_s
 	float normal[3];
 } sirWorldMeshHit_t;
 
-typedef enum sirWorldMeshQueryResult_e : uint8_t
-{
+enum class SIRWorldMeshQueryResult : uint8_t {
 	SIR_WORLD_MESH_OK = 0,
 	SIR_WORLD_MESH_INVALID_ARGUMENT = 1,
 	SIR_WORLD_MESH_NOT_READY = 2,
@@ -65,7 +64,7 @@ typedef enum sirWorldMeshQueryResult_e : uint8_t
 	SIR_WORLD_MESH_NOT_FOUND = 5,
 	SIR_WORLD_MESH_STALE_HANDLE = 6,
 	SIR_WORLD_MESH_BUSY = 7
-} sirWorldMeshQueryResult_t;
+};
 
 struct sirWorldMeshEntry_s;
 
@@ -87,13 +86,13 @@ public:
 	static uint64_t requiredBytes( uint32_t nCapacity ) noexcept;
 	static uint32_t requiredAlignment( void ) noexcept;
 
-	sirWorldMeshQueryResult_t initialize( void *pStorage, uint64_t nBytes, uint32_t nCapacity, uint32_t nWorldGeneration ) noexcept;
-	sirWorldMeshQueryResult_t insert( const sirWorldMeshInstance_t& instance, sirWorldMeshHandle_t *pHandle ) noexcept;
-	sirWorldMeshQueryResult_t setTransform( sirWorldMeshHandle_t handle, const float *pTransform3x4 ) noexcept;
-	sirWorldMeshQueryResult_t remove( sirWorldMeshHandle_t handle ) noexcept;
-	sirWorldMeshQueryResult_t raycast( const sirMeshCollisionRay_t& ray, uint32_t nLayerMask, uint32_t nWorldGeneration,
+	SIRWorldMeshQueryResult initialize( void *pStorage, uint64_t nBytes, uint32_t nCapacity, uint32_t nWorldGeneration ) noexcept;
+	SIRWorldMeshQueryResult insert( const sirWorldMeshInstance_t& instance, sirWorldMeshHandle_t *pHandle ) noexcept;
+	SIRWorldMeshQueryResult setTransform( sirWorldMeshHandle_t handle, const float *pTransform3x4 ) noexcept;
+	SIRWorldMeshQueryResult remove( sirWorldMeshHandle_t handle ) noexcept;
+	SIRWorldMeshQueryResult raycast( const sirMeshCollisionRay_t& ray, uint32_t nLayerMask, uint32_t nWorldGeneration,
 	                                   sirWorldMeshHit_t *pHit ) const noexcept;
-	sirWorldMeshQueryResult_t shutdown( void ) noexcept;
+	SIRWorldMeshQueryResult shutdown( void ) noexcept;
 
 protected:
 private:
@@ -109,4 +108,4 @@ private:
 	bool m_bReady;
 };
 
-#endif // __SIRENGINE_SIRWORLDMESHQUERY_H__
+#endif // __SIR_WORLDMESHQUERY_H__

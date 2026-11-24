@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIREVENTPHASEQUEUE_H__
-#define __SIRENGINE_SIREVENTPHASEQUEUE_H__
+#ifndef __SIR_EVENTPHASEQUEUE_H__
+#define __SIR_EVENTPHASEQUEUE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -185,4 +185,4 @@ private:
 template <typename TPayload, uint32_t PhaseCount = 4, uint32_t Capacity = 256>
 using SIRCompactPhaseQueue = SIREventPhaseQueue<TPayload, PhaseCount, Capacity, sirCompactEventRef_t>;
 
-#endif // __SIRENGINE_SIREVENTPHASEQUEUE_H__
+#endif // __SIR_EVENTPHASEQUEUE_H__

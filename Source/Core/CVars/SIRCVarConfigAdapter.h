@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRCVARCONFIGADAPTER_H__
-#define __SIRENGINE_SIRCVARCONFIGADAPTER_H__
+#ifndef __SIR_CVARCONFIGADAPTER_H__
+#define __SIR_CVARCONFIGADAPTER_H__
 
 #include <Core/SIRPCH.h>
 #include <Core/Config/Formats/INI/SIRIni.h>
@@ -55,10 +55,10 @@ public:
 
 	bool isInitialized( void ) const noexcept;
 
-	sirConfigResult_t initialize( SIRRegistrationCatalog& registration, SIRCVarRegistry& cvars, SIRStringPool& pool,
+	SIRConfigResult initialize( SIRRegistrationCatalog& registration, SIRCVarRegistry& cvars, SIRStringPool& pool,
 	                              const sirCVarConfigStorage_t& storage ) noexcept;
-	sirConfigResult_t applyIni( const sirConfigInput_t& input, const sirCVarOrigin_t& origin, sirConfigDiagnostic_t *pDiagnostic ) noexcept;
-	sirConfigResult_t writeArchive( const sirConfigSink_t& sink, uint32_t nCapabilities, uint64_t nMaxBytes,
+	SIRConfigResult applyIni( const sirConfigInput_t& input, const sirCVarOrigin_t& origin, sirConfigDiagnostic_t *pDiagnostic ) noexcept;
+	SIRConfigResult writeArchive( const sirConfigSink_t& sink, uint32_t nCapabilities, uint64_t nMaxBytes,
 	                                uint32_t *pWrittenEntries ) noexcept;
 	void shutdown( void ) noexcept;
 
@@ -72,4 +72,4 @@ private:
 	sirCVarConfigStorage_t m_Storage;
 };
 
-#endif // __SIRENGINE_SIRCVARCONFIGADAPTER_H__
+#endif // __SIR_CVARCONFIGADAPTER_H__

@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRPLATFORMFILEMAPPING_H__
-#define __SIRENGINE_SIRPLATFORMFILEMAPPING_H__
+#ifndef __SIR_PLATFORMFILEMAPPING_H__
+#define __SIR_PLATFORMFILEMAPPING_H__
 
 #include <Core/SIRPCH.h>
 
@@ -26,12 +26,11 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/Platform/SIRPlatformFile.h>
 
-typedef enum sirFileMapMode_e : uint8_t
-{
+enum class SIRFileMapMode : uint8_t {
 	SIR_FILE_MAP_READ_ONLY = 0,
 	SIR_FILE_MAP_READ_WRITE = 1,
 	SIR_FILE_MAP_COPY_ON_WRITE = 2
-} sirFileMapMode_t;
+};
 
 // A single OS mapping. No buffer copies or internal heap allocations.
 // Source file must remain open while map() runs, but may close afterward.
@@ -51,7 +50,7 @@ private:
 #if defined( _WIN32 )
 	uintptr_t m_nNativeMapping;
 #endif
-	sirFileMapMode_t m_eMode;
+	SIRFileMapMode m_eMode;
 
 public:
 	SIRPlatformFileMapping( void ) noexcept;
@@ -61,9 +60,9 @@ public:
 	SIRPlatformFileMapping( SIRPlatformFileMapping&& ) = delete;
 	SIRPlatformFileMapping& operator=( SIRPlatformFileMapping&& ) = delete;
 
-	sirFileResult_t map( const SIRPlatformFile& rFile, uint64_t nOffset, uint64_t nBytes, sirFileMapMode_t eMode ) noexcept;
-	sirFileResult_t unmap( void ) noexcept;
-	sirFileResult_t flush( void ) const noexcept;
+	SIRFileResult map( const SIRPlatformFile& rFile, uint64_t nOffset, uint64_t nBytes, SIRFileMapMode eMode ) noexcept;
+	SIRFileResult unmap( void ) noexcept;
+	SIRFileResult flush( void ) const noexcept;
 	bool isMapped( void ) const noexcept;
 	const uint8_t *getData( void ) const noexcept;
 	uint8_t *getWritableData( void ) noexcept;
@@ -71,4 +70,4 @@ public:
 	uint64_t getOffset( void ) const noexcept;
 };
 
-#endif // __SIRENGINE_SIRPLATFORMFILEMAPPING_H__
+#endif // __SIR_PLATFORMFILEMAPPING_H__

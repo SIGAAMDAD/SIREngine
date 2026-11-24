@@ -13,10 +13,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRINTRUSIVEPTR_H__
-#define __SIRENGINE_SIRINTRUSIVEPTR_H__
+#ifndef __SIR_INTRUSIVEPTR_H__
+#define __SIR_INTRUSIVEPTR_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -110,4 +110,4 @@ private:
 	T *m_pObject;
 };
 
-#endif // __SIRENGINE_SIRINTRUSIVEPTR_H__
+#endif // __SIR_INTRUSIVEPTR_H__

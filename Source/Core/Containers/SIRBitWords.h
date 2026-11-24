@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRBITWORDS_H__
-#define __SIRENGINE_SIRBITWORDS_H__
+#ifndef __SIR_BITWORDS_H__
+#define __SIR_BITWORDS_H__
 
 #include <Core/SIRPCH.h>
 
@@ -48,7 +48,7 @@ public:
 		nWord -= ( nWord >> 1 ) & 0x5555555555555555ull;
 		nWord = ( nWord & 0x3333333333333333ull ) + ( ( nWord >> 2 ) & 0x3333333333333333ull );
 		nWord = ( nWord + ( nWord >> 4 ) ) & 0x0f0f0f0f0f0f0f0full;
-		return ( uint32_t )( ( nWord * 0x0101010101010101ull ) >> 56 );
+		return static_cast<uint32_t>(  ( nWord * 0x0101010101010101ull ) >> 56  );
 	}
 
 	static uint32_t firstBit( uint64_t nWord ) noexcept
@@ -59,19 +59,19 @@ public:
 #if defined( _MSC_VER ) && defined( _M_X64 )
 		unsigned long iBit = 0;
 		_BitScanForward64( &iBit, nWord );
-		return ( uint32_t )iBit;
+		return static_cast<uint32_t>(iBit);
 #elif defined( _MSC_VER )
 		unsigned long iBit = 0;
-		if ( ( uint32_t )nWord != 0 ) {
-			_BitScanForward( &iBit, ( uint32_t )nWord );
-			return ( uint32_t )iBit;
+		if ( static_cast<uint32_t>(nWord) != 0 ) {
+			_BitScanForward( &iBit, static_cast<uint32_t>(nWord) );
+			return static_cast<uint32_t>(iBit);
 		}
-		_BitScanForward( &iBit, ( uint32_t )( nWord >> 32 ) );
-		return ( uint32_t )iBit + 32;
+		_BitScanForward( &iBit, static_cast<uint32_t>( nWord >> 32 ) );
+		return static_cast<uint32_t>(iBit) + 32;
 #else
-		return ( uint32_t )__builtin_ctzll( nWord );
+		return static_cast<uint32_t>(__builtin_ctzll( nWord ));
 #endif
 	}
 };
 
-#endif // __SIRENGINE_SIRBITWORDS_H__
+#endif // __SIR_BITWORDS_H__

@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRD3D11COMOWNER_H__
-#define __SIRENGINE_SIRD3D11COMOWNER_H__
+#ifndef __SIR_D3_D11_COMOWNER_H__
+#define __SIR_D3_D11_COMOWNER_H__
 
 // Stack-only ownership for unpublished COM objects and temporary DXGI refs.
 // Publication transfers the original reference into the fixed device slots.
@@ -70,4 +70,4 @@ private:
 	T *m_pObject = nullptr;
 };
 
-#endif // __SIRENGINE_SIRD3D11COMOWNER_H__
+#endif // __SIR_D3_D11_COMOWNER_H__

@@ -60,19 +60,19 @@ typedef struct sirSharedDeviceBorrowSlot_s
 
 static bool fingerprintSource( const SIRResourceView& rSource, uint64_t& nLo, uint64_t& nHi ) noexcept
 {
-	SIRResourceInfo info = {};
-	if ( rSource.getInfo( &info ) != SIR_RESOURCE_RESULT_SUCCESS || info.m_nChunkCount == 0 ) {
+	SIRResourceInfo info {};
+	if ( rSource.getInfo( &info ) != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS || info.m_nChunkCount == 0 ) {
 		return false;
 	}
 	nLo = ( UINT64_C( 0xcbf29ce484222325 ) ^ info.m_nRevision ) * UINT64_C( 0x100000001b3 );
 	nHi = UINT64_C( 0x9e3779b97f4a7c15 ) ^ info.m_nRevision;
 	for ( uint32_t iChunk = 0; iChunk < info.m_nChunkCount; ++iChunk ) {
-		SIRResourceChunkInfo chunk = {};
-		if ( rSource.getChunkInfo( iChunk, &chunk ) != SIR_RESOURCE_RESULT_SUCCESS ) {
+		SIRResourceChunkInfo chunk {};
+		if ( rSource.getChunkInfo( iChunk, &chunk ) != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ) {
 			return false;
 		}
-		SIRResourceConstBytes physicalBytes = {};
-		if ( rSource.getChunk( chunk.m_Id, &physicalBytes ) != SIR_RESOURCE_RESULT_SUCCESS || physicalBytes.m_pData == nullptr ||
+		SIRResourceConstBytes physicalBytes {};
+		if ( rSource.getChunk( chunk.m_Id, &physicalBytes ) != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS || physicalBytes.m_pData == nullptr ||
 		     physicalBytes.m_nSize != chunk.m_nBytes ) {
 			return false;
 		}
@@ -84,7 +84,7 @@ static bool fingerprintSource( const SIRResourceView& rSource, uint64_t& nLo, ui
 		                            chunk.m_ContentKey.m_nFormatId,
 		                            chunk.m_ContentKey.m_nEncodingId,
 		                            chunk.m_Id.m_nValue,
-		                            ( uint64_t )( uintptr_t )physicalBytes.m_pData };
+	                            static_cast<uint64_t>(reinterpret_cast<uintptr_t>( physicalBytes.m_pData )) };
 		for ( uint64_t nValue : values ) {
 			nLo = ( nLo ^ nValue ) * UINT64_C( 0x100000001b3 );
 			nHi ^= nValue + UINT64_C( 0x9e3779b97f4a7c15 ) + ( nHi << 6 ) + ( nHi >> 2 );
@@ -99,19 +99,19 @@ static bool sameCanonicalStorage( SIRResourceGraph& rGraph, const SIRResourceRea
                                   const sirDerivedRepresentationSlot_t& rBacking ) noexcept
 {
 	SIRResourceView resident;
-	if ( rGraph.resolve( rScope, rBacking.registration.m_Key.m_Resource, &resident ) != SIR_RESOURCE_RESULT_SUCCESS ) {
+	if ( rGraph.resolve( rScope, rBacking.registration.m_Key.m_Resource, &resident ) != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ) {
 		return false;
 	}
 	SIRResourceInfo a = {}, b = {};
-	if ( resident.getInfo( &a ) != SIR_RESOURCE_RESULT_SUCCESS || rRequested.getInfo( &b ) != SIR_RESOURCE_RESULT_SUCCESS ||
+	if ( resident.getInfo( &a ) != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS || rRequested.getInfo( &b ) != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ||
 	     a.m_eKind != b.m_eKind || a.m_nRevision != b.m_nRevision || a.m_nSchemaVersion != b.m_nSchemaVersion ||
 	     a.m_nFormatId != b.m_nFormatId || a.m_nChunkCount != b.m_nChunkCount ) {
 		return false;
 	}
 	for ( uint32_t iChunk = 0; iChunk < a.m_nChunkCount; ++iChunk ) {
 		SIRResourceChunkInfo first = {}, second = {};
-		if ( resident.getChunkInfo( iChunk, &first ) != SIR_RESOURCE_RESULT_SUCCESS ||
-		     rRequested.getChunkInfo( iChunk, &second ) != SIR_RESOURCE_RESULT_SUCCESS || first.m_Id.m_nValue != second.m_Id.m_nValue ||
+		if ( resident.getChunkInfo( iChunk, &first ) != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ||
+		     rRequested.getChunkInfo( iChunk, &second ) != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS || first.m_Id.m_nValue != second.m_Id.m_nValue ||
 		     first.m_nBytes != second.m_nBytes || first.m_ContentKey.m_nHashLo != second.m_ContentKey.m_nHashLo ||
 		     first.m_ContentKey.m_nHashHi != second.m_ContentKey.m_nHashHi ||
 		     first.m_ContentKey.m_nFormatId != second.m_ContentKey.m_nFormatId ||
@@ -119,8 +119,8 @@ static bool sameCanonicalStorage( SIRResourceGraph& rGraph, const SIRResourceRea
 			return false;
 		}
 		SIRResourceConstBytes physicalA = {}, physicalB = {};
-		if ( resident.getChunk( first.m_Id, &physicalA ) != SIR_RESOURCE_RESULT_SUCCESS ||
-		     rRequested.getChunk( second.m_Id, &physicalB ) != SIR_RESOURCE_RESULT_SUCCESS || physicalA.m_pData != physicalB.m_pData ||
+		if ( resident.getChunk( first.m_Id, &physicalA ) != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ||
+		     rRequested.getChunk( second.m_Id, &physicalB ) != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS || physicalA.m_pData != physicalB.m_pData ||
 		     physicalA.m_nSize != physicalB.m_nSize ) {
 			return false;
 		}
@@ -160,10 +160,10 @@ SIRResourceDerivedRegistry::SIRResourceDerivedRegistry( SIRResourceGraph& rGraph
 	     !rConfig.nMaxRepresentations || !rConfig.nMaxTrackedBytes ) {
 		return;
 	}
-	const uint64_t nProviderBytes = ( uint64_t )rConfig.nMaxProviders * sizeof( sirDerivedProviderSlot_t );
-	const uint64_t nRecordBytes = ( uint64_t )rConfig.nMaxRepresentations * sizeof( sirDerivedRepresentationSlot_t );
+	const uint64_t nProviderBytes = static_cast<uint64_t>(rConfig.nMaxProviders) * sizeof( sirDerivedProviderSlot_t );
+	const uint64_t nRecordBytes = static_cast<uint64_t>(rConfig.nMaxRepresentations) * sizeof( sirDerivedRepresentationSlot_t );
 	m_nSharedBorrowCapacity = rConfig.nMaxSharedBorrows == 0 ? rConfig.nMaxRepresentations : rConfig.nMaxSharedBorrows;
-	const uint64_t nBorrowBytes = ( uint64_t )m_nSharedBorrowCapacity * sizeof( sirSharedDeviceBorrowSlot_t );
+	const uint64_t nBorrowBytes = static_cast<uint64_t>(m_nSharedBorrowCapacity * sizeof(  sirSharedDeviceBorrowSlot_t  ));
 	const uint64_t nBorrowAlignment = alignof( sirSharedDeviceBorrowSlot_t );
 	if ( nRecordBytes > UINT64_MAX - ( nBorrowAlignment - 1 ) ) {
 		return;
@@ -175,20 +175,20 @@ SIRResourceDerivedRegistry::SIRResourceDerivedRegistry( SIRResourceGraph& rGraph
 	m_nRepresentationMetadataBytes = nBorrowOffset + nBorrowBytes;
 	m_nRepresentationMetadataAlignment = alignof( sirDerivedRepresentationSlot_t ) > nBorrowAlignment
 	                                         ? alignof( sirDerivedRepresentationSlot_t )
-	                                         : ( uint32_t )nBorrowAlignment;
+	                                         : static_cast<uint32_t>(nBorrowAlignment);
 	if ( nProviderBytes > SIZE_MAX || m_nRepresentationMetadataBytes > SIZE_MAX ) {
 		return;
 	}
-	m_pProviders = ( sirDerivedProviderSlot_t * )rConfig.allocator.m_pfnAllocate(
-	    rConfig.allocator.m_pContext, nProviderBytes, alignof( sirDerivedProviderSlot_t ), rConfig.nMetadataDomain );
-	m_pRepresentations = ( sirDerivedRepresentationSlot_t * )rConfig.allocator.m_pfnAllocate(
-	    rConfig.allocator.m_pContext, m_nRepresentationMetadataBytes, m_nRepresentationMetadataAlignment, rConfig.nMetadataDomain );
+	m_pProviders = static_cast<sirDerivedProviderSlot_t *>( rConfig.allocator.m_pfnAllocate(
+	    rConfig.allocator.m_pContext, nProviderBytes, alignof( sirDerivedProviderSlot_t ), rConfig.nMetadataDomain ));
+	m_pRepresentations = static_cast<sirDerivedRepresentationSlot_t *>( rConfig.allocator.m_pfnAllocate(
+	    rConfig.allocator.m_pContext, m_nRepresentationMetadataBytes, m_nRepresentationMetadataAlignment, rConfig.nMetadataDomain ));
 	if ( m_pProviders == nullptr || m_pRepresentations == nullptr ) {
 		return;
 	}
-	m_pSharedBorrows = ( sirSharedDeviceBorrowSlot_t * )( ( uint8_t * )m_pRepresentations + nBorrowOffset );
-	memset( m_pProviders, 0, ( size_t )nProviderBytes );
-	memset( m_pRepresentations, 0, ( size_t )m_nRepresentationMetadataBytes );
+	m_pSharedBorrows = ( sirSharedDeviceBorrowSlot_t * )( reinterpret_cast<uint8_t *>(m_pRepresentations) + nBorrowOffset );
+	memset( m_pProviders, 0, static_cast<size_t>(nProviderBytes) );
+	memset( m_pRepresentations, 0, static_cast<size_t>(m_nRepresentationMetadataBytes) );
 	for ( uint32_t iSlot = 0; iSlot < rConfig.nMaxRepresentations; ++iSlot ) {
 		m_pRepresentations[iSlot].nGeneration = 1;
 	}
@@ -228,7 +228,7 @@ void SIRResourceDerivedRegistry::releaseMetadata( void ) noexcept
 	}
 	if ( m_pProviders != nullptr ) {
 		m_Config.allocator.m_pfnFree( m_Config.allocator.m_pContext, m_pProviders,
-		                              ( uint64_t )m_Config.nMaxProviders * sizeof( sirDerivedProviderSlot_t ),
+		                              static_cast<uint64_t>(m_Config.nMaxProviders) * sizeof( sirDerivedProviderSlot_t ),
 		                              alignof( sirDerivedProviderSlot_t ), m_Config.nMetadataDomain );
 		m_pProviders = nullptr;
 	}
@@ -249,7 +249,7 @@ int32_t SIRResourceDerivedRegistry::findProvider( uint32_t nProviderId ) const n
 {
 	for ( uint32_t iProvider = 0; iProvider < m_Config.nMaxProviders; ++iProvider ) {
 		if ( m_pProviders[iProvider].bRegistered && m_pProviders[iProvider].nProviderId == nProviderId ) {
-			return ( int32_t )iProvider;
+			return static_cast<int32_t>(iProvider);
 		}
 	}
 	return -1;
@@ -265,14 +265,14 @@ SIRResourceResult SIRResourceDerivedRegistry::registerProvider( uint32_t nProvid
                                                                 const SIRDerivedProviderCallbacks& rCallbacks ) noexcept
 {
 	if ( !isWriterThread() ) {
-		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_WRITER_VIOLATION;
 	}
 	if ( !m_bReady || !nProviderId || !nProviderGeneration || nLaneCount == 0 || nLaneCount > SIR_PROVIDER_MAX_LANES ||
 	     !rCallbacks.pfnReleaseNative ) {
-		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	if ( findProvider( nProviderId ) >= 0 ) {
-		return SIR_RESOURCE_RESULT_BUSY;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_BUSY;
 	}
 	for ( uint32_t iProvider = 0; iProvider < m_Config.nMaxProviders; ++iProvider ) {
 		sirDerivedProviderSlot_t& rProvider = m_pProviders[iProvider];
@@ -282,10 +282,10 @@ SIRResourceResult SIRResourceDerivedRegistry::registerProvider( uint32_t nProvid
 			rProvider.completed = { nProviderId, nProviderGeneration, ( 1u << nLaneCount ) - 1u, nLaneCount, {} };
 			rProvider.bRegistered = true;
 			++m_Stats.nRegisteredProviders;
-			return SIR_RESOURCE_RESULT_SUCCESS;
+			return SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS;
 		}
 	}
-	return SIR_RESOURCE_RESULT_OUT_OF_BUDGET;
+	return SIRResourceResult::SIR_RESOURCE_RESULT_OUT_OF_BUDGET;
 }
 
 SIRResourceResult SIRResourceDerivedRegistry::registerRepresentation( const SIRResourceReadScope& rScope, const SIRResourceView& rSource,
@@ -293,33 +293,33 @@ SIRResourceResult SIRResourceDerivedRegistry::registerRepresentation( const SIRR
                                                                       SIRDerivedResourceHandle *pHandle ) noexcept
 {
 	if ( !isWriterThread() ) {
-		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_WRITER_VIOLATION;
 	}
 	if ( !m_bReady || !pHandle || !rRegistration.m_nNativeToken || !rRegistration.m_Key.m_nRevision ||
 	     !rRegistration.m_Key.m_nRepresentationId || rRegistration.m_Key.m_nReserved || rRegistration.m_Key.m_Resource.m_nReserved ) {
-		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	const SIRDerivedResourceAccounting& rAccounting = rRegistration.m_Accounting;
-	if ( rAccounting.m_eSpace > SIR_MEMORY_SPACE_EXTERNAL || rAccounting.m_eSpace == SIR_MEMORY_SPACE_DEVICE ||
+	if ( rAccounting.m_eSpace > SIRMemorySpace::SIR_MEMORY_SPACE_EXTERNAL || rAccounting.m_eSpace == SIRMemorySpace::SIR_MEMORY_SPACE_DEVICE ||
 	     rAccounting.m_nCommittedBytes == 0 || rAccounting.m_nResidentBytes > rAccounting.m_nCommittedBytes ||
 	     rAccounting.m_nSourceRevision != rRegistration.m_Key.m_nRevision ) {
-		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	const int32_t iProvider = findProvider( rRegistration.m_Key.m_nProviderId );
 	if ( iProvider < 0 ) {
-		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
-	SIRResourceInfo sourceInfo = {};
-	if ( rSource.getInfo( &sourceInfo ) != SIR_RESOURCE_RESULT_SUCCESS ||
+	SIRResourceInfo sourceInfo {};
+	if ( rSource.getInfo( &sourceInfo ) != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ||
 	     !sameDerivedHandle( rSource.getHandle(), rRegistration.m_Key.m_Resource ) ||
 	     rSource.getRevision() != rRegistration.m_Key.m_nRevision ) {
-		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_HANDLE;
 	}
-	const uint32_t iSpace = ( uint32_t )rAccounting.m_eSpace;
+	const uint32_t iSpace = static_cast<uint32_t>(rAccounting.m_eSpace);
 	if ( rAccounting.m_nCommittedBytes > m_Config.nMaxTrackedBytes - m_nTrackedBytes ||
 	     rAccounting.m_nCommittedBytes > UINT64_MAX - m_Stats.nCommittedBytes[iSpace] ||
 	     rAccounting.m_nResidentBytes > UINT64_MAX - m_Stats.nResidentBytes[iSpace] ) {
-		return SIR_RESOURCE_RESULT_OUT_OF_BUDGET;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_OUT_OF_BUDGET;
 	}
 	uint32_t iFree = UINT32_MAX;
 	for ( uint32_t iSlot = 0; iSlot < m_Config.nMaxRepresentations; ++iSlot ) {
@@ -330,24 +330,24 @@ SIRResourceResult SIRResourceDerivedRegistry::registerRepresentation( const SIRR
 			}
 			continue;
 		}
-		if ( rSlot.bSharedDeviceBacking && rAccounting.m_eSpace == SIR_MEMORY_SPACE_DEVICE &&
+		if ( rSlot.bSharedDeviceBacking && rAccounting.m_eSpace == SIRMemorySpace::SIR_MEMORY_SPACE_DEVICE &&
 		     sameDerivedHandle( rSlot.registration.m_Key.m_Resource, rRegistration.m_Key.m_Resource ) &&
 		     rSlot.registration.m_Key.m_nRevision == rRegistration.m_Key.m_nRevision ) {
-			return SIR_RESOURCE_RESULT_BUSY;
+			return SIRResourceResult::SIR_RESOURCE_RESULT_BUSY;
 		}
 		if ( sameDerivedKey( rSlot.registration.m_Key, rRegistration.m_Key ) ||
 		     ( rSlot.registration.m_Key.m_nProviderId == rRegistration.m_Key.m_nProviderId &&
 		       rSlot.registration.m_nNativeToken == rRegistration.m_nNativeToken ) ) {
 			// A given provider's native allocation must only be counted once.
-			return SIR_RESOURCE_RESULT_BUSY;
+			return SIRResourceResult::SIR_RESOURCE_RESULT_BUSY;
 		}
 	}
 	if ( iFree == UINT32_MAX ) {
-		return SIR_RESOURCE_RESULT_OUT_OF_BUDGET;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_OUT_OF_BUDGET;
 	}
-	SIRResourcePinHandle pin = {};
+	SIRResourcePinHandle pin {};
 	const SIRResourceResult ePin = m_pGraph->pinForProvider( rScope, rSource, rRegistration.m_Key.m_nProviderId, &pin );
-	if ( ePin != SIR_RESOURCE_RESULT_SUCCESS ) {
+	if ( ePin != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ) {
 		return ePin;
 	}
 	sirDerivedRepresentationSlot_t& rSlot = m_pRepresentations[iFree];
@@ -367,7 +367,7 @@ SIRResourceResult SIRResourceDerivedRegistry::registerRepresentation( const SIRR
 	}
 	++m_Stats.nLiveRepresentations;
 	*pHandle = { iFree, rSlot.nGeneration };
-	return SIR_RESOURCE_RESULT_SUCCESS;
+	return SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS;
 }
 
 SIRResourceResult SIRResourceDerivedRegistry::collectProvider( uint32_t iProvider ) noexcept
@@ -379,8 +379,8 @@ SIRResourceResult SIRResourceDerivedRegistry::collectProvider( uint32_t iProvide
 		     !sirProviderCompletionSatisfied( rBorrow.required, rProvider.completed ) ) {
 			continue;
 		}
-		if ( m_pGraph->releaseProviderPin( rBorrow.sourcePin ) != SIR_RESOURCE_RESULT_SUCCESS ) {
-			return SIR_RESOURCE_RESULT_FAILED;
+		if ( m_pGraph->releaseProviderPin( rBorrow.sourcePin ) != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ) {
+			return SIRResourceResult::SIR_RESOURCE_RESULT_FAILED;
 		}
 		rBorrow.bOccupied = false;
 		rBorrow.bReleased = false;
@@ -416,10 +416,10 @@ SIRResourceResult SIRResourceDerivedRegistry::collectProvider( uint32_t iProvide
 			}
 			rSlot.bNativeReleased = true;
 		}
-		if ( m_pGraph->releaseProviderPin( rSlot.pin ) != SIR_RESOURCE_RESULT_SUCCESS ) {
-			return SIR_RESOURCE_RESULT_FAILED;
+		if ( m_pGraph->releaseProviderPin( rSlot.pin ) != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ) {
+			return SIRResourceResult::SIR_RESOURCE_RESULT_FAILED;
 		}
-		const uint32_t iSpace = ( uint32_t )rSlot.registration.m_Accounting.m_eSpace;
+		const uint32_t iSpace = static_cast<uint32_t>(rSlot.registration.m_Accounting.m_eSpace);
 		const uint64_t nCommitted = rSlot.registration.m_Accounting.m_nCommittedBytes;
 		const uint64_t nResident = rSlot.registration.m_Accounting.m_nResidentBytes;
 		m_Stats.nCommittedBytes[iSpace] -= nCommitted;
@@ -432,65 +432,65 @@ SIRResourceResult SIRResourceDerivedRegistry::collectProvider( uint32_t iProvide
 		rSlot.bNativeReleased = false;
 		rSlot.nGeneration = nextDerivedGeneration( rSlot.nGeneration );
 	}
-	return bBusy ? SIR_RESOURCE_RESULT_BUSY : SIR_RESOURCE_RESULT_SUCCESS;
+	return bBusy ? SIRResourceResult::SIR_RESOURCE_RESULT_BUSY : SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS;
 }
 
 SIRResourceResult SIRResourceDerivedRegistry::retireRepresentation( SIRDerivedResourceHandle hRepresentation,
                                                                     const sirProviderCompletionSet_t& required ) noexcept
 {
 	if ( !isWriterThread() ) {
-		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_WRITER_VIOLATION;
 	}
 	if ( !m_bReady || hRepresentation.m_nSlot >= m_Config.nMaxRepresentations ) {
-		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_HANDLE;
 	}
 	sirDerivedRepresentationSlot_t& rSlot = m_pRepresentations[hRepresentation.m_nSlot];
 	if ( !rSlot.bOccupied || rSlot.nGeneration != hRepresentation.m_nGeneration ) {
-		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_HANDLE;
 	}
 	if ( rSlot.bRetiring || rSlot.bPendingNativeCreate ) {
-		return SIR_RESOURCE_RESULT_BUSY;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_BUSY;
 	}
 	const int32_t iProvider = findProvider( rSlot.registration.m_Key.m_nProviderId );
 	if ( iProvider < 0 || !sirProviderCompletionValid( required ) ) {
-		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	const sirProviderCompletionSet_t& completed = m_pProviders[iProvider].completed;
 	if ( required.nProviderId != completed.nProviderId || required.nProviderGeneration != completed.nProviderGeneration ||
 	     required.nLaneCount != completed.nLaneCount ) {
-		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	rSlot.bRetiring = true;
 	rSlot.retirement = required;
 	++m_Stats.nPendingRetirements;
 	if ( sirProviderCompletionSatisfied( required, completed ) ) {
-		( void )collectProvider( ( uint32_t )iProvider );
+		static_cast<void>(collectProvider( static_cast<uint32_t>(iProvider) ));
 	}
-	return SIR_RESOURCE_RESULT_SUCCESS;
+	return SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS;
 }
 
 SIRResourceResult SIRResourceDerivedRegistry::updateProviderCompletion( const sirProviderCompletionSet_t& observed ) noexcept
 {
 	if ( !isWriterThread() ) {
-		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_WRITER_VIOLATION;
 	}
 	if ( !m_bReady ) {
-		return SIR_RESOURCE_RESULT_FAILED;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_FAILED;
 	}
 	if ( !sirProviderCompletionValid( observed ) ) {
-		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	const int32_t iProvider = findProvider( observed.nProviderId );
 	if ( iProvider < 0 ) {
-		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	sirProviderCompletionSet_t& completed = m_pProviders[iProvider].completed;
 	if ( completed.nProviderGeneration != observed.nProviderGeneration || completed.nLaneCount != observed.nLaneCount ) {
-		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	for ( uint32_t iLane = 0; iLane < completed.nLaneCount; ++iLane ) {
 		if ( ( observed.nLaneMask & ( 1u << iLane ) ) != 0 && observed.szCompletedValues[iLane] < completed.szCompletedValues[iLane] ) {
-			return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+			return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 		}
 	}
 	for ( uint32_t iLane = 0; iLane < completed.nLaneCount; ++iLane ) {
@@ -498,55 +498,55 @@ SIRResourceResult SIRResourceDerivedRegistry::updateProviderCompletion( const si
 			completed.szCompletedValues[iLane] = observed.szCompletedValues[iLane];
 		}
 	}
-	return collectProvider( ( uint32_t )iProvider );
+	return collectProvider( static_cast<uint32_t>(iProvider) );
 }
 
 SIRResourceResult SIRResourceDerivedRegistry::getAccounting( SIRDerivedResourceHandle hRepresentation,
                                                              SIRDerivedResourceAccounting *pAccounting ) const noexcept
 {
 	if ( !isWriterThread() ) {
-		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_WRITER_VIOLATION;
 	}
 	if ( !m_bReady || !pAccounting || hRepresentation.m_nSlot >= m_Config.nMaxRepresentations ) {
-		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	const sirDerivedRepresentationSlot_t& rSlot = m_pRepresentations[hRepresentation.m_nSlot];
 	if ( !rSlot.bOccupied || rSlot.nGeneration != hRepresentation.m_nGeneration ) {
-		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_HANDLE;
 	}
 	*pAccounting = rSlot.registration.m_Accounting;
-	return SIR_RESOURCE_RESULT_SUCCESS;
+	return SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS;
 }
 
 SIRResourceResult SIRResourceDerivedRegistry::getStats( SIRResourceDerivedStats *pStats ) const noexcept
 {
 	if ( !isWriterThread() ) {
-		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_WRITER_VIOLATION;
 	}
 	if ( !m_bReady || !pStats ) {
-		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	*pStats = m_Stats;
-	return SIR_RESOURCE_RESULT_SUCCESS;
+	return SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS;
 }
 
 SIRResourceResult SIRResourceDerivedRegistry::checkCurrentSource( const SIRResourceReadScope& rScope,
                                                                   const SIRResourceView& rSource ) const noexcept
 {
-	SIRResourceInfo source = {};
-	if ( rSource.getInfo( &source ) != SIR_RESOURCE_RESULT_SUCCESS || source.m_eState != SIR_RESOURCE_STATE_RESIDENT ) {
-		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+	SIRResourceInfo source {};
+	if ( rSource.getInfo( &source ) != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS || source.m_eState != SIRResourceState::SIR_RESOURCE_STATE_RESIDENT ) {
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_HANDLE;
 	}
-	SIRResourceHandle hCurrent = {};
-	if ( m_pGraph->find( rScope, source.m_Key, &hCurrent ) != SIR_RESOURCE_RESULT_SUCCESS ) {
-		return SIR_RESOURCE_RESULT_STALE_REVISION;
+	SIRResourceHandle hCurrent {};
+	if ( m_pGraph->find( rScope, source.m_Key, &hCurrent ) != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ) {
+		return SIRResourceResult::SIR_RESOURCE_RESULT_STALE_REVISION;
 	}
 	SIRResourceView current;
-	if ( m_pGraph->resolve( rScope, hCurrent, &current ) != SIR_RESOURCE_RESULT_SUCCESS ||
+	if ( m_pGraph->resolve( rScope, hCurrent, &current ) != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ||
 	     current.getRevision() != rSource.getRevision() ) {
-		return SIR_RESOURCE_RESULT_STALE_REVISION;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_STALE_REVISION;
 	}
-	return SIR_RESOURCE_RESULT_SUCCESS;
+	return SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS;
 }
 
 SIRResourceResult SIRResourceDerivedRegistry::reserveSharedDeviceBacking( const SIRResourceReadScope& rScope,
@@ -555,30 +555,30 @@ SIRResourceResult SIRResourceDerivedRegistry::reserveSharedDeviceBacking( const 
                                                                           sirSharedDeviceBackingReservation_t *pReservation ) noexcept
 {
 	if ( !isWriterThread() ) {
-		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_WRITER_VIOLATION;
 	}
 	if ( !m_bReady || !pReservation || !rDesc.nPhysicalDeviceId || !rDesc.nDeviceGeneration || !rDesc.nStorageLayoutId ||
 	     !rDesc.nStorageFormatId || !rDesc.nSupportedUsageMask || !rDesc.nProviderId || !rDesc.nCommittedBytes ||
 	     rDesc.nResidentBytes > rDesc.nCommittedBytes || !rDesc.nAlignment || ( rDesc.nAlignment & ( rDesc.nAlignment - 1 ) ) != 0 ||
 	     findProvider( rDesc.nProviderId ) < 0 ) {
-		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	const SIRResourceResult eSource = checkCurrentSource( rScope, rSource );
-	if ( eSource != SIR_RESOURCE_RESULT_SUCCESS ) {
+	if ( eSource != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ) {
 		return eSource;
 	}
-	SIRResourceInfo info = {};
-	( void )rSource.getInfo( &info );
+	SIRResourceInfo info {};
+	static_cast<void>(rSource.getInfo( &info ));
 	if ( info.m_nChunkCount == 0 ) {
-		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	const int32_t iOwnerProvider = findProvider( rDesc.nProviderId );
 	if ( iOwnerProvider < 0 || m_pProviders[iOwnerProvider].completed.nProviderGeneration != rDesc.nDeviceGeneration ) {
-		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	uint64_t nLo = 0, nHi = 0;
 	if ( !fingerprintSource( rSource, nLo, nHi ) ) {
-		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_HANDLE;
 	}
 	uint32_t iFree = UINT32_MAX;
 	for ( uint32_t iSlot = 0; iSlot < m_Config.nMaxRepresentations; ++iSlot ) {
@@ -595,34 +595,34 @@ SIRResourceResult SIRResourceDerivedRegistry::reserveSharedDeviceBacking( const 
 		// Switching a physical device generation requires a full drain. No second
 		// simultaneous full source allocation may be admitted during reset.
 		if ( rSlot.physical.nDeviceGeneration != rDesc.nDeviceGeneration ) {
-			return SIR_RESOURCE_RESULT_BUSY;
+			return SIRResourceResult::SIR_RESOURCE_RESULT_BUSY;
 		}
 		if ( rSlot.nFingerprintLo != nLo || rSlot.nFingerprintHi != nHi || rSlot.source.m_eKind != info.m_eKind ||
 		     rSlot.source.m_nSchemaVersion != info.m_nSchemaVersion || rSlot.source.m_nFormatId != info.m_nFormatId ) {
 			continue;
 		}
 		if ( !sameCanonicalStorage( *m_pGraph, rScope, rSource, rSlot ) ) {
-			return SIR_RESOURCE_RESULT_INVALID_FORMAT;
+			return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_FORMAT;
 		}
 		if ( !sameBackingStorage( rSlot.physical, rDesc ) || rSlot.physical.nAlignment < rDesc.nAlignment ||
 		     ( rSlot.physical.nSupportedUsageMask & rDesc.nSupportedUsageMask ) != rDesc.nSupportedUsageMask ) {
-			return SIR_RESOURCE_RESULT_INVALID_FORMAT;
+			return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_FORMAT;
 		}
-		*pReservation = { { iSlot, rSlot.nGeneration }, ( ( uint64_t )rSlot.nGeneration << 32 ) | ( iSlot + 1 ), false };
-		return rSlot.bPendingNativeCreate ? SIR_RESOURCE_RESULT_BUSY : SIR_RESOURCE_RESULT_SUCCESS;
+		*pReservation = { { iSlot, rSlot.nGeneration }, ( static_cast<uint64_t>(rSlot.nGeneration) << 32 ) | ( iSlot + 1 ), false };
+		return rSlot.bPendingNativeCreate ? SIRResourceResult::SIR_RESOURCE_RESULT_BUSY : SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS;
 	}
 	if ( iFree == UINT32_MAX || rDesc.nCommittedBytes > m_Config.nMaxTrackedBytes - m_nTrackedBytes ) {
-		return SIR_RESOURCE_RESULT_OUT_OF_BUDGET;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_OUT_OF_BUDGET;
 	}
-	SIRResourcePinHandle sourcePin = {};
+	SIRResourcePinHandle sourcePin {};
 	const SIRResourceResult ePin = m_pGraph->pinForProvider( rScope, rSource, rDesc.nProviderId, &sourcePin );
-	if ( ePin != SIR_RESOURCE_RESULT_SUCCESS ) {
+	if ( ePin != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ) {
 		return ePin;
 	}
 	sirDerivedRepresentationSlot_t& rSlot = m_pRepresentations[iFree];
 	rSlot.registration = {};
 	rSlot.registration.m_Key = { rSource.getHandle(), info.m_nRevision, rDesc.nProviderId, 1, 0, 0 };
-	rSlot.registration.m_Accounting = { SIR_MEMORY_SPACE_DEVICE, rDesc.nDomainId, rDesc.nCommittedBytes, rDesc.nResidentBytes,
+	rSlot.registration.m_Accounting = { SIRMemorySpace::SIR_MEMORY_SPACE_DEVICE, rDesc.nDomainId, rDesc.nCommittedBytes, rDesc.nResidentBytes,
 	                                    info.m_nRevision };
 	rSlot.pin = sourcePin;
 	rSlot.source = info;
@@ -636,22 +636,22 @@ SIRResourceResult SIRResourceDerivedRegistry::reserveSharedDeviceBacking( const 
 	rSlot.bSharedDeviceBacking = true;
 	rSlot.bPendingNativeCreate = true;
 	m_nTrackedBytes += rDesc.nCommittedBytes;
-	*pReservation = { { iFree, rSlot.nGeneration }, ( ( uint64_t )rSlot.nGeneration << 32 ) | ( iFree + 1 ), true };
-	return SIR_RESOURCE_RESULT_SUCCESS;
+	*pReservation = { { iFree, rSlot.nGeneration }, ( static_cast<uint64_t>(rSlot.nGeneration) << 32 ) | ( iFree + 1 ), true };
+	return SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS;
 }
 
 SIRResourceResult SIRResourceDerivedRegistry::publishSharedDeviceBacking( SIRDerivedResourceHandle hBacking,
                                                                           uint64_t nNativeToken ) noexcept
 {
 	if ( !isWriterThread() ) {
-		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_WRITER_VIOLATION;
 	}
 	if ( !m_bReady || !nNativeToken || hBacking.m_nSlot >= m_Config.nMaxRepresentations ) {
-		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	sirDerivedRepresentationSlot_t& rSlot = m_pRepresentations[hBacking.m_nSlot];
 	if ( !rSlot.bOccupied || rSlot.nGeneration != hBacking.m_nGeneration || !rSlot.bSharedDeviceBacking || !rSlot.bPendingNativeCreate ) {
-		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_HANDLE;
 	}
 	for ( uint32_t iSlot = 0; iSlot < m_Config.nMaxRepresentations; ++iSlot ) {
 		const sirDerivedRepresentationSlot_t& rOther = m_pRepresentations[iSlot];
@@ -660,13 +660,13 @@ SIRResourceResult SIRResourceDerivedRegistry::publishSharedDeviceBacking( SIRDer
 		if ( iSlot != hBacking.m_nSlot && rOther.bOccupied && !rOther.bPendingNativeCreate && rOther.bSharedDeviceBacking &&
 		     rOther.physical.nPhysicalDeviceId == rSlot.physical.nPhysicalDeviceId &&
 		     rOther.physical.nDeviceGeneration == rSlot.physical.nDeviceGeneration && rOther.registration.m_nNativeToken == nNativeToken ) {
-			return SIR_RESOURCE_RESULT_BUSY;
+			return SIRResourceResult::SIR_RESOURCE_RESULT_BUSY;
 		}
 	}
-	const uint32_t iSpace = SIR_MEMORY_SPACE_DEVICE;
+	const uint32_t iSpace = SIRMemorySpace::SIR_MEMORY_SPACE_DEVICE;
 	if ( rSlot.physical.nCommittedBytes > UINT64_MAX - m_Stats.nCommittedBytes[iSpace] ||
 	     rSlot.physical.nResidentBytes > UINT64_MAX - m_Stats.nResidentBytes[iSpace] ) {
-		return SIR_RESOURCE_RESULT_OUT_OF_BUDGET;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_OUT_OF_BUDGET;
 	}
 	rSlot.registration.m_nNativeToken = nNativeToken;
 	rSlot.bPendingNativeCreate = false;
@@ -676,30 +676,30 @@ SIRResourceResult SIRResourceDerivedRegistry::publishSharedDeviceBacking( SIRDer
 		m_Stats.nPeakCommittedBytes[iSpace] = m_Stats.nCommittedBytes[iSpace];
 	}
 	++m_Stats.nLiveRepresentations;
-	return SIR_RESOURCE_RESULT_SUCCESS;
+	return SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS;
 }
 
 SIRResourceResult SIRResourceDerivedRegistry::cancelSharedDeviceBacking( SIRDerivedResourceHandle hBacking ) noexcept
 {
 	if ( !isWriterThread() ) {
-		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_WRITER_VIOLATION;
 	}
 	if ( !m_bReady || hBacking.m_nSlot >= m_Config.nMaxRepresentations ) {
-		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_HANDLE;
 	}
 	sirDerivedRepresentationSlot_t& rSlot = m_pRepresentations[hBacking.m_nSlot];
 	if ( !rSlot.bOccupied || rSlot.nGeneration != hBacking.m_nGeneration || !rSlot.bPendingNativeCreate ) {
-		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_HANDLE;
 	}
-	if ( m_pGraph->releaseProviderPin( rSlot.pin ) != SIR_RESOURCE_RESULT_SUCCESS ) {
-		return SIR_RESOURCE_RESULT_FAILED;
+	if ( m_pGraph->releaseProviderPin( rSlot.pin ) != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ) {
+		return SIRResourceResult::SIR_RESOURCE_RESULT_FAILED;
 	}
 	m_nTrackedBytes -= rSlot.physical.nCommittedBytes;
 	rSlot.bOccupied = false;
 	rSlot.bPendingNativeCreate = false;
 	rSlot.bSharedDeviceBacking = false;
 	rSlot.nGeneration = nextDerivedGeneration( rSlot.nGeneration );
-	return SIR_RESOURCE_RESULT_SUCCESS;
+	return SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS;
 }
 
 SIRResourceResult SIRResourceDerivedRegistry::acquireSharedDeviceView( const SIRResourceReadScope& rScope, const SIRResourceView& rSource,
@@ -707,33 +707,33 @@ SIRResourceResult SIRResourceDerivedRegistry::acquireSharedDeviceView( const SIR
                                                                        sirSharedDeviceView_t *pView ) noexcept
 {
 	if ( !isWriterThread() ) {
-		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_WRITER_VIOLATION;
 	}
 	if ( !m_bReady || !pView || !rRequest.nPhysicalDeviceId || !rRequest.nDeviceGeneration || !rRequest.nStorageLayoutId ||
 	     !rRequest.nStorageFormatId || !rRequest.nRequiredUsageMask || !rRequest.nBytes || !rRequest.nExpectedPublicationEpoch ||
 	     !rRequest.nConsumerId || !rRequest.nCompletionProviderId || !rRequest.nRequiredAlignment ||
 	     ( rRequest.nRequiredAlignment & ( rRequest.nRequiredAlignment - 1 ) ) != 0 ) {
-		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	if ( m_pGraph->getStats().nPublicationEpoch != rRequest.nExpectedPublicationEpoch ) {
-		return SIR_RESOURCE_RESULT_STALE_REVISION;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_STALE_REVISION;
 	}
 	const SIRResourceResult eSource = checkCurrentSource( rScope, rSource );
-	if ( eSource != SIR_RESOURCE_RESULT_SUCCESS ) {
+	if ( eSource != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ) {
 		return eSource;
 	}
-	SIRResourceInfo info = {};
-	( void )rSource.getInfo( &info );
+	SIRResourceInfo info {};
+	static_cast<void>(rSource.getInfo( &info ));
 	if ( info.m_nRevision != rRequest.nExpectedSourceRevision ) {
-		return SIR_RESOURCE_RESULT_STALE_REVISION;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_STALE_REVISION;
 	}
 	const int32_t iProvider = findProvider( rRequest.nCompletionProviderId );
 	if ( iProvider < 0 || m_pProviders[iProvider].completed.nProviderGeneration != rRequest.nDeviceGeneration ) {
-		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	uint64_t nLo = 0, nHi = 0;
 	if ( !fingerprintSource( rSource, nLo, nHi ) ) {
-		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_HANDLE;
 	}
 	for ( uint32_t iSlot = 0; iSlot < m_Config.nMaxRepresentations; ++iSlot ) {
 		const sirDerivedRepresentationSlot_t& rSlot = m_pRepresentations[iSlot];
@@ -745,22 +745,22 @@ SIRResourceResult SIRResourceDerivedRegistry::acquireSharedDeviceView( const SIR
 			continue;
 		}
 		if ( !sameCanonicalStorage( *m_pGraph, rScope, rSource, rSlot ) ) {
-			return SIR_RESOURCE_RESULT_INVALID_FORMAT;
+			return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_FORMAT;
 		}
 		if ( rSlot.physical.nStorageLayoutId != rRequest.nStorageLayoutId || rSlot.physical.nStorageFormatId != rRequest.nStorageFormatId ||
 		     ( rSlot.physical.nSupportedUsageMask & rRequest.nRequiredUsageMask ) != rRequest.nRequiredUsageMask ||
 		     rRequest.nOffset > rSlot.physical.nCommittedBytes || rRequest.nBytes > rSlot.physical.nCommittedBytes - rRequest.nOffset ||
 		     rRequest.nRequiredAlignment > rSlot.physical.nAlignment || ( rRequest.nOffset & ( rRequest.nRequiredAlignment - 1 ) ) != 0 ) {
-			return SIR_RESOURCE_RESULT_INVALID_FORMAT;
+			return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_FORMAT;
 		}
 		for ( uint32_t iBorrow = 0; iBorrow < m_nSharedBorrowCapacity; ++iBorrow ) {
 			sirSharedDeviceBorrowSlot_t& rBorrow = m_pSharedBorrows[iBorrow];
 			if ( rBorrow.bOccupied ) {
 				continue;
 			}
-			SIRResourcePinHandle pin = {};
+			SIRResourcePinHandle pin {};
 			const SIRResourceResult ePin = m_pGraph->pinForProvider( rScope, rSource, rRequest.nCompletionProviderId, &pin );
-			if ( ePin != SIR_RESOURCE_RESULT_SUCCESS ) {
+			if ( ePin != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ) {
 				return ePin;
 			}
 			rBorrow.sourcePin = pin;
@@ -772,7 +772,7 @@ SIRResourceResult SIRResourceDerivedRegistry::acquireSharedDeviceView( const SIR
 			rBorrow.bOccupied = true;
 			rBorrow.bReleased = false;
 			++m_Stats.nLiveSharedBorrows;
-			*pView = { ( ( uint64_t )rSlot.nGeneration << 32 ) | ( iSlot + 1 ),
+			*pView = { ( static_cast<uint64_t>(rSlot.nGeneration) << 32 ) | ( iSlot + 1 ),
 			           rSlot.registration.m_nNativeToken,
 			           rRequest.nOffset,
 			           rRequest.nBytes,
@@ -785,79 +785,79 @@ SIRResourceResult SIRResourceDerivedRegistry::acquireSharedDeviceView( const SIR
 			           true,
 			           rRequest.nCompletionProviderId };
 			rBorrow.issuedView = *pView;
-			return SIR_RESOURCE_RESULT_SUCCESS;
+			return SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS;
 		}
-		return SIR_RESOURCE_RESULT_OUT_OF_BUDGET;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_OUT_OF_BUDGET;
 	}
-	return SIR_RESOURCE_RESULT_NOT_RESIDENT;
+	return SIRResourceResult::SIR_RESOURCE_RESULT_NOT_RESIDENT;
 }
 
 SIRResourceResult SIRResourceDerivedRegistry::validateSharedDeviceView( const sirSharedDeviceView_t& rView ) const noexcept
 {
 	if ( !isWriterThread() ) {
-		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_WRITER_VIOLATION;
 	}
 	if ( !m_bReady || rView.nBorrowSlot >= m_nSharedBorrowCapacity ) {
-		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	const sirSharedDeviceBorrowSlot_t& rBorrow = m_pSharedBorrows[rView.nBorrowSlot];
 	if ( !rBorrow.bOccupied || rBorrow.bReleased || rBorrow.nGeneration != rView.nBorrowGeneration ) {
-		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_HANDLE;
 	}
 	if ( rBorrow.nConsumerId != rView.nConsumerId || rBorrow.nCompletionProviderId != rView.nCompletionProviderId ) {
-		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_HANDLE;
 	}
 	if ( rBorrow.nBackingSlot >= m_Config.nMaxRepresentations ) {
-		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_HANDLE;
 	}
 	const sirDerivedRepresentationSlot_t& rBacking = m_pRepresentations[rBorrow.nBackingSlot];
 	if ( !rBacking.bOccupied || !rBacking.bSharedDeviceBacking || rBacking.nGeneration != rBorrow.nBackingGeneration ) {
-		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_HANDLE;
 	}
 	const sirSharedDeviceView_t& issued = rBorrow.issuedView;
 	if ( issued.nPhysicalBackingId != rView.nPhysicalBackingId || issued.nNativeResourceToken != rView.nNativeResourceToken ||
 	     issued.nOffset != rView.nOffset ) {
-		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_HANDLE;
 	}
 	if ( issued.nBytes != rView.nBytes || issued.nSourceRevision != rView.nSourceRevision ||
 	     issued.nDeviceGeneration != rView.nDeviceGeneration ) {
-		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_HANDLE;
 	}
 	if ( issued.nApprovedUsageMask != rView.nApprovedUsageMask || issued.nConsumerId != rView.nConsumerId ||
 	     issued.nBorrowSlot != rView.nBorrowSlot ) {
-		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_HANDLE;
 	}
 	if ( issued.nBorrowGeneration != rView.nBorrowGeneration || issued.bReadOnly != rView.bReadOnly ||
 	     issued.nCompletionProviderId != rView.nCompletionProviderId ) {
-		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_HANDLE;
 	}
-	const uint64_t nExpectedBackingId = ( ( uint64_t )rBorrow.nBackingGeneration << 32 ) | ( rBorrow.nBackingSlot + 1 );
+	const uint64_t nExpectedBackingId = ( static_cast<uint64_t>(rBorrow.nBackingGeneration) << 32 ) | ( rBorrow.nBackingSlot + 1 );
 	if ( nExpectedBackingId != rView.nPhysicalBackingId || rBacking.registration.m_nNativeToken != rView.nNativeResourceToken ) {
-		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_HANDLE;
 	}
-	return SIR_RESOURCE_RESULT_SUCCESS;
+	return SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS;
 }
 
 SIRResourceResult SIRResourceDerivedRegistry::releaseSharedDeviceView( const sirSharedDeviceView_t& rView,
                                                                        const sirProviderCompletionSet_t& required ) noexcept
 {
 	const SIRResourceResult eValidity = validateSharedDeviceView( rView );
-	if ( eValidity != SIR_RESOURCE_RESULT_SUCCESS ) {
+	if ( eValidity != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ) {
 		return eValidity;
 	}
 	if ( !sirProviderCompletionValid( required ) ) {
-		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	sirSharedDeviceBorrowSlot_t& rBorrow = m_pSharedBorrows[rView.nBorrowSlot];
 	if ( rBorrow.nCompletionProviderId != required.nProviderId ) {
-		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_HANDLE;
 	}
 	const int32_t iProvider = findProvider( rBorrow.nCompletionProviderId );
 	if ( iProvider < 0 || required.nProviderGeneration != m_pProviders[iProvider].completed.nProviderGeneration ||
 	     required.nLaneCount != m_pProviders[iProvider].completed.nLaneCount ) {
-		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	rBorrow.required = required;
 	rBorrow.bReleased = true;
-	return collectProvider( ( uint32_t )iProvider );
+	return collectProvider( static_cast<uint32_t>(iProvider) );
 }

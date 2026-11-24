@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRLANGSOURCECOMPILER_H__
-#define __SIRENGINE_SIRLANGSOURCECOMPILER_H__
+#ifndef __SIR_LANGSOURCECOMPILER_H__
+#define __SIR_LANGSOURCECOMPILER_H__
 
 #include <Core/SIRPCH.h>
 
@@ -24,8 +24,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Scripting/Language/SIRLangEffects.h>
 
-typedef enum sirLangCompilePhase_e : uint8_t
-{
+enum class SIRLangCompilePhase : uint8_t {
 	SIR_LANG_COMPILE_INPUT = 0,
 	SIR_LANG_COMPILE_PARSE,
 	SIR_LANG_COMPILE_SEMANTIC,
@@ -34,11 +33,11 @@ typedef enum sirLangCompilePhase_e : uint8_t
 	SIR_LANG_COMPILE_CIR,
 	SIR_LANG_COMPILE_EFFECTS,
 	SIR_LANG_COMPILE_COMPLETE
-} sirLangCompilePhase_t;
+};
 
 typedef struct sirLangCompileReport_s
 {
-	sirLangCompilePhase_t ePhase;
+	SIRLangCompilePhase ePhase;
 	uint32_t nStageResult;
 	uint32_t iErrorNode;
 } sirLangCompileReport_t;
@@ -63,4 +62,4 @@ typedef struct sirLangCompileWorkspace_s
 // host binding snapshot and may not change during this operation.
 bool SIRLangCompileSource( const sirLangSourceView_t& source, sirLangCompileWorkspace_t *pWorkspace ) noexcept;
 
-#endif // __SIRENGINE_SIRLANGSOURCECOMPILER_H__
+#endif // __SIR_LANGSOURCECOMPILER_H__

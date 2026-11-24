@@ -15,9 +15,9 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Renderer/Graph/SIRFrameGraph.h>
 
-#include <Core/Platform/SIRAtomic.h>
+#include <atomic>
 
-static SIRAtomic<uint64_t> s_nNextGraphIdentity{ 1 };
+static std::atomic<uint64_t> s_nNextGraphIdentity{ 1 };
 
 // Expand only explicit dependency bits into the compiler-owned dense adjacency scratch.
 struct sirFrameGraphDenseEdgeWriter_t
@@ -31,7 +31,7 @@ struct sirFrameGraphDenseEdgeWriter_t
 
 SIRFrameGraph::SIRFrameGraph( const SIRSharedGPUBackingOwner *pSharedOwner ) noexcept : m_pSharedOwner( pSharedOwner )
 {
-	m_nIdentity = s_nNextGraphIdentity.fetchAdd( 1, SIR_MEMORY_ORDER_RELAXED );
+	m_nIdentity = s_nNextGraphIdentity.fetch_add( 1, std::memory_order_relaxed );
 }
 
 uint32_t SIRFrameGraph::getPassCount( void ) const noexcept
@@ -68,28 +68,28 @@ void SIRFrameGraph::reset( void ) noexcept
 	m_ExplicitEdges.clear();
 }
 
-bool SIRFrameGraph::isWritableState( sirGraphicsState_t eState ) noexcept
+bool SIRFrameGraph::isWritableState( SIRGraphicsState eState ) noexcept
 {
 	switch ( eState ) {
-	case SIR_GRAPHICS_STATE_SHADER_WRITE:
-	case SIR_GRAPHICS_STATE_COLOR_ATTACHMENT:
-	case SIR_GRAPHICS_STATE_DEPTH_WRITE:
-	case SIR_GRAPHICS_STATE_COPY_DESTINATION:
+	case SIRGraphicsState::SIR_GRAPHICS_STATE_SHADER_WRITE:
+	case SIRGraphicsState::SIR_GRAPHICS_STATE_COLOR_ATTACHMENT:
+	case SIRGraphicsState::SIR_GRAPHICS_STATE_DEPTH_WRITE:
+	case SIRGraphicsState::SIR_GRAPHICS_STATE_COPY_DESTINATION:
 		return true;
 	default:
 		return false;
 	}
 }
 
-bool SIRFrameGraph::isReadableState( sirGraphicsState_t eState ) noexcept
+bool SIRFrameGraph::isReadableState( SIRGraphicsState eState ) noexcept
 {
 	switch ( eState ) {
-	case SIR_GRAPHICS_STATE_VERTEX_INDEX:
-	case SIR_GRAPHICS_STATE_CONSTANT:
-	case SIR_GRAPHICS_STATE_SHADER_READ:
-	case SIR_GRAPHICS_STATE_DEPTH_READ:
-	case SIR_GRAPHICS_STATE_COPY_SOURCE:
-	case SIR_GRAPHICS_STATE_PRESENT:
+	case SIRGraphicsState::SIR_GRAPHICS_STATE_VERTEX_INDEX:
+	case SIRGraphicsState::SIR_GRAPHICS_STATE_CONSTANT:
+	case SIRGraphicsState::SIR_GRAPHICS_STATE_SHADER_READ:
+	case SIRGraphicsState::SIR_GRAPHICS_STATE_DEPTH_READ:
+	case SIRGraphicsState::SIR_GRAPHICS_STATE_COPY_SOURCE:
+	case SIRGraphicsState::SIR_GRAPHICS_STATE_PRESENT:
 		return true;
 	default:
 		return false;
@@ -153,40 +153,40 @@ static bool sirFrameGraphRequiresOrdering( const sirFrameGraphAccess_t& previous
 	return pPasses[previous.nPass].eQueue != pPasses[current.nPass].eQueue;
 }
 
-sirGraphicsResult_t SIRFrameGraph::addResource( const sirFrameGraphResource_t& resource, uint32_t *pIndex ) noexcept
+SIRGraphicsResult SIRFrameGraph::addResource( const sirFrameGraphResource_t& resource, uint32_t *pIndex ) noexcept
 {
 	return addResourceImpl( resource, pIndex, false );
 }
 
-sirGraphicsResult_t SIRFrameGraph::addResourceImpl( const sirFrameGraphResource_t& resource, uint32_t *pIndex, bool bSharedLease ) noexcept
+SIRGraphicsResult SIRFrameGraph::addResourceImpl( const sirFrameGraphResource_t& resource, uint32_t *pIndex, bool bSharedLease ) noexcept
 {
 	if ( ( resource.nCanonicalBackingId != 0 || resource.nCanonicalNativeToken != 0 ) && !bSharedLease ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( bSharedLease && ( !resource.bImported || !resource.nCanonicalBackingId || !resource.nCanonicalNativeToken ) ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( pIndex == nullptr || resource.nMipLevels == 0 || resource.nArrayLayers == 0 ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( resource.eType != SIR_GRAPHICS_HANDLE_BUFFER && resource.eType != SIR_GRAPHICS_HANDLE_TEXTURE ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	if ( resource.eType != SIRGraphicsHandleType::SIR_GRAPHICS_HANDLE_BUFFER && resource.eType != SIRGraphicsHandleType::SIR_GRAPHICS_HANDLE_TEXTURE ) {
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( resource.eType == SIR_GRAPHICS_HANDLE_BUFFER && ( resource.nMipLevels != 1 || resource.nArrayLayers != 1 ) ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	if ( resource.eType == SIRGraphicsHandleType::SIR_GRAPHICS_HANDLE_BUFFER && ( resource.nMipLevels != 1 || resource.nArrayLayers != 1 ) ) {
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( resource.bImported && ( resource.hImported.eType != resource.eType || resource.hImported.nGeneration == 0 ||
 								 resource.hImported.nDeviceGeneration == 0 ) ) {
-		return SIR_GRAPHICS_INVALID_HANDLE;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_HANDLE;
 	}
-	if ( resource.eInitialQueue >= SIR_GRAPHICS_QUEUE_COUNT || resource.eInitialState > SIR_GRAPHICS_STATE_PRESENT ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	if ( resource.eInitialQueue >= SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT || resource.eInitialState > SIRGraphicsState::SIR_GRAPHICS_STATE_PRESENT ) {
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( !resource.bImported && resource.eInitialState != SIR_GRAPHICS_STATE_UNDEFINED ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	if ( !resource.bImported && resource.eInitialState != SIRGraphicsState::SIR_GRAPHICS_STATE_UNDEFINED ) {
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( m_nResourceCount == SIR_FRAMEGRAPH_MAX_RESOURCES ) {
-		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+		return SIRGraphicsResult::SIR_GRAPHICS_CAPACITY_EXCEEDED;
 	}
 	// A semantic frame product has one producer/storage identity for its entire
 	// view/eye/quality/epoch. Duplicate descriptors cannot escape through a
@@ -195,13 +195,13 @@ sirGraphicsResult_t SIRFrameGraph::addResourceImpl( const sirFrameGraphResource_
 	const bool bNamedProduct = key.nViewId || key.nFrameEpoch || key.nSemanticId || key.nEyeId || key.nQualityId;
 	if ( bNamedProduct ) {
 		if ( !key.nViewId || !key.nFrameEpoch || !key.nSemanticId || resource.nCanonicalBackingId ) {
-			return SIR_GRAPHICS_INVALID_ARGUMENT;
+			return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
 		for ( uint32_t iResource = 0; iResource < m_nResourceCount; ++iResource ) {
 			const sirFrameGraphProductKey_t& existing = m_szResources[iResource].product;
 			if ( existing.nViewId == key.nViewId && existing.nFrameEpoch == key.nFrameEpoch && existing.nSemanticId == key.nSemanticId &&
 				 existing.nEyeId == key.nEyeId && existing.nQualityId == key.nQualityId ) {
-				return SIR_GRAPHICS_INVALID_ARGUMENT;
+				return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 			}
 		}
 	}
@@ -217,7 +217,7 @@ sirGraphicsResult_t SIRFrameGraph::addResourceImpl( const sirFrameGraphResource_
 				existing.hImported.nSlot == resource.hImported.nSlot && existing.hImported.nGeneration == resource.hImported.nGeneration;
 			const bool bSameDevice = existing.hImported.nDeviceGeneration == resource.hImported.nDeviceGeneration;
 			if ( bSameSlot && bSameDevice ) {
-				return SIR_GRAPHICS_INVALID_ARGUMENT;
+				return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 			}
 		}
 	}
@@ -225,23 +225,23 @@ sirGraphicsResult_t SIRFrameGraph::addResourceImpl( const sirFrameGraphResource_
 	*pIndex = m_nResourceCount;
 	m_szResources[m_nResourceCount++] = resource;
 	++m_nRevision;
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t SIRFrameGraph::importSharedBuffer( const sirNativeGPUBufferLease_t& rLease, sirGraphicsState_t eInitialState,
-													   sirGraphicsQueue_t eInitialQueue, uint32_t *pIndex ) noexcept
+SIRGraphicsResult SIRFrameGraph::importSharedBuffer( const sirNativeGPUBufferLease_t& rLease, SIRGraphicsState eInitialState,
+													   SIRGraphicsQueue eInitialQueue, uint32_t *pIndex ) noexcept
 {
 	if ( !pIndex || !rLease.view.bReadOnly || !rLease.view.nPhysicalBackingId || !rLease.view.nNativeResourceToken || !rLease.view.nBytes ||
 		 rLease.view.nOffset > UINT64_MAX - rLease.view.nBytes || !rLease.view.nBorrowGeneration || !rLease.view.nConsumerId ||
-		 !rLease.view.nDeviceGeneration || rLease.hNative.eType != SIR_GRAPHICS_HANDLE_BUFFER || !rLease.hNative.nGeneration ||
-		 rLease.hNative.nDeviceGeneration != rLease.view.nDeviceGeneration || eInitialQueue >= SIR_GRAPHICS_QUEUE_COUNT ||
+		 !rLease.view.nDeviceGeneration || rLease.hNative.eType != SIRGraphicsHandleType::SIR_GRAPHICS_HANDLE_BUFFER || !rLease.hNative.nGeneration ||
+		 rLease.hNative.nDeviceGeneration != rLease.view.nDeviceGeneration || eInitialQueue >= SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT ||
 		 !isReadableState( eInitialState ) ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	// A typed lease alone is not authority: its backing owner must prove it
 	// remains issued and bound to the actual live native allocation.
-	if ( !m_pSharedOwner || m_pSharedOwner->validateBufferLease( rLease ) != SIR_RESOURCE_RESULT_SUCCESS ) {
-		return SIR_GRAPHICS_INVALID_HANDLE;
+	if ( !m_pSharedOwner || m_pSharedOwner->validateBufferLease( rLease ) != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ) {
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_HANDLE;
 	}
 	for ( uint32_t iResource = 0; iResource < m_nResourceCount; ++iResource ) {
 		const sirFrameGraphResource_t& rExisting = m_szResources[iResource];
@@ -252,13 +252,13 @@ sirGraphicsResult_t SIRFrameGraph::importSharedBuffer( const sirNativeGPUBufferL
 			 rExisting.hImported.nGeneration != rLease.hNative.nGeneration ||
 			 rExisting.hImported.nDeviceGeneration != rLease.hNative.nDeviceGeneration || rExisting.eInitialQueue != eInitialQueue ||
 			 rExisting.eInitialState != eInitialState ) {
-			return SIR_GRAPHICS_INVALID_HANDLE;
+			return SIRGraphicsResult::SIR_GRAPHICS_INVALID_HANDLE;
 		}
 		*pIndex = iResource;
-		return SIR_GRAPHICS_SUCCESS;
+		return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 	}
 	const sirFrameGraphResource_t imported = { rLease.hNative,
-											   SIR_GRAPHICS_HANDLE_BUFFER,
+											   SIRGraphicsHandleType::SIR_GRAPHICS_HANDLE_BUFFER,
 											   eInitialState,
 											   eInitialQueue,
 											   1,
@@ -269,28 +269,28 @@ sirGraphicsResult_t SIRFrameGraph::importSharedBuffer( const sirNativeGPUBufferL
 	return addResourceImpl( imported, pIndex, true );
 }
 
-sirGraphicsResult_t SIRFrameGraph::addSharedBufferRead( uint32_t nPass, uint32_t nResource, const sirNativeGPUBufferLease_t& rLease,
-														uint64_t nOffsetBytes, uint64_t nBytes, sirGraphicsState_t eState ) noexcept
+SIRGraphicsResult SIRFrameGraph::addSharedBufferRead( uint32_t nPass, uint32_t nResource, const sirNativeGPUBufferLease_t& rLease,
+														uint64_t nOffsetBytes, uint64_t nBytes, SIRGraphicsState eState ) noexcept
 {
 	if ( nPass >= m_nPassCount || nResource >= m_nResourceCount || !nBytes || !rLease.view.bReadOnly ||
 		 !rLease.view.nCompletionProviderId || !rLease.view.nBorrowGeneration || !isReadableState( eState ) ||
 		 m_SharedReads.getSize() == m_SharedReads.getCapacity() || nOffsetBytes < rLease.view.nOffset || nBytes > rLease.view.nBytes ||
 		 nOffsetBytes - rLease.view.nOffset > rLease.view.nBytes - nBytes ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( !m_pSharedOwner || m_pSharedOwner->validateBufferLease( rLease ) != SIR_RESOURCE_RESULT_SUCCESS ) {
-		return SIR_GRAPHICS_INVALID_HANDLE;
+	if ( !m_pSharedOwner || m_pSharedOwner->validateBufferLease( rLease ) != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ) {
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_HANDLE;
 	}
 	const sirFrameGraphResource_t& imported = m_szResources[nResource];
-	if ( !imported.bImported || imported.eType != SIR_GRAPHICS_HANDLE_BUFFER ||
+	if ( !imported.bImported || imported.eType != SIRGraphicsHandleType::SIR_GRAPHICS_HANDLE_BUFFER ||
 		 imported.nCanonicalBackingId != rLease.view.nPhysicalBackingId ||
 		 imported.nCanonicalNativeToken != rLease.view.nNativeResourceToken || imported.hImported.nSlot != rLease.hNative.nSlot ||
 		 imported.hImported.nGeneration != rLease.hNative.nGeneration ||
 		 imported.hImported.nDeviceGeneration != rLease.hNative.nDeviceGeneration ) {
-		return SIR_GRAPHICS_INVALID_HANDLE;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_HANDLE;
 	}
-	const sirGraphicsResult_t eAdded = addAccessImpl( { nPass, nResource, 0, 1, 0, 1, eState, false }, true );
-	if ( eAdded != SIR_GRAPHICS_SUCCESS ) {
+	const SIRGraphicsResult eAdded = addAccessImpl( { nPass, nResource, 0, 1, 0, 1, eState, false }, true );
+	if ( eAdded != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 		return eAdded;
 	}
 	const SharedReadLease entry = { { nPass, nResource, rLease.view.nConsumerId, rLease.view.nCompletionProviderId, rLease.view.nBorrowSlot,
@@ -298,123 +298,123 @@ sirGraphicsResult_t SIRFrameGraph::addSharedBufferRead( uint32_t nPass, uint32_t
 									  nOffsetBytes, nBytes },
 									rLease };
 	// The capacity check precedes access registration, so this append is infallible.
-	const sirContainerResult_t eResult = m_SharedReads.tryPushBack( entry );
-	assert( eResult == SIR_CONTAINER_OK );
-	( void )eResult;
-	return SIR_GRAPHICS_SUCCESS;
+	const SIRContainerResult eResult = m_SharedReads.tryPushBack( entry );
+	assert( eResult == SIRContainerResult::SIR_CONTAINER_OK );
+	static_cast<void>(eResult);
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t SIRFrameGraph::addPass( const sirFrameGraphPass_t& pass, uint32_t *pIndex ) noexcept
+SIRGraphicsResult SIRFrameGraph::addPass( const sirFrameGraphPass_t& pass, uint32_t *pIndex ) noexcept
 {
-	if ( pIndex == nullptr || pass.eQueue >= SIR_GRAPHICS_QUEUE_COUNT ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	if ( pIndex == nullptr || pass.eQueue >= SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT ) {
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( m_nPassCount == SIR_FRAMEGRAPH_MAX_PASSES ) {
-		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+		return SIRGraphicsResult::SIR_GRAPHICS_CAPACITY_EXCEEDED;
 	}
 
 	*pIndex = m_nPassCount;
 	m_szPasses[m_nPassCount++] = pass;
 	++m_nRevision;
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t SIRFrameGraph::addAccess( const sirFrameGraphAccess_t& access ) noexcept
+SIRGraphicsResult SIRFrameGraph::addAccess( const sirFrameGraphAccess_t& access ) noexcept
 {
 	return addAccessImpl( access, false );
 }
 
-sirGraphicsResult_t SIRFrameGraph::addAccessImpl( const sirFrameGraphAccess_t& access, bool bSharedLease ) noexcept
+SIRGraphicsResult SIRFrameGraph::addAccessImpl( const sirFrameGraphAccess_t& access, bool bSharedLease ) noexcept
 {
 	if ( access.nPass >= m_nPassCount || access.nResource >= m_nResourceCount ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( access.nMipCount == 0 || access.nLayerCount == 0 ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	const sirFrameGraphResource_t& resource = m_szResources[access.nResource];
 	if ( resource.nCanonicalBackingId != 0 && !bSharedLease ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( access.nBaseMip >= resource.nMipLevels || access.nMipCount > resource.nMipLevels - access.nBaseMip ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( access.nBaseLayer >= resource.nArrayLayers || access.nLayerCount > resource.nArrayLayers - access.nBaseLayer ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	// Canonical GRDG source imports are immutable throughout this graph's
 	// lifetime. Mutable frame products require separately versioned backing.
 	if ( access.bWrite && resource.nCanonicalBackingId != 0 ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( access.bWrite ? !isWritableState( access.eState ) : !isReadableState( access.eState ) ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	const sirGraphicsQueue_t eQueue = m_szPasses[access.nPass].eQueue;
-	if ( eQueue == SIR_GRAPHICS_QUEUE_COPY && access.eState != SIR_GRAPHICS_STATE_COPY_SOURCE &&
-		 access.eState != SIR_GRAPHICS_STATE_COPY_DESTINATION ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	const SIRGraphicsQueue eQueue = m_szPasses[access.nPass].eQueue;
+	if ( eQueue == SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COPY && access.eState != SIRGraphicsState::SIR_GRAPHICS_STATE_COPY_SOURCE &&
+		 access.eState != SIRGraphicsState::SIR_GRAPHICS_STATE_COPY_DESTINATION ) {
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( eQueue == SIR_GRAPHICS_QUEUE_COMPUTE &&
-		 ( access.eState == SIR_GRAPHICS_STATE_COLOR_ATTACHMENT || access.eState == SIR_GRAPHICS_STATE_DEPTH_WRITE ||
-		   access.eState == SIR_GRAPHICS_STATE_PRESENT ) ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	if ( eQueue == SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COMPUTE &&
+		 ( access.eState == SIRGraphicsState::SIR_GRAPHICS_STATE_COLOR_ATTACHMENT || access.eState == SIRGraphicsState::SIR_GRAPHICS_STATE_DEPTH_WRITE ||
+		   access.eState == SIRGraphicsState::SIR_GRAPHICS_STATE_PRESENT ) ) {
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( m_nAccessCount == SIR_FRAMEGRAPH_MAX_ACCESSES ) {
-		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+		return SIRGraphicsResult::SIR_GRAPHICS_CAPACITY_EXCEEDED;
 	}
 	// Access declarations follow pass insertion order; hazards retain that order.
 	if ( m_nAccessCount != 0 && access.nPass < m_szAccesses[m_nAccessCount - 1].nPass ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	for ( uint32_t iAccess = 0; iAccess < m_nAccessCount; ++iAccess ) {
 		const sirFrameGraphAccess_t& previous = m_szAccesses[iAccess];
 		if ( previous.nPass == access.nPass && overlaps( previous, access ) &&
 			 ( previous.bWrite || access.bWrite || previous.eState != access.eState ) ) {
-			return SIR_GRAPHICS_INVALID_ARGUMENT;
+			return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
 	}
 
 	m_szAccesses[m_nAccessCount++] = access;
 	++m_nRevision;
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t SIRFrameGraph::addDependency( uint32_t nBefore, uint32_t nAfter ) noexcept
+SIRGraphicsResult SIRFrameGraph::addDependency( uint32_t nBefore, uint32_t nAfter ) noexcept
 {
 	if ( nBefore >= m_nPassCount || nAfter >= m_nPassCount || nBefore == nAfter ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	( void )m_ExplicitEdges.trySet( nBefore * SIR_FRAMEGRAPH_MAX_PASSES + nAfter, true );
+	static_cast<void>(m_ExplicitEdges.trySet( nBefore * SIR_FRAMEGRAPH_MAX_PASSES + nAfter, true ));
 	++m_nRevision;
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t SIRFrameGraph::addOutput( const sirFrameGraphOutput_t& output ) noexcept
+SIRGraphicsResult SIRFrameGraph::addOutput( const sirFrameGraphOutput_t& output ) noexcept
 {
 	if ( output.nResource >= m_nResourceCount || output.nMipCount == 0 || output.nLayerCount == 0 ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	const sirFrameGraphResource_t& resource = m_szResources[output.nResource];
 	if ( output.nBaseMip >= resource.nMipLevels || output.nMipCount > resource.nMipLevels - output.nBaseMip ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( output.nBaseLayer >= resource.nArrayLayers || output.nLayerCount > resource.nArrayLayers - output.nBaseLayer ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( m_Outputs.getSize() == m_Outputs.getCapacity() ) {
-		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+		return SIRGraphicsResult::SIR_GRAPHICS_CAPACITY_EXCEEDED;
 	}
-	if ( m_Outputs.tryPushBack( output ) != SIR_CONTAINER_OK ) {
-		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+	if ( m_Outputs.tryPushBack( output ) != SIRContainerResult::SIR_CONTAINER_OK ) {
+		return SIRGraphicsResult::SIR_GRAPHICS_CAPACITY_EXCEEDED;
 	}
 	++m_nRevision;
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
 // Every cell of an output or live read needs its closest preceding writer.
 // Earlier overwritten writers are not dependencies of the output.
-sirGraphicsResult_t SIRFrameGraph::markProducers( const sirFrameGraphAccess_t& target, uint32_t nBeforePass, uint8_t *pLive,
+SIRGraphicsResult SIRFrameGraph::markProducers( const sirFrameGraphAccess_t& target, uint32_t nBeforePass, uint8_t *pLive,
 												  uint32_t *pCellBudget ) const noexcept
 {
 	uint32_t szMipCuts[SIR_FRAMEGRAPH_MAX_ACCESSES * 2 + 2] = { target.nBaseMip, target.nBaseMip + target.nMipCount };
@@ -435,11 +435,11 @@ sirGraphicsResult_t SIRFrameGraph::markProducers( const sirFrameGraphAccess_t& t
 		sirFrameGraphInsertCut( szLayerCuts, &nLayerCuts,
 								nLayerEnd < target.nBaseLayer + target.nLayerCount ? nLayerEnd : target.nBaseLayer + target.nLayerCount );
 	}
-	const uint64_t nCells = ( uint64_t )( nMipCuts - 1 ) * ( nLayerCuts - 1 );
+	const uint64_t nCells = static_cast<uint64_t>( nMipCuts - 1 ) * ( nLayerCuts - 1 );
 	if ( nCells > *pCellBudget ) {
-		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+		return SIRGraphicsResult::SIR_GRAPHICS_CAPACITY_EXCEEDED;
 	}
-	*pCellBudget -= ( uint32_t )nCells;
+	*pCellBudget -= static_cast<uint32_t>(nCells);
 
 	const sirFrameGraphResource_t& resource = m_szResources[target.nResource];
 	for ( uint32_t iLayer = 0; iLayer + 1 < nLayerCuts; ++iLayer ) {
@@ -458,15 +458,15 @@ sirGraphicsResult_t SIRFrameGraph::markProducers( const sirFrameGraphAccess_t& t
 					break;
 				}
 			}
-			if ( !bFound && ( !resource.bImported || resource.eInitialState == SIR_GRAPHICS_STATE_UNDEFINED ) ) {
-				return SIR_GRAPHICS_INVALID_ARGUMENT;
+			if ( !bFound && ( !resource.bImported || resource.eInitialState == SIRGraphicsState::SIR_GRAPHICS_STATE_UNDEFINED ) ) {
+				return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 			}
 		}
 	}
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t SIRFrameGraph::findLivePasses( uint8_t *pLive ) const noexcept
+SIRGraphicsResult SIRFrameGraph::findLivePasses( uint8_t *pLive ) const noexcept
 {
 	if ( !m_bCullingEnabled ) {
 		memset( pLive, 1, m_nPassCount );
@@ -479,22 +479,23 @@ sirGraphicsResult_t SIRFrameGraph::findLivePasses( uint8_t *pLive ) const noexce
 	}
 	for ( uint32_t iOutput = 0; iOutput < m_Outputs.getSize(); ++iOutput ) {
 		const sirFrameGraphOutput_t& output = m_Outputs[iOutput];
-		sirFrameGraphAccess_t target = {};
+		sirFrameGraphAccess_t target {};
 		target.nResource = output.nResource;
 		target.nBaseMip = output.nBaseMip;
 		target.nMipCount = output.nMipCount;
 		target.nBaseLayer = output.nBaseLayer;
 		target.nLayerCount = output.nLayerCount;
-		const sirGraphicsResult_t eResult = markProducers( target, m_nPassCount, pLive, &nCellBudget );
-		if ( eResult != SIR_GRAPHICS_SUCCESS ) {
+		const SIRGraphicsResult eResult = markProducers( target, m_nPassCount, pLive, &nCellBudget );
+		if ( eResult != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 			return eResult;
 		}
 	}
 
 	if ( !m_bCullingEnabled ) {
-		return SIR_GRAPHICS_SUCCESS;
+		return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 	}
-	uint8_t szVisited[SIR_FRAMEGRAPH_MAX_PASSES] = {};
+	uint8_t szVisited[SIR_FRAMEGRAPH_MAX_PASSES];
+	memset( szVisited, 0, sizeof( szVisited ) );
 	for ( uint32_t nIteration = 0; nIteration < m_nPassCount; ++nIteration ) {
 		bool bChanged = false;
 		for ( uint32_t iPass = 0; iPass < m_nPassCount; ++iPass ) {
@@ -513,8 +514,8 @@ sirGraphicsResult_t SIRFrameGraph::findLivePasses( uint8_t *pLive ) const noexce
 				if ( access.nPass != iPass || access.bWrite ) {
 					continue;
 				}
-				const sirGraphicsResult_t eResult = markProducers( access, iPass, pLive, &nCellBudget );
-				if ( eResult != SIR_GRAPHICS_SUCCESS ) {
+				const SIRGraphicsResult eResult = markProducers( access, iPass, pLive, &nCellBudget );
+				if ( eResult != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 					return eResult;
 				}
 			}
@@ -523,7 +524,7 @@ sirGraphicsResult_t SIRFrameGraph::findLivePasses( uint8_t *pLive ) const noexce
 			break;
 		}
 	}
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
 bool SIRFrameGraph::requiresOrdering( const sirFrameGraphAccess_t& previous, const sirFrameGraphAccess_t& current ) const noexcept
@@ -537,10 +538,10 @@ bool SIRFrameGraph::requiresOrdering( const sirFrameGraphAccess_t& previous, con
 	return m_szPasses[previous.nPass].eQueue != m_szPasses[current.nPass].eQueue;
 }
 
-sirGraphicsResult_t SIRFrameGraph::validateCapabilities( const sirGraphicsCapabilities_t& caps, const uint8_t *pLive ) const noexcept
+SIRGraphicsResult SIRFrameGraph::validateCapabilities( const sirGraphicsCapabilities_t& caps, const uint8_t *pLive ) const noexcept
 {
-	if ( caps.nDeviceGeneration == 0 || ( caps.nQueueMask & ( 1U << SIR_GRAPHICS_QUEUE_DIRECT ) ) == 0 ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	if ( caps.nDeviceGeneration == 0 || ( caps.nQueueMask & ( 1U << SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_DIRECT ) ) == 0 ) {
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	for ( uint32_t iPass = 0; iPass < m_nPassCount; ++iPass ) {
 		const sirFrameGraphPass_t& pass = m_szPasses[iPass];
@@ -548,13 +549,13 @@ sirGraphicsResult_t SIRFrameGraph::validateCapabilities( const sirGraphicsCapabi
 			continue;
 		}
 		if ( ( caps.nQueueMask & ( 1U << pass.eQueue ) ) == 0 || ( pass.nRequiredFeatures & ~caps.nFeatureMask ) != 0 ) {
-			return SIR_GRAPHICS_UNSUPPORTED;
+			return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 		}
-		if ( pass.eQueue == SIR_GRAPHICS_QUEUE_COMPUTE && ( caps.nFeatureMask & SIR_GRAPHICS_FEATURE_ASYNC_COMPUTE ) == 0 ) {
-			return SIR_GRAPHICS_UNSUPPORTED;
+		if ( pass.eQueue == SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COMPUTE && ( caps.nFeatureMask & SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_ASYNC_COMPUTE ) == 0 ) {
+			return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 		}
-		if ( pass.eQueue == SIR_GRAPHICS_QUEUE_COPY && ( caps.nFeatureMask & SIR_GRAPHICS_FEATURE_COPY_QUEUE ) == 0 ) {
-			return SIR_GRAPHICS_UNSUPPORTED;
+		if ( pass.eQueue == SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COPY && ( caps.nFeatureMask & SIRGraphicsFeature::SIR_GRAPHICS_FEATURE_COPY_QUEUE ) == 0 ) {
+			return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 		}
 	}
 	for ( uint32_t iResource = 0; iResource < m_nResourceCount; ++iResource ) {
@@ -567,13 +568,13 @@ sirGraphicsResult_t SIRFrameGraph::validateCapabilities( const sirGraphicsCapabi
 			bUsed = bUsed || m_Outputs[iOutput].nResource == iResource;
 		}
 		if ( bUsed && resource.bImported && resource.hImported.nDeviceGeneration != caps.nDeviceGeneration ) {
-			return SIR_GRAPHICS_INVALID_HANDLE;
+			return SIRGraphicsResult::SIR_GRAPHICS_INVALID_HANDLE;
 		}
 	}
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
-static sirGraphicsResult_t sirFrameGraphAppendTransition( const sirFrameGraphTransition_t& transition,
+static SIRGraphicsResult sirFrameGraphAppendTransition( const sirFrameGraphTransition_t& transition,
 														  sirFrameGraphCompiled_t *pCompiled ) noexcept
 {
 	if ( pCompiled->nTransitionCount != 0 ) {
@@ -590,22 +591,22 @@ static sirGraphicsResult_t sirFrameGraphAppendTransition( const sirFrameGraphTra
 									previous.nBaseLayer + previous.nLayerCount == transition.nBaseLayer;
 			if ( bNextMip ) {
 				previous.nMipCount += transition.nMipCount;
-				return SIR_GRAPHICS_SUCCESS;
+				return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 			}
 			if ( bNextLayer ) {
 				previous.nLayerCount += transition.nLayerCount;
-				return SIR_GRAPHICS_SUCCESS;
+				return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 			}
 		}
 	}
 	if ( pCompiled->nTransitionCount >= SIR_FRAMEGRAPH_MAX_TRANSITIONS ) {
-		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+		return SIRGraphicsResult::SIR_GRAPHICS_CAPACITY_EXCEEDED;
 	}
 	pCompiled->szTransitions[pCompiled->nTransitionCount++] = transition;
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
-static sirGraphicsResult_t sirFrameGraphCompileAccess( const sirFrameGraphAccess_t *pAccesses, uint32_t iAccess,
+static SIRGraphicsResult sirFrameGraphCompileAccess( const sirFrameGraphAccess_t *pAccesses, uint32_t iAccess,
 													   sirFrameGraphCompileContext_t *pContext,
 													   sirFrameGraphCompiled_t *pCompiled ) noexcept
 {
@@ -639,11 +640,11 @@ static sirGraphicsResult_t sirFrameGraphCompileAccess( const sirFrameGraphAccess
 		sirFrameGraphInsertCut( szLayerCuts, &nLayerCuts, nLayerEnd );
 	}
 
-	const uint64_t nCellCount = ( uint64_t )( nMipCuts - 1 ) * ( nLayerCuts - 1 );
+	const uint64_t nCellCount = static_cast<uint64_t>( nMipCuts - 1 ) * ( nLayerCuts - 1 );
 	if ( nCellCount > pContext->nCellsRemaining ) {
-		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+		return SIRGraphicsResult::SIR_GRAPHICS_CAPACITY_EXCEEDED;
 	}
-	pContext->nCellsRemaining -= ( uint32_t )nCellCount;
+	pContext->nCellsRemaining -= static_cast<uint32_t>(nCellCount);
 
 	for ( uint32_t iLayer = 0; iLayer + 1 < nLayerCuts; ++iLayer ) {
 		for ( uint32_t iMip = 0; iMip + 1 < nMipCuts; ++iMip ) {
@@ -654,7 +655,7 @@ static sirGraphicsResult_t sirFrameGraphCompileAccess( const sirFrameGraphAccess
 			cell.nLayerCount = szLayerCuts[iLayer + 1] - szLayerCuts[iLayer];
 
 			uint32_t iLast = SIR_FRAMEGRAPH_INVALID_INDEX;
-			bool bInitialized = resource.bImported && resource.eInitialState != SIR_GRAPHICS_STATE_UNDEFINED;
+			bool bInitialized = resource.bImported && resource.eInitialState != SIRGraphicsState::SIR_GRAPHICS_STATE_UNDEFINED;
 			for ( uint32_t iPrevious = iAccess; iPrevious != 0; --iPrevious ) {
 				const sirFrameGraphAccess_t& previous = pAccesses[iPrevious - 1];
 				if ( !pContext->pLive[previous.nPass] || !sirFrameGraphOverlaps( previous, cell ) ) {
@@ -666,10 +667,10 @@ static sirGraphicsResult_t sirFrameGraphCompileAccess( const sirFrameGraphAccess
 				bInitialized = bInitialized || previous.bWrite;
 			}
 			if ( !access.bWrite && !bInitialized ) {
-				return SIR_GRAPHICS_INVALID_ARGUMENT;
+				return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 			}
 
-			sirFrameGraphTransition_t transition = {};
+			sirFrameGraphTransition_t transition {};
 			transition.nResource = access.nResource;
 			transition.nBeforePass = SIR_FRAMEGRAPH_INVALID_INDEX;
 			transition.nAfterPass = access.nPass;
@@ -694,16 +695,16 @@ static sirGraphicsResult_t sirFrameGraphCompileAccess( const sirFrameGraphAccess
 			if ( !bStateChanged && !bQueueChanged && !transition.bWriteHazard ) {
 				continue;
 			}
-			const sirGraphicsResult_t eResult = sirFrameGraphAppendTransition( transition, pCompiled );
-			if ( eResult != SIR_GRAPHICS_SUCCESS ) {
+			const SIRGraphicsResult eResult = sirFrameGraphAppendTransition( transition, pCompiled );
+			if ( eResult != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 				return eResult;
 			}
 		}
 	}
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t SIRFrameGraph::buildTransitions( uint8_t *pszEdges, const uint8_t *pLive,
+SIRGraphicsResult SIRFrameGraph::buildTransitions( uint8_t *pszEdges, const uint8_t *pLive,
 													 sirFrameGraphCompiled_t *pCompiled ) const noexcept
 {
 	constexpr uint32_t MAX_REGION_CELLS = 8192;
@@ -712,26 +713,28 @@ sirGraphicsResult_t SIRFrameGraph::buildTransitions( uint8_t *pszEdges, const ui
 		if ( !pLive[m_szAccesses[iAccess].nPass] ) {
 			continue;
 		}
-		const sirGraphicsResult_t eResult = sirFrameGraphCompileAccess( m_szAccesses, iAccess, &context, pCompiled );
-		if ( eResult != SIR_GRAPHICS_SUCCESS ) {
+		const SIRGraphicsResult eResult = sirFrameGraphCompileAccess( m_szAccesses, iAccess, &context, pCompiled );
+		if ( eResult != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 			return eResult;
 		}
 	}
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t SIRFrameGraph::buildSchedule( const uint8_t *pszEdges, const uint8_t *pLive,
+SIRGraphicsResult SIRFrameGraph::buildSchedule( const uint8_t *pszEdges, const uint8_t *pLive,
 												  sirFrameGraphCompiled_t *pCompiled ) const noexcept
 {
-	uint8_t szEmitted[SIR_FRAMEGRAPH_MAX_PASSES] = {};
-	uint32_t szIndegree[SIR_FRAMEGRAPH_MAX_PASSES] = {};
+	uint8_t szEmitted[SIR_FRAMEGRAPH_MAX_PASSES];
+	memset( szEmitted, 0, sizeof( szEmitted ) );
+	uint32_t szIndegree[SIR_FRAMEGRAPH_MAX_PASSES];
+	memset( szIndegree, 0, sizeof( szIndegree ) );
 	for ( uint32_t iBefore = 0; iBefore < m_nPassCount; ++iBefore ) {
 		for ( uint32_t iAfter = 0; iAfter < m_nPassCount; ++iAfter ) {
 			if ( !pLive[iBefore] || !pLive[iAfter] || pszEdges[iBefore * SIR_FRAMEGRAPH_MAX_PASSES + iAfter] == 0 ) {
 				continue;
 			}
 			if ( pCompiled->nDependencyCount == SIR_FRAMEGRAPH_MAX_DEPENDENCIES ) {
-				return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+				return SIRGraphicsResult::SIR_GRAPHICS_CAPACITY_EXCEEDED;
 			}
 			++szIndegree[iAfter];
 			sirFrameGraphDependency_t& dependency = pCompiled->szDependencies[pCompiled->nDependencyCount++];
@@ -762,15 +765,16 @@ sirGraphicsResult_t SIRFrameGraph::buildSchedule( const uint8_t *pszEdges, const
 	}
 	for ( uint32_t iPass = 0; iPass < m_nPassCount; ++iPass ) {
 		if ( pLive[iPass] && !szEmitted[iPass] ) {
-			return SIR_GRAPHICS_INVALID_ARGUMENT;
+			return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
 	}
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
 void SIRFrameGraph::calculateLifetimes( sirFrameGraphCompiled_t *pCompiled ) const noexcept
 {
-	uint32_t szOrderIndex[SIR_FRAMEGRAPH_MAX_PASSES] = {};
+	uint32_t szOrderIndex[SIR_FRAMEGRAPH_MAX_PASSES];
+	memset( szOrderIndex, 0, sizeof( szOrderIndex ) );
 	for ( uint32_t iPass = 0; iPass < m_nPassCount; ++iPass ) {
 		szOrderIndex[iPass] = SIR_FRAMEGRAPH_INVALID_INDEX;
 	}
@@ -798,31 +802,33 @@ void SIRFrameGraph::calculateLifetimes( sirFrameGraphCompiled_t *pCompiled ) con
 	}
 }
 
-sirGraphicsResult_t SIRFrameGraph::compile( const sirGraphicsCapabilities_t& caps, sirFrameGraphCompiled_t *pCompiled ) const noexcept
+SIRGraphicsResult SIRFrameGraph::compile( const sirGraphicsCapabilities_t& caps, sirFrameGraphCompiled_t *pCompiled ) const noexcept
 {
 	if ( pCompiled == nullptr ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	memset( pCompiled, 0, sizeof( *pCompiled ) );
-	sirFrameGraphCompiled_t staged = {};
-	uint8_t szLive[SIR_FRAMEGRAPH_MAX_PASSES] = {};
-	const sirGraphicsResult_t eLiveResult = findLivePasses( szLive );
-	if ( eLiveResult != SIR_GRAPHICS_SUCCESS ) {
+	sirFrameGraphCompiled_t staged {};
+	uint8_t szLive[SIR_FRAMEGRAPH_MAX_PASSES];
+	memset( szLive, 0, sizeof( szLive ) );
+	const SIRGraphicsResult eLiveResult = findLivePasses( szLive );
+	if ( eLiveResult != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 		return eLiveResult;
 	}
-	const sirGraphicsResult_t eCapsResult = validateCapabilities( caps, szLive );
-	if ( eCapsResult != SIR_GRAPHICS_SUCCESS ) {
+	const SIRGraphicsResult eCapsResult = validateCapabilities( caps, szLive );
+	if ( eCapsResult != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 		return eCapsResult;
 	}
 
-	uint8_t szEdges[SIR_FRAMEGRAPH_MAX_PASSES * SIR_FRAMEGRAPH_MAX_PASSES] = {};
+	uint8_t szEdges[SIR_FRAMEGRAPH_MAX_PASSES * SIR_FRAMEGRAPH_MAX_PASSES];
+	memset( szEdges, 0, sizeof( szEdges ) );
 	m_ExplicitEdges.forEachSetBit( sirFrameGraphDenseEdgeWriter_t{ szEdges } );
-	const sirGraphicsResult_t eTransitionResult = buildTransitions( szEdges, szLive, &staged );
-	if ( eTransitionResult != SIR_GRAPHICS_SUCCESS ) {
+	const SIRGraphicsResult eTransitionResult = buildTransitions( szEdges, szLive, &staged );
+	if ( eTransitionResult != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 		return eTransitionResult;
 	}
-	const sirGraphicsResult_t eScheduleResult = buildSchedule( szEdges, szLive, &staged );
-	if ( eScheduleResult != SIR_GRAPHICS_SUCCESS ) {
+	const SIRGraphicsResult eScheduleResult = buildSchedule( szEdges, szLive, &staged );
+	if ( eScheduleResult != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 		return eScheduleResult;
 	}
 
@@ -841,49 +847,51 @@ sirGraphicsResult_t SIRFrameGraph::compile( const sirGraphicsCapabilities_t& cap
 	staged.nOriginalPassCount = m_nPassCount;
 	memcpy( staged.szLivePasses, szLive, sizeof( szLive ) );
 	*pCompiled = staged;
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t SIRFrameGraph::record( const sirFrameGraphCompiled_t& compiled,
+SIRGraphicsResult SIRFrameGraph::record( const sirFrameGraphCompiled_t& compiled,
 										   const sirFrameGraphCallbacks_t& callbacks ) const noexcept
 {
 	if ( callbacks.pRecord == nullptr || callbacks.pRollback == nullptr || compiled.pOwner != this ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( compiled.nOwnerIdentity != m_nIdentity || compiled.nRevision != m_nRevision || compiled.nOriginalPassCount != m_nPassCount ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( compiled.nPassCount > m_nPassCount ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	uint8_t szSeen[SIR_FRAMEGRAPH_MAX_PASSES] = {};
+	uint8_t szSeen[SIR_FRAMEGRAPH_MAX_PASSES];
+	memset( szSeen, 0, sizeof( szSeen ) );
 	for ( uint32_t iOrder = 0; iOrder < compiled.nPassCount; ++iOrder ) {
 		const uint32_t iPass = compiled.szPassOrder[iOrder];
 		if ( iPass >= m_nPassCount || !compiled.szLivePasses[iPass] || szSeen[iPass] ) {
-			return SIR_GRAPHICS_INVALID_ARGUMENT;
+			return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
 		szSeen[iPass] = 1;
 	}
 	for ( uint32_t iPass = 0; iPass < m_nPassCount; ++iPass ) {
 		if ( ( szSeen[iPass] != 0 ) != ( compiled.szLivePasses[iPass] != 0 ) ) {
-			return SIR_GRAPHICS_INVALID_ARGUMENT;
+			return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
 	}
 
-	uint32_t szOrder[SIR_FRAMEGRAPH_MAX_PASSES] = {};
+	uint32_t szOrder[SIR_FRAMEGRAPH_MAX_PASSES];
+	memset( szOrder, 0, sizeof( szOrder ) );
 	for ( uint32_t iOrder = 0; iOrder < compiled.nPassCount; ++iOrder ) {
 		szOrder[compiled.szPassOrder[iOrder]] = iOrder;
 	}
 	if ( compiled.nDependencyCount > SIR_FRAMEGRAPH_MAX_DEPENDENCIES ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	for ( uint32_t iDependency = 0; iDependency < compiled.nDependencyCount; ++iDependency ) {
 		const sirFrameGraphDependency_t& edge = compiled.szDependencies[iDependency];
 		if ( edge.nBeforePass >= m_nPassCount || edge.nAfterPass >= m_nPassCount ) {
-			return SIR_GRAPHICS_INVALID_ARGUMENT;
+			return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
 		if ( !szSeen[edge.nBeforePass] || !szSeen[edge.nAfterPass] || szOrder[edge.nBeforePass] >= szOrder[edge.nAfterPass] ) {
-			return SIR_GRAPHICS_INVALID_ARGUMENT;
+			return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
 	}
 
@@ -893,15 +901,15 @@ sirGraphicsResult_t SIRFrameGraph::record( const sirFrameGraphCompiled_t& compil
 		if ( !compiled.szLivePasses[m_SharedReads[iRead].read.nPass] ) {
 			continue;
 		}
-		if ( !m_pSharedOwner || m_pSharedOwner->validateBufferLease( m_SharedReads[iRead].lease ) != SIR_RESOURCE_RESULT_SUCCESS ) {
-			return SIR_GRAPHICS_INVALID_HANDLE;
+		if ( !m_pSharedOwner || m_pSharedOwner->validateBufferLease( m_SharedReads[iRead].lease ) != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ) {
+			return SIRGraphicsResult::SIR_GRAPHICS_INVALID_HANDLE;
 		}
 	}
 
 	for ( uint32_t iOrder = 0; iOrder < compiled.nPassCount; ++iOrder ) {
 		const uint32_t iPass = compiled.szPassOrder[iOrder];
-		const sirGraphicsResult_t eResult = callbacks.pRecord( iPass, callbacks.pContext );
-		if ( eResult == SIR_GRAPHICS_SUCCESS ) {
+		const SIRGraphicsResult eResult = callbacks.pRecord( iPass, callbacks.pContext );
+		if ( eResult == SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 			continue;
 		}
 		// Include the failed pass: its callback may have staged partial CPU work.
@@ -910,5 +918,5 @@ sirGraphicsResult_t SIRFrameGraph::record( const sirFrameGraphCompiled_t& compil
 		}
 		return eResult;
 	}
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }

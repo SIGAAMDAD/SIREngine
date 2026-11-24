@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRD3D12MEMORY_H__
-#define __SIRENGINE_SIRD3D12MEMORY_H__
+#ifndef __SIR_D3_D12_MEMORY_H__
+#define __SIR_D3_D12_MEMORY_H__
 
 #include <Core/SIRPCH.h>
 
@@ -28,12 +28,11 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 class SIRGeneralHeap;
 
-typedef enum sirD3D12TransferPath_e : uint8_t
-{
+enum class SIRD3D12TransferPath : uint8_t {
 	SIR_D3D12_TRANSFER_DIRECT_UMA = 0,
 	SIR_D3D12_TRANSFER_DIRECT_GPU_UPLOAD = 1,
 	SIR_D3D12_TRANSFER_STAGED = 2
-} sirD3D12TransferPath_t;
+};
 
 typedef struct sirD3D12TransferPoolConfig_s
 {
@@ -51,7 +50,7 @@ typedef struct sirD3D12ResidentTransferView_s
 	uint64_t nSlotBytes;
 	uint64_t nReservedBufferBytes;
 	uint64_t nPersistentMappedBytes;
-	sirD3D12TransferPath_t ePath;
+	SIRD3D12TransferPath ePath;
 } sirD3D12ResidentTransferView_t;
 
 // Allocation bytes come from D3D12MA on both memory segments. Swapchain
@@ -87,7 +86,7 @@ private:
 	D3D12MA::Pool *m_szSealedPools[s_nSealedPoolCount] = {};
 	bool m_bSealed = false;
 	D3D12MA::Allocator *m_pAllocator = nullptr;
-	D3D12MA::ALLOCATION_CALLBACKS m_Callbacks = {};
+	D3D12MA::ALLOCATION_CALLBACKS m_Callbacks {};
 	SIRGeneralHeap *m_pHostHeap = nullptr;
 	uint64_t m_nResidentLimitBytes = 0;
 	uint64_t m_nExternalBytes = 0;
@@ -100,7 +99,7 @@ private:
 	const uint8_t *m_pTransferReadbackBytes = nullptr;
 	uint64_t m_nTransferSlotBytes = 0;
 	uint64_t m_nTransferReservedBytes = 0;
-	sirD3D12TransferPath_t m_eTransferPath = SIR_D3D12_TRANSFER_STAGED;
+	SIRD3D12TransferPath m_eTransferPath = SIRD3D12TransferPath::SIR_D3D12_TRANSFER_STAGED;
 	HRESULT m_nLastError = S_OK;
 
 public:
@@ -133,4 +132,4 @@ public:
 	HRESULT getLastError( void ) const noexcept;
 };
 
-#endif // __SIRENGINE_SIRD3D12MEMORY_H__
+#endif // __SIR_D3_D12_MEMORY_H__

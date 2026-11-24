@@ -20,15 +20,15 @@ bool sirVulkanMemoryTypeCompatible( uint32_t nPoolMemoryType, uint32_t nResource
 	return nPoolMemoryType < 32 && ( nResourceMemoryTypes & ( 1U << nPoolMemoryType ) ) != 0;
 }
 
-bool sirVulkanPlacementHostVisible( sirVulkanBufferPlacement_t ePlacement ) noexcept
+bool sirVulkanPlacementHostVisible( SIRVulkanBufferPlacement ePlacement ) noexcept
 {
-	return ePlacement == SIR_VULKAN_BUFFER_CPU_UPLOAD || ePlacement == SIR_VULKAN_BUFFER_CPU_READBACK ||
-	       ePlacement == SIR_VULKAN_BUFFER_GPU_UPLOAD;
+	return ePlacement == SIRVulkanBufferPlacement::SIR_VULKAN_BUFFER_CPU_UPLOAD || ePlacement == SIRVulkanBufferPlacement::SIR_VULKAN_BUFFER_CPU_READBACK ||
+	       ePlacement == SIRVulkanBufferPlacement::SIR_VULKAN_BUFFER_GPU_UPLOAD;
 }
 
-uint32_t sirVulkanPlacementPool( sirVulkanBufferPlacement_t ePlacement ) noexcept
+uint32_t sirVulkanPlacementPool( SIRVulkanBufferPlacement ePlacement ) noexcept
 {
-	return ePlacement == SIR_VULKAN_BUFFER_GPU_LOCAL ? 0U : ePlacement == SIR_VULKAN_BUFFER_CPU_READBACK ? 2U : 1U;
+	return ePlacement == SIRVulkanBufferPlacement::SIR_VULKAN_BUFFER_GPU_LOCAL ? 0U : ePlacement == SIRVulkanBufferPlacement::SIR_VULKAN_BUFFER_CPU_READBACK ? 2U : 1U;
 }
 
 bool sirVulkanValidatePoolBudget( const sirVulkanPoolBudget_t *pBudget ) noexcept
@@ -61,38 +61,38 @@ void SIRVulkanDevice::destroySealedPools( void ) noexcept
 	m_nSealedBudgetBytes = 0;
 }
 
-sirVulkanResult_t SIRVulkanDevice::chooseResidentMemoryType( uint32_t *pMemoryType ) noexcept
+SIRVulkanResult SIRVulkanDevice::chooseResidentMemoryType( uint32_t *pMemoryType ) noexcept
 {
 	if ( m_Allocator == nullptr || m_Device == VK_NULL_HANDLE || pMemoryType == nullptr ) {
-		return SIR_VULKAN_INVALID_ARGUMENT;
+		return SIRVulkanResult::SIR_VULKAN_INVALID_ARGUMENT;
 	}
 	*pMemoryType = UINT32_MAX;
-	const PFN_vkCreateBuffer pfnCreateBuffer = ( PFN_vkCreateBuffer )m_pfnGetDeviceProcAddr( m_Device, "vkCreateBuffer" );
-	const PFN_vkDestroyBuffer pfnDestroyBuffer = ( PFN_vkDestroyBuffer )m_pfnGetDeviceProcAddr( m_Device, "vkDestroyBuffer" );
+	const PFN_vkCreateBuffer pfnCreateBuffer = static_cast<PFN_vkCreateBuffer>(m_pfnGetDeviceProcAddr( m_Device, "vkCreateBuffer" ));
+	const PFN_vkDestroyBuffer pfnDestroyBuffer = static_cast<PFN_vkDestroyBuffer>(m_pfnGetDeviceProcAddr( m_Device, "vkDestroyBuffer" ));
 	const PFN_vkGetBufferMemoryRequirements pfnGetBufferRequirements =
-	    ( PFN_vkGetBufferMemoryRequirements )m_pfnGetDeviceProcAddr( m_Device, "vkGetBufferMemoryRequirements" );
-	const PFN_vkCreateImage pfnCreateImage = ( PFN_vkCreateImage )m_pfnGetDeviceProcAddr( m_Device, "vkCreateImage" );
-	const PFN_vkDestroyImage pfnDestroyImage = ( PFN_vkDestroyImage )m_pfnGetDeviceProcAddr( m_Device, "vkDestroyImage" );
+	    static_cast<PFN_vkGetBufferMemoryRequirements>(m_pfnGetDeviceProcAddr( m_Device, "vkGetBufferMemoryRequirements" ));
+	const PFN_vkCreateImage pfnCreateImage = static_cast<PFN_vkCreateImage>(m_pfnGetDeviceProcAddr( m_Device, "vkCreateImage" ));
+	const PFN_vkDestroyImage pfnDestroyImage = static_cast<PFN_vkDestroyImage>(m_pfnGetDeviceProcAddr( m_Device, "vkDestroyImage" ));
 	const PFN_vkGetImageMemoryRequirements pfnGetImageRequirements =
-	    ( PFN_vkGetImageMemoryRequirements )m_pfnGetDeviceProcAddr( m_Device, "vkGetImageMemoryRequirements" );
+	    static_cast<PFN_vkGetImageMemoryRequirements>(m_pfnGetDeviceProcAddr( m_Device, "vkGetImageMemoryRequirements" ));
 	if ( pfnCreateBuffer == nullptr || pfnDestroyBuffer == nullptr || pfnGetBufferRequirements == nullptr || pfnCreateImage == nullptr ||
 	     pfnDestroyImage == nullptr || pfnGetImageRequirements == nullptr ) {
-		return SIR_VULKAN_API_UNSUPPORTED;
+		return SIRVulkanResult::SIR_VULKAN_API_UNSUPPORTED;
 	}
-	VkBufferCreateInfo probeBuffer = {};
+	VkBufferCreateInfo probeBuffer {};
 	probeBuffer.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 	probeBuffer.size = 4096;
 	probeBuffer.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 	probeBuffer.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	VkBuffer hBuffer = VK_NULL_HANDLE;
 	if ( pfnCreateBuffer( m_Device, &probeBuffer, nullptr, &hBuffer ) != VK_SUCCESS ) {
-		return SIR_VULKAN_API_UNSUPPORTED;
+		return SIRVulkanResult::SIR_VULKAN_API_UNSUPPORTED;
 	}
-	VkMemoryRequirements bufferRequirements = {};
+	VkMemoryRequirements bufferRequirements {};
 	pfnGetBufferRequirements( m_Device, hBuffer, &bufferRequirements );
 	pfnDestroyBuffer( m_Device, hBuffer, nullptr );
 
-	VkImageCreateInfo probeImage = {};
+	VkImageCreateInfo probeImage {};
 	probeImage.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 	probeImage.imageType = VK_IMAGE_TYPE_2D;
 	probeImage.format = VK_FORMAT_R8G8B8A8_UNORM;
@@ -106,36 +106,36 @@ sirVulkanResult_t SIRVulkanDevice::chooseResidentMemoryType( uint32_t *pMemoryTy
 	probeImage.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	VkImage hImage = VK_NULL_HANDLE;
 	if ( pfnCreateImage( m_Device, &probeImage, nullptr, &hImage ) != VK_SUCCESS ) {
-		return SIR_VULKAN_API_UNSUPPORTED;
+		return SIRVulkanResult::SIR_VULKAN_API_UNSUPPORTED;
 	}
-	VkMemoryRequirements imageRequirements = {};
+	VkMemoryRequirements imageRequirements {};
 	pfnGetImageRequirements( m_Device, hImage, &imageRequirements );
 	pfnDestroyImage( m_Device, hImage, nullptr );
 
 	const uint32_t nSharedTypes = bufferRequirements.memoryTypeBits & imageRequirements.memoryTypeBits;
 	if ( nSharedTypes == 0 ) {
-		return SIR_VULKAN_API_UNSUPPORTED;
+		return SIRVulkanResult::SIR_VULKAN_API_UNSUPPORTED;
 	}
-	VmaAllocationCreateInfo selection = {};
+	VmaAllocationCreateInfo selection {};
 	selection.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-	return vmaFindMemoryTypeIndex( m_Allocator, nSharedTypes, &selection, pMemoryType ) == VK_SUCCESS ? SIR_VULKAN_SUCCESS
-	                                                                                                  : SIR_VULKAN_API_UNSUPPORTED;
+	return vmaFindMemoryTypeIndex( m_Allocator, nSharedTypes, &selection, pMemoryType ) == VK_SUCCESS ? SIRVulkanResult::SIR_VULKAN_SUCCESS
+	                                                                                                  : SIRVulkanResult::SIR_VULKAN_API_UNSUPPORTED;
 }
 
-sirVulkanResult_t SIRVulkanDevice::initializeSealedPools( const sirVulkanPoolBudget_t *pBudget ) noexcept
+SIRVulkanResult SIRVulkanDevice::initializeSealedPools( const sirVulkanPoolBudget_t *pBudget ) noexcept
 {
 	if ( m_Allocator == nullptr || m_bSealedPools || !sirVulkanValidatePoolBudget( pBudget ) ) {
-		return SIR_VULKAN_INVALID_ARGUMENT;
+		return SIRVulkanResult::SIR_VULKAN_INVALID_ARGUMENT;
 	}
 	const uint64_t szBudgets[3] = { pBudget->nResidentBytes, pBudget->nUploadBytes, pBudget->nReadbackBytes };
 	for ( uint32_t iPool = 0; iPool < 3; ++iPool ) {
-		VkBufferCreateInfo probe = {};
+		VkBufferCreateInfo probe {};
 		probe.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 		probe.size = 4096;
 		probe.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 		probe.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-		VmaAllocationCreateInfo selection = {};
+		VmaAllocationCreateInfo selection {};
 		selection.usage = VMA_MEMORY_USAGE_AUTO;
 		if ( iPool == 0 ) {
 			selection.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
@@ -149,22 +149,22 @@ sirVulkanResult_t SIRVulkanDevice::initializeSealedPools( const sirVulkanPoolBud
 		}
 		uint32_t nMemoryType = UINT32_MAX;
 		if ( iPool == 0 ) {
-			if ( chooseResidentMemoryType( &nMemoryType ) != SIR_VULKAN_SUCCESS ) {
+			if ( chooseResidentMemoryType( &nMemoryType ) != SIRVulkanResult::SIR_VULKAN_SUCCESS ) {
 				destroySealedPools();
-				return SIR_VULKAN_API_UNSUPPORTED;
+				return SIRVulkanResult::SIR_VULKAN_API_UNSUPPORTED;
 			}
 		} else if ( vmaFindMemoryTypeIndexForBufferInfo( m_Allocator, &probe, &selection, &nMemoryType ) != VK_SUCCESS ) {
 			destroySealedPools();
-			return SIR_VULKAN_API_UNSUPPORTED;
+			return SIRVulkanResult::SIR_VULKAN_API_UNSUPPORTED;
 		}
-		VmaPoolCreateInfo poolInfo = {};
+		VmaPoolCreateInfo poolInfo {};
 		poolInfo.memoryTypeIndex = nMemoryType;
 		poolInfo.blockSize = szBudgets[iPool];
 		poolInfo.minBlockCount = 1;
 		poolInfo.maxBlockCount = 1;
 		if ( vmaCreatePool( m_Allocator, &poolInfo, &m_szSealedPools[iPool] ) != VK_SUCCESS ) {
 			destroySealedPools();
-			return SIR_VULKAN_ALLOCATION_FAILED;
+			return SIRVulkanResult::SIR_VULKAN_ALLOCATION_FAILED;
 		}
 		m_szSealedMemoryTypes[iPool] = nMemoryType;
 	}
@@ -173,7 +173,7 @@ sirVulkanResult_t SIRVulkanDevice::initializeSealedPools( const sirVulkanPoolBud
 	m_bSealedPools = true;
 	m_nSealedBudgetBytes = szBudgets[0] + szBudgets[1] + szBudgets[2];
 	updateMemoryHighWater();
-	return SIR_VULKAN_SUCCESS;
+	return SIRVulkanResult::SIR_VULKAN_SUCCESS;
 }
 
 void sirVulkanAdvanceMemoryPeak( uint64_t nCommittedBytes, uint64_t nAllocatedBytes, uint64_t *pPeakCommitted,
@@ -195,7 +195,8 @@ void SIRVulkanDevice::updateMemoryHighWater( void ) noexcept
 	if ( m_Allocator == nullptr ) {
 		return;
 	}
-	VmaBudget budgets[VK_MAX_MEMORY_HEAPS] = {};
+	VmaBudget budgets[VK_MAX_MEMORY_HEAPS];
+	memset( budgets, 0, sizeof( budgets ) );
 	vmaGetHeapBudgets( m_Allocator, budgets );
 	uint64_t nCommitted = 0;
 	uint64_t nAllocated = 0;
@@ -211,10 +212,10 @@ bool SIRVulkanDevice::isSealedMemoryType( const VkImageCreateInfo& info ) const 
 	if ( !m_bSealedPools ) {
 		return true;
 	}
-	const PFN_vkCreateImage pfnCreateImage = ( PFN_vkCreateImage )m_pfnGetDeviceProcAddr( m_Device, "vkCreateImage" );
+	const PFN_vkCreateImage pfnCreateImage = static_cast<PFN_vkCreateImage>(m_pfnGetDeviceProcAddr( m_Device, "vkCreateImage" ));
 	const PFN_vkGetImageMemoryRequirements pfnGetRequirements =
-	    ( PFN_vkGetImageMemoryRequirements )m_pfnGetDeviceProcAddr( m_Device, "vkGetImageMemoryRequirements" );
-	const PFN_vkDestroyImage pfnDestroyImage = ( PFN_vkDestroyImage )m_pfnGetDeviceProcAddr( m_Device, "vkDestroyImage" );
+	    static_cast<PFN_vkGetImageMemoryRequirements>(m_pfnGetDeviceProcAddr( m_Device, "vkGetImageMemoryRequirements" ));
+	const PFN_vkDestroyImage pfnDestroyImage = static_cast<PFN_vkDestroyImage>(m_pfnGetDeviceProcAddr( m_Device, "vkDestroyImage" ));
 	if ( pfnCreateImage == nullptr || pfnGetRequirements == nullptr || pfnDestroyImage == nullptr ) {
 		return false;
 	}
@@ -222,7 +223,7 @@ bool SIRVulkanDevice::isSealedMemoryType( const VkImageCreateInfo& info ) const 
 	if ( pfnCreateImage( m_Device, &info, nullptr, &hProbe ) != VK_SUCCESS ) {
 		return false;
 	}
-	VkMemoryRequirements requirements = {};
+	VkMemoryRequirements requirements {};
 	pfnGetRequirements( m_Device, hProbe, &requirements );
 	pfnDestroyImage( m_Device, hProbe, nullptr );
 	const uint32_t nType = m_szSealedMemoryTypes[0];
@@ -237,10 +238,10 @@ bool SIRVulkanDevice::isSealedBufferMemoryType( const VkBufferCreateInfo& info, 
 	if ( iPool >= 3 ) {
 		return false;
 	}
-	const PFN_vkCreateBuffer pfnCreateBuffer = ( PFN_vkCreateBuffer )m_pfnGetDeviceProcAddr( m_Device, "vkCreateBuffer" );
+	const PFN_vkCreateBuffer pfnCreateBuffer = static_cast<PFN_vkCreateBuffer>(m_pfnGetDeviceProcAddr( m_Device, "vkCreateBuffer" ));
 	const PFN_vkGetBufferMemoryRequirements pfnGetRequirements =
-	    ( PFN_vkGetBufferMemoryRequirements )m_pfnGetDeviceProcAddr( m_Device, "vkGetBufferMemoryRequirements" );
-	const PFN_vkDestroyBuffer pfnDestroyBuffer = ( PFN_vkDestroyBuffer )m_pfnGetDeviceProcAddr( m_Device, "vkDestroyBuffer" );
+	    static_cast<PFN_vkGetBufferMemoryRequirements>(m_pfnGetDeviceProcAddr( m_Device, "vkGetBufferMemoryRequirements" ));
+	const PFN_vkDestroyBuffer pfnDestroyBuffer = static_cast<PFN_vkDestroyBuffer>(m_pfnGetDeviceProcAddr( m_Device, "vkDestroyBuffer" ));
 	if ( pfnCreateBuffer == nullptr || pfnGetRequirements == nullptr || pfnDestroyBuffer == nullptr ) {
 		return false;
 	}
@@ -248,7 +249,7 @@ bool SIRVulkanDevice::isSealedBufferMemoryType( const VkBufferCreateInfo& info, 
 	if ( pfnCreateBuffer( m_Device, &info, nullptr, &hProbe ) != VK_SUCCESS ) {
 		return false;
 	}
-	VkMemoryRequirements requirements = {};
+	VkMemoryRequirements requirements {};
 	pfnGetRequirements( m_Device, hProbe, &requirements );
 	pfnDestroyBuffer( m_Device, hProbe, nullptr );
 	return sirVulkanMemoryTypeCompatible( m_szSealedMemoryTypes[iPool], requirements.memoryTypeBits );

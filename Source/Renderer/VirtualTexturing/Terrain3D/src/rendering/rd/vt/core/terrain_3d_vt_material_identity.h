@@ -19,7 +19,7 @@ static inline uint64_t t3d_vt_material_stable_key_from_resource_path( const godo
 	if ( Path.length() <= 0 ) {
 		return 0u;
 	}
-	const uint64_t nKey = t3dHashStableBytes( Path.get_data(), ( uint64_t )Path.length() );
+	const uint64_t nKey = t3dHashStableBytes( Path.get_data(), static_cast<uint64_t>(Path.length() ));
 	return nKey == 0u ? 1u : nKey;
 }
 

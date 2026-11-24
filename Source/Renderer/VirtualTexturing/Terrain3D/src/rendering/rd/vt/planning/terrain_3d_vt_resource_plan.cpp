@@ -68,8 +68,8 @@ static bool t3d_vt_compute_block_texture_bytes( uint32_t pWidth, uint32_t pHeigh
 		return false;
 	}
 
-	const uint64_t nBlocksX = ( ( uint64_t )pWidth + pBlockWidth - 1u ) / pBlockWidth;
-	const uint64_t nBlocksY = ( ( uint64_t )pHeight + pBlockHeight - 1u ) / pBlockHeight;
+	const uint64_t nBlocksX = ( static_cast<uint64_t>(pWidth) + pBlockWidth - 1u ) / pBlockWidth;
+	const uint64_t nBlocksY = ( static_cast<uint64_t>(pHeight) + pBlockHeight - 1u ) / pBlockHeight;
 	uint64_t nBlocks = 0u;
 	uint64_t nLayerBytes = 0u;
 	if ( !t3dCheckedMultiply<uint64_t>( nBlocksX, nBlocksY, nBlocks ) ) {
@@ -83,7 +83,7 @@ static bool t3d_vt_compute_block_texture_bytes( uint32_t pWidth, uint32_t pHeigh
 
 t3dVTGpuProfile_t t3d_vt_make_development_gpu_profile()
 {
-	t3dVTGpuProfile_t profile = {};
+	t3dVTGpuProfile_t profile {};
 	profile.nVtAllocationRecordBytes = sizeof( t3dVTAllocation_t );
 	profile.nVtPageTableEntryBytes = sizeof( t3dVTPageEntry_t );
 	profile.nVtPhysicalTileSize = 136u;
@@ -143,7 +143,7 @@ bool t3d_vt_compute_resource_plan( const t3dWorldLimits_t& pLimits, const t3dVTG
 	uint64_t nBytes = 0u;
 	uint64_t nCount = 0u;
 	if ( !t3dCheckedMultiply<uint64_t>( pLimits.nMaxMaterials, 4u, nCount ) ||
-	     !t3dCheckedAdd<uint64_t>( nCount, ( uint64_t )T3D_TERRAIN_MEGAVT_ALLOCATION_CAPACITY * 12u, nCount ) ||
+	     !t3dCheckedAdd<uint64_t>( nCount, static_cast<uint64_t>(T3D_TERRAIN_MEGAVT_ALLOCATION_CAPACITY) * 12u, nCount ) ||
 	     !t3dCheckedMultiply<uint64_t>( nCount, pProfile.nVtAllocationRecordBytes, nBytes ) )
 		return false;
 	rPlan.nBufferBytes[T3D_VT_GPU_BUFFER_ALLOCATION_TABLE] = nBytes;
@@ -158,7 +158,7 @@ bool t3d_vt_compute_resource_plan( const t3dWorldLimits_t& pLimits, const t3dVTG
 	rPlan.nBufferBytes[T3D_VT_GPU_BUFFER_PAGE_TABLE] = nBytes;
 #if defined( T3D_ENABLE_VT_RESIDENT_ANCESTOR_HINTS ) && T3D_ENABLE_VT_RESIDENT_ANCESTOR_HINTS
 	// One 16-byte control record and one record per virtual page. Cold opt-in.
-	if ( !t3dCheckedMultiply<uint64_t>( ( uint64_t )pLimits.nMaxVtVirtualPages + 1u, 16u, nBytes ) || nBytes > UINT32_MAX )
+	if ( !t3dCheckedMultiply<uint64_t>( static_cast<uint64_t>(pLimits.nMaxVtVirtualPages) + 1u, 16u, nBytes ) || nBytes > UINT32_MAX )
 		return false;
 	rPlan.nBufferBytes[T3D_VT_GPU_BUFFER_ANCESTOR_HINTS] = nBytes;
 #endif
@@ -172,13 +172,13 @@ bool t3d_vt_compute_resource_plan( const t3dWorldLimits_t& pLimits, const t3dVTG
 		return false;
 	}
 	rPlan.nBufferBytes[T3D_VT_GPU_BUFFER_TAIL_METADATA] = nBytes;
-	rPlan.nVtTailEntryCapacity = ( uint32_t )nTailEntries;
+	rPlan.nVtTailEntryCapacity = static_cast<uint32_t>(nTailEntries);
 	const uint32_t feedback_entries =
 	    MAX( 2u, MIN( pLimits.nMaxVtRequests, ( pLimits.nMaxReadbackBytesPerFrame > sizeof( t3dVTRequestGpuCounters_t )
-	                                                ? pLimits.nMaxReadbackBytesPerFrame - ( uint32_t )sizeof( t3dVTRequestGpuCounters_t )
+	                                                ? pLimits.nMaxReadbackBytesPerFrame - static_cast<uint32_t>(sizeof( t3dVTRequestGpuCounters_t ))
 	                                                : 0u ) /
-		                                          ( uint32_t )sizeof( t3dVTRequestHashEntry_t ) ) );
-	rPlan.nBufferBytes[T3D_VT_GPU_BUFFER_FRAGMENT_HASH] = ( uint64_t )feedback_entries * sizeof( t3dVTRequestHashEntry_t );
+		                                          static_cast<uint32_t>(sizeof( t3dVTRequestHashEntry_t ) ) ));
+	rPlan.nBufferBytes[T3D_VT_GPU_BUFFER_FRAGMENT_HASH] = static_cast<uint64_t>(feedback_entries * sizeof(  t3dVTRequestHashEntry_t  ));
 	rPlan.nBufferBytes[T3D_VT_GPU_BUFFER_FRAGMENT_COUNTERS] = sizeof( t3dVTRequestGpuCounters_t );
 	rPlan.nBufferBytes[T3D_VT_GPU_BUFFER_FRAGMENT_PARAMS] = sizeof( t3dVTFragmentFeedbackParams_t );
 	t3dVTFeedbackGridLayout_t feedbackLayout{};
@@ -189,14 +189,14 @@ bool t3d_vt_compute_resource_plan( const t3dWorldLimits_t& pLimits, const t3dVTG
 	    T3D_VT_PACK_TAIL_ATLAS_WIDTH > T3D_VT_TAIL_ATLAS_WIDTH ? T3D_VT_PACK_TAIL_ATLAS_WIDTH : T3D_VT_TAIL_ATLAS_WIDTH;
 	const uint64_t nLegacyTailRows64 = ( nTailEntries + T3D_VT_TAIL_TILES_PER_ROW - 1u ) / T3D_VT_TAIL_TILES_PER_ROW;
 	// BC1 can hold two logical channels (instance ALBEDO and ORM).
-	const uint64_t nPackFamilySlots = ( ( uint64_t )pLimits.nMaxMaterials + T3D_TERRAIN_MEGAVT_ALLOCATION_CAPACITY * 3u ) * 3u;
+	const uint64_t nPackFamilySlots = ( static_cast<uint64_t>(pLimits.nMaxMaterials) + T3D_TERRAIN_MEGAVT_ALLOCATION_CAPACITY * 3u ) * 3u;
 	const uint64_t nPackTailRows64 = ( nPackFamilySlots + T3D_VT_PACK_TAILS_PER_ROW - 1u ) / T3D_VT_PACK_TAILS_PER_ROW;
 	if ( T3D_VT_PACK_TAILS_PER_ROW == 0u || nLegacyTailRows64 == 0u || nPackTailRows64 == 0u ||
 	     nLegacyTailRows64 > UINT32_MAX / T3D_VT_TAIL_TILE || nPackTailRows64 > UINT32_MAX / T3D_VT_PACK_TAIL_SLOT_HEIGHT ) {
 		return false;
 	}
-	const uint32_t nLegacyTailHeight = ( uint32_t )nLegacyTailRows64 * T3D_VT_TAIL_TILE;
-	const uint32_t nPackTailHeight = ( uint32_t )nPackTailRows64 * T3D_VT_PACK_TAIL_SLOT_HEIGHT;
+	const uint32_t nLegacyTailHeight = static_cast<uint32_t>(nLegacyTailRows64) * T3D_VT_TAIL_TILE;
+	const uint32_t nPackTailHeight = static_cast<uint32_t>(nPackTailRows64) * T3D_VT_PACK_TAIL_SLOT_HEIGHT;
 	rPlan.nVtTailAtlasHeight = nLegacyTailHeight > nPackTailHeight ? nLegacyTailHeight : nPackTailHeight;
 	// Table capacities stay fixed; texture storage only needs the currently
 	// published tails. Package replacement already recreates this resource image.

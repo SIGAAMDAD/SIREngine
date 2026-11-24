@@ -52,35 +52,35 @@ int main( void )
 	float szPixelErrors[3] = { -1.0f, -1.0f, -1.0f };
 	sirWorldHLODProjectionOutput_t pixelOutput = { szPixelErrors, 3 };
 
-	SIR_HLOD_CHECK( sirWorldHLODProjectErrors( projection, pixelOutput ) == SIR_WORLD_HLOD_OK );
+	SIR_HLOD_CHECK( sirWorldHLODProjectErrors( projection, pixelOutput ) == SIRWorldHLODResult::SIR_WORLD_HLOD_OK );
 	SIR_HLOD_CHECK( sirHLODNear( szPixelErrors[0], 50.0f ) );
 	SIR_HLOD_CHECK( sirHLODNear( szPixelErrors[1], 10.0f ) && sirHLODNear( szPixelErrors[2], 10.0f ) );
 	projection.view.fCameraForward[2] = 10.0;
-	SIR_HLOD_CHECK( sirWorldHLODProjectErrors( projection, pixelOutput ) == SIR_WORLD_HLOD_OK );
+	SIR_HLOD_CHECK( sirWorldHLODProjectErrors( projection, pixelOutput ) == SIRWorldHLODResult::SIR_WORLD_HLOD_OK );
 	SIR_HLOD_CHECK( sirHLODNear( szPixelErrors[0], 50.0f ) );
 	projection.view.fCameraForward[2] = 1.0;
 
 	// Moving toward the object increases projected error; moving away decreases it.
 	projection.view.fCameraPosition[2] = -15.0;
-	SIR_HLOD_CHECK( sirWorldHLODProjectErrors( projection, pixelOutput ) == SIR_WORLD_HLOD_OK );
+	SIR_HLOD_CHECK( sirWorldHLODProjectErrors( projection, pixelOutput ) == SIRWorldHLODResult::SIR_WORLD_HLOD_OK );
 	SIR_HLOD_CHECK( sirHLODNear( szPixelErrors[0], 20.0f ) );
 	projection.view.fCameraPosition[2] = -90.0;
-	SIR_HLOD_CHECK( sirWorldHLODProjectErrors( projection, pixelOutput ) == SIR_WORLD_HLOD_OK );
+	SIR_HLOD_CHECK( sirWorldHLODProjectErrors( projection, pixelOutput ) == SIRWorldHLODResult::SIR_WORLD_HLOD_OK );
 	SIR_HLOD_CHECK( sirHLODNear( szPixelErrors[0], 5.0f ) );
 
 	projection.view.eMode = SIR_WORLD_HLOD_PROJECTION_ORTHOGRAPHIC;
 	projection.view.fVerticalParameter = 10.0;
-	SIR_HLOD_CHECK( sirWorldHLODProjectErrors( projection, pixelOutput ) == SIR_WORLD_HLOD_OK );
+	SIR_HLOD_CHECK( sirWorldHLODProjectErrors( projection, pixelOutput ) == SIRWorldHLODResult::SIR_WORLD_HLOD_OK );
 	SIR_HLOD_CHECK( sirHLODNear( szPixelErrors[0], 100.0f ) );
 	projection.view.fCameraPosition[2] = 0.0;
-	SIR_HLOD_CHECK( sirWorldHLODProjectErrors( projection, pixelOutput ) == SIR_WORLD_HLOD_OK );
+	SIR_HLOD_CHECK( sirWorldHLODProjectErrors( projection, pixelOutput ) == SIRWorldHLODResult::SIR_WORLD_HLOD_OK );
 	SIR_HLOD_CHECK( sirHLODNear( szPixelErrors[0], 100.0f ) );
 
 	// Error is conservative inside the bounding box and for off-frustum boxes.
 	projection.view.eMode = SIR_WORLD_HLOD_PROJECTION_PERSPECTIVE;
 	projection.view.fVerticalParameter = 1.5707963267948966;
 	projection.view.fCameraPosition[2] = 10.5;
-	SIR_HLOD_CHECK( sirWorldHLODProjectErrors( projection, pixelOutput ) == SIR_WORLD_HLOD_OK );
+	SIR_HLOD_CHECK( sirWorldHLODProjectErrors( projection, pixelOutput ) == SIRWorldHLODResult::SIR_WORLD_HLOD_OK );
 	SIR_HLOD_CHECK( sirHLODNear( szPixelErrors[0], 500.0f ) );
 
 	// Precision survives a large origin offset represented in double.
@@ -90,7 +90,7 @@ int main( void )
 		szBounds[iNode].fMinimum[0] += 100000000.0f;
 		szBounds[iNode].fMaximum[0] += 100000000.0f;
 	}
-	SIR_HLOD_CHECK( sirWorldHLODProjectErrors( projection, pixelOutput ) == SIR_WORLD_HLOD_OK );
+	SIR_HLOD_CHECK( sirWorldHLODProjectErrors( projection, pixelOutput ) == SIRWorldHLODResult::SIR_WORLD_HLOD_OK );
 	SIR_HLOD_CHECK( sirHLODNear( szPixelErrors[0], 50.0f ) );
 	projection.view.fCameraPosition[0] = 0.0;
 
@@ -98,20 +98,20 @@ int main( void )
 	szPixelErrors[0] = 1234.0f;
 	szPixelErrors[1] = 5678.0f;
 	szGeomErrors[2] = NAN;
-	SIR_HLOD_CHECK( sirWorldHLODProjectErrors( projection, pixelOutput ) == SIR_WORLD_HLOD_INVALID_HIERARCHY );
+	SIR_HLOD_CHECK( sirWorldHLODProjectErrors( projection, pixelOutput ) == SIRWorldHLODResult::SIR_WORLD_HLOD_INVALID_HIERARCHY );
 	SIR_HLOD_CHECK( szPixelErrors[0] == 1234.0f && szPixelErrors[1] == 5678.0f );
 	szGeomErrors[2] = 0.2f;
 	szBounds[2].fMaximum[1] = -3.0f;
-	SIR_HLOD_CHECK( sirWorldHLODProjectErrors( projection, pixelOutput ) == SIR_WORLD_HLOD_INVALID_HIERARCHY );
+	SIR_HLOD_CHECK( sirWorldHLODProjectErrors( projection, pixelOutput ) == SIRWorldHLODResult::SIR_WORLD_HLOD_INVALID_HIERARCHY );
 	szBounds[2].fMaximum[1] = 2.0f;
 	pixelOutput.nCapacity = 2;
-	SIR_HLOD_CHECK( sirWorldHLODProjectErrors( projection, pixelOutput ) == SIR_WORLD_HLOD_INVALID_ARGUMENT );
+	SIR_HLOD_CHECK( sirWorldHLODProjectErrors( projection, pixelOutput ) == SIRWorldHLODResult::SIR_WORLD_HLOD_INVALID_ARGUMENT );
 	pixelOutput.nCapacity = 3;
 	projection.view.fCameraForward[2] = 0.0;
-	SIR_HLOD_CHECK( sirWorldHLODProjectErrors( projection, pixelOutput ) == SIR_WORLD_HLOD_INVALID_ARGUMENT );
+	SIR_HLOD_CHECK( sirWorldHLODProjectErrors( projection, pixelOutput ) == SIRWorldHLODResult::SIR_WORLD_HLOD_INVALID_ARGUMENT );
 	projection.view.fCameraForward[2] = 1.0;
 	projection.view.fVerticalParameter = 3.14159265358979323846;
-	SIR_HLOD_CHECK( sirWorldHLODProjectErrors( projection, pixelOutput ) == SIR_WORLD_HLOD_INVALID_ARGUMENT );
+	SIR_HLOD_CHECK( sirWorldHLODProjectErrors( projection, pixelOutput ) == SIRWorldHLODResult::SIR_WORLD_HLOD_INVALID_ARGUMENT );
 	projection.view.fVerticalParameter = 1.5707963267948966;
 
 	// Feed the actual projected errors into the planner and exercise split hysteresis.
@@ -120,7 +120,7 @@ int main( void )
 		szBounds[iNode].fMaximum[0] -= 100000000.0f;
 	}
 	projection.view.fCameraPosition[2] = -15.0;
-	SIR_HLOD_CHECK( sirWorldHLODProjectErrors( projection, pixelOutput ) == SIR_WORLD_HLOD_OK );
+	SIR_HLOD_CHECK( sirWorldHLODProjectErrors( projection, pixelOutput ) == SIRWorldHLODResult::SIR_WORLD_HLOD_OK );
 	sirWorldHLODNode_t szNodes[] = { { { 11, 3, 0 }, 7, 1, 2 }, { { 12, 3, 0 }, 7, 0, 0 }, { { 13, 3, 0 }, 7, 0, 0 } };
 	sirWorldHLODResidency_t szResidency[] = { { 7, 11, true }, { 7, 11, true }, { 7, 11, true } };
 	sirWorldHLODScratch_t szScratch[3] = {};
@@ -131,28 +131,28 @@ int main( void )
 	sirWorldHLODInput_t cutInput = { szNodes, szResidency, szPixelErrors, 3, 11, 30.0f };
 	sirWorldHLODOutput_t cutOutput = { szScratch, 3, szSelected, 3, &nSelected, szDemands, 3, &nDemands };
 
-	SIR_HLOD_CHECK( sirWorldHLODPlan( cutInput, cutOutput ) == SIR_WORLD_HLOD_OK );
+	SIR_HLOD_CHECK( sirWorldHLODPlan( cutInput, cutOutput ) == SIRWorldHLODResult::SIR_WORLD_HLOD_OK );
 	SIR_HLOD_CHECK( nSelected == 1 && szSelected[0] == 0 );
 	uint8_t szPreviouslySplit[] = { 1, 0, 0 };
 	sirWorldHLODHistory_t history = { szPreviouslySplit, 11, 15.0f };
-	SIR_HLOD_CHECK( sirWorldHLODPlanHysteretic( cutInput, history, cutOutput ) == SIR_WORLD_HLOD_OK );
+	SIR_HLOD_CHECK( sirWorldHLODPlanHysteretic( cutInput, history, cutOutput ) == SIRWorldHLODResult::SIR_WORLD_HLOD_OK );
 	SIR_HLOD_CHECK( nSelected == 2 && szSelected[0] == 1 && szSelected[1] == 2 );
 	SIR_HLOD_CHECK( szScratch[0].bActive && szScratch[0].bUseChildren );
 
 	// A lost child switches to resident parent and requests the missing detail
 	// even while the error sits between the refine and coarsen thresholds.
 	szResidency[2].bReady = false;
-	SIR_HLOD_CHECK( sirWorldHLODPlanHysteretic( cutInput, history, cutOutput ) == SIR_WORLD_HLOD_OK );
+	SIR_HLOD_CHECK( sirWorldHLODPlanHysteretic( cutInput, history, cutOutput ) == SIRWorldHLODResult::SIR_WORLD_HLOD_OK );
 	SIR_HLOD_CHECK( nSelected == 1 && szSelected[0] == 0 && nDemands == 1 && szDemands[0].nNodeIndex == 2 );
 
 	// Previous-world split history must be ignored after a generation change.
 	history.nWorldGeneration = 10;
-	SIR_HLOD_CHECK( sirWorldHLODPlanHysteretic( cutInput, history, cutOutput ) == SIR_WORLD_HLOD_OK );
+	SIR_HLOD_CHECK( sirWorldHLODPlanHysteretic( cutInput, history, cutOutput ) == SIRWorldHLODResult::SIR_WORLD_HLOD_OK );
 	SIR_HLOD_CHECK( nSelected == 1 && szSelected[0] == 0 && nDemands == 0 );
 	history.nWorldGeneration = 11;
 	history.fCoarsenProjectedError = 31.0f;
-	SIR_HLOD_CHECK( sirWorldHLODPlanHysteretic( cutInput, history, cutOutput ) == SIR_WORLD_HLOD_INVALID_ARGUMENT );
+	SIR_HLOD_CHECK( sirWorldHLODPlanHysteretic( cutInput, history, cutOutput ) == SIRWorldHLODResult::SIR_WORLD_HLOD_INVALID_ARGUMENT );
 	history.fCoarsenProjectedError = NAN;
-	SIR_HLOD_CHECK( sirWorldHLODPlanHysteretic( cutInput, history, cutOutput ) == SIR_WORLD_HLOD_INVALID_ARGUMENT );
+	SIR_HLOD_CHECK( sirWorldHLODPlanHysteretic( cutInput, history, cutOutput ) == SIRWorldHLODResult::SIR_WORLD_HLOD_INVALID_ARGUMENT );
 	return 0;
 }

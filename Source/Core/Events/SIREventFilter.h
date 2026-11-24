@@ -14,8 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIREVENTFILTER_H__
-#define __SIRENGINE_SIREVENTFILTER_H__
+#ifndef __SIR_EVENTFILTER_H__
+#define __SIR_EVENTFILTER_H__
 
 #include <Core/SIRPCH.h>
 
@@ -68,4 +68,4 @@ private:
 	uint32_t m_nDelivered;
 };
 
-#endif // __SIRENGINE_SIREVENTFILTER_H__
+#endif // __SIR_EVENTFILTER_H__

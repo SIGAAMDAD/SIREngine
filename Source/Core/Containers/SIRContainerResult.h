@@ -15,8 +15,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRCONTAINERRESULT_H__
-#define __SIRENGINE_SIRCONTAINERRESULT_H__
+#ifndef __SIR_CONTAINERRESULT_H__
+#define __SIR_CONTAINERRESULT_H__
 
 #include <Core/SIRPCH.h>
 
@@ -26,8 +26,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-typedef enum sirContainerResult_e : uint8_t
-{
+enum class SIRContainerResult : uint8_t {
 	SIR_CONTAINER_OK = 0,
 	SIR_CONTAINER_OUT_OF_MEMORY = 1,
 	SIR_CONTAINER_CAPACITY_EXCEEDED = 2,
@@ -38,7 +37,7 @@ typedef enum sirContainerResult_e : uint8_t
 	SIR_CONTAINER_CLOSED = 7,
 	SIR_CONTAINER_BUSY = 8,
 	SIR_CONTAINER_INVALID_ARGUMENT = 9
-} sirContainerResult_t;
+};
 
 typedef struct sirContainerAllocator_s
 {
@@ -70,4 +69,4 @@ typedef struct sirContainerFootprint_s
 	uint64_t nLogicalPayloadBytes;
 } sirContainerFootprint_t;
 
-#endif // __SIRENGINE_SIRCONTAINERRESULT_H__
+#endif // __SIR_CONTAINERRESULT_H__

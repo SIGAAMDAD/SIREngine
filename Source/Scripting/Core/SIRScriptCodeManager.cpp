@@ -24,7 +24,7 @@ SIRScriptCodeManager::SIRScriptCodeManager( const SIRScriptBindingRegistry *pReg
 SIRScriptCodeManager::~SIRScriptCodeManager( void ) noexcept
 {
 	// Runtime must release every source lease before manager destruction.
-	( void )shutdown();
+	static_cast<void>(shutdown());
 }
 
 bool SIRScriptCodeManager::isOwnerThread( void ) const noexcept
@@ -42,24 +42,24 @@ bool SIRScriptCodeManager::validView( const sirScriptProgramView_t& view, const 
 {
 	return view.nProgramId == artifact.nProgramId && view.nRevision == artifact.nRevision && view.nFormatId == artifact.nFormatId &&
 	       view.pData != nullptr && view.nBytes != 0 && view.nAlignment != 0 && view.nAlignment <= 4096 &&
-	       ( view.nAlignment & ( view.nAlignment - 1 ) ) == 0 && ( ( uintptr_t )view.pData & ( view.nAlignment - 1 ) ) == 0;
+	       ( view.nAlignment & ( view.nAlignment - 1 ) ) == 0 && ( reinterpret_cast<uintptr_t>(view.pData) & ( view.nAlignment - 1 ) ) == 0;
 }
 
-sirScriptResult_t SIRScriptCodeManager::configure( uint64_t nTargetId, const sirScriptProgramSourceAPI_t& provider ) noexcept
+SIRScriptResult SIRScriptCodeManager::configure( uint64_t nTargetId, const sirScriptProgramSourceAPI_t& provider ) noexcept
 {
 	if ( !isOwnerThread() || m_bInProvider ) {
-		return SIR_SCRIPT_BUSY;
+		return SIRScriptResult::SIR_SCRIPT_BUSY;
 	}
 	if ( nTargetId == 0 || provider.nABIRevision != SIR_SCRIPT_PROGRAM_SOURCE_ABI_REVISION || provider.pAcquire == nullptr ||
 	     provider.pRelease == nullptr ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 	if ( m_Provider.pAcquire != nullptr ) {
-		return SIR_SCRIPT_WRONG_STATE;
+		return SIRScriptResult::SIR_SCRIPT_WRONG_STATE;
 	}
 	m_nTargetId = nTargetId;
 	m_Provider = provider;
-	return SIR_SCRIPT_OK;
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
 int32_t SIRScriptCodeManager::resolve( sirScriptCodeHandle_t handle ) const noexcept
@@ -69,49 +69,49 @@ int32_t SIRScriptCodeManager::resolve( sirScriptCodeHandle_t handle ) const noex
 	}
 	const uint32_t iSlot = handle.nSlot - 1;
 	const sirScriptCodeSlot_t& slot = m_szArtifacts[iSlot];
-	return slot.bOccupied && slot.nGeneration == handle.nGeneration ? ( int32_t )iSlot : -1;
+	return slot.bOccupied && slot.nGeneration == handle.nGeneration ? static_cast<int32_t>(iSlot) : -1;
 }
 
-sirScriptResult_t SIRScriptCodeManager::stage( const sirScriptCodeArtifact_t& artifact, sirScriptCodeHandle_t *pHandle ) noexcept
+SIRScriptResult SIRScriptCodeManager::stage( const sirScriptCodeArtifact_t& artifact, sirScriptCodeHandle_t *pHandle ) noexcept
 {
 	if ( !isOwnerThread() || m_bInProvider ) {
-		return SIR_SCRIPT_BUSY;
+		return SIRScriptResult::SIR_SCRIPT_BUSY;
 	}
 	if ( pHandle == nullptr ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 	if ( m_pRegistry == nullptr || !m_pRegistry->isPublished() || m_Provider.pAcquire == nullptr ) {
-		return SIR_SCRIPT_WRONG_STATE;
+		return SIRScriptResult::SIR_SCRIPT_WRONG_STATE;
 	}
 	if ( artifact.nBackendId == 0 || artifact.nProgramId == 0 || artifact.nRevision == 0 || artifact.nFormatId == 0 ||
 	     artifact.nSchemaFingerprint == 0 || artifact.nTargetId == 0 || artifact.nBuildFingerprint == 0 ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 	if ( artifact.nSchemaFingerprint != m_pRegistry->schemaFingerprint() || artifact.nTargetId != m_nTargetId ) {
-		return SIR_SCRIPT_TYPE_MISMATCH;
+		return SIRScriptResult::SIR_SCRIPT_TYPE_MISMATCH;
 	}
 	int32_t iFree = -1;
 	for ( uint32_t iSlot = 0; iSlot < MAX_ARTIFACTS; ++iSlot ) {
 		const sirScriptCodeSlot_t& slot = m_szArtifacts[iSlot];
 		if ( !slot.bOccupied && iFree < 0 ) {
-			iFree = ( int32_t )iSlot;
+			iFree = static_cast<int32_t>(iSlot);
 		}
 		if ( slot.bOccupied && slot.artifact.nBackendId == artifact.nBackendId && slot.artifact.nProgramId == artifact.nProgramId &&
 		     slot.artifact.nRevision == artifact.nRevision ) {
-			return SIR_SCRIPT_DUPLICATE;
+			return SIRScriptResult::SIR_SCRIPT_DUPLICATE;
 		}
 	}
 	if ( iFree < 0 ) {
-		return SIR_SCRIPT_CAPACITY_EXCEEDED;
+		return SIRScriptResult::SIR_SCRIPT_CAPACITY_EXCEEDED;
 	}
 
-	sirScriptProgramView_t view = {};
+	sirScriptProgramView_t view {};
 	uint64_t nProviderLease = 0;
 	m_bInProvider = true;
-	const sirScriptResult_t eAcquire =
+	const SIRScriptResult eAcquire =
 	    m_Provider.pAcquire( m_Provider.pUser, artifact.nBackendId, artifact.nProgramId, artifact.nRevision, &view, &nProviderLease );
 	m_bInProvider = false;
-	if ( eAcquire != SIR_SCRIPT_OK ) {
+	if ( eAcquire != SIRScriptResult::SIR_SCRIPT_OK ) {
 		// A failed acquisition is forbidden from handing ownership to the caller.
 		if ( nProviderLease != 0 ) {
 			m_bInProvider = true;
@@ -121,13 +121,13 @@ sirScriptResult_t SIRScriptCodeManager::stage( const sirScriptCodeArtifact_t& ar
 		return eAcquire;
 	}
 	if ( nProviderLease == 0 ) {
-		return SIR_SCRIPT_BACKEND_FAILURE;
+		return SIRScriptResult::SIR_SCRIPT_BACKEND_FAILURE;
 	}
 	if ( !validView( view, artifact ) ) {
 		m_bInProvider = true;
 		m_Provider.pRelease( m_Provider.pUser, nProviderLease );
 		m_bInProvider = false;
-		return SIR_SCRIPT_TYPE_MISMATCH;
+		return SIRScriptResult::SIR_SCRIPT_TYPE_MISMATCH;
 	}
 
 	sirScriptCodeSlot_t& slot = m_szArtifacts[iFree];
@@ -139,8 +139,8 @@ sirScriptResult_t SIRScriptCodeManager::stage( const sirScriptCodeArtifact_t& ar
 	slot.bOccupied = true;
 	slot.bActive = false;
 	slot.bRetired = false;
-	*pHandle = { ( uint32_t )iFree + 1, slot.nGeneration };
-	return SIR_SCRIPT_OK;
+	*pHandle = { static_cast<uint32_t>(iFree) + 1, slot.nGeneration };
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
 void SIRScriptCodeManager::destroySlot( uint32_t iSlot ) noexcept
@@ -161,18 +161,18 @@ void SIRScriptCodeManager::destroySlot( uint32_t iSlot ) noexcept
 	m_bInProvider = false;
 }
 
-sirScriptResult_t SIRScriptCodeManager::activate( sirScriptCodeHandle_t handle ) noexcept
+SIRScriptResult SIRScriptCodeManager::activate( sirScriptCodeHandle_t handle ) noexcept
 {
 	if ( !isOwnerThread() || m_bInProvider ) {
-		return SIR_SCRIPT_BUSY;
+		return SIRScriptResult::SIR_SCRIPT_BUSY;
 	}
 	const int32_t iSlot = resolve( handle );
 	if ( iSlot < 0 ) {
-		return SIR_SCRIPT_INVALID_HANDLE;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_HANDLE;
 	}
 	sirScriptCodeSlot_t& candidate = m_szArtifacts[iSlot];
 	if ( candidate.bActive || candidate.bRetired ) {
-		return SIR_SCRIPT_WRONG_STATE;
+		return SIRScriptResult::SIR_SCRIPT_WRONG_STATE;
 	}
 	for ( uint32_t iOld = 0; iOld < MAX_ARTIFACTS; ++iOld ) {
 		sirScriptCodeSlot_t& old = m_szArtifacts[iOld];
@@ -186,84 +186,84 @@ sirScriptResult_t SIRScriptCodeManager::activate( sirScriptCodeHandle_t handle )
 		}
 	}
 	candidate.bActive = true;
-	return SIR_SCRIPT_OK;
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
-sirScriptResult_t SIRScriptCodeManager::discard( sirScriptCodeHandle_t handle ) noexcept
+SIRScriptResult SIRScriptCodeManager::discard( sirScriptCodeHandle_t handle ) noexcept
 {
 	if ( !isOwnerThread() || m_bInProvider ) {
-		return SIR_SCRIPT_BUSY;
+		return SIRScriptResult::SIR_SCRIPT_BUSY;
 	}
 	const int32_t iSlot = resolve( handle );
 	if ( iSlot < 0 ) {
-		return SIR_SCRIPT_INVALID_HANDLE;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_HANDLE;
 	}
 	if ( m_szArtifacts[iSlot].bActive || m_szArtifacts[iSlot].bRetired || m_szArtifacts[iSlot].nPins != 0 ) {
-		return SIR_SCRIPT_WRONG_STATE;
+		return SIRScriptResult::SIR_SCRIPT_WRONG_STATE;
 	}
-	destroySlot( ( uint32_t )iSlot );
-	return SIR_SCRIPT_OK;
+	destroySlot( static_cast<uint32_t>(iSlot) );
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
-sirScriptResult_t SIRScriptCodeManager::retire( sirScriptCodeHandle_t handle ) noexcept
+SIRScriptResult SIRScriptCodeManager::retire( sirScriptCodeHandle_t handle ) noexcept
 {
 	if ( !isOwnerThread() || m_bInProvider ) {
-		return SIR_SCRIPT_BUSY;
+		return SIRScriptResult::SIR_SCRIPT_BUSY;
 	}
 	const int32_t iSlot = resolve( handle );
 	if ( iSlot < 0 ) {
-		return SIR_SCRIPT_INVALID_HANDLE;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_HANDLE;
 	}
 	sirScriptCodeSlot_t& slot = m_szArtifacts[iSlot];
 	if ( slot.bRetired ) {
-		return SIR_SCRIPT_WRONG_STATE;
+		return SIRScriptResult::SIR_SCRIPT_WRONG_STATE;
 	}
 	slot.bActive = false;
 	slot.bRetired = true;
 	if ( slot.nPins == 0 ) {
-		destroySlot( ( uint32_t )iSlot );
+		destroySlot( static_cast<uint32_t>(iSlot) );
 	}
-	return SIR_SCRIPT_OK;
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
-sirScriptResult_t SIRScriptCodeManager::activeRevision( uint64_t nBackendId, uint64_t nProgramId, uint64_t *pRevision ) const noexcept
+SIRScriptResult SIRScriptCodeManager::activeRevision( uint64_t nBackendId, uint64_t nProgramId, uint64_t *pRevision ) const noexcept
 {
 	if ( !isOwnerThread() || m_bInProvider ) {
-		return SIR_SCRIPT_BUSY;
+		return SIRScriptResult::SIR_SCRIPT_BUSY;
 	}
 	if ( nBackendId == 0 || nProgramId == 0 || pRevision == nullptr ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 	for ( uint32_t iSlot = 0; iSlot < MAX_ARTIFACTS; ++iSlot ) {
 		const sirScriptCodeSlot_t& slot = m_szArtifacts[iSlot];
 		if ( slot.bOccupied && slot.bActive && slot.artifact.nBackendId == nBackendId && slot.artifact.nProgramId == nProgramId ) {
 			*pRevision = slot.artifact.nRevision;
-			return SIR_SCRIPT_OK;
+			return SIRScriptResult::SIR_SCRIPT_OK;
 		}
 	}
-	return SIR_SCRIPT_NOT_FOUND;
+	return SIRScriptResult::SIR_SCRIPT_NOT_FOUND;
 }
 
-sirScriptResult_t SIRScriptCodeManager::acquire( uint64_t nBackendId, uint64_t nProgramId, uint64_t nRevision,
+SIRScriptResult SIRScriptCodeManager::acquire( uint64_t nBackendId, uint64_t nProgramId, uint64_t nRevision,
                                                  sirScriptProgramView_t *pView, uint64_t *pToken ) noexcept
 {
 	if ( !isOwnerThread() || m_bInProvider ) {
-		return SIR_SCRIPT_BUSY;
+		return SIRScriptResult::SIR_SCRIPT_BUSY;
 	}
 	if ( pView == nullptr || pToken == nullptr || nBackendId == 0 || nProgramId == 0 || nRevision == 0 ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 	int32_t iCode = -1;
 	for ( uint32_t iSlot = 0; iSlot < MAX_ARTIFACTS; ++iSlot ) {
 		const sirScriptCodeSlot_t& slot = m_szArtifacts[iSlot];
 		if ( slot.bOccupied && slot.bActive && slot.artifact.nBackendId == nBackendId && slot.artifact.nProgramId == nProgramId &&
 		     slot.artifact.nRevision == nRevision ) {
-			iCode = ( int32_t )iSlot;
+			iCode = static_cast<int32_t>(iSlot);
 			break;
 		}
 	}
 	if ( iCode < 0 ) {
-		return SIR_SCRIPT_NOT_FOUND;
+		return SIRScriptResult::SIR_SCRIPT_NOT_FOUND;
 	}
 	for ( uint32_t iLease = 0; iLease < MAX_LEASES; ++iLease ) {
 		sirScriptCodeLeaseSlot_t& lease = m_szLeases[iLease];
@@ -271,14 +271,14 @@ sirScriptResult_t SIRScriptCodeManager::acquire( uint64_t nBackendId, uint64_t n
 			continue;
 		}
 		lease.nGeneration = nextGeneration( lease.nGeneration );
-		lease.iArtifact = ( uint32_t )iCode;
+		lease.iArtifact = static_cast<uint32_t>(iCode);
 		lease.bOccupied = true;
 		++m_szArtifacts[iCode].nPins;
 		*pView = m_szArtifacts[iCode].view;
-		*pToken = ( ( uint64_t )lease.nGeneration << 32 ) | ( iLease + 1 );
-		return SIR_SCRIPT_OK;
+		*pToken = ( static_cast<uint64_t>(lease.nGeneration) << 32 ) | ( iLease + 1 );
+		return SIRScriptResult::SIR_SCRIPT_OK;
 	}
-	return SIR_SCRIPT_CAPACITY_EXCEEDED;
+	return SIRScriptResult::SIR_SCRIPT_CAPACITY_EXCEEDED;
 }
 
 void SIRScriptCodeManager::release( uint64_t nToken ) noexcept
@@ -286,8 +286,8 @@ void SIRScriptCodeManager::release( uint64_t nToken ) noexcept
 	if ( !isOwnerThread() || m_bInProvider ) {
 		return;
 	}
-	const uint32_t nSlot = ( uint32_t )nToken;
-	const uint32_t nGeneration = ( uint32_t )( nToken >> 32 );
+	const uint32_t nSlot = static_cast<uint32_t>(nToken);
+	const uint32_t nGeneration = static_cast<uint32_t>( nToken >> 32 );
 	if ( nSlot == 0 || nSlot > MAX_LEASES || nGeneration == 0 ) {
 		return;
 	}
@@ -307,25 +307,25 @@ void SIRScriptCodeManager::release( uint64_t nToken ) noexcept
 	}
 }
 
-sirScriptResult_t SIRScriptCodeManager::acquireThunk( void *pUser, uint64_t nBackendId, uint64_t nProgramId, uint64_t nRevision,
+SIRScriptResult SIRScriptCodeManager::acquireThunk( void *pUser, uint64_t nBackendId, uint64_t nProgramId, uint64_t nRevision,
                                                       sirScriptProgramView_t *pView, uint64_t *pToken ) noexcept
 {
 	if ( pUser == nullptr ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
-	return ( ( SIRScriptCodeManager * )pUser )->acquire( nBackendId, nProgramId, nRevision, pView, pToken );
+	return static_cast<SIRScriptCodeManager *>(pUser)->acquire( nBackendId, nProgramId, nRevision, pView, pToken );
 }
 
 void SIRScriptCodeManager::releaseThunk( void *pUser, uint64_t nToken ) noexcept
 {
 	if ( pUser != nullptr ) {
-		( ( SIRScriptCodeManager * )pUser )->release( nToken );
+		static_cast<SIRScriptCodeManager *>(pUser)->release( nToken );
 	}
 }
 
 sirScriptProgramSourceAPI_t SIRScriptCodeManager::makeProgramSourceAPI( void ) noexcept
 {
-	sirScriptProgramSourceAPI_t api = {};
+	sirScriptProgramSourceAPI_t api {};
 	api.nABIRevision = SIR_SCRIPT_PROGRAM_SOURCE_ABI_REVISION;
 	api.pUser = this;
 	api.pAcquire = acquireThunk;
@@ -333,14 +333,14 @@ sirScriptProgramSourceAPI_t SIRScriptCodeManager::makeProgramSourceAPI( void ) n
 	return api;
 }
 
-sirScriptResult_t SIRScriptCodeManager::shutdown( void ) noexcept
+SIRScriptResult SIRScriptCodeManager::shutdown( void ) noexcept
 {
 	if ( !isOwnerThread() || m_bInProvider ) {
-		return SIR_SCRIPT_BUSY;
+		return SIRScriptResult::SIR_SCRIPT_BUSY;
 	}
 	for ( uint32_t iLease = 0; iLease < MAX_LEASES; ++iLease ) {
 		if ( m_szLeases[iLease].bOccupied ) {
-			return SIR_SCRIPT_BUSY;
+			return SIRScriptResult::SIR_SCRIPT_BUSY;
 		}
 	}
 	for ( uint32_t iSlot = 0; iSlot < MAX_ARTIFACTS; ++iSlot ) {
@@ -350,12 +350,12 @@ sirScriptResult_t SIRScriptCodeManager::shutdown( void ) noexcept
 	}
 	m_Provider = {};
 	m_nTargetId = 0;
-	return SIR_SCRIPT_OK;
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
 sirScriptCodeStats_t SIRScriptCodeManager::stats( void ) const noexcept
 {
-	sirScriptCodeStats_t stats = {};
+	sirScriptCodeStats_t stats {};
 	if ( !isOwnerThread() || m_bInProvider ) {
 		return stats;
 	}

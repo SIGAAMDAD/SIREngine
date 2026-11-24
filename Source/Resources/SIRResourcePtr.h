@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef SIRENGINE_SIRRESOURCEPTR_H
-#define SIRENGINE_SIRRESOURCEPTR_H
+#ifndef __SIR_RESOURCEPTR_H__
+#define __SIR_RESOURCEPTR_H__
 
 #include <Core/SIRPCH.h>
 
@@ -69,7 +69,7 @@ SIRResourcePtr<T>::~SIRResourcePtr( void ) noexcept
 template <typename T>
 SIRResourcePtr<T>::SIRResourcePtr( const SIRResourcePtr& rOther ) noexcept : m_pGraph( rOther.m_pGraph ), m_hResource( rOther.m_hResource )
 {
-	if ( m_pGraph != nullptr && SIRResourceAcquireReference( *m_pGraph, m_hResource, T::RESOURCE_KIND ) != SIR_RESOURCE_RESULT_SUCCESS ) {
+	if ( m_pGraph != nullptr && SIRResourceAcquireReference( *m_pGraph, m_hResource, T::RESOURCE_KIND ) != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ) {
 		// Copying an existing strong claim must never fail while graph lifetime is valid.
 		abort();
 	}
@@ -129,18 +129,18 @@ template <typename T>
 SIRResourceResult SIRResourcePtr<T>::resolve( const SIRResourceReadScope& rScope, SIRResourceView *pView ) const noexcept
 {
 	if ( m_pGraph == nullptr || pView == nullptr ) {
-		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	SIRResourceView base;
 	const SIRResourceResult eResult = m_pGraph->resolve( rScope, m_hResource, &base );
-	if ( eResult != SIR_RESOURCE_RESULT_SUCCESS ) {
+	if ( eResult != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ) {
 		return eResult;
 	}
 	if ( base.getKind() != T::RESOURCE_KIND ) {
-		return SIR_RESOURCE_RESULT_TYPE_MISMATCH;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_TYPE_MISMATCH;
 	}
 	*pView = base;
-	return SIR_RESOURCE_RESULT_SUCCESS;
+	return SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS;
 }
 
 template <typename T>
@@ -168,17 +168,17 @@ template <typename T>
 SIRResourceResult SIRResourcePtr<T>::acquire( SIRResourceGraph& rGraph, SIRResourceHandle hResource, SIRResourcePtr *pOut ) noexcept
 {
 	if ( pOut == nullptr ) {
-		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	const SIRResourceResult eResult = SIRResourceAcquireReference( rGraph, hResource, T::RESOURCE_KIND );
-	if ( eResult != SIR_RESOURCE_RESULT_SUCCESS ) {
+	if ( eResult != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ) {
 		return eResult;
 	}
 	SIRResourcePtr owned;
 	owned.m_pGraph = &rGraph;
 	owned.m_hResource = hResource;
 	pOut->swap( owned );
-	return SIR_RESOURCE_RESULT_SUCCESS;
+	return SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS;
 }
 
-#endif // SIRENGINE_SIRRESOURCEPTR_H
+#endif // __SIR_RESOURCEPTR_H__

@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSEMAPHORE_H__
-#define __SIRENGINE_SIRSEMAPHORE_H__
+#ifndef __SIR_SEMAPHORE_H__
+#define __SIR_SEMAPHORE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -32,8 +32,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #error "SIRSemaphore requires a Windows or Linux backend"
 #endif
 
-typedef enum sirSemaphoreResult_e : uint8_t
-{
+enum class SIRSemaphoreResult : uint8_t {
 	SIR_SEMAPHORE_OK = 0,
 	SIR_SEMAPHORE_WOULD_BLOCK = 1,
 	SIR_SEMAPHORE_TIMED_OUT = 2,
@@ -41,7 +40,7 @@ typedef enum sirSemaphoreResult_e : uint8_t
 	SIR_SEMAPHORE_LIMIT_REACHED = 4,
 	SIR_SEMAPHORE_INVALID_ARGUMENT = 5,
 	SIR_SEMAPHORE_OS_ERROR = 6
-} sirSemaphoreResult_t;
+};
 
 // Thread-shared, process-local counting semaphore.
 // create()/close() are lifecycle operations and must not race with any wait
@@ -66,13 +65,13 @@ public:
 	SIRSemaphore( SIRSemaphore&& ) = delete;
 	SIRSemaphore& operator=( SIRSemaphore&& ) = delete;
 
-	sirSemaphoreResult_t create( uint32_t nInitialCount = 0 ) noexcept;
-	sirSemaphoreResult_t post( void ) noexcept;
-	sirSemaphoreResult_t wait( void ) noexcept;
-	sirSemaphoreResult_t tryWait( void ) noexcept;
-	sirSemaphoreResult_t waitFor( uint32_t nMilliseconds ) noexcept;
-	sirSemaphoreResult_t close( void ) noexcept;
+	SIRSemaphoreResult create( uint32_t nInitialCount = 0 ) noexcept;
+	SIRSemaphoreResult post( void ) noexcept;
+	SIRSemaphoreResult wait( void ) noexcept;
+	SIRSemaphoreResult tryWait( void ) noexcept;
+	SIRSemaphoreResult waitFor( uint32_t nMilliseconds ) noexcept;
+	SIRSemaphoreResult close( void ) noexcept;
 	bool isOpen( void ) const noexcept;
 };
 
-#endif // __SIRENGINE_SIRSEMAPHORE_H__
+#endif // __SIR_SEMAPHORE_H__

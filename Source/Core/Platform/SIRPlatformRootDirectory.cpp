@@ -17,7 +17,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 static uint8_t sirRootLowerAscii( uint8_t nByte ) noexcept
 {
-	return nByte >= 'A' && nByte <= 'Z' ? ( uint8_t )( nByte + 'a' - 'A' ) : nByte;
+	return nByte >= 'A' && nByte <= 'Z' ? static_cast<uint8_t>( nByte + 'a' - 'A' ) : nByte;
 }
 
 static bool sirRootReservedDevice( const char *pszComponent, uint32_t nLength ) noexcept
@@ -27,22 +27,22 @@ static bool sirRootReservedDevice( const char *pszComponent, uint32_t nLength ) 
 		++nStem;
 	}
 	if ( nStem == 3 ) {
-		const uint8_t a = sirRootLowerAscii( ( uint8_t )pszComponent[0] );
-		const uint8_t b = sirRootLowerAscii( ( uint8_t )pszComponent[1] );
-		const uint8_t c = sirRootLowerAscii( ( uint8_t )pszComponent[2] );
+		const uint8_t a = sirRootLowerAscii( static_cast<uint8_t>(pszComponent[0]) );
+		const uint8_t b = sirRootLowerAscii( static_cast<uint8_t>(pszComponent[1]) );
+		const uint8_t c = sirRootLowerAscii( static_cast<uint8_t>(pszComponent[2]) );
 		return ( a == 'c' && b == 'o' && c == 'n' ) || ( a == 'p' && b == 'r' && c == 'n' ) || ( a == 'a' && b == 'u' && c == 'x' ) ||
 		       ( a == 'n' && b == 'u' && c == 'l' );
 	}
 	if ( nStem == 4 || nStem == 5 ) {
-		const uint8_t a = sirRootLowerAscii( ( uint8_t )pszComponent[0] );
-		const uint8_t b = sirRootLowerAscii( ( uint8_t )pszComponent[1] );
-		const uint8_t c = sirRootLowerAscii( ( uint8_t )pszComponent[2] );
-		const uint8_t d = ( uint8_t )pszComponent[3];
+		const uint8_t a = sirRootLowerAscii( static_cast<uint8_t>(pszComponent[0]) );
+		const uint8_t b = sirRootLowerAscii( static_cast<uint8_t>(pszComponent[1]) );
+		const uint8_t c = sirRootLowerAscii( static_cast<uint8_t>(pszComponent[2]) );
+		const uint8_t d = static_cast<uint8_t>(pszComponent[3]);
 		const bool bDevice = ( a == 'c' && b == 'o' && c == 'm' ) || ( a == 'l' && b == 'p' && c == 't' );
 		if ( nStem == 4 ) {
 			return bDevice && d >= '1' && d <= '9';
 		}
-		const uint8_t nSuperscript = ( uint8_t )pszComponent[4];
+		const uint8_t nSuperscript = static_cast<uint8_t>(pszComponent[4]);
 		return bDevice && d == 0xc2 && ( nSuperscript == 0xb9 || nSuperscript == 0xb2 || nSuperscript == 0xb3 );
 	}
 	return false;
@@ -55,7 +55,7 @@ bool SIRPlatformRootDirectory::validRelative( const char *pszRelativePath ) noex
 	}
 	uint32_t nStart = 0;
 	for ( uint32_t i = 0; i < SIR_PLATFORM_ROOTED_MAX_RELATIVE_BYTES; ++i ) {
-		const uint8_t nByte = ( uint8_t )pszRelativePath[i];
+		const uint8_t nByte = static_cast<uint8_t>(pszRelativePath[i]);
 		if ( nByte == '\0' || nByte == '/' ) {
 			const uint32_t nLength = i - nStart;
 			if ( nLength == 0 || ( nLength == 1 && pszRelativePath[nStart] == '.' ) ||

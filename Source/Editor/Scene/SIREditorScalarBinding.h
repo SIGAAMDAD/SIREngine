@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIREDITORSCALARBINDING_H__
-#define __SIRENGINE_SIREDITORSCALARBINDING_H__
+#ifndef __SIR_EDITORSCALARBINDING_H__
+#define __SIR_EDITORSCALARBINDING_H__
 
 #include <Core/SIRPCH.h>
 
@@ -27,8 +27,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Editor/Scene/SIREditorScalarCodec.h>
 #include <Editor/Scene/SIREditorTextWriter.h>
 
-typedef enum sirEditorScalarBridgeResult_e : uint8_t
-{
+enum class SIREditorScalarBridgeResult : uint8_t {
 	SIR_EDITOR_SCALAR_BRIDGE_OK = 0,
 	SIR_EDITOR_SCALAR_BRIDGE_INVALID_ARGUMENT = 1,
 	SIR_EDITOR_SCALAR_BRIDGE_INVALID_BINDING = 2,
@@ -36,7 +35,7 @@ typedef enum sirEditorScalarBridgeResult_e : uint8_t
 	SIR_EDITOR_SCALAR_BRIDGE_DOCUMENT_ERROR = 4,
 	SIR_EDITOR_SCALAR_BRIDGE_WRITE_ERROR = 5,
 	SIR_EDITOR_SCALAR_BRIDGE_OUT_OF_CAPACITY = 6
-} sirEditorScalarBridgeResult_t;
+};
 
 typedef struct sirEditorScalarBinding_s
 {
@@ -65,7 +64,7 @@ typedef struct sirEditorScalarDiscovery_s
 // Discover supported scalar properties from source names and native type
 // metadata. Null output/capacity zero measures required storage. A failure
 // does not publish a partial binding table.
-sirEditorScalarBridgeResult_t sirEditorDiscoverScalarBindings( const sirEditorScalarDiscovery_t& context, uint32_t *pOutCount ) noexcept;
+SIREditorScalarBridgeResult sirEditorDiscoverScalarBindings( const sirEditorScalarDiscovery_t& context, uint32_t *pOutCount ) noexcept;
 
 // Caller-supplied scratch; all borrowed pointers remain valid through the
 // entire operation. The editor document is the only mutable authoring graph.
@@ -86,11 +85,11 @@ typedef struct sirEditorScalarBridge_s
 
 // Maps only the explicitly bound scalar subset into one document transaction.
 // A failed parse, type check, or commit never publishes partial property edits.
-sirEditorScalarBridgeResult_t sirEditorImportBoundScalars( const sirEditorScalarBridge_t& context ) noexcept;
+SIREditorScalarBridgeResult sirEditorImportBoundScalars( const sirEditorScalarBridge_t& context ) noexcept;
 
 // Writes the current document values into the preserved original source bytes.
 // Supports a measure-only call (null output, zero capacity).
-sirEditorScalarBridgeResult_t sirEditorExportBoundScalars( const sirEditorScalarBridge_t& context, char *pszOutput, size_t nCapacity,
+SIREditorScalarBridgeResult sirEditorExportBoundScalars( const sirEditorScalarBridge_t& context, char *pszOutput, size_t nCapacity,
                                                            size_t *pOutBytes ) noexcept;
 
-#endif // __SIRENGINE_SIREDITORSCALARBINDING_H__
+#endif // __SIR_EDITORSCALARBINDING_H__

@@ -20,7 +20,7 @@ static bool t3d_vt_feedback_multi_texture_valid( RenderingDevice *pRd, const RID
 	return format.is_valid() && format->get_format() == RenderingDevice::DATA_FORMAT_R32_UINT && format->get_texture_type() == eType &&
 	       format->get_width() == nWidth && format->get_height() == nHeight && format->get_array_layers() == nLayers &&
 	       format->get_mipmaps() == 1u && format->get_samples() == RenderingDevice::TEXTURE_SAMPLES_1 &&
-	       ( ( uint64_t )format->get_usage_bits() & RenderingDevice::TEXTURE_USAGE_SAMPLING_BIT ) != 0u;
+	       ( static_cast<uint64_t>(format->get_usage_bits() & RenderingDevice::TEXTURE_USAGE_SAMPLING_BIT )) != 0u;
 }
 
 bool Terrain3DVTFeedbackMultiGpu::initializeCold( Terrain3DRdContext& rContext, const t3dVTFeedbackGridLayout_t& rLayout, const RID& rPages,
@@ -135,14 +135,14 @@ bool Terrain3DVTFeedbackMultiGpu::initializeOwnedCold( Terrain3DRdContext& rCont
 		return false;
 	}
 	for ( uint32_t i = 0u; i < nSourceLayers; ++i ) {
-		m_pageUpload[i].resize( ( int64_t )pixelBytes );
-		if ( m_pageUpload[i].size() != ( int64_t )pixelBytes ) {
+		m_pageUpload[i].resizestatic_cast<int64_t>(pixelBytes);
+		if ( m_pageUpload[i].size() != static_cast<int64_t>(pixelBytes) ) {
 			shutdownCold( rContext );
 			return false;
 		}
 	}
-	m_countUpload.resize( ( int64_t )pixelBytes );
-	if ( m_countUpload.size() != ( int64_t )pixelBytes || !initializeCold( rContext, rLayout, m_ownedPages.rid(), m_ownedCounts.rid(),
+	m_countUpload.resizestatic_cast<int64_t>(pixelBytes);
+	if ( m_countUpload.size() != static_cast<int64_t>(pixelBytes) || !initializeCold( rContext, rLayout, m_ownedPages.rid(), m_ownedCounts.rid(),
 	                                                                       nViewportWidth, nViewportHeight, nSourceLayers, nPageCount ) ) {
 		shutdownCold( rContext );
 		return false;
@@ -157,22 +157,22 @@ bool Terrain3DVTFeedbackMultiGpu::publishOwnedCaptureHot( Terrain3DRdContext& rC
 	if ( !Terrain3DRdContext::isOnRenderThread() || !ready() || !hasOwnedSource() || !rContext.getDevice() ||
 	     m_nDeviceGeneration != rContext.getDeviceGeneration() || rProof.m_nFrame == 0u ||
 	     !t3d_vt_feedback_multi_source_complete( rProof, m_params, rProof.m_nFeedbackEpoch, rProof.m_nDatabaseGeneration,
-	                                             ( uint32_t )m_nDeviceGeneration, rProof.m_nViewport ) ||
+	                                             static_cast<uint32_t>(m_nDeviceGeneration), rProof.m_nViewport ) ||
 	     !t3d_vt_feedback_multi_capture_valid( rCapture, m_params ) )
 		return false;
 	// This source pair is single-buffered. Reusing it while a GPU capture or
 	// readback owns the previous contents is prohibited.
 	for ( uint32_t i = 0u; i < T3D_VT_FEEDBACK_GRID_SLOT_COUNT; ++i )
-		if ( m_slots[i].m_eStatus != T3D_VT_FEEDBACK_SLOT_FREE )
+		if ( m_slots[i].m_eStatus != SIRVTFeedbackGridSlotStatus::T3D_VT_FEEDBACK_SLOT_FREE )
 			return false;
-	const uint64_t pixelBytes = ( uint64_t )m_params.m_nViewportWidth * m_params.m_nViewportHeight * sizeof( uint32_t );
+	const uint64_t pixelBytes = static_cast<uint64_t>(m_params.m_nViewportWidth) * m_params.m_nViewportHeight * sizeof( uint32_t );
 	const uint64_t pixels = pixelBytes / sizeof( uint32_t );
 	for ( uint32_t layer = 0u; layer < m_params.m_nSourceLayers; ++layer ) {
-		memcpy( m_pageUpload[layer].ptrw(), rCapture.m_pPages + layer * pixels, ( size_t )pixelBytes );
+		memcpy( m_pageUpload[layer].ptrw(), rCapture.m_pPages + layer * pixels, static_cast<size_t>(pixelBytes) );
 		if ( !m_ownedPages.updateLayerTracked( rContext, layer, m_pageUpload[layer] ) )
 			return false;
 	}
-	memcpy( m_countUpload.ptrw(), rCapture.m_pCounts, ( size_t )pixelBytes );
+	memcpy( m_countUpload.ptrw(), rCapture.m_pCounts, static_cast<size_t>(pixelBytes) );
 	if ( !m_ownedCounts.updateLayerTracked( rContext, 0u, m_countUpload ) )
 		return false;
 	m_publishedProof = rProof;
@@ -187,7 +187,7 @@ bool Terrain3DVTFeedbackMultiGpu::dispatchHot( Terrain3DRdContext& rContext, con
 	RenderingDevice *const rd = rContext.getDevice();
 	rSlot = UINT32_MAX;
 	if ( !Terrain3DRdContext::isOnRenderThread() || !rd || !ready() || rContext.getDeviceGeneration() != m_nDeviceGeneration ||
-	     ( uint32_t )m_nDeviceGeneration != nDevice ||
+	     static_cast<uint32_t>(m_nDeviceGeneration) != nDevice ||
 	     !t3d_vt_feedback_multi_texture_valid( rd, m_sourcePages, RenderingDevice::TEXTURE_TYPE_2D_ARRAY, m_params.m_nViewportWidth,
 	                                           m_params.m_nViewportHeight, m_params.m_nSourceLayers ) ||
 	     !t3d_vt_feedback_multi_texture_valid( rd, m_sourceCounts, RenderingDevice::TEXTURE_TYPE_2D, m_params.m_nViewportWidth,
@@ -198,7 +198,7 @@ bool Terrain3DVTFeedbackMultiGpu::dispatchHot( Terrain3DRdContext& rContext, con
 	uint32_t slot = UINT32_MAX;
 	for ( uint32_t i = 0u; i < T3D_VT_FEEDBACK_GRID_SLOT_COUNT; ++i ) {
 		const uint32_t candidate = ( i + m_nNextSlot ) % T3D_VT_FEEDBACK_GRID_SLOT_COUNT;
-		if ( m_slots[candidate].m_eStatus == T3D_VT_FEEDBACK_SLOT_FREE ) {
+		if ( m_slots[candidate].m_eStatus == SIRVTFeedbackGridSlotStatus::T3D_VT_FEEDBACK_SLOT_FREE ) {
 			slot = candidate;
 			break;
 		}
@@ -247,7 +247,7 @@ bool Terrain3DVTFeedbackMultiGpu::requestReadbackHot( Terrain3DRdContext& rConte
 {
 	RenderingDevice *const rd = rContext.getDevice();
 	if ( !Terrain3DRdContext::isOnRenderThread() || !rd || !ready() || rContext.getDeviceGeneration() != m_nDeviceGeneration ||
-	     nSlot >= T3D_VT_FEEDBACK_GRID_SLOT_COUNT || m_slots[nSlot].m_eStatus != T3D_VT_FEEDBACK_SLOT_DRAWN || !rCallback.is_valid() )
+	     nSlot >= T3D_VT_FEEDBACK_GRID_SLOT_COUNT || m_slots[nSlot].m_eStatus != SIRVTFeedbackGridSlotStatus::T3D_VT_FEEDBACK_SLOT_DRAWN || !rCallback.is_valid() )
 		return false;
 	t3dGpuTransferTicket_t ticket;
 	if ( !Terrain3DGpuTransferBudget::get().reserve( T3D_GPU_TRANSFER_FEEDBACK, m_layout.m_nSlotBytes, 1u, ticket ) ) {
@@ -266,7 +266,7 @@ bool Terrain3DVTFeedbackMultiGpu::requestReadbackHot( Terrain3DRdContext& rConte
 
 bool Terrain3DVTFeedbackMultiGpu::consumeReadbackHot( const PackedByteArray& rBytes )
 {
-	if ( rBytes.size() < ( int64_t )sizeof( t3dVTFeedbackGridHeader_t ) )
+	if ( rBytes.size() < static_cast<int64_t>(sizeof( t3dVTFeedbackGridHeader_t ) ))
 		return false;
 	t3dVTFeedbackGridHeader_t header{};
 	memcpy( &header, rBytes.ptr(), sizeof( header ) );
@@ -280,20 +280,20 @@ bool Terrain3DVTFeedbackMultiGpu::consumeReadbackHot( const PackedByteArray& rBy
 		// A truncated callback is never admitted to the reducer. Retire only
 		// the matching outstanding identity, not a newer reused slot.
 		t3dVTFeedbackMultiSlot_t& slot = m_slots[header.m_nSlot];
-		if ( slot.m_eStatus == T3D_VT_FEEDBACK_SLOT_READBACK_SUBMITTED && slot.m_Header.m_nFrame == header.m_nFrame &&
+		if ( slot.m_eStatus == SIRVTFeedbackGridSlotStatus::T3D_VT_FEEDBACK_SLOT_READBACK_SUBMITTED && slot.m_Header.m_nFrame == header.m_nFrame &&
 		     slot.m_Header.m_nFeedbackEpoch == header.m_nFeedbackEpoch && slot.m_Header.m_nViewportKey == header.m_nViewportKey )
 			slot.reset();
 		return true;
 	}
 	if ( !m_slots[header.m_nSlot].complete( header, slotParams ) )
 		return true;
-	memcpy( m_readback[header.m_nSlot].ptrw(), rBytes.ptr(), ( size_t )rBytes.size() );
+	memcpy( m_readback[header.m_nSlot].ptrw(), rBytes.ptr(), static_cast<size_t>(rBytes.size() ));
 	return true;
 }
 
 const uint8_t *Terrain3DVTFeedbackMultiGpu::peekReadyHot( const uint32_t nSlot, t3dVTFeedbackGridHeader_t& rHeader ) const
 {
-	if ( nSlot >= T3D_VT_FEEDBACK_GRID_SLOT_COUNT || m_slots[nSlot].m_eStatus != T3D_VT_FEEDBACK_SLOT_READY )
+	if ( nSlot >= T3D_VT_FEEDBACK_GRID_SLOT_COUNT || m_slots[nSlot].m_eStatus != SIRVTFeedbackGridSlotStatus::T3D_VT_FEEDBACK_SLOT_READY )
 		return NULL;
 	rHeader = m_slots[nSlot].m_Header;
 	return m_readback[nSlot].ptr();
@@ -301,7 +301,7 @@ const uint8_t *Terrain3DVTFeedbackMultiGpu::peekReadyHot( const uint32_t nSlot, 
 
 bool Terrain3DVTFeedbackMultiGpu::retireReadyHot( const uint32_t nSlot )
 {
-	if ( nSlot >= T3D_VT_FEEDBACK_GRID_SLOT_COUNT || m_slots[nSlot].m_eStatus != T3D_VT_FEEDBACK_SLOT_READY )
+	if ( nSlot >= T3D_VT_FEEDBACK_GRID_SLOT_COUNT || m_slots[nSlot].m_eStatus != SIRVTFeedbackGridSlotStatus::T3D_VT_FEEDBACK_SLOT_READY )
 		return false;
 	m_slots[nSlot].reset();
 	return true;

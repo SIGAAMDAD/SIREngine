@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRWORLDHLODGRDG_H__
-#define __SIRENGINE_SIRWORLDHLODGRDG_H__
+#ifndef __SIR_WORLDHLODGRDG_H__
+#define __SIR_WORLDHLODGRDG_H__
 
 #include <Core/SIRPCH.h>
 
@@ -64,6 +64,6 @@ typedef struct sirWorldHLODGRDGOutput_s
 // The caller owns a stable provider snapshot and a live GRDG read scope for the
 // call, and must revalidate or pin selected resources before GPU submission.
 // Invalid arguments/capacity leave the output array unchanged.
-sirWorldHLODResult_t sirWorldHLODSnapshotGRDG( const sirWorldHLODGRDGInput_t& input, const sirWorldHLODGRDGOutput_t& output ) noexcept;
+SIRWorldHLODResult sirWorldHLODSnapshotGRDG( const sirWorldHLODGRDGInput_t& input, const sirWorldHLODGRDGOutput_t& output ) noexcept;
 
-#endif // __SIRENGINE_SIRWORLDHLODGRDG_H__
+#endif // __SIR_WORLDHLODGRDG_H__

@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRPLATFORMFILE_H__
-#define __SIRENGINE_SIRPLATFORMFILE_H__
+#ifndef __SIR_PLATFORMFILE_H__
+#define __SIR_PLATFORMFILE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -24,8 +24,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-typedef enum sirFileResult_e : uint8_t
-{
+enum class SIRFileResult : uint8_t {
 	SIR_FILE_OK = 0,
 	SIR_FILE_END_OF_FILE = 1,
 	SIR_FILE_CLOSED = 2,
@@ -36,24 +35,22 @@ typedef enum sirFileResult_e : uint8_t
 	SIR_FILE_ACCESS_DENIED = 7,
 	SIR_FILE_NO_SPACE = 8,
 	SIR_FILE_IO_ERROR = 9
-} sirFileResult_t;
+};
 
-typedef enum sirFileOpenFlag_e : uint32_t
-{
+enum class SIRFileOpenFlag : uint32_t {
 	SIR_FILE_OPEN_READ = 1u << 0,
 	SIR_FILE_OPEN_WRITE = 1u << 1,
 	SIR_FILE_OPEN_CREATE = 1u << 2,
 	SIR_FILE_OPEN_TRUNCATE = 1u << 3,
 	SIR_FILE_OPEN_APPEND = 1u << 4,
 	SIR_FILE_OPEN_EXCLUSIVE = 1u << 5
-} sirFileOpenFlag_t;
+};
 
-typedef enum sirFileSeekOrigin_e : uint8_t
-{
+enum class SIRFileSeekOrigin : uint8_t {
 	SIR_FILE_SEEK_BEGIN = 0,
 	SIR_FILE_SEEK_CURRENT = 1,
 	SIR_FILE_SEEK_END = 2
-} sirFileSeekOrigin_t;
+};
 
 typedef struct sirFileInfo_s
 {
@@ -86,22 +83,22 @@ public:
 	SIRPlatformFile( SIRPlatformFile&& ) = delete;
 	SIRPlatformFile& operator=( SIRPlatformFile&& ) = delete;
 
-	sirFileResult_t open( const char *pszUtf8Path, uint32_t nFlags ) noexcept;
-	sirFileResult_t close( void ) noexcept;
+	SIRFileResult open( const char *pszUtf8Path, uint32_t nFlags ) noexcept;
+	SIRFileResult close( void ) noexcept;
 	bool isOpen( void ) const noexcept;
-	sirFileResult_t read( void *pDestination, uint64_t nBytes, uint64_t *pTransferred ) noexcept;
-	sirFileResult_t write( const void *pSource, uint64_t nBytes, uint64_t *pTransferred ) noexcept;
-	sirFileResult_t readAt( uint64_t nOffset, void *pDestination, uint64_t nBytes, uint64_t *pTransferred ) const noexcept;
-	sirFileResult_t writeAt( uint64_t nOffset, const void *pSource, uint64_t nBytes, uint64_t *pTransferred ) const noexcept;
-	sirFileResult_t seek( int64_t nOffset, sirFileSeekOrigin_t eOrigin, uint64_t *pPosition ) noexcept;
-	sirFileResult_t tell( uint64_t *pPosition ) const noexcept;
-	sirFileResult_t getSize( uint64_t *pBytes ) const noexcept;
-	sirFileResult_t flush( void ) const noexcept;
-	sirFileResult_t truncate( uint64_t nBytes ) noexcept;
+	SIRFileResult read( void *pDestination, uint64_t nBytes, uint64_t *pTransferred ) noexcept;
+	SIRFileResult write( const void *pSource, uint64_t nBytes, uint64_t *pTransferred ) noexcept;
+	SIRFileResult readAt( uint64_t nOffset, void *pDestination, uint64_t nBytes, uint64_t *pTransferred ) const noexcept;
+	SIRFileResult writeAt( uint64_t nOffset, const void *pSource, uint64_t nBytes, uint64_t *pTransferred ) const noexcept;
+	SIRFileResult seek( int64_t nOffset, SIRFileSeekOrigin eOrigin, uint64_t *pPosition ) noexcept;
+	SIRFileResult tell( uint64_t *pPosition ) const noexcept;
+	SIRFileResult getSize( uint64_t *pBytes ) const noexcept;
+	SIRFileResult flush( void ) const noexcept;
+	SIRFileResult truncate( uint64_t nBytes ) noexcept;
 
-	static sirFileResult_t getInfo( const char *pszUtf8Path, sirFileInfo_t *pInfo ) noexcept;
-	static sirFileResult_t remove( const char *pszUtf8Path ) noexcept;
-	static sirFileResult_t renameReplace( const char *pszOldPath, const char *pszNewPath ) noexcept;
+	static SIRFileResult getInfo( const char *pszUtf8Path, sirFileInfo_t *pInfo ) noexcept;
+	static SIRFileResult remove( const char *pszUtf8Path ) noexcept;
+	static SIRFileResult renameReplace( const char *pszOldPath, const char *pszNewPath ) noexcept;
 };
 
-#endif // __SIRENGINE_SIRPLATFORMFILE_H__
+#endif // __SIR_PLATFORMFILE_H__

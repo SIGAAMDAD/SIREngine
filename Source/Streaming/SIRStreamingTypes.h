@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSTREAMINGTYPES_H__
-#define __SIRENGINE_SIRSTREAMINGTYPES_H__
+#ifndef __SIR_STREAMINGTYPES_H__
+#define __SIR_STREAMINGTYPES_H__
 
 #include <Core/SIRPCH.h>
 
@@ -26,8 +26,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 // These identify demand units, not GRDG resource IDs or physical allocations.
 // The GRDG resource owner resolves units through the cooked manifest.
-typedef enum sirStreamingUnitKind_e : uint8_t
-{
+enum class SIRStreamingUnitKind : uint8_t {
 	SIR_STREAMING_UNIT_WORLD_CELL = 0,
 	SIR_STREAMING_UNIT_TERRAIN_REGION = 1,
 	SIR_STREAMING_UNIT_HLOD = 2,
@@ -37,16 +36,14 @@ typedef enum sirStreamingUnitKind_e : uint8_t
 	SIR_STREAMING_UNIT_AUDIO = 6,
 	SIR_STREAMING_UNIT_ENTITY = 7,
 	SIR_STREAMING_UNIT_COUNT = 8
-} sirStreamingUnitKind_t;
+};
 
-typedef enum sirStreamingTarget_e : uint8_t
-{
+enum class SIRStreamingTarget : uint8_t {
 	SIR_STREAMING_TARGET_PREPARED = 1,
 	SIR_STREAMING_TARGET_ACTIVE = 2
-} sirStreamingTarget_t;
+};
 
-typedef enum sirStreamingStage_e : uint8_t
-{
+enum class SIRStreamingStage : uint8_t {
 	SIR_STREAMING_STAGE_EMPTY = 0,
 	SIR_STREAMING_STAGE_QUEUED = 1,
 	SIR_STREAMING_STAGE_PREPARING = 2,
@@ -54,10 +51,9 @@ typedef enum sirStreamingStage_e : uint8_t
 	SIR_STREAMING_STAGE_ACTIVE = 4,
 	SIR_STREAMING_STAGE_RETIRING = 5,
 	SIR_STREAMING_STAGE_FAILED = 6
-} sirStreamingStage_t;
+};
 
-typedef enum sirStreamingResult_e : uint8_t
-{
+enum class SIRStreamingResult : uint8_t {
 	SIR_STREAMING_OK = 0,
 	SIR_STREAMING_INVALID_ARGUMENT = 1,
 	SIR_STREAMING_NOT_READY = 2,
@@ -66,7 +62,7 @@ typedef enum sirStreamingResult_e : uint8_t
 	SIR_STREAMING_STALE_TICKET = 5,
 	SIR_STREAMING_INVALID_TRANSITION = 6,
 	SIR_STREAMING_BUSY = 7
-} sirStreamingResult_t;
+};
 
 typedef struct sirStreamingUnitKey_s
 {
@@ -74,7 +70,7 @@ typedef struct sirStreamingUnitKey_s
 	uint64_t nUnitId;
 	uint32_t nManifestGeneration;
 	uint16_t nVariant;
-	sirStreamingUnitKind_t eKind;
+	SIRStreamingUnitKind eKind;
 	uint8_t nReserved;
 } sirStreamingUnitKey_t;
 
@@ -85,7 +81,7 @@ typedef struct sirStreamingDemand_s
 	uint64_t nDeadlineTick;
 	uint32_t nConsumerGeneration;
 	uint32_t nRequestEpoch;
-	sirStreamingTarget_t eTarget;
+	SIRStreamingTarget eTarget;
 	uint8_t nPriority;
 	uint16_t nReserved;
 } sirStreamingDemand_t;
@@ -99,7 +95,7 @@ typedef struct sirStreamingTicket_s
 typedef struct sirStreamingSnapshot_s
 {
 	sirStreamingDemand_t demand;
-	sirStreamingStage_t eStage;
+	SIRStreamingStage eStage;
 	bool bCancellationRequested;
 } sirStreamingSnapshot_t;
 
@@ -118,4 +114,4 @@ typedef struct sirStreamingStats_s
 
 static_assert( sizeof( sirStreamingTicket_t ) == 8, "streaming tickets require slot and generation" );
 
-#endif // __SIRENGINE_SIRSTREAMINGTYPES_H__
+#endif // __SIR_STREAMINGTYPES_H__

@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSHADERPIPELINE_H__
-#define __SIRENGINE_SIRSHADERPIPELINE_H__
+#ifndef __SIR_SHADERPIPELINE_H__
+#define __SIR_SHADERPIPELINE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -30,8 +30,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // One variant describes one stage of one backend-specific permutation.
 typedef struct sirShaderVariant_s
 {
-	sirGraphicsBackend_t eBackend;
-	sirGraphicsShaderFormat_t eFormat;
+	SIRGraphicsBackend eBackend;
+	SIRGraphicsShaderFormat eFormat;
 	uint32_t nStage;
 	uint64_t nRequiredFeatures;
 	uint64_t nPermutationKey;
@@ -46,7 +46,7 @@ typedef struct sirShaderVariant_s
 
 typedef struct sirShaderSelection_s
 {
-	sirGraphicsBackend_t eBackend;
+	SIRGraphicsBackend eBackend;
 	uint32_t nStage;
 	uint64_t nAvailableFeatures;
 	uint64_t nPermutationKey;
@@ -64,8 +64,8 @@ typedef struct sirShaderCacheDescriptor_s
 	uint32_t nCompilerVersion;
 	uint32_t nOptimizationFlags;
 	uint32_t nStage;
-	sirGraphicsBackend_t eBackend;
-	sirGraphicsShaderFormat_t eFormat;
+	SIRGraphicsBackend eBackend;
+	SIRGraphicsShaderFormat eFormat;
 	uint64_t nSourceHash;
 	uint64_t nIncludesHash;
 	uint64_t nEntryPointHash;
@@ -98,7 +98,7 @@ public:
 	uint32_t getCount( void ) const noexcept;
 	uint32_t getCapacity( void ) const noexcept;
 
-	sirGraphicsResult_t push( const sirShaderCacheKey_t& key, uint32_t nPriority ) noexcept;
+	SIRGraphicsResult push( const sirShaderCacheKey_t& key, uint32_t nPriority ) noexcept;
 	bool tryPop( sirShaderWarmupItem_t *pItem ) noexcept;
 	void clear( void ) noexcept;
 
@@ -110,11 +110,11 @@ private:
 };
 
 bool sirShaderIsStageValid( uint32_t nStage ) noexcept;
-sirGraphicsResult_t sirShaderGetBackendFormat( sirGraphicsBackend_t eBackend, sirGraphicsShaderFormat_t *pFormat ) noexcept;
-sirGraphicsResult_t sirShaderBuildCacheKey( const sirShaderCacheDescriptor_t& desc, sirShaderCacheKey_t *pKey ) noexcept;
-sirGraphicsResult_t sirShaderValidateVariant( const sirShaderVariant_t& variant ) noexcept;
-sirGraphicsResult_t sirShaderSelectVariant( const sirShaderVariant_t *pVariants, uint32_t nVariantCount,
+SIRGraphicsResult sirShaderGetBackendFormat( SIRGraphicsBackend eBackend, SIRGraphicsShaderFormat *pFormat ) noexcept;
+SIRGraphicsResult sirShaderBuildCacheKey( const sirShaderCacheDescriptor_t& desc, sirShaderCacheKey_t *pKey ) noexcept;
+SIRGraphicsResult sirShaderValidateVariant( const sirShaderVariant_t& variant ) noexcept;
+SIRGraphicsResult sirShaderSelectVariant( const sirShaderVariant_t *pVariants, uint32_t nVariantCount,
                                             const sirShaderSelection_t& selection, const sirShaderVariant_t **ppVariant ) noexcept;
-sirGraphicsResult_t sirShaderToGraphicsCode( const sirShaderVariant_t& variant, sirGraphicsShaderCode_t *pCode ) noexcept;
+SIRGraphicsResult sirShaderToGraphicsCode( const sirShaderVariant_t& variant, sirGraphicsShaderCode_t *pCode ) noexcept;
 
-#endif // __SIRENGINE_SIRSHADERPIPELINE_H__
+#endif // __SIR_SHADERPIPELINE_H__

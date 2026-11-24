@@ -13,10 +13,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRRENDERFRAMEBUFFER_H__
-#define __SIRENGINE_SIRRENDERFRAMEBUFFER_H__
+#ifndef __SIR_RENDERFRAMEBUFFER_H__
+#define __SIR_RENDERFRAMEBUFFER_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -29,13 +29,11 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // Logical render-target attachment collection. It does not allocate images.
 // Vulkan may use dynamic rendering, D3D12 RTV/DSV and OpenGL a cached FBO.
 // The descriptor borrows attachment arrays for the duration of command record.
-class SIRRenderFramebuffer final
+class SIRRenderFramebuffer
 {
 public:
 	SIRRenderFramebuffer( void ) noexcept = default;
-	explicit SIRRenderFramebuffer( const sirRenderFramebufferDesc_t& desc ) noexcept : m_Desc( desc )
-	{
-	}
+	explicit SIRRenderFramebuffer( const sirRenderFramebufferDesc_t& desc ) noexcept;
 
 	const sirRenderFramebufferDesc_t& getDesc( void ) const noexcept
 	{
@@ -49,7 +47,7 @@ public:
 	}
 
 private:
-	sirRenderFramebufferDesc_t m_Desc = {};
+	sirRenderFramebufferDesc_t m_Desc {};
 };
 
-#endif // __SIRENGINE_SIRRENDERFRAMEBUFFER_H__
+#endif // __SIR_RENDERFRAMEBUFFER_H__

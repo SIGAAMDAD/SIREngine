@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSHADERGRDG_H__
-#define __SIRENGINE_SIRSHADERGRDG_H__
+#ifndef __SIR_SHADERGRDG_H__
+#define __SIR_SHADERGRDG_H__
 
 #include <Core/SIRPCH.h>
 
@@ -39,7 +39,7 @@ typedef struct sirShaderGRDGFormats_s
 
 typedef struct sirShaderPackageValidation_s
 {
-	sirGraphicsShaderFormat_t eFormat;
+	SIRGraphicsShaderFormat eFormat;
 	uint64_t nAvailableFeatures;
 } sirShaderPackageValidation_t;
 
@@ -94,7 +94,7 @@ typedef struct sirShaderPublicationRequest_s
 	uint64_t nBytes;
 	uint64_t nExpectedRevision;
 	uint32_t nStagingDomain;
-	sirGraphicsShaderFormat_t eShaderFormat;
+	SIRGraphicsShaderFormat eShaderFormat;
 	uint64_t nAvailableFeatures;
 	const SIRResourceDependency *pDependencies;
 	uint32_t nDependencyCount;
@@ -123,4 +123,4 @@ SIRResourceResult sirShaderPublishPackage( SIRResourceGraphWriter& writer, const
 SIRResourceResult sirShaderPublishMaterial( SIRResourceGraphWriter& writer, const sirShaderGRDGFormats_t& formats,
                                             const sirShaderPublicationRequest_t& request, SIRResourceHandle *pHandle ) noexcept;
 
-#endif // __SIRENGINE_SIRSHADERGRDG_H__
+#endif // __SIR_SHADERGRDG_H__

@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRPROVIDERCOMPLETION_H__
-#define __SIRENGINE_SIRPROVIDERCOMPLETION_H__
+#ifndef __SIR_PROVIDERCOMPLETION_H__
+#define __SIR_PROVIDERCOMPLETION_H__
 
 #include <Core/SIRPCH.h>
 
@@ -77,4 +77,4 @@ static inline bool sirProviderCompletionSatisfied( const sirProviderCompletionSe
 	return true;
 }
 
-#endif // __SIRENGINE_SIRPROVIDERCOMPLETION_H__
+#endif // __SIR_PROVIDERCOMPLETION_H__

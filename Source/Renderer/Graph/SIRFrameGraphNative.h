@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRFRAMEGRAPHNATIVE_H__
-#define __SIRENGINE_SIRFRAMEGRAPHNATIVE_H__
+#ifndef __SIR_FRAMEGRAPHNATIVE_H__
+#define __SIR_FRAMEGRAPHNATIVE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -28,7 +28,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 // Called once after native barriers have been recorded. The command context
 // is borrowed from the driver for this pass only; this callback must not submit.
-typedef sirGraphicsResult_t ( *sirFrameGraphNativeRecordFn_t )( uint32_t nPass, sirGraphicsABICommandList_t *pCommands,
+typedef SIRGraphicsResult ( *sirFrameGraphNativeRecordFn_t )( uint32_t nPass, sirGraphicsABICommandList_t *pCommands,
 																void *pContext ) noexcept;
 
 typedef struct sirFrameGraphNativeInput_s
@@ -51,7 +51,7 @@ typedef struct sirFrameGraphNativeOutput_s
 
 // The C++ rendering-device adapter uses the same FrameGraph native lowering
 // path as binary drivers; no second queue scheduler or barrier planner.
-typedef sirGraphicsResult_t ( *sirFrameGraphDeviceRecordFn_t )( uint32_t nPass, SIRGraphicsCommandList *pCommands,
+typedef SIRGraphicsResult ( *sirFrameGraphDeviceRecordFn_t )( uint32_t nPass, SIRGraphicsCommandList *pCommands,
 																void *pContext ) noexcept;
 
 typedef struct sirFrameGraphDeviceInput_s
@@ -63,4 +63,4 @@ typedef struct sirFrameGraphDeviceInput_s
 	void *pContext;
 } sirFrameGraphDeviceInput_t;
 
-#endif // __SIRENGINE_SIRFRAMEGRAPHNATIVE_H__
+#endif // __SIR_FRAMEGRAPHNATIVE_H__

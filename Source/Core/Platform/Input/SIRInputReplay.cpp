@@ -17,45 +17,45 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <string.h>
 
 SIRInputReplayTape::SIRInputReplayTape( void ) noexcept
-    : m_pWrite( nullptr ), m_pRead( nullptr ), m_nCapacity( 0 ), m_nOffset( 0 ), m_nLastTick( 0 ), m_eMode( SIR_INPUT_REPLAY_IDLE )
+    : m_pWrite( nullptr ), m_pRead( nullptr ), m_nCapacity( 0 ), m_nOffset( 0 ), m_nLastTick( 0 ), m_eMode( SIRInputReplayMode::SIR_INPUT_REPLAY_IDLE )
 {
 }
 
 void SIRInputReplayTape::write16( uint8_t *pBytes, uint16_t nValue ) noexcept
 {
-	pBytes[0] = ( uint8_t )nValue;
-	pBytes[1] = ( uint8_t )( nValue >> 8 );
+	pBytes[0] = static_cast<uint8_t>(nValue);
+	pBytes[1] = static_cast<uint8_t>( nValue >> 8 );
 }
 
 void SIRInputReplayTape::write32( uint8_t *pBytes, uint32_t nValue ) noexcept
 {
 	for ( uint32_t i = 0; i < 4; ++i ) {
-		pBytes[i] = ( uint8_t )( nValue >> ( 8 * i ) );
+		pBytes[i] = static_cast<uint8_t>(  nValue >> ( 8 * i )  );
 	}
 }
 
 void SIRInputReplayTape::write64( uint8_t *pBytes, uint64_t nValue ) noexcept
 {
 	for ( uint32_t i = 0; i < 8; ++i ) {
-		pBytes[i] = ( uint8_t )( nValue >> ( 8 * i ) );
+		pBytes[i] = static_cast<uint8_t>(  nValue >> ( 8 * i )  );
 	}
 }
 
 uint16_t SIRInputReplayTape::read16( const uint8_t *pBytes ) noexcept
 {
-	return ( uint16_t )pBytes[0] | ( ( uint16_t )pBytes[1] << 8 );
+	return static_cast<uint16_t>(pBytes[0]) | ( static_cast<uint16_t>(pBytes[1]) << 8 );
 }
 
 uint32_t SIRInputReplayTape::read32( const uint8_t *pBytes ) noexcept
 {
-	return ( uint32_t )pBytes[0] | ( ( uint32_t )pBytes[1] << 8 ) | ( ( uint32_t )pBytes[2] << 16 ) | ( ( uint32_t )pBytes[3] << 24 );
+	return static_cast<uint32_t>(pBytes[0]) | ( static_cast<uint32_t>(pBytes[1]) << 8 ) | ( static_cast<uint32_t>(pBytes[2]) << 16 ) | ( static_cast<uint32_t>(pBytes[3]) << 24 );
 }
 
 uint64_t SIRInputReplayTape::read64( const uint8_t *pBytes ) noexcept
 {
 	uint64_t nValue = 0;
 	for ( uint32_t i = 0; i < 8; ++i ) {
-		nValue |= ( uint64_t )pBytes[i] << ( 8 * i );
+		nValue |= static_cast<uint64_t>(pBytes[i]) << ( 8 * i );
 	}
 	return nValue;
 }
@@ -88,14 +88,14 @@ bool SIRInputReplayTape::beginRecord( uint8_t *pBuffer, uint32_t nCapacity ) noe
 	reset();
 	m_pWrite = pBuffer;
 	m_nCapacity = nCapacity;
-	m_eMode = SIR_INPUT_REPLAY_RECORD;
+	m_eMode = SIRInputReplayMode::SIR_INPUT_REPLAY_RECORD;
 	return true;
 }
 
 bool SIRInputReplayTape::append( uint64_t nTick, const SIRInputActions& actions, const sirInputReplayKey_t *pKeys,
                                  uint32_t nCount ) noexcept
 {
-	if ( m_eMode != SIR_INPUT_REPLAY_RECORD || nTick == 0 || nTick <= m_nLastTick || nCount > SIR_INPUT_ACTION_CAPACITY ||
+	if ( m_eMode != SIRInputReplayMode::SIR_INPUT_REPLAY_RECORD || nTick == 0 || nTick <= m_nLastTick || nCount > SIR_INPUT_ACTION_CAPACITY ||
 	     ( nCount != 0 && pKeys == nullptr ) ) {
 		return false;
 	}
@@ -106,7 +106,7 @@ bool SIRInputReplayTape::append( uint64_t nTick, const SIRInputActions& actions,
 
 	// Preflight every key and its state before touching the caller's buffer.
 	for ( uint32_t i = 0; i < nCount; ++i ) {
-		sirInputActionState_t state = {};
+		sirInputActionState_t state {};
 		if ( !actions.query( pKeys[i].nActionId, pKeys[i].nUser, &state ) || !valid( state ) ) {
 			return false;
 		}
@@ -126,12 +126,12 @@ bool SIRInputReplayTape::append( uint64_t nTick, const SIRInputActions& actions,
 	write32( pBytes + 20, nBytes );
 	write32( pBytes + 28, 0 );
 	for ( uint32_t i = 0; i < nCount; ++i ) {
-		sirInputActionState_t state = {};
-		( void )actions.query( pKeys[i].nActionId, pKeys[i].nUser, &state );
+		sirInputActionState_t state {};
+		static_cast<void>(actions.query( pKeys[i].nActionId, pKeys[i].nUser, &state ));
 		uint8_t *pRecord = pBytes + SIR_INPUT_REPLAY_HEADER_BYTES + i * SIR_INPUT_REPLAY_RECORD_BYTES;
 		write32( pRecord, state.nActionId );
 		write32( pRecord + 4, state.nUser );
-		write32( pRecord + 8, ( uint32_t )state.nValue );
+		write32( pRecord + 8, static_cast<uint32_t>(state.nValue) );
 		write32( pRecord + 12, state.nTransitions );
 		const uint32_t nFlags = ( state.bHeld ? 1U : 0U ) | ( state.bPressed ? 2U : 0U ) | ( state.bReleased ? 4U : 0U );
 		write32( pRecord + 16, nFlags );
@@ -150,13 +150,13 @@ bool SIRInputReplayTape::beginRead( const uint8_t *pBuffer, uint32_t nBytes ) no
 	reset();
 	m_pRead = pBuffer;
 	m_nCapacity = nBytes;
-	m_eMode = SIR_INPUT_REPLAY_READ;
+	m_eMode = SIRInputReplayMode::SIR_INPUT_REPLAY_READ;
 	return true;
 }
 
 bool SIRInputReplayTape::next( sirInputReplayFrame_t *pFrame ) noexcept
 {
-	if ( m_eMode != SIR_INPUT_REPLAY_READ || pFrame == nullptr || m_nCapacity - m_nOffset < SIR_INPUT_REPLAY_HEADER_BYTES ) {
+	if ( m_eMode != SIRInputReplayMode::SIR_INPUT_REPLAY_READ || pFrame == nullptr || m_nCapacity - m_nOffset < SIR_INPUT_REPLAY_HEADER_BYTES ) {
 		return false;
 	}
 	const uint8_t *pBytes = m_pRead + m_nOffset;
@@ -173,7 +173,7 @@ bool SIRInputReplayTape::next( sirInputReplayFrame_t *pFrame ) noexcept
 		return false;
 	}
 
-	sirInputReplayFrame_t candidate = {};
+	sirInputReplayFrame_t candidate {};
 	candidate.nTick = nTick;
 	candidate.nCount = nCount;
 	for ( uint32_t i = 0; i < nCount; ++i ) {
@@ -181,7 +181,7 @@ bool SIRInputReplayTape::next( sirInputReplayFrame_t *pFrame ) noexcept
 		sirInputActionState_t& state = candidate.actions[i];
 		state.nActionId = read32( pRecord );
 		state.nUser = read32( pRecord + 4 );
-		state.nValue = ( int32_t )read32( pRecord + 8 );
+		state.nValue = static_cast<int32_t>(read32( pRecord + 8 ));
 		state.nTransitions = read32( pRecord + 12 );
 		const uint32_t nFlags = read32( pRecord + 16 );
 		if ( ( nFlags & ~7U ) != 0 ) {
@@ -202,11 +202,11 @@ bool SIRInputReplayTape::next( sirInputReplayFrame_t *pFrame ) noexcept
 
 bool SIRInputReplayTape::seek( uint64_t nTick, sirInputReplayFrame_t *pFrame ) noexcept
 {
-	if ( m_eMode != SIR_INPUT_REPLAY_READ || pFrame == nullptr ) {
+	if ( m_eMode != SIRInputReplayMode::SIR_INPUT_REPLAY_READ || pFrame == nullptr ) {
 		return false;
 	}
 	rewind();
-	sirInputReplayFrame_t candidate = {};
+	sirInputReplayFrame_t candidate {};
 	while ( next( &candidate ) ) {
 		if ( candidate.nTick == nTick ) {
 			*pFrame = candidate;
@@ -221,7 +221,7 @@ bool SIRInputReplayTape::seek( uint64_t nTick, sirInputReplayFrame_t *pFrame ) n
 
 void SIRInputReplayTape::rewind( void ) noexcept
 {
-	if ( m_eMode == SIR_INPUT_REPLAY_READ ) {
+	if ( m_eMode == SIRInputReplayMode::SIR_INPUT_REPLAY_READ ) {
 		m_nOffset = 0;
 		m_nLastTick = 0;
 	}
@@ -234,12 +234,12 @@ void SIRInputReplayTape::reset( void ) noexcept
 	m_nCapacity = 0;
 	m_nOffset = 0;
 	m_nLastTick = 0;
-	m_eMode = SIR_INPUT_REPLAY_IDLE;
+	m_eMode = SIRInputReplayMode::SIR_INPUT_REPLAY_IDLE;
 }
 
 bool SIRInputReplayTape::finished( void ) const noexcept
 {
-	return m_eMode == SIR_INPUT_REPLAY_READ && m_nOffset == m_nCapacity;
+	return m_eMode == SIRInputReplayMode::SIR_INPUT_REPLAY_READ && m_nOffset == m_nCapacity;
 }
 
 uint32_t SIRInputReplayTape::bytesUsed( void ) const noexcept
@@ -247,7 +247,7 @@ uint32_t SIRInputReplayTape::bytesUsed( void ) const noexcept
 	return m_nOffset;
 }
 
-sirInputReplayMode_t SIRInputReplayTape::mode( void ) const noexcept
+SIRInputReplayMode SIRInputReplayTape::mode( void ) const noexcept
 {
 	return m_eMode;
 }

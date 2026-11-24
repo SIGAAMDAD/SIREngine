@@ -46,7 +46,7 @@ bool t3d_st_cook_region_package_cold( Terrain3DData& rData, const godot::PackedB
 {
 	rError = godot::String();
 	t3dVTPackBaselineView_t pack{};
-	if ( rFinalV1.is_empty() || !t3d_vt_pack_open_baseline_view( rFinalV1.ptr(), ( uint64_t )rFinalV1.size(), pack ) ||
+	if ( rFinalV1.is_empty() || !t3d_vt_pack_open_baseline_view( rFinalV1.ptr(), static_cast<uint64_t>(rFinalV1.size(), pack )) ||
 	     pack.m_pHeader == nullptr || pack.m_pHeader->m_nPackageGeneration == 0u ) {
 		rError = "SuperTerrain cannot cook from an invalid COMPOSED V1 package";
 		return false;
@@ -56,9 +56,9 @@ bool t3d_st_cook_region_package_cold( Terrain3DData& rData, const godot::PackedB
 		rError = "SuperTerrain has no valid authored regions";
 		return false;
 	}
-	std::vector<t3dStAuthoringSnapshot_t> snapshots( ( size_t )locations.size() );
+	std::vector<t3dStAuthoringSnapshot_t> snapshots( static_cast<size_t>(locations.size() ));
 	std::vector<t3dStAuthoredRegionSource_t> inputs;
-	inputs.reserve( ( size_t )locations.size() );
+	inputs.reserve( static_cast<size_t>(locations.size() ));
 	for ( int i = 0; i < locations.size(); ++i ) {
 		const godot::Vector2i location = locations[i];
 		if ( location.x < -T3D_REGION_MAP_HALF || location.x >= T3D_REGION_MAP_HALF || location.y < -T3D_REGION_MAP_HALF ||
@@ -72,7 +72,7 @@ bool t3d_st_cook_region_package_cold( Terrain3DData& rData, const godot::PackedB
 			return false;
 		}
 		const uint32_t index =
-		    ( uint32_t )( location.y + T3D_REGION_MAP_HALF ) * T3D_REGION_MAP_SIZE + ( uint32_t )( location.x + T3D_REGION_MAP_HALF );
+		    static_cast<uint32_t>( location.y + T3D_REGION_MAP_HALF ) * T3D_REGION_MAP_SIZE + static_cast<uint32_t>( location.x + T3D_REGION_MAP_HALF );
 		uint32_t allocation = 0u, generation = 0u;
 		if ( !t3dStFindComposedFromPack( pack, index, allocation, generation ) ) {
 			rError = "SuperTerrain region lacks a canonical composed allocation";
@@ -88,7 +88,7 @@ bool t3d_st_cook_region_package_cold( Terrain3DData& rData, const godot::PackedB
 			rError = "SuperTerrain requires exact authored R16/RF/RGBA8 128x128 sources";
 			return false;
 		}
-		t3dStAuthoringSnapshot_t& snapshot = snapshots[( size_t )i];
+		t3dStAuthoringSnapshot_t& snapshot = snapshots[static_cast<size_t>(i)];
 		snapshot.m_height = height->get_data();
 		snapshot.m_control = control->get_data();
 		snapshot.m_color = color->get_data();
@@ -105,13 +105,13 @@ bool t3d_st_cook_region_package_cold( Terrain3DData& rData, const godot::PackedB
 		inputs.push_back( snapshot.m_input );
 	}
 	std::vector<uint8_t> bytes;
-	if ( !Terrain3DStRegionSourceCooker::cookCold( inputs.data(), ( uint32_t )inputs.size(), pack.m_pHeader->m_nPackageGeneration,
+	if ( !Terrain3DStRegionSourceCooker::cookCold( inputs.data(), static_cast<uint32_t>(inputs.size()), pack.m_pHeader->m_nPackageGeneration,
 	                                               bytes ) ) {
 		rError = "SuperTerrain VHM/cutout transaction cook failed";
 		return false;
 	}
 	godot::PackedByteArray staged;
-	if ( staged.resize( ( int64_t )bytes.size() ) != godot::OK ) {
+	if ( staged.resize( static_cast<int64_t>(bytes.size() ) != godot::OK )) {
 		rError = "SuperTerrain VHM/cutout transaction allocation failed";
 		return false;
 	}

@@ -27,14 +27,14 @@ public:
 	    : m_pAllocator( pAllocator ), m_keys( pAllocator ), m_offsets( pAllocator ), m_values( pAllocator ), m_less( std::move( less ) )
 	{
 	}
-	sirContainerResult_t tryBuild( const Entry *pEntries, uint32_t nCount )
+	SIRContainerResult tryBuild( const Entry *pEntries, uint32_t nCount )
 	{
 		if ( nCount == UINT32_MAX || ( nCount && pEntries == nullptr ) ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		SIRVector<Entry> sorted( m_pAllocator );
-		sirContainerResult_t eResult = sorted.tryReserve( nCount );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		SIRContainerResult eResult = sorted.tryReserve( nCount );
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		for ( uint32_t iIndex = 0; iIndex < nCount; ++iIndex ) {
@@ -47,15 +47,15 @@ public:
 		SIRVector<uint32_t> offsets( m_pAllocator );
 		SIRVector<V> values( m_pAllocator );
 		eResult = keys.tryReserve( nCount );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		eResult = offsets.tryReserve( nCount + 1 );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		eResult = values.tryReserve( nCount );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		for ( uint32_t iIndex = 0; iIndex < nCount; ++iIndex ) {
@@ -69,7 +69,7 @@ public:
 		m_keys = std::move( keys );
 		m_offsets = std::move( offsets );
 		m_values = std::move( values );
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 	bool find( const K& key, const V **ppValues, uint32_t *pCount ) const
 	{

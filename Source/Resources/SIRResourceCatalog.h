@@ -13,13 +13,12 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRRESOURCECATALOG_H__
-#define __SIRENGINE_SIRRESOURCECATALOG_H__
+#ifndef __SIR_RESOURCECATALOG_H__
+#define __SIR_RESOURCECATALOG_H__
 
 #include <Core/SIRPCH.h>
 
-typedef enum sirResourceCatalogResult_e : uint8_t
-{
+enum class SIRResourceCatalogResult : uint8_t {
 	SIR_RESOURCE_CATALOG_OK = 0,
 	SIR_RESOURCE_CATALOG_INVALID_ARGUMENT = 1,
 	SIR_RESOURCE_CATALOG_UNINITIALIZED = 2,
@@ -28,13 +27,12 @@ typedef enum sirResourceCatalogResult_e : uint8_t
 	SIR_RESOURCE_CATALOG_OUT_OF_CAPACITY = 5,
 	SIR_RESOURCE_CATALOG_CYCLIC = 6,
 	SIR_RESOURCE_CATALOG_SEALED = 7
-} sirResourceCatalogResult_t;
+};
 
-typedef enum sirResourceSource_e : uint8_t
-{
+enum class SIRResourceSource : uint8_t {
 	SIR_RESOURCE_SOURCE_EXTERNAL = 1,
 	SIR_RESOURCE_SOURCE_EMBEDDED = 2
-} sirResourceSource_t;
+};
 
 typedef struct sirResourceEntry_s
 {
@@ -42,7 +40,7 @@ typedef struct sirResourceEntry_s
 	uint64_t nPathAtom;
 	uint32_t nTypeId;
 	uint32_t nGeneration;
-	sirResourceSource_t eSource;
+	SIRResourceSource eSource;
 	uint8_t szReserved[7];
 } sirResourceEntry_t;
 
@@ -72,17 +70,17 @@ private:
 	bool canReach( uint32_t iStart, uint32_t iTarget ) noexcept;
 
 public:
-	sirResourceCatalogResult_t initialize( sirResourceEntry_t *pEntries, uint32_t nEntryCapacity, sirResourceDependency_t *pDependencies,
+	SIRResourceCatalogResult initialize( sirResourceEntry_t *pEntries, uint32_t nEntryCapacity, sirResourceDependency_t *pDependencies,
 	                                       uint32_t nDependencyCapacity, uint32_t *pScratch, uint8_t *pSeen ) noexcept;
 	void shutdown( void ) noexcept;
-	sirResourceCatalogResult_t addResource( uint64_t nId, uint32_t nTypeId, uint64_t nPathAtom, sirResourceSource_t eSource ) noexcept;
-	sirResourceCatalogResult_t addDependency( uint64_t nOwnerId, uint64_t nTargetId ) noexcept;
-	sirResourceCatalogResult_t seal( void ) noexcept;
-	sirResourceCatalogResult_t buildLoadOrder( uint64_t *pOutIds, uint32_t nCapacity, uint32_t *pOutCount ) noexcept;
-	sirResourceCatalogResult_t findResource( uint64_t nId, sirResourceEntry_t *pOutEntry ) const noexcept;
-	sirResourceCatalogResult_t dependencyAt( uint32_t iDependency, sirResourceDependency_t *pOutDependency ) const noexcept;
+	SIRResourceCatalogResult addResource( uint64_t nId, uint32_t nTypeId, uint64_t nPathAtom, SIRResourceSource eSource ) noexcept;
+	SIRResourceCatalogResult addDependency( uint64_t nOwnerId, uint64_t nTargetId ) noexcept;
+	SIRResourceCatalogResult seal( void ) noexcept;
+	SIRResourceCatalogResult buildLoadOrder( uint64_t *pOutIds, uint32_t nCapacity, uint32_t *pOutCount ) noexcept;
+	SIRResourceCatalogResult findResource( uint64_t nId, sirResourceEntry_t *pOutEntry ) const noexcept;
+	SIRResourceCatalogResult dependencyAt( uint32_t iDependency, sirResourceDependency_t *pOutDependency ) const noexcept;
 	uint32_t getResourceCount( void ) const noexcept;
 	uint32_t getDependencyCount( void ) const noexcept;
 };
 
-#endif // __SIRENGINE_SIRRESOURCECATALOG_H__
+#endif // __SIR_RESOURCECATALOG_H__

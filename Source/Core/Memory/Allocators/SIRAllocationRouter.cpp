@@ -15,7 +15,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Core/Memory/SIRAllocationRouter.h>
-#include <Core/Memory/SIRMemoryUtils.h>
+#include <Core/SIRMath.h>
 #include <Core/Memory/Allocators/SIRSizeClassAllocator.h>
 #include <Core/Memory/Allocators/SIRReclaimableSizeClassAllocator.h>
 #include <Core/Memory/Allocators/SIRFreeListAllocator.h>
@@ -28,7 +28,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 static thread_local uint8_t s_nRouterThreadMarker = 0;
 static uintptr_t routerThreadToken( void )
 {
-	return ( ( uintptr_t )( &s_nRouterThreadMarker ) );
+	return reinterpret_cast<uintptr_t>( &s_nRouterThreadMarker );
 }
 
 SIRAllocationRouter::SIRAllocationRouter( void ) : m_Config{}, m_nCounts{}, m_nOwnerToken( 0 ), m_bInitialized( false )
@@ -49,48 +49,48 @@ bool SIRAllocationRouter::init( const sirAllocationRouterConfig_t& config )
 	return true;
 }
 
-bool SIRAllocationRouter::alloc( uint32_t nBytes, uint32_t nAlignment, sirRoutedAllocation_t *pResult, sirAllocationLifetime_e nLifetime,
+bool SIRAllocationRouter::alloc( uint32_t nBytes, uint32_t nAlignment, sirRoutedAllocation_t *pResult, SIRAllocationLifetime nLifetime,
                                  sirJobScratchToken_t job )
 {
 	if ( !m_bInitialized || m_nOwnerToken != routerThreadToken() || pResult == nullptr || nBytes == 0 ||
-	     !SIR_IS_POWER_OF_TWO( nAlignment ) || nLifetime > SIR_LIFETIME_FRAME ) {
+	     !SIR_IS_POWER_OF_TWO( nAlignment ) || nLifetime > SIRAllocationLifetime::SIR_LIFETIME_FRAME ) {
 		return false;
 	}
 	void *pMemory = nullptr;
-	sirRoutingBacking_e backing = SIR_ROUTE_NONE;
-	if ( nLifetime == SIR_LIFETIME_JOB && m_Config.pJobs != nullptr ) {
-		backing = SIR_ROUTE_JOB;
+	SIRRoutingBacking backing = SIRRoutingBacking::SIR_ROUTE_NONE;
+	if ( nLifetime == SIRAllocationLifetime::SIR_LIFETIME_JOB && m_Config.pJobs != nullptr ) {
+		backing = SIRRoutingBacking::SIR_ROUTE_JOB;
 		pMemory = m_Config.pJobs->alloc( job, nBytes, nAlignment );
-	} else if ( nLifetime == SIR_LIFETIME_FRAME && m_Config.pFrames != nullptr ) {
-		backing = SIR_ROUTE_FRAME;
+	} else if ( nLifetime == SIRAllocationLifetime::SIR_LIFETIME_FRAME && m_Config.pFrames != nullptr ) {
+		backing = SIRRoutingBacking::SIR_ROUTE_FRAME;
 		pMemory = m_Config.pFrames->alloc( nBytes, nAlignment );
-	} else if ( nLifetime != SIR_LIFETIME_ARBITRARY ) {
+	} else if ( nLifetime != SIRAllocationLifetime::SIR_LIFETIME_ARBITRARY ) {
 		return false;
 	} else if ( nBytes <= m_Config.nSmallMaximumBytes && nAlignment <= 16 ) {
 		if ( m_Config.bUseReclaimableSmall ) {
-			backing = SIR_ROUTE_RECLAIMABLE;
+			backing = SIRRoutingBacking::SIR_ROUTE_RECLAIMABLE;
 			pMemory = m_Config.pReclaimableClasses->alloc( nBytes, nAlignment );
 		} else {
-			backing = SIR_ROUTE_POOL;
+			backing = SIRRoutingBacking::SIR_ROUTE_POOL;
 			pMemory = m_Config.pPoolClasses->alloc( nBytes );
 		}
 	} else if ( nBytes < m_Config.nLargeMinimumBytes ) {
 		if ( m_Config.bUseTLSFMedium ) {
-			backing = SIR_ROUTE_TLSF;
+			backing = SIRRoutingBacking::SIR_ROUTE_TLSF;
 			pMemory = m_Config.pTLSF->alloc( nBytes, nAlignment );
 		} else {
-			backing = SIR_ROUTE_FREE_LIST;
+			backing = SIRRoutingBacking::SIR_ROUTE_FREE_LIST;
 			pMemory = m_Config.pFreeList->alloc( nBytes, nAlignment );
 		}
 	} else {
-		backing = SIR_ROUTE_BUDDY;
+		backing = SIRRoutingBacking::SIR_ROUTE_BUDDY;
 		pMemory = m_Config.pBuddy->alloc( nBytes, nAlignment );
 	}
 	if ( pMemory == nullptr ) {
 		return false;
 	}
-	*pResult = { pMemory, nBytes, backing };
-	m_nCounts[backing].fetchAdd( 1, SIR_MEMORY_ORDER_RELAXED );
+	*pResult = { pMemory, nBytes, static_cast<uint32_t>( backing ) };
+	m_nCounts[static_cast<size_t>( backing )].fetch_add( 1, std::memory_order_relaxed );
 	return true;
 }
 
@@ -101,19 +101,19 @@ bool SIRAllocationRouter::free( sirRoutedAllocation_t *pAllocation )
 	}
 	bool bFreed = false;
 	switch ( pAllocation->nBacking ) {
-	case SIR_ROUTE_POOL:
+	case static_cast<uint32_t>( SIRRoutingBacking::SIR_ROUTE_POOL ):
 		bFreed = !m_Config.bUseReclaimableSmall && m_Config.pPoolClasses->free( pAllocation->pMemory, pAllocation->nBytes );
 		break;
-	case SIR_ROUTE_RECLAIMABLE:
+	case static_cast<uint32_t>( SIRRoutingBacking::SIR_ROUTE_RECLAIMABLE ):
 		bFreed = m_Config.bUseReclaimableSmall && m_Config.pReclaimableClasses->free( pAllocation->pMemory, pAllocation->nBytes );
 		break;
-	case SIR_ROUTE_FREE_LIST:
+	case static_cast<uint32_t>( SIRRoutingBacking::SIR_ROUTE_FREE_LIST ):
 		bFreed = !m_Config.bUseTLSFMedium && m_Config.pFreeList->free( pAllocation->pMemory );
 		break;
-	case SIR_ROUTE_TLSF:
+	case static_cast<uint32_t>( SIRRoutingBacking::SIR_ROUTE_TLSF ):
 		bFreed = m_Config.bUseTLSFMedium && m_Config.pTLSF->free( pAllocation->pMemory );
 		break;
-	case SIR_ROUTE_BUDDY:
+	case static_cast<uint32_t>( SIRRoutingBacking::SIR_ROUTE_BUDDY ):
 		bFreed = m_Config.pBuddy->free( pAllocation->pMemory );
 		break;
 	default:
@@ -121,14 +121,14 @@ bool SIRAllocationRouter::free( sirRoutedAllocation_t *pAllocation )
 		return false;
 	}
 	if ( bFreed ) {
-		*pAllocation = { nullptr, 0, SIR_ROUTE_NONE };
+		*pAllocation = { nullptr, 0, static_cast<uint32_t>( SIRRoutingBacking::SIR_ROUTE_NONE ) };
 	}
 	return bFreed;
 }
 
-uint64_t SIRAllocationRouter::getRoutedCount( sirRoutingBacking_e backing ) const
+uint64_t SIRAllocationRouter::getRoutedCount( SIRRoutingBacking backing ) const
 {
-	return m_bInitialized && m_nOwnerToken == routerThreadToken() && backing > SIR_ROUTE_NONE && backing <= SIR_ROUTE_FRAME
-	           ? m_nCounts[backing].load( SIR_MEMORY_ORDER_RELAXED )
+	return m_bInitialized && m_nOwnerToken == routerThreadToken() && static_cast<uint32_t>( backing ) > static_cast<uint32_t>( SIRRoutingBacking::SIR_ROUTE_NONE ) && static_cast<uint32_t>( backing ) <= static_cast<uint32_t>( SIRRoutingBacking::SIR_ROUTE_FRAME )
+	           ? m_nCounts[static_cast<size_t>( backing )].load( std::memory_order_relaxed )
 			   : 0;
 }

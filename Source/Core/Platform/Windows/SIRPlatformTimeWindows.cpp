@@ -24,13 +24,13 @@ uint64_t SIRPlatformTime::getMonotonicNanoseconds( void ) noexcept
 {
 	// Cache the QPC frequency once and use integer conversion to nanoseconds.
 	static const uint64_t s_nFrequency = []() {
-		LARGE_INTEGER frequency = {};
-		return QueryPerformanceFrequency( &frequency ) != FALSE && frequency.QuadPart > 0 ? ( uint64_t )frequency.QuadPart : 0;
+		LARGE_INTEGER frequency {};
+		return QueryPerformanceFrequency( &frequency ) != FALSE && frequency.QuadPart > 0 ? static_cast<uint64_t>(frequency.QuadPart) : 0;
 	}();
-	LARGE_INTEGER ticks = {};
+	LARGE_INTEGER ticks {};
 	if ( s_nFrequency == 0 || QueryPerformanceCounter( &ticks ) == FALSE || ticks.QuadPart < 0 ) {
 		return 0;
 	}
-	const uint64_t nTicks = ( uint64_t )ticks.QuadPart;
+	const uint64_t nTicks = static_cast<uint64_t>(ticks.QuadPart);
 	return ( nTicks / s_nFrequency ) * UINT64_C( 1000000000 ) + ( nTicks % s_nFrequency ) * UINT64_C( 1000000000 ) / s_nFrequency;
 }

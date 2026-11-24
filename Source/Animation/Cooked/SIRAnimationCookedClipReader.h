@@ -12,8 +12,8 @@ express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIRANIMATIONCOOKEDCLIPREADER_H__
-#define __SIRENGINE_SIRANIMATIONCOOKEDCLIPREADER_H__
+#ifndef __SIR_ANIMATIONCOOKEDCLIPREADER_H__
+#define __SIR_ANIMATIONCOOKEDCLIPREADER_H__
 
 #include <Core/SIRPCH.h>
 // clang-format off
@@ -32,15 +32,15 @@ class SIRAnimationCookedClipReader
 public:
 	SIRAnimationCookedClipReader( void ) noexcept = default;
 
-	sirAnimationCookResult_t initialize( sirAnimationCookSpan_t source, sirAnimationCookAssetInfo_t *pInfo ) noexcept;
-	sirAnimationCookResult_t getTrackCount( uint32_t nBoneIndex, bool bPreferFine, uint32_t *pCount ) const noexcept;
-	sirAnimationCookResult_t readTrack( uint32_t nBoneIndex, bool bPreferFine, sirAnimationCookTrackOutput_t *pOutput ) const noexcept;
+	SIRAnimationCookResult initialize( sirAnimationCookSpan_t source, sirAnimationCookAssetInfo_t *pInfo ) noexcept;
+	SIRAnimationCookResult getTrackCount( uint32_t nBoneIndex, bool bPreferFine, uint32_t *pCount ) const noexcept;
+	SIRAnimationCookResult readTrack( uint32_t nBoneIndex, bool bPreferFine, sirAnimationCookTrackOutput_t *pOutput ) const noexcept;
 
 protected:
 private:
-	sirAnimationCookSpan_t m_Source = {};
+	sirAnimationCookSpan_t m_Source {};
 	uint32_t m_nTrackCount = 0;
 	uint64_t m_nTrackOffset = 0;
 };
 
-#endif // __SIRENGINE_SIRANIMATIONCOOKEDCLIPREADER_H__
+#endif // __SIR_ANIMATIONCOOKEDCLIPREADER_H__

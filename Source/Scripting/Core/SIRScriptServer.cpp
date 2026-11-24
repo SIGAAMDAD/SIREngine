@@ -22,8 +22,8 @@ SIRScriptServer::SIRScriptServer( void ) noexcept : m_Bindings(), m_CodeManager(
 SIRScriptServer::~SIRScriptServer( void ) noexcept
 {
 	// Finish backend unload callbacks before code-manager resource release.
-	( void )m_Runtime.shutdownAll();
-	( void )m_CodeManager.shutdown();
+	static_cast<void>(m_Runtime.shutdownAll());
+	static_cast<void>(m_CodeManager.shutdown());
 }
 
 SIRScriptBindingRegistry& SIRScriptServer::bindings( void ) noexcept
@@ -41,7 +41,7 @@ SIRScriptCodeManager& SIRScriptServer::codeManager( void ) noexcept
 	return m_CodeManager;
 }
 
-sirScriptResult_t SIRScriptServer::useCodeManagerSource( void ) noexcept
+SIRScriptResult SIRScriptServer::useCodeManagerSource( void ) noexcept
 {
 	return m_Runtime.setProgramSource( m_CodeManager.makeProgramSourceAPI() );
 }

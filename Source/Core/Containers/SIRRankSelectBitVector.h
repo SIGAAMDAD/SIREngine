@@ -13,7 +13,7 @@ class SIRRankSelectBitVector
 	static uint32_t pop( uint64_t nWord ) noexcept
 	{
 #if defined( __clang__ ) || defined( __GNUC__ )
-		return ( uint32_t )__builtin_popcountll( nWord );
+		return static_cast<uint32_t>(__builtin_popcountll( nWord ));
 #else
 		uint32_t nCount = 0;
 		while ( nWord ) {
@@ -46,20 +46,20 @@ public:
 	    : m_pAllocator( pAllocator ), m_words( pAllocator ), m_prefix( pAllocator )
 	{
 	}
-	sirContainerResult_t tryBuild( const uint64_t *pWords, uint32_t nBits )
+	SIRContainerResult tryBuild( const uint64_t *pWords, uint32_t nBits )
 	{
 		if ( nBits != 0 && pWords == nullptr ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		const uint32_t nWords = ( nBits + 63ull ) / 64;
 		SIRVector<uint64_t> words( m_pAllocator );
 		SIRVector<uint64_t> prefix( m_pAllocator );
-		sirContainerResult_t eResult = words.tryReserve( nWords );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		SIRContainerResult eResult = words.tryReserve( nWords );
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		eResult = prefix.tryReserve( nWords + 1 );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		uint64_t nCount = 0;
@@ -76,7 +76,7 @@ public:
 		m_words = std::move( words );
 		m_prefix = std::move( prefix );
 		m_nBits = nBits;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 	uint64_t rank1( uint32_t nExclusive ) const noexcept
 	{
@@ -111,7 +111,7 @@ public:
 			nWord &= nWord - 1;
 		}
 #if defined( __clang__ ) || defined( __GNUC__ )
-		return nLo * 64 + ( uint32_t )__builtin_ctzll( nWord );
+		return nLo * 64 + static_cast<uint32_t>(__builtin_ctzll( nWord ));
 #else
 		uint32_t nBit = 0;
 		while ( ( nWord & 1 ) == 0 ) {
@@ -140,18 +140,18 @@ public:
 				nHi = iMid;
 			}
 		}
-		return nLo * 64 + selectBitInWord( m_words[nLo], ( uint32_t )( nOrdinal - m_prefix[nLo] ) );
+		return nLo * 64 + selectBitInWord( m_words[nLo], static_cast<uint32_t>( nOrdinal - m_prefix[nLo] ) );
 	}
 	uint32_t select0( uint64_t nOrdinal ) const noexcept
 	{
-		if ( nOrdinal >= ( uint64_t )m_nBits - getOnes() ) {
+		if ( nOrdinal >= static_cast<uint64_t>(m_nBits - getOnes()) ) {
 			return UINT32_MAX;
 		}
 		uint32_t nLo = 0;
 		uint32_t nHi = m_words.getSize();
 		while ( nLo < nHi ) {
 			const uint32_t iMid = nLo + ( nHi - nLo ) / 2;
-			const uint64_t nEnd = ( uint64_t )( iMid + 1 ) * 64 < m_nBits ? ( uint64_t )( iMid + 1 ) * 64 : m_nBits;
+			const uint64_t nEnd = static_cast<uint64_t>( iMid + 1 ) * 64 < m_nBits ? static_cast<uint64_t>( iMid + 1 ) * 64 : m_nBits;
 			if ( nEnd - m_prefix[iMid + 1] <= nOrdinal ) {
 				nLo = iMid + 1;
 			} else {
@@ -163,7 +163,7 @@ public:
 		if ( nTail != 0 && nLo + 1 == m_words.getSize() ) {
 			nWord &= ( uint64_t( 1 ) << nTail ) - 1;
 		}
-		return nLo * 64 + selectBitInWord( nWord, ( uint32_t )( nOrdinal - ( ( uint64_t )nLo * 64 - m_prefix[nLo] ) ) );
+		return nLo * 64 + selectBitInWord( nWord, ( uint32_t )( nOrdinal - ( static_cast<uint64_t>(nLo) * 64 - m_prefix[nLo] ) ) );
 	}
 	bool contains( uint32_t iBit ) const noexcept
 	{

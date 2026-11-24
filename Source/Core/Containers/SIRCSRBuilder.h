@@ -67,33 +67,33 @@ public:
 	    : m_pAllocator( pAllocator ), m_edges( pAllocator ), m_nVertices( nVertices )
 	{
 	}
-	sirContainerResult_t tryAddEdge( uint32_t iSource, uint32_t iDestination, const T& value )
+	SIRContainerResult tryAddEdge( uint32_t iSource, uint32_t iDestination, const T& value )
 	{
 		if ( iSource >= m_nVertices || iDestination >= m_nVertices ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		return m_edges.tryEmplaceBack( Edge{ iSource, iDestination, value } );
 	}
-	sirContainerResult_t tryFreeze( SIRCSRGraph<T>& output ) const
+	SIRContainerResult tryFreeze( SIRCSRGraph<T>& output ) const
 	{
 		if ( m_nVertices == UINT32_MAX ) {
-			return SIR_CONTAINER_SIZE_OVERFLOW;
+			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
 		SIRVector<uint32_t> offsets( m_pAllocator );
 		SIRVector<uint32_t> cursors( m_pAllocator );
 		SIRVector<uint32_t> order( m_pAllocator );
 		SIRVector<uint32_t> destinations( m_pAllocator );
 		SIRVector<T> values( m_pAllocator );
-		sirContainerResult_t eResult = offsets.tryResize( m_nVertices + 1 );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		SIRContainerResult eResult = offsets.tryResize( m_nVertices + 1 );
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		eResult = cursors.tryResize( m_nVertices );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		eResult = order.tryResize( m_edges.getSize() );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 
@@ -119,11 +119,11 @@ public:
 			}
 		}
 		eResult = destinations.tryReserve( m_edges.getSize() );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		eResult = values.tryReserve( m_edges.getSize() );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		for ( uint32_t iOrder = 0; iOrder < order.getSize(); ++iOrder ) {
@@ -135,7 +135,7 @@ public:
 		output.m_destinations = std::move( destinations );
 		output.m_values = std::move( values );
 		output.m_nVertices = m_nVertices;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 	uint32_t getPendingEdges( void ) const noexcept
 	{

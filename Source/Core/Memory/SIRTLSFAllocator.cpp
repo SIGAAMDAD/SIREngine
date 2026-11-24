@@ -15,7 +15,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Core/Memory/Allocators/SIRTLSFAllocator.h>
-#include <Core/Memory/SIRMemoryUtils.h>
+#include <Core/SIRMath.h>
 #include <Core/Memory/SIRMemorySegment.h>
 
 #include <cstring>
@@ -60,16 +60,16 @@ bool SIRTLSFAllocator::init( SIRMemorySegment *pSegment, uint32_t nCommitIncreme
 		return false;
 	}
 	m_pSegment = pSegment;
-	m_pBase = ( ( uint8_t * )( pSegment->getBase() ) );
-	m_nCapacityBytes = ( ( uint32_t )( pSegment->getReservedBytes() ) );
-	m_nIncrementBytes = ( ( uint32_t )( nIncrement ) );
-	m_nPageSize = ( ( uint32_t )( pSegment->getPageSize() ) );
+	m_pBase = static_cast<uint8_t *>(  pSegment->getBase()  );
+	m_nCapacityBytes = static_cast<uint32_t>(  pSegment->getReservedBytes()  );
+	m_nIncrementBytes = static_cast<uint32_t>( nIncrement );
+	m_nPageSize = static_cast<uint32_t>(  pSegment->getPageSize()  );
 	return true;
 }
 
 sirHeapBlock_t *SIRTLSFAllocator::block( uint32_t nOffset ) const
 {
-	return ( ( sirHeapBlock_t * )( m_pBase + nOffset ) );
+	return reinterpret_cast<sirHeapBlock_t *>( m_pBase + nOffset );
 }
 
 uint32_t SIRTLSFAllocator::firstSet( uint32_t nWord )
@@ -77,9 +77,9 @@ uint32_t SIRTLSFAllocator::firstSet( uint32_t nWord )
 #if defined( _MSC_VER )
 	unsigned long nBit = 0;
 	_BitScanForward( &nBit, nWord );
-	return ( ( uint32_t )( nBit ) );
+	return static_cast<uint32_t>( nBit );
 #else
-	return ( ( uint32_t )( __builtin_ctz( nWord ) ) );
+	return static_cast<uint32_t>(  __builtin_ctz( nWord )  );
 #endif
 }
 
@@ -88,9 +88,9 @@ uint32_t SIRTLSFAllocator::highestSet( uint32_t nWord )
 #if defined( _MSC_VER )
 	unsigned long nBit = 0;
 	_BitScanReverse( &nBit, nWord );
-	return ( ( uint32_t )( nBit ) );
+	return static_cast<uint32_t>( nBit );
 #else
-	return 31u - ( ( uint32_t )( __builtin_clz( nWord ) ) );
+	return 31u - ( static_cast<uint32_t>(  __builtin_clz( nWord )  ) );
 #endif
 }
 
@@ -204,12 +204,12 @@ bool SIRTLSFAllocator::requiredBytes( uint32_t nBytes, uint32_t nAlignment, uint
 	if ( pBytes == nullptr || nBytes == 0 || !SIR_IS_POWER_OF_TWO( nAlignment ) || nAlignment > m_nPageSize ) {
 		return false;
 	}
-	const uint64_t nWorst = ( ( uint64_t )( SIRHeapBlock::HEADER ) ) + nBytes + ( nAlignment > 16 ? nAlignment - 16 : 0 );
+	const uint64_t nWorst = ( static_cast<uint64_t>( SIRHeapBlock::HEADER ) ) + nBytes + ( nAlignment > 16 ? nAlignment - 16 : 0 );
 	const uint64_t nRounded = SIR_ALIGN_UP( nWorst, 16ull );
 	if ( nRounded > m_nCapacityBytes ) {
 		return false;
 	}
-	*pBytes = ( ( uint32_t )( nRounded < SIRHeapBlock::MINIMUM ? SIRHeapBlock::MINIMUM : nRounded ) );
+	*pBytes = static_cast<uint32_t>( nRounded < SIRHeapBlock::MINIMUM ? SIRHeapBlock::MINIMUM : nRounded );
 	return true;
 }
 
@@ -219,17 +219,17 @@ uint32_t SIRTLSFAllocator::usedBytes( uint32_t nOffset, uint32_t nBytes, uint32_
 	// ordinary path therefore needs no pointer-based alignment calculation.
 	if ( nAlignment <= 16 ) {
 		*pUserOffset = nOffset + 16;
-		const uint64_t nUsed = SIR_ALIGN_UP( ( ( uint64_t )( 16 ) ) + nBytes, 16ull );
-		return ( ( uint32_t )( nUsed < SIRHeapBlock::MINIMUM ? SIRHeapBlock::MINIMUM : nUsed ) );
+		const uint64_t nUsed = SIR_ALIGN_UP( ( static_cast<uint64_t>( 16 ) ) + nBytes, 16ull );
+		return static_cast<uint32_t>( nUsed < SIRHeapBlock::MINIMUM ? SIRHeapBlock::MINIMUM : nUsed );
 	}
-	const uintptr_t nAddress = ( ( uintptr_t )( m_pBase ) ) + nOffset + 16;
+	const uintptr_t nAddress = reinterpret_cast<uintptr_t>(m_pBase) + nOffset + 16;
 	const uint64_t nUser = SIR_ALIGN_UP( nAddress, nAlignment );
-	const uint64_t nUsed = SIR_ALIGN_UP( nUser - ( ( uintptr_t )( m_pBase ) ) - nOffset + nBytes, 16ull );
+	const uint64_t nUsed = SIR_ALIGN_UP( nUser - reinterpret_cast<uintptr_t>(m_pBase) - nOffset + nBytes, 16ull );
 	if ( nUsed > UINT32_MAX ) {
 		return 0;
 	}
-	*pUserOffset = ( ( uint32_t )( nUser - ( ( uintptr_t )( m_pBase ) ) ) );
-	return ( ( uint32_t )( nUsed < SIRHeapBlock::MINIMUM ? SIRHeapBlock::MINIMUM : nUsed ) );
+	*pUserOffset = ( ( uint32_t )( nUser - reinterpret_cast<uintptr_t>(m_pBase) ) );
+	return static_cast<uint32_t>( nUsed < SIRHeapBlock::MINIMUM ? SIRHeapBlock::MINIMUM : nUsed );
 }
 
 bool SIRTLSFAllocator::grow( uint32_t nMinimumBytes )
@@ -258,15 +258,15 @@ bool SIRTLSFAllocator::grow( uint32_t nMinimumBytes )
 		nGrow = nRoundValue <= UINT64_MAX - ( nRoundMultiple - 1 ) ? SIR_ROUND_UP_MULTIPLE( nRoundValue, nRoundMultiple )
 		                                                           : nRoundValue + nPadding;
 	}
-	if ( !SIR_IS_POWER_OF_TWO( m_pSegment->getPageSize() ) || ( uint64_t )( m_pSegment->getPageSize() ) > UINTPTR_MAX ||
-	     ( uint64_t )( ( ( uint64_t )( nOld ) ) + nGrow ) > UINTPTR_MAX - ( ( uint64_t )( m_pSegment->getPageSize() ) - 1 ) ) {
+	if ( !SIR_IS_POWER_OF_TWO( m_pSegment->getPageSize() ) || static_cast<uint64_t>(  m_pSegment->getPageSize()  ) > UINTPTR_MAX ||
+	     ( uint64_t )( static_cast<uint64_t>( nOld ) + nGrow ) > UINTPTR_MAX - ( ( uint64_t )( m_pSegment->getPageSize() ) - 1 ) ) {
 		return false;
 	}
-	nTarget = SIR_ALIGN_UP( ( ( uint64_t )( nOld ) ) + nGrow, m_pSegment->getPageSize() );
+	nTarget = SIR_ALIGN_UP( static_cast<uint64_t>( nOld ) + nGrow, m_pSegment->getPageSize() );
 	if ( nTarget > m_nCapacityBytes ) {
 		nTarget = m_nCapacityBytes;
 	}
-	uint32_t nAdded = ( ( uint32_t )( nTarget ) ) - nOld;
+	uint32_t nAdded = static_cast<uint32_t>( nTarget ) - nOld;
 	if ( !m_pSegment->commit( nOld, nAdded ) ) {
 		// commit the minimum page-rounded growth when the preferred batch
 		// exceeds the remaining global commitment budget.
@@ -287,10 +287,10 @@ bool SIRTLSFAllocator::grow( uint32_t nMinimumBytes )
 		if ( nGrow > m_nCapacityBytes - nOld || !m_pSegment->commit( nOld, nGrow ) ) {
 			return false;
 		}
-		nAdded = ( ( uint32_t )( nGrow ) );
-		nTarget = ( ( uint64_t )( nOld ) ) + nGrow;
+		nAdded = static_cast<uint32_t>( nGrow );
+		nTarget = static_cast<uint64_t>( nOld ) + nGrow;
 	}
-	m_nCommittedBytes = ( ( uint32_t )( nTarget ) );
+	m_nCommittedBytes = static_cast<uint32_t>( nTarget );
 	if ( m_nLastBlock != SIRHeapBlock::NONE && SIRHeapBlock::isFree( block( m_nLastBlock ) ) ) {
 		removeFree( m_nLastBlock );
 		block( m_nLastBlock )->nSizeAndFlags += nAdded;
@@ -363,8 +363,8 @@ bool SIRTLSFAllocator::free( void *pMemory )
 	if ( m_pSegment == nullptr || pMemory == nullptr || m_nAllocationCount == 0 ) {
 		return false;
 	}
-	const uintptr_t nBase = ( ( uintptr_t )( m_pBase ) );
-	const uintptr_t nUser = ( ( uintptr_t )( pMemory ) );
+	const uintptr_t nBase = reinterpret_cast<uintptr_t>(m_pBase);
+	const uintptr_t nUser = reinterpret_cast<uintptr_t>(pMemory);
 	if ( nUser < nBase + 16 || nUser >= nBase + m_nCommittedBytes ) {
 		return false;
 	}
@@ -412,8 +412,8 @@ uint32_t SIRTLSFAllocator::getUsableSize( const void *pMemory ) const
 	if ( m_pSegment == nullptr || pMemory == nullptr || m_nAllocationCount == 0 ) {
 		return 0;
 	}
-	const uintptr_t nBase = ( ( uintptr_t )( m_pBase ) );
-	const uintptr_t nUser = ( ( uintptr_t )( pMemory ) );
+	const uintptr_t nBase = reinterpret_cast<uintptr_t>(m_pBase);
+	const uintptr_t nUser = reinterpret_cast<uintptr_t>(pMemory);
 	if ( nUser < nBase + SIRHeapBlock::HEADER || nUser >= nBase + m_nCommittedBytes ) {
 		return 0;
 	}
@@ -424,7 +424,7 @@ uint32_t SIRTLSFAllocator::getUsableSize( const void *pMemory ) const
 	}
 	const sirHeapBlock_t *pBlock = block( nOffset );
 	const uint32_t nSize = SIRHeapBlock::size( pBlock );
-	const uint32_t nUserOffset = ( ( uint32_t )( nUser - nBase ) );
+	const uint32_t nUserOffset = static_cast<uint32_t>( nUser - nBase );
 	if ( SIRHeapBlock::isFree( pBlock ) || nSize < SIRHeapBlock::MINIMUM || nSize > m_nCommittedBytes - nOffset ||
 	     nOffset + pBlock->nPreviousFreeOffset != nUserOffset || nUserOffset >= nOffset + nSize ) {
 		return 0;
@@ -442,9 +442,9 @@ bool SIRTLSFAllocator::trimUnusedPages( void )
 	}
 	const uint32_t nStart = m_nLastBlock;
 	uint64_t nKeep = 0;
-	const uint64_t nKeepStart = nStart % m_pSegment->getPageSize() == 0 ? nStart : ( ( uint64_t )( nStart ) ) + SIRHeapBlock::MINIMUM;
-	if ( !SIR_IS_POWER_OF_TWO( m_pSegment->getPageSize() ) || ( uint64_t )( m_pSegment->getPageSize() ) > UINTPTR_MAX ||
-	     ( uint64_t )( nKeepStart ) > UINTPTR_MAX - ( ( uint64_t )( m_pSegment->getPageSize() ) - 1 ) ) {
+	const uint64_t nKeepStart = nStart % m_pSegment->getPageSize() == 0 ? nStart : static_cast<uint64_t>( nStart ) + SIRHeapBlock::MINIMUM;
+	if ( !SIR_IS_POWER_OF_TWO( m_pSegment->getPageSize() ) || static_cast<uint64_t>(  m_pSegment->getPageSize()  ) > UINTPTR_MAX ||
+	     static_cast<uint64_t>( nKeepStart ) > UINTPTR_MAX - ( ( uint64_t )( m_pSegment->getPageSize() ) - 1 ) ) {
 		return false;
 	}
 	nKeep = SIR_ALIGN_UP( nKeepStart, m_pSegment->getPageSize() );
@@ -461,10 +461,10 @@ bool SIRTLSFAllocator::trimUnusedPages( void )
 	if ( nKeep == nStart ) {
 		m_nLastBlock = nStart == 0 ? SIRHeapBlock::NONE : nStart - nPreviousSize;
 	} else {
-		block( nStart )->nSizeAndFlags = ( ( uint32_t )( nKeep - nStart ) );
+		block( nStart )->nSizeAndFlags = static_cast<uint32_t>( nKeep - nStart );
 		insertFree( nStart );
 	}
-	m_nCommittedBytes = ( ( uint32_t )( nKeep ) );
+	m_nCommittedBytes = static_cast<uint32_t>( nKeep );
 	return true;
 }
 

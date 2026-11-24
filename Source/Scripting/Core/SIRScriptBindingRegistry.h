@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSCRIPTBINDINGREGISTRY_H__
-#define __SIRENGINE_SIRSCRIPTBINDINGREGISTRY_H__
+#ifndef __SIR_SCRIPTBINDINGREGISTRY_H__
+#define __SIR_SCRIPTBINDINGREGISTRY_H__
 
 #include <Core/SIRPCH.h>
 
@@ -24,11 +24,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Scripting/Public/SIRScriptTypes.h>
 
-typedef enum sirScriptTypeFlags_e : uint32_t
-{
+enum class SIRScriptTypeFlags : uint32_t {
 	SIR_SCRIPT_TYPE_PLAIN_BYTES = 1U << 0,
 	SIR_SCRIPT_TYPE_NO_POINTERS = 1U << 1
-} sirScriptTypeFlags_t;
+};
 
 typedef struct sirScriptTypeDescriptor_s
 {
@@ -55,7 +54,7 @@ typedef struct sirScriptEventDescriptor_s
 	uint64_t nPayloadTypeId; // zero identifies an empty event payload
 } sirScriptEventDescriptor_t;
 
-typedef sirScriptResult_t ( *sirScriptNativeThunk_t )( void *, sirScriptReadFrame_t, sirScriptWriteFrame_t ) noexcept;
+typedef SIRScriptResult ( *sirScriptNativeThunk_t )( void *, sirScriptReadFrame_t, sirScriptWriteFrame_t ) noexcept;
 
 typedef struct sirScriptFunctionEntry_s
 {
@@ -80,19 +79,19 @@ class SIRScriptBindingRegistry
 public:
 	SIRScriptBindingRegistry( void ) noexcept;
 
-	sirScriptResult_t registerType( const sirScriptTypeDescriptor_t& descriptor ) noexcept;
-	sirScriptResult_t registerFunction( const sirScriptFunctionDescriptor_t& descriptor, sirScriptNativeThunk_t pInvoke,
+	SIRScriptResult registerType( const sirScriptTypeDescriptor_t& descriptor ) noexcept;
+	SIRScriptResult registerFunction( const sirScriptFunctionDescriptor_t& descriptor, sirScriptNativeThunk_t pInvoke,
 	                                    void *pUser ) noexcept;
-	sirScriptResult_t registerEvent( const sirScriptEventDescriptor_t& descriptor ) noexcept;
-	sirScriptResult_t publish( void ) noexcept;
+	SIRScriptResult registerEvent( const sirScriptEventDescriptor_t& descriptor ) noexcept;
+	SIRScriptResult publish( void ) noexcept;
 	bool isPublished( void ) const noexcept;
 	uint64_t schemaFingerprint( void ) const noexcept;
 	bool describeFunction( uint64_t nFunctionId, sirScriptFunctionDescriptor_t *pDescriptor ) const noexcept;
 	bool hasEvent( uint64_t nEventTypeId ) const noexcept;
-	sirScriptResult_t validateEvent( uint64_t nEventTypeId, sirScriptReadFrame_t payload ) const noexcept;
-	sirScriptResult_t validateQueuedEvent( uint64_t nEventTypeId, sirScriptReadFrame_t payload ) const noexcept;
-	sirScriptResult_t validateQueuedFrame( uint64_t nTypeId, sirScriptReadFrame_t frame ) const noexcept;
-	sirScriptResult_t invokeNative( const sirScriptNativeInvocation_t& request ) const noexcept;
+	SIRScriptResult validateEvent( uint64_t nEventTypeId, sirScriptReadFrame_t payload ) const noexcept;
+	SIRScriptResult validateQueuedEvent( uint64_t nEventTypeId, sirScriptReadFrame_t payload ) const noexcept;
+	SIRScriptResult validateQueuedFrame( uint64_t nTypeId, sirScriptReadFrame_t frame ) const noexcept;
+	SIRScriptResult invokeNative( const sirScriptNativeInvocation_t& request ) const noexcept;
 
 private:
 	static constexpr uint32_t MAX_TYPES = 64;
@@ -114,4 +113,4 @@ private:
 	bool m_bPublished;
 };
 
-#endif // __SIRENGINE_SIRSCRIPTBINDINGREGISTRY_H__
+#endif // __SIR_SCRIPTBINDINGREGISTRY_H__

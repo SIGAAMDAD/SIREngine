@@ -33,7 +33,7 @@ SIRFileLock::SIRFileLock( const char *pszLockPath ) noexcept : m_nHandle( -1 )
 
 	while ( flock( nDescriptor, LOCK_EX ) != 0 ) {
 		if ( errno != EINTR ) {
-			( void )close( nDescriptor );
+			static_cast<void>(close( nDescriptor ));
 			return;
 		}
 	}
@@ -44,8 +44,8 @@ SIRFileLock::SIRFileLock( const char *pszLockPath ) noexcept : m_nHandle( -1 )
 SIRFileLock::~SIRFileLock( void ) noexcept
 {
 	if ( m_nHandle >= 0 ) {
-		( void )flock( ( int )m_nHandle, LOCK_UN );
-		( void )close( ( int )m_nHandle );
+		static_cast<void>(flock( static_cast<int>(m_nHandle), LOCK_UN ));
+		static_cast<void>(::close( static_cast<int>(m_nHandle) ));
 	}
 }
 

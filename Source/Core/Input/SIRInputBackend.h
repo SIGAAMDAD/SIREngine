@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRINPUTBACKEND_H__
-#define __SIRENGINE_SIRINPUTBACKEND_H__
+#ifndef __SIR_INPUTBACKEND_H__
+#define __SIR_INPUTBACKEND_H__
 
 #include <Core/SIRPCH.h>
 
@@ -34,7 +34,7 @@ class SIRInputBackend
 {
 public:
 	virtual ~SIRInputBackend() = default;
-	virtual sirInputBackendId_t id( void ) const noexcept = 0;
+	virtual SIRInputBackendId id( void ) const noexcept = 0;
 	virtual void sample( SIRInputService& service ) noexcept = 0;
 	virtual void resynchronize( SIRInputService& service ) noexcept = 0;
 	virtual bool vibrate( sirInputDeviceId_t hDevice, uint16_t nLeft, uint16_t nRight ) noexcept = 0;
@@ -43,4 +43,4 @@ public:
 	virtual void stop( SIRInputService& service ) noexcept = 0;
 };
 
-#endif // __SIRENGINE_SIRINPUTBACKEND_H__
+#endif // __SIR_INPUTBACKEND_H__

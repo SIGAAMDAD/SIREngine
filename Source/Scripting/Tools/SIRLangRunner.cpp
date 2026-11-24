@@ -33,13 +33,13 @@ typedef struct sirLangRunnerBuffers_s
 	uint8_t szBytecode[SIR_LANG_RUN_MAX_BYTES];
 	sirLangCIRFunction_t szFunctions[SIR_LANG_RUN_MAX_FUNCTIONS];
 	sirLangCIRInstruction_t szInstructions[SIR_LANG_RUN_MAX_INSTRUCTIONS];
-	sirLangValueKind_t szParameterTypes[SIR_LANG_RUN_MAX_PARAMETERS];
+	SIRLangValueKind szParameterTypes[SIR_LANG_RUN_MAX_PARAMETERS];
 	uint32_t szCallArguments[SIR_LANG_RUN_MAX_CALL_ARGUMENTS];
 	sirLangVMValue_t szArguments[SIR_LANG_VM_MAX_PARAMETERS];
 	sirLangCIRStorage_t storage;
 } sirLangRunnerBuffers_t;
 
-static sirLangRunnerBuffers_t s_RunBuffers = {};
+static sirLangRunnerBuffers_t s_RunBuffers {};
 
 static bool sirLangRunReadFile( const char *pszPath, uint32_t *pUsed ) noexcept
 {
@@ -53,11 +53,11 @@ static bool sirLangRunReadFile( const char *pszPath, uint32_t *pUsed ) noexcept
 	const size_t nBytes = fread( s_RunBuffers.szBytecode, 1, sizeof( s_RunBuffers.szBytecode ), pFile );
 	const int nExtra = fgetc( pFile );
 	const bool bOk = nBytes >= SIR_LANG_BYTECODE_HEADER_BYTES && nExtra == EOF && !ferror( pFile );
-	( void )fclose( pFile );
+	static_cast<void>(fclose( pFile ));
 	if ( !bOk ) {
 		return false;
 	}
-	*pUsed = ( uint32_t )nBytes;
+	*pUsed = static_cast<uint32_t>(nBytes);
 	return true;
 }
 
@@ -89,24 +89,24 @@ static bool sirLangRunParseUnsigned( const char *pszValue, uint64_t *pResult ) n
 	if ( errno != 0 || pszEnd == pszValue || *pszEnd != '\0' ) {
 		return false;
 	}
-	*pResult = ( uint64_t )nValue;
+	*pResult = static_cast<uint64_t>(nValue);
 	return true;
 }
 
-static uint32_t sirLangRunIntegerWidth( sirLangValueKind_t eType ) noexcept
+static uint32_t sirLangRunIntegerWidth( SIRLangValueKind eType ) noexcept
 {
 	switch ( eType ) {
-	case SIR_LANG_VALUE_I8:
-	case SIR_LANG_VALUE_U8:
+	case SIRLangValueKind::SIR_LANG_VALUE_I8:
+	case SIRLangValueKind::SIR_LANG_VALUE_U8:
 		return 8;
-	case SIR_LANG_VALUE_I16:
-	case SIR_LANG_VALUE_U16:
+	case SIRLangValueKind::SIR_LANG_VALUE_I16:
+	case SIRLangValueKind::SIR_LANG_VALUE_U16:
 		return 16;
-	case SIR_LANG_VALUE_I32:
-	case SIR_LANG_VALUE_U32:
+	case SIRLangValueKind::SIR_LANG_VALUE_I32:
+	case SIRLangValueKind::SIR_LANG_VALUE_U32:
 		return 32;
-	case SIR_LANG_VALUE_I64:
-	case SIR_LANG_VALUE_U64:
+	case SIRLangValueKind::SIR_LANG_VALUE_I64:
+	case SIRLangValueKind::SIR_LANG_VALUE_U64:
 		return 64;
 	default:
 		return 0;
@@ -124,7 +124,7 @@ static bool sirLangRunParseSigned( const char *pszValue, uint32_t nWidth, uint64
 	if ( errno != 0 || pszEnd == pszValue || *pszEnd != '\0' ) {
 		return false;
 	}
-	const int64_t nSigned = ( int64_t )nParsed;
+	const int64_t nSigned = static_cast<int64_t>(nParsed);
 	if ( nWidth < 64 ) {
 		const int64_t nMin = -( INT64_C( 1 ) << ( nWidth - 1 ) );
 		const int64_t nMax = ( INT64_C( 1 ) << ( nWidth - 1 ) ) - 1;
@@ -136,13 +136,13 @@ static bool sirLangRunParseSigned( const char *pszValue, uint32_t nWidth, uint64
 	return true;
 }
 
-static bool sirLangRunParseArgument( const char *pszValue, sirLangValueKind_t eType, sirLangVMValue_t *pValue ) noexcept
+static bool sirLangRunParseArgument( const char *pszValue, SIRLangValueKind eType, sirLangVMValue_t *pValue ) noexcept
 {
 	if ( pszValue == nullptr || pValue == nullptr ) {
 		return false;
 	}
 	uint64_t nBits = 0;
-	if ( eType == SIR_LANG_VALUE_BOOL ) {
+	if ( eType == SIRLangValueKind::SIR_LANG_VALUE_BOOL ) {
 		if ( strcmp( pszValue, "true" ) == 0 || strcmp( pszValue, "1" ) == 0 ) {
 			nBits = 1;
 		} else if ( strcmp( pszValue, "false" ) == 0 || strcmp( pszValue, "0" ) == 0 ) {
@@ -156,7 +156,7 @@ static bool sirLangRunParseArgument( const char *pszValue, sirLangValueKind_t eT
 			return false;
 		}
 		const bool bSigned =
-		    eType == SIR_LANG_VALUE_I8 || eType == SIR_LANG_VALUE_I16 || eType == SIR_LANG_VALUE_I32 || eType == SIR_LANG_VALUE_I64;
+		    eType == SIRLangValueKind::SIR_LANG_VALUE_I8 || eType == SIRLangValueKind::SIR_LANG_VALUE_I16 || eType == SIRLangValueKind::SIR_LANG_VALUE_I32 || eType == SIRLangValueKind::SIR_LANG_VALUE_I64;
 		if ( bSigned ) {
 			if ( !sirLangRunParseSigned( pszValue, nWidth, &nBits ) ) {
 				return false;
@@ -187,9 +187,9 @@ int main( int nArgc, char **ppszArgv )
 		return 3;
 	}
 	sirLangRunSetup( &s_RunBuffers );
-	const sirLangVMError_t eDecode = SIRLangDecodeGraphVM( s_RunBuffers.szBytecode, nBytes, &s_RunBuffers.storage );
-	if ( eDecode != SIR_LANG_VM_OK ) {
-		fprintf( stderr, "SIRLangRunner: invalid or incompatible bytecode (%u)\n", ( unsigned )eDecode );
+	const SIRLangVMError eDecode = SIRLangDecodeGraphVM( s_RunBuffers.szBytecode, nBytes, &s_RunBuffers.storage );
+	if ( eDecode != SIRLangVMError::SIR_LANG_VM_OK ) {
+		fprintf( stderr, "SIRLangRunner: invalid or incompatible bytecode (%u)\n", static_cast<unsigned>(eDecode) );
 		return 4;
 	}
 
@@ -199,19 +199,19 @@ int main( int nArgc, char **ppszArgv )
 		return 2;
 	}
 	const sirLangCIRFunction_t& function = s_RunBuffers.storage.program.pFunctions[iFunction];
-	if ( nArgc - 3 != ( int )function.nParameterCount || function.nParameterCount > SIR_LANG_VM_MAX_PARAMETERS ) {
+	if ( nArgc - 3 != static_cast<int>(function.nParameterCount) || function.nParameterCount > SIR_LANG_VM_MAX_PARAMETERS ) {
 		fprintf( stderr, "SIRLangRunner: expected %u arguments\n", function.nParameterCount );
 		return 2;
 	}
 	for ( uint32_t i = 0; i < function.nParameterCount; ++i ) {
-		const sirLangValueKind_t eType = s_RunBuffers.storage.program.pParameterTypes[function.iFirstParameterType + i];
+		const SIRLangValueKind eType = s_RunBuffers.storage.program.pParameterTypes[function.iFirstParameterType + i];
 		if ( !sirLangRunParseArgument( ppszArgv[3 + i], eType, &s_RunBuffers.szArguments[i] ) ) {
 			fprintf( stderr, "SIRLangRunner: invalid argument %u\n", i );
 			return 2;
 		}
 	}
 
-	sirLangVMInvocation_t invocation = {};
+	sirLangVMInvocation_t invocation {};
 	invocation.nFunctionId = function.nFunctionId;
 	invocation.pArguments = function.nParameterCount != 0 ? s_RunBuffers.szArguments : nullptr;
 	invocation.nArgumentCount = function.nParameterCount;
@@ -219,11 +219,11 @@ int main( int nArgc, char **ppszArgv )
 	invocation.nExpectedLayoutDigest = s_RunBuffers.storage.program.nLayoutDigest;
 	invocation.nExpectedBindingDigest = s_RunBuffers.storage.program.nBindingDigest;
 	const sirLangVMRunResult_t result = SIRLangRunGraphVM( &s_RunBuffers.storage.program, invocation );
-	if ( result.eError != SIR_LANG_VM_OK ) {
-		fprintf( stderr, "SIRLangRunner: execution failed (%u) at node %u\n", ( unsigned )result.eError, result.nSourceNode );
+	if ( result.eError != SIRLangVMError::SIR_LANG_VM_OK ) {
+		fprintf( stderr, "SIRLangRunner: execution failed (%u) at node %u\n", static_cast<unsigned>(result.eError), result.nSourceNode );
 		return 5;
 	}
-	printf( "value_type=%u value_bits=%llu fuel=%llu\n", ( unsigned )result.result.eType, ( unsigned long long )result.result.nBits,
+	printf( "value_type=%u value_bits=%llu fuel=%llu\n", static_cast<unsigned>(result.result.eType), ( unsigned long long )result.result.nBits,
 	        ( unsigned long long )result.nFuelConsumed );
 	return 0;
 }

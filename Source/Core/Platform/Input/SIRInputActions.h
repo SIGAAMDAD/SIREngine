@@ -13,10 +13,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRINPUTACTIONS_H__
-#define __SIRENGINE_SIRINPUTACTIONS_H__
+#ifndef __SIR_INPUTACTIONS_H__
+#define __SIR_INPUTACTIONS_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -35,20 +35,18 @@ constexpr uint32_t SIR_INPUT_PROFILE_CONTEXT_BYTES = 16;
 constexpr uint32_t SIR_INPUT_PROFILE_ACTION_BYTES = 8;
 constexpr uint32_t SIR_INPUT_PROFILE_BINDING_BYTES = 28;
 
-typedef enum sirInputBindingFlags_e : uint8_t
-{
+enum class SIRInputBindingFlags : uint8_t {
 	SIR_INPUT_BIND_NONE = 0,
 	SIR_INPUT_BIND_CONSUME = 1,
 	SIR_INPUT_BIND_TOGGLE = 2
-} sirInputBindingFlags_t;
+};
 
-typedef enum sirInputCaptureStatus_e : uint8_t
-{
+enum class SIRInputCaptureStatus : uint8_t {
 	SIR_INPUT_CAPTURE_IDLE = 0,
 	SIR_INPUT_CAPTURE_PENDING = 1,
 	SIR_INPUT_CAPTURE_ACCEPTED = 2,
 	SIR_INPUT_CAPTURE_CONFLICT = 3
-} sirInputCaptureStatus_t;
+};
 
 typedef struct sirInputActionContext_s
 {
@@ -67,8 +65,8 @@ typedef struct sirInputActionBinding_s
 	uint32_t nUser;
 	int32_t nDeadzone;
 	int32_t nScale;
-	sirInputDeviceClass_t eClass;
-	sirInputSignal_t eSignal;
+	SIRInputDeviceClass eClass;
+	SIRInputSignal eSignal;
 	uint8_t nFlags;
 } sirInputActionBinding_t;
 
@@ -96,7 +94,7 @@ public:
 	bool removeBinding( uint32_t iBinding ) noexcept;
 	bool beginCapture( uint32_t iBinding ) noexcept;
 	void cancelCapture( void ) noexcept;
-	sirInputCaptureStatus_t captureStatus( void ) const noexcept;
+	SIRInputCaptureStatus captureStatus( void ) const noexcept;
 	bool describeBinding( uint32_t iBinding, sirInputActionBinding_t *pOut ) const noexcept;
 	bool query( uint32_t nActionId, uint32_t nUser, sirInputActionState_t *pOut ) const noexcept;
 	void evaluate( const sirInputFrame_t& frame ) noexcept;
@@ -123,15 +121,15 @@ private:
 	uint32_t m_Held[SIR_INPUT_DEVICE_CAPACITY][SIR_INPUT_BUTTON_WORDS];
 	int32_t m_Axes[SIR_INPUT_DEVICE_CAPACITY][SIR_INPUT_AXIS_CAPACITY];
 	sirInputDeviceId_t m_DeviceIds[SIR_INPUT_DEVICE_CAPACITY];
-	sirInputDeviceClass_t m_Classes[SIR_INPUT_DEVICE_CAPACITY];
+	SIRInputDeviceClass m_Classes[SIR_INPUT_DEVICE_CAPACITY];
 	bool m_Toggled[SIR_INPUT_ACTION_CAPACITY];
 	uint32_t m_nContexts;
 	uint32_t m_nBindings;
 	uint32_t m_nActions;
 	uint64_t m_nLastTick;
 	bool m_bContextDirty;
-	sirInputCaptureStatus_t m_eCaptureStatus;
+	SIRInputCaptureStatus m_eCaptureStatus;
 	uint32_t m_iCaptureBinding;
 };
 
-#endif // __SIRENGINE_SIRINPUTACTIONS_H__
+#endif // __SIR_INPUTACTIONS_H__

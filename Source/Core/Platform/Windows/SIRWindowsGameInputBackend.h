@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRWINDOWSGAMEINPUTBACKEND_H__
-#define __SIRENGINE_SIRWINDOWSGAMEINPUTBACKEND_H__
+#ifndef __SIR_WINDOWSGAMEINPUTBACKEND_H__
+#define __SIR_WINDOWSGAMEINPUTBACKEND_H__
 
 #include <Core/SIRPCH.h>
 
@@ -27,7 +27,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Input/SIRInputBackend.h>
 #include <Core/Input/SIRInputService.h>
 #include <Core/Platform/Windows/SIRWindowsGameInputCodec.h>
-#include <Core/Platform/SIRAtomic.h>
+#include <atomic>
 #include <GameInput.h>
 
 typedef struct sirGameInputNativeDevice_s
@@ -50,7 +50,7 @@ public:
 	SIRWindowsGameInputBackend( const SIRWindowsGameInputBackend& ) = delete;
 	SIRWindowsGameInputBackend& operator=( const SIRWindowsGameInputBackend& ) = delete;
 
-	sirInputBackendId_t id( void ) const noexcept override;
+	SIRInputBackendId id( void ) const noexcept override;
 	bool initialize( void ) noexcept;
 	void sample( SIRInputService& service ) noexcept override;
 	void resynchronize( SIRInputService& service ) noexcept override;
@@ -82,8 +82,8 @@ private:
 	void *m_pCursor;
 	uint64_t m_nDeviceCallback;
 	sirGameInputNativeDevice_t m_Devices[SIR_INPUT_DEVICE_CAPACITY];
-	SIRAtomic<void *> m_Pending[PENDING_CAPACITY];
-	SIRAtomic<bool> m_bOverflow;
+	std::atomic<void *> m_Pending[PENDING_CAPACITY];
+	std::atomic<bool> m_bOverflow;
 };
 
-#endif // __SIRENGINE_SIRWINDOWSGAMEINPUTBACKEND_H__
+#endif // __SIR_WINDOWSGAMEINPUTBACKEND_H__

@@ -8,8 +8,8 @@ License, v2. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIREDITORRESOURCEKEYS_H__
-#define __SIRENGINE_SIREDITORRESOURCEKEYS_H__
+#ifndef __SIR_EDITORRESOURCEKEYS_H__
+#define __SIR_EDITORRESOURCEKEYS_H__
 #include <Core/SIRPCH.h>
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -33,4 +33,4 @@ typedef struct sirEditorResourceKeyBuffer_s
 } sirEditorResourceKeyBuffer_t;
 
 bool sirEditorCollectCatalogKeys( SIRResourceCatalog& catalog, sirEditorResourceKeyBuffer_t *pBuffer ) noexcept;
-#endif // __SIRENGINE_SIREDITORRESOURCEKEYS_H__
+#endif // __SIR_EDITORRESOURCEKEYS_H__

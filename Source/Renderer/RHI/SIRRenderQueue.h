@@ -13,10 +13,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRRENDERQUEUE_H__
-#define __SIRENGINE_SIRRENDERQUEUE_H__
+#ifndef __SIR_RENDERQUEUE_H__
+#define __SIR_RENDERQUEUE_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -35,26 +35,26 @@ class SIRRenderQueue final
 {
 public:
 	SIRRenderQueue( void ) noexcept = default;
-	SIRRenderQueue( SIRRenderingDevice& device, sirGraphicsQueue_t eQueue ) noexcept : m_pDevice( &device ), m_eQueue( eQueue )
+	SIRRenderQueue( SIRRenderingDevice& device, SIRGraphicsQueue eQueue ) noexcept : m_pDevice( &device ), m_eQueue( eQueue )
 	{
 	}
 
-	sirGraphicsQueue_t getType( void ) const noexcept
+	SIRGraphicsQueue getType( void ) const noexcept
 	{
 		return m_eQueue;
 	}
 	bool isValid( void ) const noexcept
 	{
-		return m_pDevice != nullptr && m_eQueue < SIR_GRAPHICS_QUEUE_COUNT;
+		return m_pDevice != nullptr && m_eQueue < SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT;
 	}
 
-	sirGraphicsResult_t submit( const sirGraphicsSubmission_t& submission, sirGraphicsCompletion_t *pCompletion ) noexcept;
-	sirGraphicsResult_t poll( const sirGraphicsCompletion_t& completion, bool *pComplete ) noexcept;
-	sirGraphicsResult_t wait( const sirGraphicsCompletion_t& completion, uint64_t nTimeoutNanoseconds ) noexcept;
+	SIRGraphicsResult submit( const sirGraphicsSubmission_t& submission, sirGraphicsCompletion_t *pCompletion ) noexcept;
+	SIRGraphicsResult poll( const sirGraphicsCompletion_t& completion, bool *pComplete ) noexcept;
+	SIRGraphicsResult wait( const sirGraphicsCompletion_t& completion, uint64_t nTimeoutNanoseconds ) noexcept;
 
 private:
 	SIRRenderingDevice *m_pDevice = nullptr;
-	sirGraphicsQueue_t m_eQueue = SIR_GRAPHICS_QUEUE_DIRECT;
+	SIRGraphicsQueue m_eQueue = SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_DIRECT;
 };
 
-#endif // __SIRENGINE_SIRRENDERQUEUE_H__
+#endif // __SIR_RENDERQUEUE_H__

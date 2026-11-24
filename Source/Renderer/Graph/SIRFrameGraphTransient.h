@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRFRAMEGRAPHTRANSIENT_H__
-#define __SIRENGINE_SIRFRAMEGRAPHTRANSIENT_H__
+#ifndef __SIR_FRAMEGRAPHTRANSIENT_H__
+#define __SIR_FRAMEGRAPHTRANSIENT_H__
 
 #include <Core/SIRPCH.h>
 
@@ -32,8 +32,8 @@ typedef struct sirFrameGraphTransientDesc_s
 	uint64_t nRequiredBytes;
 	uint64_t nAlignmentBytes;
 	uint64_t nProviderCompatibilityKey;
-	sirGraphicsMemoryClass_t eMemory;
-	sirGraphicsFormat_t eFormat;
+	SIRGraphicsMemoryClass eMemory;
+	SIRGraphicsFormat eFormat;
 	uint32_t nSampleCount;
 	bool bAllowAlias;
 } sirFrameGraphTransientDesc_t;
@@ -55,10 +55,10 @@ typedef struct sirFrameGraphTransientSlot_s
 	uint64_t nRequiredBytes;
 	uint64_t nAlignmentBytes;
 	uint64_t nProviderCompatibilityKey;
-	sirGraphicsMemoryClass_t eMemory;
-	sirGraphicsHandleType_t eType;
-	sirGraphicsFormat_t eFormat;
-	sirGraphicsQueue_t eQueue;
+	SIRGraphicsMemoryClass eMemory;
+	SIRGraphicsHandleType eType;
+	SIRGraphicsFormat eFormat;
+	SIRGraphicsQueue eQueue;
 	uint32_t nSampleCount;
 	bool bReuseAllowed;
 } sirFrameGraphTransientSlot_t;
@@ -73,4 +73,4 @@ typedef struct sirFrameGraphTransientPlan_s
 	sirFrameGraphTransientSlot_t szSlots[SIR_FRAMEGRAPH_MAX_RESOURCES];
 } sirFrameGraphTransientPlan_t;
 
-#endif // __SIRENGINE_SIRFRAMEGRAPHTRANSIENT_H__
+#endif // __SIR_FRAMEGRAPHTRANSIENT_H__

@@ -28,7 +28,7 @@ static sirLangCursor_t sirLangCursor( const sirLangLexer_t *pLexer ) noexcept
 	return { pLexer->nOffset, pLexer->nLine, pLexer->nColumn };
 }
 
-static sirLangToken_t sirLangToken( sirLangCursor_t start, sirLangTokenKind_t eKind, uint32_t nLength, sirLangLexError_t eError ) noexcept
+static sirLangToken_t sirLangToken( sirLangCursor_t start, SIRLangTokenKind eKind, uint32_t nLength, SIRLangLexError eError ) noexcept
 {
 	return { eKind, eError, start.nOffset, nLength, start.nLine, start.nColumn };
 }
@@ -53,7 +53,7 @@ static bool sirLangIsPunctuation( uint8_t iByte ) noexcept
 {
 	static constexpr char s_szPunctuation[] = "()[]{}.,:;+-*/%&|^!?=<>@~";
 	for ( uint32_t iChar = 0; s_szPunctuation[iChar] != '\0'; ++iChar ) {
-		if ( iByte == ( uint8_t )s_szPunctuation[iChar] ) {
+		if ( iByte == static_cast<uint8_t>(s_szPunctuation[iChar]) ) {
 			return true;
 		}
 	}
@@ -140,7 +140,7 @@ static sirLangToken_t sirLangReadIdentifier( sirLangLexer_t *pLexer ) noexcept
 			if ( nUtf8 == 0 ) {
 				if ( pLexer->nOffset == start.nOffset ) {
 					sirLangConsumeByte( pLexer );
-					return sirLangToken( start, SIR_LANG_TOKEN_ERROR, 1, SIR_LANG_LEX_INVALID_UTF8 );
+					return sirLangToken( start, SIRLangTokenKind::SIR_LANG_TOKEN_ERROR, 1, SIRLangLexError::SIR_LANG_LEX_INVALID_UTF8 );
 				}
 				break;
 			}
@@ -152,9 +152,9 @@ static sirLangToken_t sirLangReadIdentifier( sirLangLexer_t *pLexer ) noexcept
 	}
 
 	const uint32_t nLength = pLexer->nOffset - start.nOffset;
-	const sirLangTokenKind_t eKind =
-	    SIRLangIsKeyword( pBytes + start.nOffset, nLength ) ? SIR_LANG_TOKEN_KEYWORD : SIR_LANG_TOKEN_IDENTIFIER;
-	return sirLangToken( start, eKind, nLength, SIR_LANG_LEX_OK );
+	const SIRLangTokenKind eKind =
+	    SIRLangIsKeyword( pBytes + start.nOffset, nLength ) ? SIRLangTokenKind::SIR_LANG_TOKEN_KEYWORD : SIRLangTokenKind::SIR_LANG_TOKEN_IDENTIFIER;
+	return sirLangToken( start, eKind, nLength, SIRLangLexError::SIR_LANG_LEX_OK );
 }
 
 static sirLangToken_t sirLangReadNumber( sirLangLexer_t *pLexer ) noexcept
@@ -184,7 +184,7 @@ static sirLangToken_t sirLangReadNumber( sirLangLexer_t *pLexer ) noexcept
 		}
 		break;
 	}
-	return sirLangToken( start, SIR_LANG_TOKEN_NUMBER, pLexer->nOffset - start.nOffset, SIR_LANG_LEX_OK );
+	return sirLangToken( start, SIRLangTokenKind::SIR_LANG_TOKEN_NUMBER, pLexer->nOffset - start.nOffset, SIRLangLexError::SIR_LANG_LEX_OK );
 }
 
 static sirLangToken_t sirLangReadString( sirLangLexer_t *pLexer ) noexcept
@@ -201,7 +201,7 @@ static sirLangToken_t sirLangReadString( sirLangLexer_t *pLexer ) noexcept
 		}
 		if ( iByte == iQuote ) {
 			sirLangConsumeByte( pLexer );
-			return sirLangToken( start, SIR_LANG_TOKEN_STRING, pLexer->nOffset - start.nOffset, SIR_LANG_LEX_OK );
+			return sirLangToken( start, SIRLangTokenKind::SIR_LANG_TOKEN_STRING, pLexer->nOffset - start.nOffset, SIRLangLexError::SIR_LANG_LEX_OK );
 		}
 		if ( iByte == '\\' ) {
 			sirLangConsumeByte( pLexer );
@@ -214,7 +214,7 @@ static sirLangToken_t sirLangReadString( sirLangLexer_t *pLexer ) noexcept
 			const uint32_t nUtf8 = sirLangUtf8Bytes( pBytes + pLexer->nOffset, pLexer->source.nBytes - pLexer->nOffset );
 			if ( nUtf8 == 0 ) {
 				sirLangConsumeByte( pLexer );
-				return sirLangToken( start, SIR_LANG_TOKEN_ERROR, pLexer->nOffset - start.nOffset, SIR_LANG_LEX_INVALID_UTF8 );
+				return sirLangToken( start, SIRLangTokenKind::SIR_LANG_TOKEN_ERROR, pLexer->nOffset - start.nOffset, SIRLangLexError::SIR_LANG_LEX_INVALID_UTF8 );
 			}
 			pLexer->nOffset += nUtf8;
 			++pLexer->nColumn;
@@ -222,7 +222,7 @@ static sirLangToken_t sirLangReadString( sirLangLexer_t *pLexer ) noexcept
 		}
 		sirLangConsumeByte( pLexer );
 	}
-	return sirLangToken( start, SIR_LANG_TOKEN_ERROR, pLexer->nOffset - start.nOffset, SIR_LANG_LEX_UNTERMINATED_STRING );
+	return sirLangToken( start, SIRLangTokenKind::SIR_LANG_TOKEN_ERROR, pLexer->nOffset - start.nOffset, SIRLangLexError::SIR_LANG_LEX_UNTERMINATED_STRING );
 }
 
 bool SIRLangIsKeyword( const uint8_t *pBytes, uint32_t nBytes ) noexcept
@@ -261,16 +261,16 @@ void SIRLangLexerInit( sirLangLexer_t *pLexer, const sirLangSourceView_t& source
 sirLangToken_t SIRLangLexerNext( sirLangLexer_t *pLexer ) noexcept
 {
 	if ( pLexer == nullptr ) {
-		return { SIR_LANG_TOKEN_ERROR, SIR_LANG_LEX_INVALID_SOURCE, 0, 0, 0, 0 };
+		return { SIRLangTokenKind::SIR_LANG_TOKEN_ERROR, SIRLangLexError::SIR_LANG_LEX_INVALID_SOURCE, 0, 0, 0, 0 };
 	}
 	const sirLangCursor_t initial = sirLangCursor( pLexer );
 	if ( pLexer->bInvalidSource ) {
 		pLexer->bInvalidSource = false;
 		pLexer->bFinished = true;
-		return sirLangToken( initial, SIR_LANG_TOKEN_ERROR, 0, SIR_LANG_LEX_INVALID_SOURCE );
+		return sirLangToken( initial, SIRLangTokenKind::SIR_LANG_TOKEN_ERROR, 0, SIRLangLexError::SIR_LANG_LEX_INVALID_SOURCE );
 	}
 	if ( pLexer->bFinished ) {
-		return sirLangToken( initial, SIR_LANG_TOKEN_END, 0, SIR_LANG_LEX_OK );
+		return sirLangToken( initial, SIRLangTokenKind::SIR_LANG_TOKEN_END, 0, SIRLangLexError::SIR_LANG_LEX_OK );
 	}
 
 	const uint8_t *pBytes = pLexer->source.pBytes;
@@ -278,7 +278,7 @@ sirLangToken_t SIRLangLexerNext( sirLangLexer_t *pLexer ) noexcept
 		if ( pLexer->nOffset == pLexer->source.nBytes ) {
 			const sirLangCursor_t end = sirLangCursor( pLexer );
 			pLexer->bFinished = true;
-			return sirLangToken( end, SIR_LANG_TOKEN_END, 0, SIR_LANG_LEX_OK );
+			return sirLangToken( end, SIRLangTokenKind::SIR_LANG_TOKEN_END, 0, SIRLangLexError::SIR_LANG_LEX_OK );
 		}
 		const uint8_t iByte = pBytes[pLexer->nOffset];
 		if ( sirLangIsNewline( iByte ) ) {
@@ -310,9 +310,9 @@ sirLangToken_t SIRLangLexerNext( sirLangLexer_t *pLexer ) noexcept
 	}
 	if ( sirLangIsPunctuation( iByte ) ) {
 		sirLangConsumeByte( pLexer );
-		return sirLangToken( start, SIR_LANG_TOKEN_PUNCTUATION, 1, SIR_LANG_LEX_OK );
+		return sirLangToken( start, SIRLangTokenKind::SIR_LANG_TOKEN_PUNCTUATION, 1, SIRLangLexError::SIR_LANG_LEX_OK );
 	}
 
 	sirLangConsumeByte( pLexer );
-	return sirLangToken( start, SIR_LANG_TOKEN_ERROR, 1, SIR_LANG_LEX_INVALID_CHARACTER );
+	return sirLangToken( start, SIRLangTokenKind::SIR_LANG_TOKEN_ERROR, 1, SIRLangLexError::SIR_LANG_LEX_INVALID_CHARACTER );
 }

@@ -14,8 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRCACHEALLOCATOR_H__
-#define __SIRENGINE_SIRCACHEALLOCATOR_H__
+#ifndef __SIR_CACHEALLOCATOR_H__
+#define __SIR_CACHEALLOCATOR_H__
 
 #include <Core/SIRPCH.h>
 
@@ -113,4 +113,4 @@ private:
 	uint64_t m_nEvicted;
 };
 
-#endif // __SIRENGINE_SIRCACHEALLOCATOR_H__
+#endif // __SIR_CACHEALLOCATOR_H__

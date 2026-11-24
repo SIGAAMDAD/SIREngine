@@ -15,9 +15,9 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Renderer/Drivers/D3D11/SIRD3D11Formats.h>
 
-static constexpr uint32_t SIR_D3D11_TEXTURE_USAGE_MASK = SIR_GRAPHICS_USAGE_SAMPLED | SIR_GRAPHICS_USAGE_STORAGE |
-                                                         SIR_GRAPHICS_USAGE_COLOR_ATTACHMENT | SIR_GRAPHICS_USAGE_DEPTH_STENCIL |
-                                                         SIR_GRAPHICS_USAGE_COPY_SOURCE | SIR_GRAPHICS_USAGE_COPY_DESTINATION;
+static constexpr uint32_t SIR_D3D11_TEXTURE_USAGE_MASK = SIRGraphicsUsage::SIR_GRAPHICS_USAGE_SAMPLED | SIRGraphicsUsage::SIR_GRAPHICS_USAGE_STORAGE |
+                                                         SIRGraphicsUsage::SIR_GRAPHICS_USAGE_COLOR_ATTACHMENT | SIRGraphicsUsage::SIR_GRAPHICS_USAGE_DEPTH_STENCIL |
+                                                         SIRGraphicsUsage::SIR_GRAPHICS_USAGE_COPY_SOURCE | SIRGraphicsUsage::SIR_GRAPHICS_USAGE_COPY_DESTINATION;
 
 uint32_t sirD3D11GetMaxSampleCount( const sirD3D11FormatSupport_t *pSupport ) noexcept
 {
@@ -32,45 +32,45 @@ uint32_t sirD3D11GetMaxSampleCount( const sirD3D11FormatSupport_t *pSupport ) no
 	return ( pSupport->nSampleCountMask & 1U ) != 0 ? 1U : 0U;
 }
 
-sirGraphicsResult_t sirD3D11ValidateTextureSupport( const sirGraphicsTextureDesc_t *pDesc,
+SIRGraphicsResult sirD3D11ValidateTextureSupport( const sirGraphicsTextureDesc_t *pDesc,
                                                     const sirD3D11FormatSupport_t *pSupport ) noexcept
 {
 	if ( pDesc == nullptr || pSupport == nullptr || pSupport->nSize < sizeof( *pSupport ) ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( pDesc->nWidth == 0 || pDesc->nHeight == 0 || pDesc->nDepth == 0 || pDesc->nArrayLayers == 0 || pDesc->nMipLevels == 0 ||
 	     pDesc->nSampleCount == 0 || pDesc->nUsage == 0 || ( pDesc->nUsage & ~SIR_D3D11_TEXTURE_USAGE_MASK ) != 0 ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( pDesc->eDimension < SIR_GRAPHICS_TEXTURE_1D || pDesc->eDimension > SIR_GRAPHICS_TEXTURE_CUBE || pDesc->nSampleCount > 32 ||
+	if ( pDesc->eDimension < SIRGraphicsTextureDimension::SIR_GRAPHICS_TEXTURE_1D || pDesc->eDimension > SIRGraphicsTextureDimension::SIR_GRAPHICS_TEXTURE_CUBE || pDesc->nSampleCount > 32 ||
 	     ( pDesc->nSampleCount & ( pDesc->nSampleCount - 1U ) ) != 0 ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( pDesc->eFormat == SIR_GRAPHICS_FORMAT_UNKNOWN || pDesc->eFormat != pSupport->eFormat ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	if ( pDesc->eFormat == SIRGraphicsFormat::SIR_GRAPHICS_FORMAT_UNKNOWN || pDesc->eFormat != pSupport->eFormat ) {
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( ( pDesc->nUsage & SIR_GRAPHICS_USAGE_DEPTH_STENCIL ) != 0 &&
-	     ( pDesc->nUsage & ( SIR_GRAPHICS_USAGE_STORAGE | SIR_GRAPHICS_USAGE_COLOR_ATTACHMENT ) ) != 0 ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	if ( ( pDesc->nUsage & SIRGraphicsUsage::SIR_GRAPHICS_USAGE_DEPTH_STENCIL ) != 0 &&
+	     ( pDesc->nUsage & ( SIRGraphicsUsage::SIR_GRAPHICS_USAGE_STORAGE | SIRGraphicsUsage::SIR_GRAPHICS_USAGE_COLOR_ATTACHMENT ) ) != 0 ) {
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( pDesc->nSampleCount != 1 && ( pDesc->eDimension != SIR_GRAPHICS_TEXTURE_2D || pDesc->nMipLevels != 1 ||
-	                                   ( pDesc->nUsage & SIR_GRAPHICS_USAGE_STORAGE ) != 0 ) ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	if ( pDesc->nSampleCount != 1 && ( pDesc->eDimension != SIRGraphicsTextureDimension::SIR_GRAPHICS_TEXTURE_2D || pDesc->nMipLevels != 1 ||
+	                                   ( pDesc->nUsage & SIRGraphicsUsage::SIR_GRAPHICS_USAGE_STORAGE ) != 0 ) ) {
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( pDesc->eDimension == SIR_GRAPHICS_TEXTURE_1D ) {
+	if ( pDesc->eDimension == SIRGraphicsTextureDimension::SIR_GRAPHICS_TEXTURE_1D ) {
 		if ( pDesc->nHeight != 1 || pDesc->nDepth != 1 ) {
-			return SIR_GRAPHICS_INVALID_ARGUMENT;
+			return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
-	} else if ( pDesc->eDimension == SIR_GRAPHICS_TEXTURE_3D ) {
+	} else if ( pDesc->eDimension == SIRGraphicsTextureDimension::SIR_GRAPHICS_TEXTURE_3D ) {
 		if ( pDesc->nArrayLayers != 1 ) {
-			return SIR_GRAPHICS_INVALID_ARGUMENT;
+			return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
 	} else {
 		if ( pDesc->nDepth != 1 ) {
-			return SIR_GRAPHICS_INVALID_ARGUMENT;
+			return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
-		if ( pDesc->eDimension == SIR_GRAPHICS_TEXTURE_CUBE && ( pDesc->nWidth != pDesc->nHeight || pDesc->nArrayLayers % 6U != 0 ) ) {
-			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		if ( pDesc->eDimension == SIRGraphicsTextureDimension::SIR_GRAPHICS_TEXTURE_CUBE && ( pDesc->nWidth != pDesc->nHeight || pDesc->nArrayLayers % 6U != 0 ) ) {
+			return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
 	}
 	uint32_t nLargestDimension = pDesc->nWidth > pDesc->nHeight ? pDesc->nWidth : pDesc->nHeight;
@@ -82,19 +82,19 @@ sirGraphicsResult_t sirD3D11ValidateTextureSupport( const sirGraphicsTextureDesc
 		++nAvailableMips;
 	}
 	if ( pDesc->nMipLevels > nAvailableMips ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 
-	const uint32_t nDimensionBit = 1U << ( ( uint32_t )pDesc->eDimension - 1U );
+	const uint32_t nDimensionBit = 1U << ( static_cast<uint32_t>(pDesc->eDimension) - 1U );
 	if ( ( pSupport->nDimensionMask & nDimensionBit ) == 0 || ( pDesc->nUsage & ~pSupport->nSupportedUsages ) != 0 ) {
-		return SIR_GRAPHICS_UNSUPPORTED;
+		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
 	uint32_t nSampleExponent = 0;
 	for ( uint32_t nSamples = pDesc->nSampleCount; nSamples > 1; nSamples >>= 1 ) {
 		++nSampleExponent;
 	}
 	if ( ( pSupport->nSampleCountMask & ( 1U << nSampleExponent ) ) == 0 ) {
-		return SIR_GRAPHICS_UNSUPPORTED;
+		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }

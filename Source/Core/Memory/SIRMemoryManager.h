@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRMEMORYMANAGER_H__
-#define __SIRENGINE_SIRMEMORYMANAGER_H__
+#ifndef __SIR_MEMORYMANAGER_H__
+#define __SIR_MEMORYMANAGER_H__
 
 #include <Core/SIRPCH.h>
 
@@ -28,8 +28,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 class SIRMemorySegment;
 
-typedef enum sirMemoryDomain_e : uint32_t
-{
+enum class SIRMemoryDomain : uint32_t {
 	SIR_MEMORY_DOMAIN_CORE = 0,
 	SIR_MEMORY_DOMAIN_GODOT = 1,
 	SIR_MEMORY_DOMAIN_GAMEPLAY = 2,
@@ -44,7 +43,7 @@ typedef enum sirMemoryDomain_e : uint32_t
 	SIR_MEMORY_DOMAIN_FRAME = 11,
 	SIR_MEMORY_DOMAIN_THIRD_PARTY = 12,
 	SIR_MEMORY_DOMAIN_COUNT = 13
-} sirMemoryDomain_t;
+};
 
 typedef struct sirMemoryDomainStats_s
 {
@@ -67,13 +66,12 @@ typedef struct sirMemoryBudgetProfile_s
 	uint64_t nMaximumCommitBudgetBytes;
 } sirMemoryBudgetProfile_t;
 
-typedef enum sirMemoryTraceType_e : uint32_t
-{
+enum class SIRMemoryTraceType : uint32_t {
 	SIR_MEMORY_TRACE_COMMIT = 1,
 	SIR_MEMORY_TRACE_DECOMMIT = 2,
 	SIR_MEMORY_TRACE_METADATA = 3,
 	SIR_MEMORY_TRACE_DENIED = 4
-} sirMemoryTraceType_t;
+};
 
 typedef struct sirMemoryTraceEvent_s
 {
@@ -147,16 +145,16 @@ public:
 	void shutdown( void );
 
 	SIRMemorySegment *createSegment( const char *pszName, uint64_t nBytes, uint64_t nCommitLimitBytes = 0,
-	                                 sirMemoryDomain_t eDomain = SIR_MEMORY_DOMAIN_GAMEPLAY );
-	bool setDomainCommitLimit( sirMemoryDomain_t eDomain, uint64_t nLimitBytes );
-	sirMemoryDomainStats_t getDomainStats( sirMemoryDomain_t eDomain ) const;
+	                                 SIRMemoryDomain eDomain = SIRMemoryDomain::SIR_MEMORY_DOMAIN_GAMEPLAY );
+	bool setDomainCommitLimit( SIRMemoryDomain eDomain, uint64_t nLimitBytes );
+	sirMemoryDomainStats_t getDomainStats( SIRMemoryDomain eDomain ) const;
 
 	// Initialization-time allocator metadata, backed by the SAME reservation.
 	// Bump-only storage; individual allocations are not freed until shutdown().
-	void *allocateMetadata( uint64_t nBytes, uint64_t nAlignment, sirMemoryDomain_t eDomain = SIR_MEMORY_DOMAIN_GAMEPLAY );
+	void *allocateMetadata( uint64_t nBytes, uint64_t nAlignment, SIRMemoryDomain eDomain = SIRMemoryDomain::SIR_MEMORY_DOMAIN_GAMEPLAY );
 	// Manager-owned, page-granular recyclable metadata in the same reservation.
-	void *allocateRecyclableMetadataPage( sirMemoryDomain_t eDomain = SIR_MEMORY_DOMAIN_GAMEPLAY );
-	bool releaseRecyclableMetadataPage( void *pPage, sirMemoryDomain_t eDomain = SIR_MEMORY_DOMAIN_GAMEPLAY );
+	void *allocateRecyclableMetadataPage( SIRMemoryDomain eDomain = SIRMemoryDomain::SIR_MEMORY_DOMAIN_GAMEPLAY );
+	bool releaseRecyclableMetadataPage( void *pPage, SIRMemoryDomain eDomain = SIRMemoryDomain::SIR_MEMORY_DOMAIN_GAMEPLAY );
 
 	sirMemoryStats_t getStats( void ) const;
 	sirPageBackingStats_t getPageBackingStats( void ) const;
@@ -178,7 +176,7 @@ private:
 	void markPendingPages( SIRMemorySegment *pSegment, uint64_t nFirstPage, uint64_t nPageCount, bool bPending );
 	void clearPendingPages( SIRMemorySegment *pSegment, uint64_t nFirstPage, uint64_t nPageCount, bool bReused );
 	uint64_t getSegmentCommittedBytes( const SIRMemorySegment *pSegment ) const;
-	void *allocateMetadataLocked( uint64_t nBytes, uint64_t nAlignment, sirMemoryDomain_t eDomain );
+	void *allocateMetadataLocked( uint64_t nBytes, uint64_t nAlignment, SIRMemoryDomain eDomain );
 	uint64_t countCommittedPages( const SIRMemorySegment *pSegment, uint64_t nFirstPage, uint64_t nPageCount ) const;
 	void recordTraceLocked( uint32_t nType, uint64_t nBytes, uint32_t nSegment );
 	void markCommittedPages( SIRMemorySegment *pSegment, uint64_t nFirstPage, uint64_t nPageCount, bool bCommitted );
@@ -209,10 +207,10 @@ private:
 	sirMemoryTraceEvent_t *m_pTrace;
 	uint32_t m_nTraceCapacity;
 	uint32_t m_nTraceCount;
-	uint64_t m_nDomainCommittedBytes[SIR_MEMORY_DOMAIN_COUNT];
-	uint64_t m_nDomainMetadataCommittedBytes[SIR_MEMORY_DOMAIN_COUNT];
-	uint64_t m_nDomainPeakCommittedBytes[SIR_MEMORY_DOMAIN_COUNT];
-	uint64_t m_nDomainCommitLimits[SIR_MEMORY_DOMAIN_COUNT];
+	uint64_t m_nDomainCommittedBytes[static_cast<size_t>( SIRMemoryDomain::SIR_MEMORY_DOMAIN_COUNT )];
+	uint64_t m_nDomainMetadataCommittedBytes[static_cast<size_t>( SIRMemoryDomain::SIR_MEMORY_DOMAIN_COUNT )];
+	uint64_t m_nDomainPeakCommittedBytes[static_cast<size_t>( SIRMemoryDomain::SIR_MEMORY_DOMAIN_COUNT )];
+	uint64_t m_nDomainCommitLimits[static_cast<size_t>( SIRMemoryDomain::SIR_MEMORY_DOMAIN_COUNT )];
 	uint64_t m_nCommittedBytes;
 	uint64_t m_nPeakCommittedBytes;
 	uint64_t m_nMetadataBytes;
@@ -227,4 +225,4 @@ private:
 	uint32_t m_nSegmentCount;
 };
 
-#endif // __SIRENGINE_SIRMEMORYMANAGER_H__
+#endif // __SIR_MEMORYMANAGER_H__

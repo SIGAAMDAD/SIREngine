@@ -2,11 +2,11 @@
 #include <Core/Platform/SIRPlatformTime.h>
 
 SIRApplication::SIRApplication( void ) noexcept
-    : m_eState( SIR_APP_UNINITIALIZED ), m_nTicks( 0 ), m_nLastFrameTimestampNs( 0 ), m_fFrameDeltaSeconds( 0.0f ),
-      m_dElapsedSeconds( 0.0 ), m_nSystemCount( 0 ), m_nInitializedSystems( 0 ), m_eInitializationResult( SIR_SYSTEM_OK ),
+    : m_eState( SIRAppState::SIR_APP_UNINITIALIZED ), m_nTicks( 0 ), m_nLastFrameTimestampNs( 0 ), m_fFrameDeltaSeconds( 0.0f ),
+      m_dElapsedSeconds( 0.0 ), m_nSystemCount( 0 ), m_nInitializedSystems( 0 ), m_eInitializationResult( SIRSystemResult::SIR_SYSTEM_OK ),
       m_pFailedSystem( nullptr ), m_bShutdownInProgress( false ), m_bFrameDispatchInProgress( false ), m_EventRegistry(),
       m_pInput( nullptr ), m_pInputPump( nullptr ), m_pInputPumpContext( nullptr ), m_pWindowPump( nullptr ),
-      m_pWindowPumpContext( nullptr ), m_eWindowPumpResult( SIR_APP_WINDOW_CONTINUE ), m_pTimeline( nullptr ), m_pSchedule( nullptr ),
+      m_pWindowPumpContext( nullptr ), m_eWindowPumpResult( SIRAppWindowPumpResult::SIR_APP_WINDOW_CONTINUE ), m_pTimeline( nullptr ), m_pSchedule( nullptr ),
       m_fScheduledDeltaSeconds( 0.0f ), m_bScheduledFixed( false ), m_bScheduledActive( false )
 {
 }
@@ -46,7 +46,7 @@ bool SIRApplication::resolveInitializationOrder( void ) noexcept
 
 bool SIRApplication::attachInput( SIRInputService& input, sirAppInputPump_t pPump, void *pContext ) noexcept
 {
-	if ( m_eState != SIR_APP_UNINITIALIZED || m_pInput != nullptr || ( pPump != nullptr && m_pWindowPump != nullptr ) ) {
+	if ( m_eState != SIRAppState::SIR_APP_UNINITIALIZED || m_pInput != nullptr || ( pPump != nullptr && m_pWindowPump != nullptr ) ) {
 		return false;
 	}
 
@@ -58,7 +58,7 @@ bool SIRApplication::attachInput( SIRInputService& input, sirAppInputPump_t pPum
 
 bool SIRApplication::attachWindowPump( sirAppWindowPump_t pPump, void *pContext ) noexcept
 {
-	if ( m_eState != SIR_APP_UNINITIALIZED || pPump == nullptr || m_pWindowPump != nullptr || m_pInputPump != nullptr ) {
+	if ( m_eState != SIRAppState::SIR_APP_UNINITIALIZED || pPump == nullptr || m_pWindowPump != nullptr || m_pInputPump != nullptr ) {
 		return false;
 	}
 	m_pWindowPump = pPump;
@@ -66,14 +66,14 @@ bool SIRApplication::attachWindowPump( sirAppWindowPump_t pPump, void *pContext 
 	return true;
 }
 
-sirAppWindowPumpResult_t SIRApplication::getWindowPumpResult( void ) const noexcept
+SIRAppWindowPumpResult SIRApplication::getWindowPumpResult( void ) const noexcept
 {
 	return m_eWindowPumpResult;
 }
 
 bool SIRApplication::registerSystem( SIREngineSystem *pSystem ) noexcept
 {
-	if ( m_eState != SIR_APP_UNINITIALIZED || pSystem == nullptr || m_nSystemCount >= SIR_APPLICATION_MAX_SYSTEMS ) {
+	if ( m_eState != SIRAppState::SIR_APP_UNINITIALIZED || pSystem == nullptr || m_nSystemCount >= SIR_APPLICATION_MAX_SYSTEMS ) {
 		return false;
 	}
 
@@ -84,14 +84,14 @@ bool SIRApplication::registerSystem( SIREngineSystem *pSystem ) noexcept
 	}
 
 	m_szSystems[m_nSystemCount] = pSystem;
-	m_szSystemPriorities[m_nSystemCount] = SIR_TASK_PRIORITY_NORMAL;
+	m_szSystemPriorities[m_nSystemCount] = SIRTaskPriority::SIR_TASK_PRIORITY_NORMAL;
 	++m_nSystemCount;
 	return true;
 }
 
 bool SIRApplication::addDependency( SIREngineSystem& consumer, SIREngineSystem& provider ) noexcept
 {
-	if ( m_eState != SIR_APP_UNINITIALIZED || &consumer == &provider ) {
+	if ( m_eState != SIRAppState::SIR_APP_UNINITIALIZED || &consumer == &provider ) {
 		return false;
 	}
 
@@ -111,42 +111,42 @@ bool SIRApplication::addDependency( SIREngineSystem& consumer, SIREngineSystem& 
 
 bool SIRApplication::initialize( void ) noexcept
 {
-	if ( m_eState != SIR_APP_UNINITIALIZED ) {
+	if ( m_eState != SIRAppState::SIR_APP_UNINITIALIZED ) {
 		return false;
 	}
 
-	m_eInitializationResult = SIR_SYSTEM_OK;
+	m_eInitializationResult = SIRSystemResult::SIR_SYSTEM_OK;
 	m_pFailedSystem = nullptr;
-	m_eWindowPumpResult = SIR_APP_WINDOW_CONTINUE;
+	m_eWindowPumpResult = SIRAppWindowPumpResult::SIR_APP_WINDOW_CONTINUE;
 	if ( !resolveInitializationOrder() ) {
-		m_eInitializationResult = SIR_SYSTEM_ERROR;
-		m_eState = SIR_APP_STOPPING;
-		( void )shutdown();
+		m_eInitializationResult = SIRSystemResult::SIR_SYSTEM_ERROR;
+		m_eState = SIRAppState::SIR_APP_STOPPING;
+		static_cast<void>(shutdown());
 		return false;
 	}
 
-	m_eState = SIR_APP_STARTING;
+	m_eState = SIRAppState::SIR_APP_STARTING;
 	for ( uint32_t iOrder = 0; iOrder < m_nSystemCount; ++iOrder ) {
 		const uint32_t iSystem = m_szInitializationOrder[iOrder];
-		const sirSystemResult_t eResult = m_szSystems[iSystem]->initialize();
-		if ( eResult != SIR_SYSTEM_OK ) {
+		const SIRSystemResult eResult = m_szSystems[iSystem]->initialize();
+		if ( eResult != SIRSystemResult::SIR_SYSTEM_OK ) {
 			m_eInitializationResult = eResult;
 			m_pFailedSystem = m_szSystems[iSystem];
-			m_eState = SIR_APP_STOPPING;
-			( void )shutdown();
+			m_eState = SIRAppState::SIR_APP_STOPPING;
+			static_cast<void>(shutdown());
 			return false;
 		}
 		++m_nInitializedSystems;
 	}
 
 	m_nLastFrameTimestampNs = SIRPlatformTime::getMonotonicNanoseconds();
-	m_eState = SIR_APP_READY;
+	m_eState = SIRAppState::SIR_APP_READY;
 	return true;
 }
 
 bool SIRApplication::tick( float fDeltaSeconds ) noexcept
 {
-	if ( m_eState != SIR_APP_READY || m_bFrameDispatchInProgress || m_bScheduledActive ) {
+	if ( m_eState != SIRAppState::SIR_APP_READY || m_bFrameDispatchInProgress || m_bScheduledActive ) {
 		return false;
 	}
 	m_bFrameDispatchInProgress = true;
@@ -162,14 +162,14 @@ bool SIRApplication::tickFrame( float fDeltaSeconds ) noexcept
 
 	// The window OS event pump runs exactly once even without InputService.
 	// When input exists, its native events are collected between begin/publish.
-	m_eWindowPumpResult = SIR_APP_WINDOW_CONTINUE;
+	m_eWindowPumpResult = SIRAppWindowPumpResult::SIR_APP_WINDOW_CONTINUE;
 	if ( m_pWindowPump != nullptr ) {
 		m_eWindowPumpResult = m_pWindowPump( m_pWindowPumpContext );
 	} else if ( m_pInput != nullptr && m_pInputPump != nullptr && !m_pInputPump( *m_pInput, m_pInputPumpContext ) ) {
-		m_eWindowPumpResult = SIR_APP_WINDOW_STOP;
+		m_eWindowPumpResult = SIRAppWindowPumpResult::SIR_APP_WINDOW_STOP;
 	}
 
-	if ( m_eState != SIR_APP_READY ) {
+	if ( m_eState != SIRAppState::SIR_APP_READY ) {
 		return false;
 	}
 	if ( !bInputBegun ) {
@@ -181,27 +181,27 @@ bool SIRApplication::tickFrame( float fDeltaSeconds ) noexcept
 			return false;
 		}
 	}
-	if ( m_eWindowPumpResult != SIR_APP_WINDOW_CONTINUE ) {
+	if ( m_eWindowPumpResult != SIRAppWindowPumpResult::SIR_APP_WINDOW_CONTINUE ) {
 		m_nTicks = nNextTick;
 		return false;
 	}
 
 	for ( uint32_t iOrder = 0; iOrder < m_nInitializedSystems; ++iOrder ) {
 		m_szSystems[m_szInitializationOrder[iOrder]]->update( fDeltaSeconds );
-		if ( m_eState != SIR_APP_READY ) {
+		if ( m_eState != SIRAppState::SIR_APP_READY ) {
 			return false;
 		}
 	}
 
 	m_nTicks = nNextTick;
 	m_fFrameDeltaSeconds = fDeltaSeconds;
-	m_dElapsedSeconds += ( double )fDeltaSeconds;
+	m_dElapsedSeconds += static_cast<double>(fDeltaSeconds);
 	return true;
 }
 
 bool SIRApplication::tickTimed( void ) noexcept
 {
-	if ( m_eState != SIR_APP_READY || m_nLastFrameTimestampNs == 0 ) {
+	if ( m_eState != SIRAppState::SIR_APP_READY || m_nLastFrameTimestampNs == 0 ) {
 		return false;
 	}
 
@@ -210,7 +210,7 @@ bool SIRApplication::tickTimed( void ) noexcept
 		return false;
 	}
 
-	const float fDeltaSeconds = ( float )( ( double )( nNowNs - m_nLastFrameTimestampNs ) * 0.000000001 );
+	const float fDeltaSeconds = ( float )( static_cast<double>( nNowNs - m_nLastFrameTimestampNs ) * 0.000000001 );
 	if ( !tick( fDeltaSeconds ) ) {
 		return false;
 	}
@@ -219,31 +219,31 @@ bool SIRApplication::tickTimed( void ) noexcept
 	return true;
 }
 
-sirAppRunResult_t SIRApplication::run( uint64_t nMaxFrames ) noexcept
+SIRAppRunResult SIRApplication::run( uint64_t nMaxFrames ) noexcept
 {
-	if ( m_eState != SIR_APP_READY || m_bFrameDispatchInProgress || ( nMaxFrames == 0 && m_pWindowPump == nullptr ) ) {
-		return SIR_APP_RUN_ERROR;
+	if ( m_eState != SIRAppState::SIR_APP_READY || m_bFrameDispatchInProgress || ( nMaxFrames == 0 && m_pWindowPump == nullptr ) ) {
+		return SIRAppRunResult::SIR_APP_RUN_ERROR;
 	}
 	uint64_t nFrame = 0;
 	while ( nMaxFrames == 0 || nFrame < nMaxFrames ) {
 		if ( !tickTimed() ) {
-			return m_eWindowPumpResult == SIR_APP_WINDOW_STOP ? SIR_APP_RUN_STOPPED : SIR_APP_RUN_ERROR;
+			return m_eWindowPumpResult == SIRAppWindowPumpResult::SIR_APP_WINDOW_STOP ? SIRAppRunResult::SIR_APP_RUN_STOPPED : SIRAppRunResult::SIR_APP_RUN_ERROR;
 		}
 		++nFrame;
 	}
-	return SIR_APP_RUN_OK;
+	return SIRAppRunResult::SIR_APP_RUN_OK;
 }
 
 bool SIRApplication::fixedTick( float fFixedDeltaSeconds ) noexcept
 {
-	if ( m_eState != SIR_APP_READY || m_bFrameDispatchInProgress || m_bScheduledActive ) {
+	if ( m_eState != SIRAppState::SIR_APP_READY || m_bFrameDispatchInProgress || m_bScheduledActive ) {
 		return false;
 	}
 
 	m_bFrameDispatchInProgress = true;
 	for ( uint32_t iOrder = 0; iOrder < m_nInitializedSystems; ++iOrder ) {
 		m_szSystems[m_szInitializationOrder[iOrder]]->fixedUpdate( fFixedDeltaSeconds );
-		if ( m_eState != SIR_APP_READY ) {
+		if ( m_eState != SIRAppState::SIR_APP_READY ) {
 			m_bFrameDispatchInProgress = false;
 			return false;
 		}
@@ -253,25 +253,25 @@ bool SIRApplication::fixedTick( float fFixedDeltaSeconds ) noexcept
 	return true;
 }
 
-sirSystemResult_t SIRApplication::shutdown( void ) noexcept
+SIRSystemResult SIRApplication::shutdown( void ) noexcept
 {
 	if ( m_bShutdownInProgress || m_bFrameDispatchInProgress || m_bScheduledActive ) {
-		return SIR_SYSTEM_BUSY;
+		return SIRSystemResult::SIR_SYSTEM_BUSY;
 	}
-	if ( m_eState == SIR_APP_UNINITIALIZED || m_eState == SIR_APP_STOPPED ) {
-		return SIR_SYSTEM_OK;
+	if ( m_eState == SIRAppState::SIR_APP_UNINITIALIZED || m_eState == SIRAppState::SIR_APP_STOPPED ) {
+		return SIRSystemResult::SIR_SYSTEM_OK;
 	}
-	if ( m_eState == SIR_APP_STARTING ) {
-		return SIR_SYSTEM_BUSY;
+	if ( m_eState == SIRAppState::SIR_APP_STARTING ) {
+		return SIRSystemResult::SIR_SYSTEM_BUSY;
 	}
 
-	m_eState = SIR_APP_STOPPING;
+	m_eState = SIRAppState::SIR_APP_STOPPING;
 	m_bShutdownInProgress = true;
 	while ( m_nInitializedSystems != 0 ) {
 		const uint32_t iSystem = m_szInitializationOrder[m_nInitializedSystems - 1];
 		SIREngineSystem *pSystem = m_szSystems[iSystem];
-		const sirSystemResult_t eResult = pSystem->shutdown();
-		if ( eResult != SIR_SYSTEM_OK ) {
+		const SIRSystemResult eResult = pSystem->shutdown();
+		if ( eResult != SIRSystemResult::SIR_SYSTEM_OK ) {
 			m_bShutdownInProgress = false;
 			return eResult;
 		}
@@ -287,12 +287,12 @@ sirSystemResult_t SIRApplication::shutdown( void ) noexcept
 	m_pWindowPump = nullptr;
 	m_pWindowPumpContext = nullptr;
 	m_EventRegistry.clear();
-	m_eState = SIR_APP_STOPPED;
+	m_eState = SIRAppState::SIR_APP_STOPPED;
 	m_bShutdownInProgress = false;
-	return SIR_SYSTEM_OK;
+	return SIRSystemResult::SIR_SYSTEM_OK;
 }
 
-sirSystemResult_t SIRApplication::getInitializationResult( void ) const noexcept
+SIRSystemResult SIRApplication::getInitializationResult( void ) const noexcept
 {
 	return m_eInitializationResult;
 }
@@ -302,7 +302,7 @@ const SIREngineSystem *SIRApplication::getFailedSystem( void ) const noexcept
 	return m_pFailedSystem;
 }
 
-sirAppState_t SIRApplication::getState( void ) const noexcept
+SIRAppState SIRApplication::getState( void ) const noexcept
 {
 	return m_eState;
 }

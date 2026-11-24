@@ -14,8 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRRINGALLOCATOR_H__
-#define __SIRENGINE_SIRRINGALLOCATOR_H__
+#ifndef __SIR_RINGALLOCATOR_H__
+#define __SIR_RINGALLOCATOR_H__
 
 #include <Core/SIRPCH.h>
 
@@ -74,4 +74,4 @@ private:
 	uint64_t wrapOffset( uint64_t nOffset ) const;
 };
 
-#endif // __SIRENGINE_SIRRINGALLOCATOR_H__
+#endif // __SIR_RINGALLOCATOR_H__

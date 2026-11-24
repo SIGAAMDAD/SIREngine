@@ -9,8 +9,8 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSHAREDGPUBACKINGOWNER_H__
-#define __SIRENGINE_SIRSHAREDGPUBACKINGOWNER_H__
+#ifndef __SIR_SHAREDGPUBACKINGOWNER_H__
+#define __SIR_SHAREDGPUBACKINGOWNER_H__
 
 #include <Renderer/SIRRenderingDevice.h>
 #include <Resources/SIRResourceGraph.h>
@@ -71,11 +71,11 @@ private:
 	uint64_t m_nPhysicalDeviceId = 0;
 	uint32_t m_nProviderId = 0;
 	uint32_t m_nDeviceGeneration = 0;
-	sirGraphicsCompletionSet_t m_LastNativeCompletion = {};
+	sirGraphicsCompletionSet_t m_LastNativeCompletion {};
 
 	static bool releaseNative( void *pContext, uint64_t nNativeToken ) noexcept;
 	bool retireNative( uint64_t nNativeToken ) noexcept;
 	NativeBacking *findNative( uint64_t nNativeToken ) noexcept;
 };
 
-#endif // __SIRENGINE_SIRSHAREDGPUBACKINGOWNER_H__
+#endif // __SIR_SHAREDGPUBACKINGOWNER_H__

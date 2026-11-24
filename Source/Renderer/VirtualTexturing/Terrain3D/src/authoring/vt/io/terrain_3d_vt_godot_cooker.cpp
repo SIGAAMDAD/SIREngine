@@ -75,13 +75,13 @@ static bool t3d_vt_godot_extract_texture( const Ref<Texture2D>& rTexture, const 
 	default:
 		return false;
 	}
-	const uint64_t nRequiredBytes = ( uint64_t )pImage->get_width() * pImage->get_height() * nComponents;
-	if ( nRequiredBytes != ( uint64_t )rBytes.size() ) {
+	const uint64_t nRequiredBytes = static_cast<uint64_t>(pImage->get_width() * pImage->get_height()) * nComponents;
+	if ( nRequiredBytes != static_cast<uint64_t>(rBytes.size() )) {
 		return false;
 	}
 	rView.m_pPixels = rBytes.ptr();
-	rView.m_nWidth = ( uint32_t )pImage->get_width();
-	rView.m_nHeight = ( uint32_t )pImage->get_height();
+	rView.m_nWidth = static_cast<uint32_t>(pImage->get_width());
+	rView.m_nHeight = static_cast<uint32_t>(pImage->get_height());
 	rView.m_nComponents = nComponents;
 	rView.m_nRowBytes = rView.m_nWidth * nComponents;
 	return true;
@@ -109,7 +109,7 @@ static bool t3d_vt_godot_reference_fallback( const t3dVTEncodeTileRequest_t& rRe
 
 static bool t3d_vt_godot_encode_tile( void *pUser, const t3dVTEncodeTileRequest_t& rRequest, uint32_t& rWrittenBytes )
 {
-	( void )pUser;
+	static_cast<void>(pUser);
 	rWrittenBytes = 0u;
 	const bool bV1 = rRequest.m_nContractVersion == T3D_VT_FILE_FORMAT_VERSION;
 	// Quality 0 favors deterministic reference encoding over the Godot compressor.
@@ -142,7 +142,7 @@ static bool t3d_vt_godot_encode_tile( void *pUser, const t3dVTEncodeTileRequest_
 		eSourceFormat = Image::FORMAT_RG8;
 	}
 	Ref<Image> pImage =
-	    Image::create_from_data( ( int32_t )rRequest.m_nWidth, ( int32_t )rRequest.m_nHeight, false, eSourceFormat, SourceBytes );
+	    Image::create_from_data( static_cast<int32_t>(rRequest.m_nWidth), static_cast<int32_t>(rRequest.m_nHeight), false, eSourceFormat, SourceBytes );
 	if ( pImage.is_null() || pImage->is_empty() ) {
 		return t3d_vt_godot_reference_fallback( rRequest, rWrittenBytes );
 	}
@@ -168,11 +168,11 @@ static bool t3d_vt_godot_encode_tile( void *pUser, const t3dVTEncodeTileRequest_
 	const PackedByteArray Compressed = pImage->get_data();
 	const uint32_t nExpectedBytes =
 	    bV1 ? t3d_vt_pack_expected_physical_tile_bytes( rRequest.m_nFormat ) : t3d_vt_pack_expected_tile_bytes( rRequest.m_nFormat );
-	if ( Compressed.size() != ( int64_t )nExpectedBytes || Compressed.size() > ( int64_t )rRequest.m_nDestinationCapacity ) {
+	if ( Compressed.size() != static_cast<int64_t>(nExpectedBytes) || Compressed.size() > static_cast<int64_t>(rRequest.m_nDestinationCapacity) ) {
 		return t3d_vt_godot_reference_fallback( rRequest, rWrittenBytes );
 	}
-	memcpy( rRequest.m_pDestination, Compressed.ptr(), ( size_t )Compressed.size() );
-	rWrittenBytes = ( uint32_t )Compressed.size();
+	memcpy( rRequest.m_pDestination, Compressed.ptr(), static_cast<size_t>(Compressed.size() ));
+	rWrittenBytes = static_cast<uint32_t>(Compressed.size());
 	if ( bAlbedo && rRequest.m_nFormat == nBc7Format && rRequest.m_nAlphaThreshold != 0u && rRequest.m_nQuality >= 2u ) {
 		// Retain BPTC's color quality; repair only blocks whose decoded cutoff
 		// coverage changed. The reference RGBA fit constrains each alpha class.
@@ -229,7 +229,7 @@ static void t3d_vt_godot_clear_source( t3dVTGodotSource_t& rSource )
 		rSource.m_ChannelBytes[iChannel].clear();
 		memset( &rSource.m_Channels[iChannel], 0, sizeof( rSource.m_Channels[iChannel] ) );
 		memset( &rSource.m_ChannelDesc[iChannel], 0, sizeof( rSource.m_ChannelDesc[iChannel] ) );
-		rSource.m_ChannelDesc[iChannel].m_nLogicalChannel = ( uint8_t )iChannel;
+		rSource.m_ChannelDesc[iChannel].m_nLogicalChannel = static_cast<uint8_t>(iChannel);
 	}
 	rSource.m_nStableKey = 0u;
 	rSource.m_nAuthoredChannelMask = 0u;
@@ -255,26 +255,26 @@ static uint64_t t3d_vt_godot_channel_fingerprint( const t3dVTCookImageView_t& rV
 		return 0u;
 	}
 	uint64_t nHash = 1469598103934665603ULL;
-	nHash = t3d_vt_godot_hash_u64( nHash, ( uint32_t )Channel );
+	nHash = t3d_vt_godot_hash_u64( nHash, static_cast<uint32_t>(Channel) );
 	if ( Channel == T3D_VT_LOGICAL_CHANNEL_ALBEDO ) {
 		nHash = t3d_vt_godot_hash_u64( nHash, T3D_VT_REFERENCE_ALBEDO_CODEC_REVISION );
 	}
 	nHash = t3d_vt_godot_hash_u64( nHash, rView.m_nWidth );
 	nHash = t3d_vt_godot_hash_u64( nHash, rView.m_nHeight );
 	nHash = t3d_vt_godot_hash_u64( nHash, rView.m_nComponents );
-	nHash = t3dHashFnv1a64( rBytes.ptr(), ( uint64_t )rBytes.size(), nHash );
+	nHash = t3dHashFnv1a64( rBytes.ptr(), static_cast<uint64_t>(rBytes.size(), nHash ));
 	return nHash == 0u ? 1u : nHash;
 }
 
 static void t3d_vt_godot_finalize_source_channel( t3dVTGodotSource_t& rSource, const t3dVTLogicalChannel_t Channel,
                                                   const t3dVTConsumer_t Consumer, const uint32_t nWrapMode, const bool bAlphaScissor )
 {
-	const uint32_t iChannel = ( uint32_t )Channel;
+	const uint32_t iChannel = static_cast<uint32_t>(Channel);
 	t3dVTGodotSourceChannel_t& desc = rSource.m_ChannelDesc[iChannel];
 	const t3dVTCookImageView_t& view = rSource.m_Channels[iChannel];
-	desc.m_nLogicalChannel = ( uint8_t )Channel;
-	desc.m_nConsumer = ( uint8_t )Consumer;
-	desc.m_nWrapMode = ( uint8_t )nWrapMode;
+	desc.m_nLogicalChannel = static_cast<uint8_t>(Channel);
+	desc.m_nConsumer = static_cast<uint8_t>(Consumer);
+	desc.m_nWrapMode = static_cast<uint8_t>(nWrapMode);
 	desc.m_bAlphaScissor = bAlphaScissor ? 1u : 0u;
 	if ( view.m_pPixels == NULL || rSource.m_ChannelBytes[iChannel].is_empty() ) {
 		return;
@@ -294,7 +294,7 @@ static void t3d_vt_godot_resolve_source_profile( t3dVTGodotSource_t& rSource )
 		nSourceExtent[iChannel] = rSource.m_ChannelDesc[iChannel].m_nSourceExtent;
 	}
 	rSource.m_eHighestAvailableProfile =
-	    t3d_vt_fixed_profile_highest_supported( ( t3dVTConsumer_t )rSource.m_nConsumer, rSource.m_nAuthoredChannelMask, nSourceExtent );
+	    t3d_vt_fixed_profile_highest_supported( static_cast<t3dVTConsumer_t>(rSource.m_nConsumer), rSource.m_nAuthoredChannelMask, nSourceExtent );
 }
 
 bool t3d_vt_godot_extract_instance_source( const Ref<Terrain3DRenderingMaterial>& rMaterial, uint64_t nStableKey,
@@ -323,12 +323,12 @@ bool t3d_vt_godot_extract_instance_source( const Ref<Terrain3DRenderingMaterial>
 	}
 
 	rSource.m_nStableKey = nStableKey;
-	rSource.m_nConsumer = ( uint32_t )T3D_VT_CONSUMER_INSTANCE;
-	rSource.m_nOrmSourceLayout = ( uint32_t )rMaterial->getSurfaceTextureLayout();
-	if ( rSource.m_nOrmSourceLayout > ( uint32_t )SURFACE_TEXTURE_ROUGHNESS_A ) {
+	rSource.m_nConsumer = static_cast<uint32_t>(T3D_VT_CONSUMER_INSTANCE);
+	rSource.m_nOrmSourceLayout = static_cast<uint32_t>(rMaterial->getSurfaceTextureLayout());
+	if ( rSource.m_nOrmSourceLayout > static_cast<uint32_t>(SURFACE_TEXTURE_ROUGHNESS_A) ) {
 		return false;
 	}
-	if ( rMaterial->usesDirectOrmChannels() && rSource.m_nOrmSourceLayout == ( uint32_t )SURFACE_TEXTURE_ORM ) {
+	if ( rMaterial->usesDirectOrmChannels() && rSource.m_nOrmSourceLayout == static_cast<uint32_t>(SURFACE_TEXTURE_ORM) ) {
 		rSource.m_nSourceFlags |= T3D_VT_GODOT_SOURCE_DIRECT_ORM;
 	}
 	bool bTextureAlpha = false;
@@ -345,8 +345,8 @@ bool t3d_vt_godot_extract_instance_source( const Ref<Terrain3DRenderingMaterial>
 	if ( rMaterial->isAlphaScissor() || rMaterial->getBaseColor().a < 1.0f || bTextureAlpha ) {
 		rSource.m_nSourceFlags |= T3D_VT_GODOT_SOURCE_HAS_ALPHA | T3D_VT_GODOT_SOURCE_ALBEDO_RGBA;
 	}
-	const bool bClamp = rMaterial->getSamplerClass() == ( int32_t )T3D_VT_SAMPLER_LINEAR_CLAMP ||
-	                    rMaterial->getSamplerClass() == ( int32_t )T3D_VT_SAMPLER_NEAREST_CLAMP;
+	const bool bClamp = rMaterial->getSamplerClass() == static_cast<int32_t>(T3D_VT_SAMPLER_LINEAR_CLAMP) ||
+	                    rMaterial->getSamplerClass() == static_cast<int32_t>(T3D_VT_SAMPLER_NEAREST_CLAMP);
 	const uint32_t nWrapMode = bClamp ? T3D_VT_COOK_WRAP_CLAMP : T3D_VT_COOK_WRAP_REPEAT;
 	t3d_vt_godot_finalize_source_channel( rSource, T3D_VT_LOGICAL_CHANNEL_ALBEDO, T3D_VT_CONSUMER_INSTANCE, nWrapMode,
 	                                      rMaterial->isAlphaScissor() );
@@ -355,8 +355,8 @@ bool t3d_vt_godot_extract_instance_source( const Ref<Terrain3DRenderingMaterial>
 	// Match the shader's packed cutoff and uniform opacity. The first covered
 	// source byte is ceil(cutoff / opacity), rather than a rounded raw cutoff.
 	rSource.m_ChannelDesc[T3D_VT_LOGICAL_CHANNEL_ALBEDO].m_nAlphaThreshold =
-	    ( uint8_t )CLAMP( ( int32_t )ceilf( ( float )t3dPackUnorm8Nearest( rMaterial->getAlphaScissorThreshold() ) /
-		                                    MAX( ( float )rMaterial->getBaseColor().a, 0.0001f ) ),
+	    static_cast<uint8_t>(CLAMP( static_cast<int32_t>(ceilf( static_cast<float>(t3dPackUnorm8Nearest( rMaterial->getAlphaScissorThreshold() )))) /
+		                                    MAX( static_cast<float>(rMaterial->getBaseColor().a, 0.0001f ) )),
 		                  0, 255 );
 	t3d_vt_godot_resolve_source_profile( rSource );
 	return true;
@@ -366,11 +366,11 @@ bool t3d_vt_godot_extract_terrain_source( const Ref<Terrain3DAssets>& rAssets, c
                                           t3dVTGodotSource_t& rSource )
 {
 	t3d_vt_godot_clear_source( rSource );
-	if ( rAssets.is_null() || !rAssets->usesPackedPbr() || nLogicalMaterialId >= ( uint32_t )rAssets->getTextureCount() ||
+	if ( rAssets.is_null() || !rAssets->usesPackedPbr() || nLogicalMaterialId >= static_cast<uint32_t>(rAssets->getTextureCount()) ||
 	     nLogicalMaterialId >= T3D_MAX_TEXTURE_ASSETS || nStableKey == 0u ) {
 		return false;
 	}
-	const Ref<Terrain3DTextureAsset> asset = rAssets->getTextureAsset( ( int )nLogicalMaterialId );
+	const Ref<Terrain3DTextureAsset> asset = rAssets->getTextureAssetstatic_cast<int>(nLogicalMaterialId);
 	if ( asset.is_null() ) {
 		return false;
 	}
@@ -387,7 +387,7 @@ bool t3d_vt_godot_extract_terrain_source( const Ref<Terrain3DAssets>& rAssets, c
 	}
 
 	rSource.m_nStableKey = nStableKey;
-	rSource.m_nConsumer = ( uint32_t )T3D_VT_CONSUMER_CLIPMAP;
+	rSource.m_nConsumer = static_cast<uint32_t>(T3D_VT_CONSUMER_CLIPMAP);
 	t3d_vt_godot_finalize_source_channel( rSource, T3D_VT_LOGICAL_CHANNEL_ALBEDO, T3D_VT_CONSUMER_CLIPMAP, T3D_VT_COOK_WRAP_REPEAT, false );
 	t3d_vt_godot_finalize_source_channel( rSource, T3D_VT_LOGICAL_CHANNEL_PBR, T3D_VT_CONSUMER_CLIPMAP, T3D_VT_COOK_WRAP_REPEAT, false );
 	t3d_vt_godot_finalize_source_channel( rSource, T3D_VT_LOGICAL_CHANNEL_HEIGHT, T3D_VT_CONSUMER_CLIPMAP, T3D_VT_COOK_WRAP_REPEAT, false );
@@ -488,35 +488,35 @@ static void *t3d_vt_godot_editor_allocate( void *pUser, const uint64_t nBytes, c
 	if ( nBytes == 0u || nBytes > SIZE_MAX || nAlignment == 0u || ( nAlignment & ( nAlignment - 1u ) ) != 0u ) {
 		return NULL;
 	}
-	const uint32_t nEffectiveAlignment = MAX( nAlignment, ( uint32_t )alignof( t3dVTEditorAllocationHeader_t ) );
-	const uint64_t nExtra = ( uint64_t )nEffectiveAlignment - 1u + sizeof( t3dVTEditorAllocationHeader_t );
+	const uint32_t nEffectiveAlignment = MAX( nAlignment, static_cast<uint32_t>(alignof( t3dVTEditorAllocationHeader_t ) ));
+	const uint64_t nExtra = static_cast<uint64_t>(nEffectiveAlignment) - 1u + sizeof( t3dVTEditorAllocationHeader_t );
 	if ( nBytes > SIZE_MAX - nExtra ) {
 		return NULL;
 	}
-	t3dVTEditorAllocationBudget_t *const pBudget = ( t3dVTEditorAllocationBudget_t * )pUser;
+	t3dVTEditorAllocationBudget_t *const pBudget = static_cast<t3dVTEditorAllocationBudget_t *>(pUser);
 	if ( pBudget != NULL && ( pBudget->m_nLiveBytes > pBudget->m_nLimit || nBytes + nExtra > pBudget->m_nLimit - pBudget->m_nLiveBytes ) ) {
 		return NULL;
 	}
-	void *const pBase = t3dMemoryAllocate( ( size_t )( nBytes + nExtra ) );
+	void *const pBase = t3dMemoryAllocate( static_cast<size_t>( nBytes + nExtra ) );
 	if ( pBase == NULL ) {
 		return NULL;
 	}
-	const uintptr_t nStart = ( uintptr_t )pBase + sizeof( t3dVTEditorAllocationHeader_t );
-	const uintptr_t nAligned = ( nStart + nEffectiveAlignment - 1u ) & ~( ( uintptr_t )nEffectiveAlignment - 1u );
-	t3dVTEditorAllocationHeader_t& header = ( ( t3dVTEditorAllocationHeader_t * )nAligned )[-1];
+	const uintptr_t nStart = static_cast<uintptr_t>(pBase) + sizeof( t3dVTEditorAllocationHeader_t );
+	const uintptr_t nAligned = ( nStart + nEffectiveAlignment - 1u ) & ~( static_cast<uintptr_t>(nEffectiveAlignment) - 1u );
+	t3dVTEditorAllocationHeader_t& header = static_cast<t3dVTEditorAllocationHeader_t *>(nAligned)[-1];
 	header.m_pBase = pBase;
 	header.m_nChargedBytes = nBytes + nExtra;
 	if ( pBudget != NULL ) {
 		pBudget->m_nLiveBytes += header.m_nChargedBytes;
 	}
-	return ( void * )nAligned;
+	return static_cast<void *>(nAligned);
 }
 
 static void t3d_vt_godot_editor_free( void *pUser, void *pMemory )
 {
 	if ( pMemory != NULL ) {
-		const t3dVTEditorAllocationHeader_t& header = ( ( t3dVTEditorAllocationHeader_t * )pMemory )[-1];
-		t3dVTEditorAllocationBudget_t *const pBudget = ( t3dVTEditorAllocationBudget_t * )pUser;
+		const t3dVTEditorAllocationHeader_t& header = static_cast<t3dVTEditorAllocationHeader_t *>(pMemory)[-1];
+		t3dVTEditorAllocationBudget_t *const pBudget = static_cast<t3dVTEditorAllocationBudget_t *>(pUser);
 		if ( pBudget != NULL ) {
 			pBudget->m_nLiveBytes -= header.m_nChargedBytes;
 		}
@@ -583,7 +583,7 @@ static bool t3d_vt_godot_write_cache_atomic( const String& rPath, const PackedBy
 
 static bool t3d_vt_godot_timed_encode_tile( void *pUser, const t3dVTEncodeTileRequest_t& rRequest, uint32_t& rWrittenBytes )
 {
-	t3dVTEditorTimedEncoder_t *const pTimed = ( t3dVTEditorTimedEncoder_t * )pUser;
+	t3dVTEditorTimedEncoder_t *const pTimed = static_cast<t3dVTEditorTimedEncoder_t *>(pUser);
 	if ( pTimed == NULL || pTimed->m_Base.m_pEncodeTile == NULL ) {
 		return false;
 	}
@@ -639,7 +639,7 @@ static bool t3d_vt_godot_load_channel_cache_disk( t3dVTEditorCookCache_t& rCache
 		return false;
 	}
 	const PackedByteArray fileBytes = cache_file->get_buffer( cache_file->get_length() );
-	if ( fileBytes.size() < ( int64_t )sizeof( t3dVTEditorChannelCacheDiskHeader_t ) ) {
+	if ( fileBytes.size() < static_cast<int64_t>(sizeof( t3dVTEditorChannelCacheDiskHeader_t ) )) {
 		return false;
 	}
 	t3dVTEditorChannelCacheDiskHeader_t header;
@@ -647,7 +647,7 @@ static bool t3d_vt_godot_load_channel_cache_disk( t3dVTEditorCookCache_t& rCache
 	if ( header.m_nMagic != T3D_VT_EDITOR_CHANNEL_CACHE_MAGIC || header.m_nVersion != T3D_VT_EDITOR_CHANNEL_CACHE_VERSION ||
 	     header.m_nKey != nKey || header.m_nLogicalChannel != nChannel || header.m_nTargetExtent != nTargetExtent ||
 	     header.m_nPayloadBytes == 0u || header.m_nPayloadBytes > INT64_MAX ||
-	     ( uint64_t )fileBytes.size() != sizeof( header ) + header.m_nPayloadBytes ||
+	     static_cast<uint64_t>(fileBytes.size() != sizeof( header )) + header.m_nPayloadBytes ||
 	     header.m_Layout.m_nTotalBytes != header.m_nPayloadBytes || header.m_Layout.m_nMipCount == 0u ||
 	     header.m_Layout.m_nMipCount > T3D_VT_MAX_MIPS ) {
 		return false;
@@ -664,11 +664,11 @@ static bool t3d_vt_godot_load_channel_cache_disk( t3dVTEditorCookCache_t& rCache
 	if ( !entry.m_memory.reserve( header.m_nPayloadBytes ) ) {
 		return false;
 	}
-	entry.m_Bytes.resize( ( int64_t )header.m_nPayloadBytes );
-	if ( entry.m_Bytes.size() != ( int64_t )header.m_nPayloadBytes ) {
+	entry.m_Bytes.resizestatic_cast<int64_t>(header.m_nPayloadBytes);
+	if ( entry.m_Bytes.size() != static_cast<int64_t>(header.m_nPayloadBytes) ) {
 		return false;
 	}
-	memcpy( entry.m_Bytes.ptrw(), pPayload, ( size_t )header.m_nPayloadBytes );
+	memcpy( entry.m_Bytes.ptrw(), pPayload, static_cast<size_t>(header.m_nPayloadBytes) );
 	if ( !t3dContainerReserveCold( rCache.m_ChannelEntries, rCache.m_ChannelEntries.size() + 1u ) ) {
 		return false;
 	}
@@ -691,20 +691,20 @@ static void t3d_vt_godot_store_channel_cache_disk( const t3dVTEditorCookCache_t&
 	header.m_nTargetExtent = rEntry.m_nTargetExtent;
 	header.m_nKey = rEntry.m_nKey;
 	header.m_Layout = rEntry.m_Layout;
-	header.m_nPayloadBytes = ( uint64_t )rEntry.m_Bytes.size();
+	header.m_nPayloadBytes = static_cast<uint64_t>(rEntry.m_Bytes.size());
 	header.m_nPayloadChecksum = t3d_vt_pack_checksum32( rEntry.m_Bytes.ptr(), header.m_nPayloadBytes );
 	PackedByteArray fileBytes;
 	Terrain3DMemoryReservation file_memory;
 	if ( !file_memory.resize( sizeof( header ) + header.m_nPayloadBytes ) ) {
 		return;
 	}
-	fileBytes.resize( ( int64_t )( sizeof( header ) + header.m_nPayloadBytes ) );
-	if ( fileBytes.size() != ( int64_t )( sizeof( header ) + header.m_nPayloadBytes ) ) {
+	fileBytes.resize( static_cast<int64_t>(  sizeof( header ) + header.m_nPayloadBytes  ) );
+	if ( fileBytes.size() != static_cast<int64_t>(  sizeof( header ) + header.m_nPayloadBytes  ) ) {
 		return;
 	}
 	memcpy( fileBytes.ptrw(), &header, sizeof( header ) );
-	memcpy( fileBytes.ptrw() + sizeof( header ), rEntry.m_Bytes.ptr(), ( size_t )header.m_nPayloadBytes );
-	( void )t3d_vt_godot_write_cache_atomic( path, fileBytes );
+	memcpy( fileBytes.ptrw() + sizeof( header ), rEntry.m_Bytes.ptr(), static_cast<size_t>(header.m_nPayloadBytes) );
+	static_cast<void>(t3d_vt_godot_write_cache_atomic( path, fileBytes ));
 }
 
 static t3dVTEditorAllocationCacheEntry_t *t3d_vt_godot_find_allocation_cache( t3dVTEditorCookCache_t& rCache, const uint64_t nStableKey,
@@ -725,7 +725,7 @@ static bool t3d_vt_godot_validate_allocation_fragment( const PackedByteArray& rB
 		return false;
 	}
 	t3dVTPackBaselineView_t view;
-	return t3d_vt_pack_open_baseline_view( rBytes.ptr(), ( uint64_t )rBytes.size(), view ) && view.m_pHeader->m_nAllocationCount == 1u &&
+	return t3d_vt_pack_open_baseline_view( rBytes.ptr(), static_cast<uint64_t>(rBytes.size(), view )) && view.m_pHeader->m_nAllocationCount == 1u &&
 	       view.m_pAllocationKeys[0].m_nStableKey == nStableKey;
 }
 
@@ -764,7 +764,7 @@ static void t3d_vt_godot_store_allocation_cache_disk( const t3dVTEditorCookCache
 {
 	const String path = t3d_vt_godot_allocation_cache_path( rCache, rEntry.m_nKey );
 	if ( !path.is_empty() && !rEntry.m_PackageBytes.is_empty() ) {
-		( void )t3d_vt_godot_write_cache_atomic( path, rEntry.m_PackageBytes );
+		static_cast<void>(t3d_vt_godot_write_cache_atomic( path, rEntry.m_PackageBytes ));
 	}
 }
 
@@ -772,12 +772,12 @@ static uint64_t t3d_vt_godot_channel_cache_key( const t3dVTEditorCookCache_t& rC
                                                 const t3dVTLogicalChannel_t Channel, const uint32_t nTargetExtent,
                                                 const uint32_t nCompressionQuality, const uint32_t nMipQuality )
 {
-	const t3dVTGodotSourceChannel_t& rDesc = rSource.m_ChannelDesc[( uint32_t )Channel];
+	const t3dVTGodotSourceChannel_t& rDesc = rSource.m_ChannelDesc[static_cast<uint32_t>(Channel)];
 	uint64_t nHash = 1469598103934665603ULL;
 	nHash = t3d_vt_godot_hash_u64( nHash, rDesc.m_nSourceFingerprint );
 	// ORM channel interpretation changes the filtered pixels even when source bytes do not.
 	nHash = t3d_vt_godot_hash_u64( nHash, rSource.m_nOrmSourceLayout );
-	nHash = t3d_vt_godot_hash_u64( nHash, ( uint32_t )Channel );
+	nHash = t3d_vt_godot_hash_u64( nHash, static_cast<uint32_t>(Channel) );
 	nHash = t3d_vt_godot_hash_u64( nHash, rSource.m_nConsumer );
 	nHash = t3d_vt_godot_hash_u64( nHash, nTargetExtent );
 	nHash = t3d_vt_godot_hash_u64( nHash, rDesc.m_nWrapMode );
@@ -801,7 +801,7 @@ static uint64_t t3d_vt_godot_allocation_cache_key( const t3dVTGodotSource_t& rSo
 	nHash = t3d_vt_godot_hash_u64( nHash, rSource.m_nStableKey );
 	nHash = t3d_vt_godot_hash_u64( nHash, rSource.m_nAuthoredChannelMask );
 	nHash = t3d_vt_godot_hash_u64( nHash, rSource.m_nConsumer );
-	nHash = t3d_vt_godot_hash_u64( nHash, ( uint32_t )rSource.m_eHighestAvailableProfile );
+	nHash = t3d_vt_godot_hash_u64( nHash, static_cast<uint32_t>(rSource.m_eHighestAvailableProfile) );
 	nHash = t3d_vt_godot_hash_u64( nHash, rSource.m_nSourceFlags );
 	nHash = t3d_vt_godot_hash_u64( nHash, rSource.m_nOrmSourceLayout );
 	nHash = t3d_vt_godot_hash_u64( nHash, rSettings.m_nMipQuality );
@@ -827,9 +827,9 @@ static bool t3d_vt_godot_prepare_channel_cache( t3dVTEditorCookCache_t& rCache, 
 	rChannelKey =
 	    t3d_vt_godot_channel_cache_key( rCache, rSource, Channel, nTargetExtent, rSettings.m_nCompressionQuality, rSettings.m_nMipQuality );
 	t3dVTEditorChannelCacheEntry_t *pEntry =
-	    bForceRebuild ? NULL : t3d_vt_godot_find_channel_cache( rCache, rChannelKey, ( uint32_t )Channel, nTargetExtent );
+	    bForceRebuild ? NULL : t3d_vt_godot_find_channel_cache( rCache, rChannelKey, static_cast<uint32_t>(Channel), nTargetExtent );
 	if ( !bForceRebuild && pEntry == NULL ) {
-		( void )t3d_vt_godot_load_channel_cache_disk( rCache, rChannelKey, ( uint32_t )Channel, nTargetExtent, pEntry );
+		static_cast<void>(t3d_vt_godot_load_channel_cache_disk( rCache, rChannelKey, static_cast<uint32_t>(Channel), nTargetExtent, pEntry ));
 	}
 	if ( pEntry != NULL ) {
 		++rTelemetry.m_nChannelCacheHits;
@@ -856,18 +856,18 @@ static bool t3d_vt_godot_prepare_channel_cache( t3dVTEditorCookCache_t& rCache, 
 		t3dVTEditorChannelCacheEntry_t entry;
 		entry.m_nKey = rChannelKey;
 		entry.m_nTargetExtent = nTargetExtent;
-		entry.m_nLogicalChannel = ( uint32_t )Channel;
+		entry.m_nLogicalChannel = static_cast<uint32_t>(Channel);
 		entry.m_Layout = layout;
 		if ( !entry.m_memory.reserve( layout.m_nTotalBytes ) ) {
 			rAllocator.m_pFree( rAllocator.m_pUser, pMipBytes );
 			return false;
 		}
-		entry.m_Bytes.resize( ( int64_t )layout.m_nTotalBytes );
-		if ( entry.m_Bytes.size() != ( int64_t )layout.m_nTotalBytes ) {
+		entry.m_Bytes.resizestatic_cast<int64_t>(layout.m_nTotalBytes);
+		if ( entry.m_Bytes.size() != static_cast<int64_t>(layout.m_nTotalBytes) ) {
 			rAllocator.m_pFree( rAllocator.m_pUser, pMipBytes );
 			return false;
 		}
-		memcpy( entry.m_Bytes.ptrw(), pMipBytes, ( size_t )layout.m_nTotalBytes );
+		memcpy( entry.m_Bytes.ptrw(), pMipBytes, static_cast<size_t>(layout.m_nTotalBytes) );
 		rAllocator.m_pFree( rAllocator.m_pUser, pMipBytes );
 		if ( !t3dContainerReserveCold( rCache.m_ChannelEntries, rCache.m_ChannelEntries.size() + 1u ) ) {
 			return false;
@@ -876,9 +876,9 @@ static bool t3d_vt_godot_prepare_channel_cache( t3dVTEditorCookCache_t& rCache, 
 		pEntry = &rCache.m_ChannelEntries.back();
 		t3d_vt_godot_store_channel_cache_disk( rCache, *pEntry );
 	}
-	rCookSource.m_PreparedChannels[( uint32_t )Channel].m_pMipBytes = pEntry->m_Bytes.ptr();
-	rCookSource.m_PreparedChannels[( uint32_t )Channel].m_Layout = pEntry->m_Layout;
-	rCookSource.m_PreparedChannels[( uint32_t )Channel].m_nTargetExtent = pEntry->m_nTargetExtent;
+	rCookSource.m_PreparedChannels[static_cast<uint32_t>(Channel)].m_pMipBytes = pEntry->m_Bytes.ptr();
+	rCookSource.m_PreparedChannels[static_cast<uint32_t>(Channel)].m_Layout = pEntry->m_Layout;
+	rCookSource.m_PreparedChannels[static_cast<uint32_t>(Channel)].m_nTargetExtent = pEntry->m_nTargetExtent;
 	return true;
 }
 
@@ -926,11 +926,11 @@ static bool t3d_vt_godot_cook_allocation_fragment( const Ref<Terrain3DAssets>& r
 	if ( ( source.m_nSourceFlags & T3D_VT_GODOT_SOURCE_ALBEDO_RGBA ) != 0u ) {
 		nAllocationFlags |= T3D_VT_ALLOCATION_ALBEDO_RGBA;
 	}
-	cookSource.m_nAllocationFlags = ( uint16_t )nAllocationFlags;
+	cookSource.m_nAllocationFlags = static_cast<uint16_t>(nAllocationFlags);
 	uint64_t channelKeys[T3D_VT_LOGICAL_CHANNEL_COUNT];
 	memset( channelKeys, 0, sizeof( channelKeys ) );
 	for ( uint32_t iChannel = 0u; iChannel < T3D_VT_LOGICAL_CHANNEL_COUNT; ++iChannel ) {
-		const t3dVTLogicalChannel_t Channel = ( t3dVTLogicalChannel_t )iChannel;
+		const t3dVTLogicalChannel_t Channel = static_cast<t3dVTLogicalChannel_t>(iChannel);
 		const uint32_t nTargetExtent = t3d_vt_fixed_profile_channel_extent( source.m_eHighestAvailableProfile, Channel );
 		if ( nTargetExtent != 0u && ( source.m_nAuthoredChannelMask & T3D_VT_LOGICAL_CHANNEL_BIT( Channel ) ) != 0u ) {
 			channelKeys[iChannel] = t3d_vt_godot_channel_cache_key( rCache, source, Channel, nTargetExtent, rSettings.m_nCompressionQuality,
@@ -938,14 +938,14 @@ static bool t3d_vt_godot_cook_allocation_fragment( const Ref<Terrain3DAssets>& r
 		}
 	}
 	rAllocationKey = t3d_vt_godot_allocation_cache_key( source, channelKeys, rSettings, nAllocationFlags );
-	cookSource.m_nGenerationSeed = ( uint32_t )( rAllocationKey ^ ( rAllocationKey >> 32u ) );
+	cookSource.m_nGenerationSeed = static_cast<uint32_t>(  rAllocationKey ^ ( rAllocationKey >> 32u )  );
 	if ( cookSource.m_nGenerationSeed == 0u ) {
 		cookSource.m_nGenerationSeed = 1u;
 	}
 	t3dVTEditorAllocationCacheEntry_t *pAllocationCache =
 	    bForceRebuild ? NULL : t3d_vt_godot_find_allocation_cache( rCache, nStableKey, rAllocationKey );
 	if ( !bForceRebuild && pAllocationCache == NULL ) {
-		( void )t3d_vt_godot_load_allocation_cache_disk( rCache, nStableKey, rAllocationKey, pAllocationCache );
+		static_cast<void>(t3d_vt_godot_load_allocation_cache_disk( rCache, nStableKey, rAllocationKey, pAllocationCache ));
 	}
 	if ( pAllocationCache != NULL ) {
 		++rTelemetry.m_nAllocationCacheHits;
@@ -958,7 +958,7 @@ static bool t3d_vt_godot_cook_allocation_fragment( const Ref<Terrain3DAssets>& r
 	++rCache.m_nLifetimeMisses;
 	for ( uint32_t iChannel = 0u; iChannel < T3D_VT_LOGICAL_CHANNEL_COUNT; ++iChannel ) {
 		uint64_t nPreparedKey = 0u;
-		if ( !t3d_vt_godot_prepare_channel_cache( rCache, source, cookSource, ( t3dVTLogicalChannel_t )iChannel, rSettings, rAllocator,
+		if ( !t3d_vt_godot_prepare_channel_cache( rCache, source, cookSource, static_cast<t3dVTLogicalChannel_t>(iChannel), rSettings, rAllocator,
 		                                          rTelemetry, nPreparedKey, bForceRebuild ) ||
 		     nPreparedKey != channelKeys[iChannel] ) {
 			rCache.m_ChannelEntries.clear();
@@ -1009,9 +1009,9 @@ static bool t3d_vt_godot_cook_allocation_fragment( const Ref<Terrain3DAssets>& r
 		t3d_vt_cooker_release_sparse_package( package );
 		return false;
 	}
-	rFragmentBytes.resize( ( int64_t )nBytes );
+	rFragmentBytes.resizestatic_cast<int64_t>(nBytes);
 	uint64_t nWritten = 0u;
-	const bool bWritten = rFragmentBytes.size() == ( int64_t )nBytes &&
+	const bool bWritten = rFragmentBytes.size() == static_cast<int64_t>(nBytes) &&
 	                      t3d_vt_pack_write( packSource, rFragmentBytes.ptrw(), nBytes, nWritten ) && nWritten == nBytes;
 	t3d_vt_cooker_release_sparse_package( package );
 	if ( !bWritten || !t3d_vt_godot_validate_allocation_fragment( rFragmentBytes, nStableKey ) ) {
@@ -1075,10 +1075,10 @@ struct t3dVTEditorPayloadIndex_t
 	bool prepare( const uint32_t nCount )
 	{
 		uint64_t nBuckets = 1u;
-		while ( nBuckets < ( uint64_t )nCount * 2u ) {
+		while ( nBuckets < static_cast<uint64_t>(nCount) * 2u ) {
 			nBuckets *= 2u;
 		}
-		return t3dVectorResizeCold( m_heads, ( size_t )nBuckets, UINT32_MAX ) && t3dContainerReserveCold( m_next, nCount );
+		return t3dVectorResizeCold( m_heads, static_cast<size_t>(nBuckets), UINT32_MAX ) && t3dContainerReserveCold( m_next, nCount );
 	}
 };
 
@@ -1089,14 +1089,14 @@ static uint32_t t3d_vt_godot_find_or_add_payload( eastl::vector<t3dVTEditorUniqu
 	// Hash actual bytes, not just the supplied signature. Equality still checks
 	// metadata and bytes so a hash collision never merges distinct payloads.
 	uint64_t nHash = t3d_vt_pack_hash64( pBytes, nBytes ) * 1099511628211ull + rPayload.m_nContentSignature;
-	nHash ^= ( uint64_t )rPayload.m_nFormat << 32u;
+	nHash ^= static_cast<uint64_t>(rPayload.m_nFormat) << 32u;
 	nHash ^= rPayload.m_nFlags;
 	nHash ^= nHash >> 30u;
 	nHash *= 0xbf58476d1ce4e5b9ull;
 	nHash ^= nHash >> 27u;
 	nHash *= 0x94d049bb133111ebull;
 	nHash ^= nHash >> 31u;
-	const size_t nBucket = ( size_t )( nHash & ( rIndex.m_heads.size() - 1u ) );
+	const size_t nBucket = static_cast<size_t>(  nHash & ( rIndex.m_heads.size() - 1u )  );
 	for ( uint32_t iPayload = rIndex.m_heads[nBucket]; iPayload != UINT32_MAX; iPayload = rIndex.m_next[iPayload] ) {
 		++rIndex.m_nComparisons;
 		const t3dVTEditorUniquePayload_t& rExisting = rPayloads[iPayload];
@@ -1119,7 +1119,7 @@ static uint32_t t3d_vt_godot_find_or_add_payload( eastl::vector<t3dVTEditorUniqu
 	entry.m_pBytes = pBytes;
 	entry.m_nBytes = nBytes;
 	rPayloads.push_back( entry );
-	const uint32_t nId = ( uint32_t )rPayloads.size() - 1u;
+	const uint32_t nId = static_cast<uint32_t>(rPayloads.size()) - 1u;
 	rIndex.m_next.push_back( rIndex.m_heads[nBucket] );
 	rIndex.m_heads[nBucket] = nId;
 	return nId;
@@ -1161,18 +1161,18 @@ static bool t3dVTPlanMerge( const eastl::vector<t3dVTEditorFragment_t, Terrain3D
 	for ( size_t i = 0u; i < rFragments.size(); ++i ) {
 		const PackedByteArray& bytes = rFragments[i].m_Bytes;
 		t3dVTPackBaselineView_t& view = rViews[i];
-		if ( !t3d_vt_pack_open_baseline_view( bytes.ptr(), ( uint64_t )bytes.size(), view ) ||
+		if ( !t3d_vt_pack_open_baseline_view( bytes.ptr(), static_cast<uint64_t>(bytes.size(), view )) ||
 		     ( rFragments[i].m_nStableKey != 0u &&
 		       ( view.m_pHeader->m_nAllocationCount != 1u || view.m_pAllocationKeys[0].m_nStableKey != rFragments[i].m_nStableKey ) ) ) {
 			return false;
 		}
 		const t3dVTPackHeader_t& header = *view.m_pHeader;
-		if ( !t3dCheckedAdd( rPlan.m_nInputBytes, ( uint64_t )bytes.size(), rPlan.m_nInputBytes ) ||
-		     !t3dCheckedAdd( rPlan.m_nAllocations, ( uint64_t )header.m_nAllocationCount, rPlan.m_nAllocations ) ||
-		     !t3dCheckedAdd( rPlan.m_nPages, ( uint64_t )header.m_nPageCount, rPlan.m_nPages ) ||
-		     !t3dCheckedAdd( rPlan.m_nTails, ( uint64_t )header.m_nTailCount, rPlan.m_nTails ) ||
-		     !t3dCheckedAdd( rPlan.m_nViews, ( uint64_t )header.m_nQualityViewCount, rPlan.m_nViews ) ||
-		     !t3dCheckedAdd( rPlan.m_nPayloads, ( uint64_t )header.m_nPayloadCount, rPlan.m_nPayloads ) ) {
+		if ( !t3dCheckedAdd( rPlan.m_nInputBytes, static_cast<uint64_t>(bytes.size(), rPlan.m_nInputBytes )) ||
+		     !t3dCheckedAdd( rPlan.m_nAllocations, static_cast<uint64_t>(header.m_nAllocationCount), rPlan.m_nAllocations ) ||
+		     !t3dCheckedAdd( rPlan.m_nPages, static_cast<uint64_t>(header.m_nPageCount), rPlan.m_nPages ) ||
+		     !t3dCheckedAdd( rPlan.m_nTails, static_cast<uint64_t>(header.m_nTailCount), rPlan.m_nTails ) ||
+		     !t3dCheckedAdd( rPlan.m_nViews, static_cast<uint64_t>(header.m_nQualityViewCount), rPlan.m_nViews ) ||
+		     !t3dCheckedAdd( rPlan.m_nPayloads, static_cast<uint64_t>(header.m_nPayloadCount), rPlan.m_nPayloads ) ) {
 			return false;
 		}
 	}
@@ -1239,7 +1239,7 @@ static bool t3d_vt_godot_merge_allocation_fragments( const eastl::vector<t3dVTEd
 	eastl::vector<t3dVTEditorAllocationInput_t, Terrain3DEastlAllocator> inputs;
 	if ( !t3dVTPlanMerge( rFragments, inputViews, plan, nWorkingByteLimit ) ) {
 		if ( plan.m_nWorkingBytes > nWorkingByteLimit ) {
-			( void )t3dVTMergeAdmitWorkingBytes( plan.m_nWorkingBytes, nWorkingByteLimit, pStatistics );
+			static_cast<void>(t3dVTMergeAdmitWorkingBytes( plan.m_nWorkingBytes, nWorkingByteLimit, pStatistics ));
 		}
 		return fail();
 	}
@@ -1249,17 +1249,17 @@ static bool t3d_vt_godot_merge_allocation_fragments( const eastl::vector<t3dVTEd
 		return fail();
 	}
 	stage = "metadata allocation";
-	if ( !t3dVectorResizeCold( payloadMaps, rFragments.size() ) || !t3dContainerReserveCold( inputs, ( size_t )plan.m_nAllocations ) ||
-	     !t3dContainerReserveCold( allocations, ( size_t )plan.m_nAllocations ) ||
-	     !t3dContainerReserveCold( keys, ( size_t )plan.m_nAllocations ) ||
-	     !t3dContainerReserveCold( channels, ( size_t )plan.m_nAllocations * T3D_VT_LOGICAL_CHANNEL_COUNT ) ||
-	     !t3dContainerReserveCold( pages, ( size_t )plan.m_nPages ) || !t3dContainerReserveCold( tails, ( size_t )plan.m_nTails ) ||
-	     !t3dContainerReserveCold( views, ( size_t )plan.m_nViews ) ||
-	     !t3dContainerReserveCold( uniquePayloads, ( size_t )plan.m_nPayloads ) || !payloadIndex.prepare( ( uint32_t )plan.m_nPayloads ) ) {
+	if ( !t3dVectorResizeCold( payloadMaps, rFragments.size() ) || !t3dContainerReserveCold( inputs, static_cast<size_t>(plan.m_nAllocations) ) ||
+	     !t3dContainerReserveCold( allocations, static_cast<size_t>(plan.m_nAllocations) ) ||
+	     !t3dContainerReserveCold( keys, static_cast<size_t>(plan.m_nAllocations) ) ||
+	     !t3dContainerReserveCold( channels, static_cast<size_t>(plan.m_nAllocations) * T3D_VT_LOGICAL_CHANNEL_COUNT ) ||
+	     !t3dContainerReserveCold( pages, static_cast<size_t>(plan.m_nPages) ) || !t3dContainerReserveCold( tails, static_cast<size_t>(plan.m_nTails) ) ||
+	     !t3dContainerReserveCold( views, static_cast<size_t>(plan.m_nViews) ) ||
+	     !t3dContainerReserveCold( uniquePayloads, static_cast<size_t>(plan.m_nPayloads) ) || !payloadIndex.preparestatic_cast<uint32_t>(plan.m_nPayloads) ) {
 		return fail();
 	}
 	stage = "payload extraction";
-	for ( uint32_t iFragment = 0u; iFragment < ( uint32_t )rFragments.size(); ++iFragment ) {
+	for ( uint32_t iFragment = 0u; iFragment < static_cast<uint32_t>(rFragments.size(); ++iFragment )) {
 		t3dVTPackBaselineView_t& view = inputViews[iFragment];
 		for ( uint32_t iAllocation = 0u; iAllocation < view.m_pHeader->m_nAllocationCount; ++iAllocation ) {
 			inputs.push_back( { iFragment, iAllocation, view.m_pAllocationKeys[iAllocation].m_nStableKey } );
@@ -1292,7 +1292,7 @@ static bool t3d_vt_godot_merge_allocation_fragments( const eastl::vector<t3dVTEd
 		}
 		const t3dVTPackBaselineView_t& view = inputViews[input.nFragment];
 		const eastl::vector<uint32_t, Terrain3DEastlAllocator>& payloadMap = payloadMaps[input.nFragment];
-		const uint32_t nNewAllocation = ( uint32_t )allocations.size();
+		const uint32_t nNewAllocation = static_cast<uint32_t>(allocations.size());
 		allocations.push_back( view.m_pAllocations[input.nAllocation] );
 		t3dVTPackAllocationKeyRecord_t key = view.m_pAllocationKeys[input.nAllocation];
 		key.m_nAllocationId = nNewAllocation;
@@ -1301,7 +1301,7 @@ static bool t3d_vt_godot_merge_allocation_fragments( const eastl::vector<t3dVTEd
 			t3dVTChannelAllocation_t channel = view.m_pChannelAllocations[input.nAllocation * T3D_VT_LOGICAL_CHANNEL_COUNT + iChannel];
 			if ( channel.m_nMipCount != 0u ) {
 				const uint32_t nOldBase = channel.m_nBaseVirtualPage;
-				const uint32_t nNewBase = ( uint32_t )pages.size();
+				const uint32_t nNewBase = static_cast<uint32_t>(pages.size());
 				for ( uint32_t iPage = 0u; iPage < channel.m_nPageCount; ++iPage ) {
 					t3dVTPackPageRecord_t page = view.m_pPages[nOldBase + iPage];
 					page.m_nVirtualPage = nNewBase + iPage;
@@ -1316,7 +1316,7 @@ static bool t3d_vt_godot_merge_allocation_fragments( const eastl::vector<t3dVTEd
 				tail.m_nCanonicalAllocationId = nNewAllocation;
 				tail.m_nPayloadId = payloadMap[tail.m_nPayloadId];
 				channel.m_nBaseVirtualPage = nNewBase;
-				channel.m_nTailIndex = ( uint32_t )tails.size();
+				channel.m_nTailIndex = static_cast<uint32_t>(tails.size());
 				tails.push_back( tail );
 			}
 			channels.push_back( channel );
@@ -1346,7 +1346,7 @@ static bool t3d_vt_godot_merge_allocation_fragments( const eastl::vector<t3dVTEd
 		}
 	}
 	uint32_t nPayloadOffset = 0u;
-	for ( uint32_t iPayload = 0u; iPayload < ( uint32_t )uniquePayloads.size(); ++iPayload ) {
+	for ( uint32_t iPayload = 0u; iPayload < static_cast<uint32_t>(uniquePayloads.size(); ++iPayload )) {
 		payloads[iPayload] = uniquePayloads[iPayload].m_Record;
 		payloads[iPayload].m_nClusterId = 0u;
 		payloads[iPayload].m_nClusterOffset = nPayloadOffset;
@@ -1355,10 +1355,10 @@ static bool t3d_vt_godot_merge_allocation_fragments( const eastl::vector<t3dVTEd
 	t3dVTPackClusterRecord_t cluster;
 	memset( &cluster, 0, sizeof( cluster ) );
 	cluster.m_nPayloadDataOffset = 0u;
-	cluster.m_nStoredBytes = ( uint32_t )nPayloadBytes;
-	cluster.m_nDecodedBytes = ( uint32_t )nPayloadBytes;
+	cluster.m_nStoredBytes = static_cast<uint32_t>(nPayloadBytes);
+	cluster.m_nDecodedBytes = static_cast<uint32_t>(nPayloadBytes);
 	cluster.m_nFirstPayload = 0u;
-	cluster.m_nPayloadCount = ( uint32_t )payloads.size();
+	cluster.m_nPayloadCount = static_cast<uint32_t>(payloads.size());
 	cluster.m_nCodec = T3D_VT_PACK_CODEC_NONE;
 	t3dVTPackFormatFamilyRecord_t formatFamilies[T3D_VT_LOGICAL_CHANNEL_COUNT];
 	if ( !t3d_vt_pack_init_format_family_records( formatFamilies, T3D_VT_LOGICAL_CHANNEL_COUNT ) ) {
@@ -1367,20 +1367,20 @@ static bool t3d_vt_godot_merge_allocation_fragments( const eastl::vector<t3dVTEd
 	t3dVTSerializedPackSource_t packSource;
 	memset( &packSource, 0, sizeof( packSource ) );
 	packSource.m_pAllocations = allocations.data();
-	packSource.m_nAllocationCount = ( uint32_t )allocations.size();
+	packSource.m_nAllocationCount = static_cast<uint32_t>(allocations.size());
 	packSource.m_pAllocationKeys = keys.data();
 	packSource.m_pChannelAllocations = channels.data();
-	packSource.m_nChannelAllocationCount = ( uint32_t )channels.size();
+	packSource.m_nChannelAllocationCount = static_cast<uint32_t>(channels.size());
 	packSource.m_pPages = pages.empty() ? NULL : pages.data();
-	packSource.m_nPageCount = ( uint32_t )pages.size();
+	packSource.m_nPageCount = static_cast<uint32_t>(pages.size());
 	packSource.m_pPayloads = payloads.data();
-	packSource.m_nPayloadCount = ( uint32_t )payloads.size();
+	packSource.m_nPayloadCount = static_cast<uint32_t>(payloads.size());
 	packSource.m_pClusters = &cluster;
 	packSource.m_nClusterCount = 1u;
 	packSource.m_pTails = tails.data();
-	packSource.m_nTailCount = ( uint32_t )tails.size();
+	packSource.m_nTailCount = static_cast<uint32_t>(tails.size());
 	packSource.m_pQualityViews = views.data();
-	packSource.m_nQualityViewCount = ( uint32_t )views.size();
+	packSource.m_nQualityViewCount = static_cast<uint32_t>(views.size());
 	packSource.m_pFormatFamilies = formatFamilies;
 	packSource.m_nFormatFamilyCount = T3D_VT_LOGICAL_CHANNEL_COUNT;
 	packSource.m_nPayloadDataBytes = nPayloadBytes;
@@ -1400,11 +1400,11 @@ static bool t3d_vt_godot_merge_allocation_fragments( const eastl::vector<t3dVTEd
 	     !t3dVTMergeAdmitWorkingBytes( nWorkingBytes, nWorkingByteLimit, pStatistics ) ) {
 		return fail();
 	}
-	if ( !outputMemory.reserve( nBytes + 64u ) || output.resize( ( int64_t )nBytes ) != OK ) {
+	if ( !outputMemory.reserve( nBytes + 64u ) || output.resizestatic_cast<int64_t>(nBytes) != OK ) {
 		return fail();
 	}
 	uint8_t *const pPayloadBytes = output.ptrw() + nMetadataBytes;
-	for ( uint32_t iPayload = 0u; iPayload < ( uint32_t )uniquePayloads.size(); ++iPayload ) {
+	for ( uint32_t iPayload = 0u; iPayload < static_cast<uint32_t>(uniquePayloads.size(); ++iPayload )) {
 		memcpy( pPayloadBytes + payloads[iPayload].m_nClusterOffset, uniquePayloads[iPayload].m_pBytes, uniquePayloads[iPayload].m_nBytes );
 	}
 	cluster.m_nContentSignature = t3d_vt_pack_hash64( pPayloadBytes, nPayloadBytes );
@@ -1450,7 +1450,7 @@ bool t3d_vt_godot_cook_source_fragment( const t3dVTCookSparseSource_t& rSource, 
 		if ( t3d_vt_cooker_build_pack_source( package, packSource ) ) {
 			const uint64_t nBytes = t3d_vt_pack_compute_bytes( packSource );
 			if ( budget.m_nLiveBytes <= budget.m_nLimit && nBytes != 0u && nBytes <= INT64_MAX &&
-			     nBytes <= budget.m_nLimit - budget.m_nLiveBytes && rBytes.resize( ( int64_t )nBytes ) == OK ) {
+			     nBytes <= budget.m_nLimit - budget.m_nLiveBytes && rBytes.resizestatic_cast<int64_t>(nBytes) == OK ) {
 				uint64_t nWritten = 0u;
 				bWritten = t3d_vt_pack_write( packSource, rBytes.ptrw(), nBytes, nWritten ) && nWritten == nBytes;
 			}
@@ -1474,7 +1474,7 @@ bool t3d_vt_godot_merge_packages( const PackedByteArray *pPackages, const uint32
 		return false;
 	}
 	eastl::vector<t3dVTEditorFragment_t, Terrain3DEastlAllocator> fragments;
-	if ( !t3dVTMergeAdmitWorkingBytes( ( uint64_t )nCount * sizeof( t3dVTEditorFragment_t ), nWorkingByteLimit, pStatistics ) ||
+	if ( !t3dVTMergeAdmitWorkingBytes( static_cast<uint64_t>(nCount * sizeof(  t3dVTEditorFragment_t  )), nWorkingByteLimit, pStatistics ) ||
 	     !t3dContainerReserveCold( fragments, nCount ) ) {
 		return false;
 	}
@@ -1496,7 +1496,7 @@ bool t3d_vt_godot_cook_editor_package_incremental( const Ref<Terrain3DAssets>& r
                                                    String *const pError, Terrain3DSharedMemoryReservation *const pPackageMemory,
                                                    const bool bForceRebuild )
 {
-	( void )pMaterialRecords; // Runtime-only scalar/material state must not invalidate page payloads.
+	static_cast<void>(pMaterialRecords); // Runtime-only scalar/material state must not invalidate page payloads.
 	rPackageBytes.clear();
 	rFingerprint = 0u;
 	rPackageGeneration = 0u;
@@ -1570,7 +1570,7 @@ bool t3d_vt_godot_cook_editor_package_incremental( const Ref<Terrain3DAssets>& r
 		nFingerprint = t3d_vt_godot_hash_u64( nFingerprint, fragments[iFragment].m_nKey );
 	}
 	rFingerprint = nFingerprint == 0u ? 1u : nFingerprint;
-	rPackageGeneration = ( uint32_t )( rFingerprint ^ ( rFingerprint >> 32u ) );
+	rPackageGeneration = static_cast<uint32_t>(  rFingerprint ^ ( rFingerprint >> 32u )  );
 	if ( rPackageGeneration == 0u ) {
 		rPackageGeneration = 1u;
 	}
@@ -1604,7 +1604,7 @@ bool t3d_vt_godot_cook_editor_package_incremental( const Ref<Terrain3DAssets>& r
 		rTelemetry.m_nPackUsec += nPackEnd - nPackStart;
 	}
 	t3dVTPackBaselineView_t finalView;
-	if ( !t3d_vt_pack_open_baseline_view( rPackageBytes.ptr(), ( uint64_t )rPackageBytes.size(), finalView ) ||
+	if ( !t3d_vt_pack_open_baseline_view( rPackageBytes.ptr(), static_cast<uint64_t>(rPackageBytes.size(), finalView )) ||
 	     finalView.m_pHeader->m_nAllocationCount != nMaterialCount ) {
 		rPackageBytes.clear();
 		if ( pError ) {
@@ -1632,7 +1632,7 @@ static bool t3d_vt_godot_validate_shipping_package( const Ref<Terrain3DAssets>& 
                                                     const uint32_t nExpectedAllocationCount, String *const pError )
 {
 	t3dVTPackBaselineView_t view;
-	if ( rPackageBytes.is_empty() || !t3d_vt_pack_open_baseline_view( rPackageBytes.ptr(), ( uint64_t )rPackageBytes.size(), view ) ||
+	if ( rPackageBytes.is_empty() || !t3d_vt_pack_open_baseline_view( rPackageBytes.ptr(), static_cast<uint64_t>(rPackageBytes.size(), view )) ||
 	     view.m_pHeader->m_nVersion != T3D_VT_FILE_FORMAT_VERSION || view.m_pHeader->m_nAllocationCount != nExpectedAllocationCount ||
 	     view.m_pHeader->m_nFullySupportedProfileMask == 0u ) {
 		if ( pError ) {
@@ -1655,7 +1655,7 @@ static bool t3d_vt_godot_validate_shipping_package( const Ref<Terrain3DAssets>& 
 		bool bAuthored = false;
 		if ( !t3d_vt_godot_extract_source_by_stable_key( rAssets, key.m_nStableKey, source, bAuthored ) || !bAuthored ||
 		     source.m_eHighestAvailableProfile == T3D_VT_FIXED_PROFILE_INVALID || allocation.m_nConsumer != source.m_nConsumer ||
-		     allocation.m_nHighestAvailableProfile != ( uint8_t )source.m_eHighestAvailableProfile ) {
+		     allocation.m_nHighestAvailableProfile != static_cast<uint8_t>(source.m_eHighestAvailableProfile) ) {
 			if ( pError ) {
 				*pError = "VT shipping V1 allocation/source contract mismatch";
 			}
@@ -1666,7 +1666,7 @@ static bool t3d_vt_godot_validate_shipping_package( const Ref<Terrain3DAssets>& 
 		for ( uint32_t iChannel = 0u; iChannel < T3D_VT_LOGICAL_CHANNEL_COUNT; ++iChannel ) {
 			sourceExtent[iChannel] = source.m_ChannelDesc[iChannel].m_nSourceExtent;
 			if ( ( source.m_nAuthoredChannelMask & T3D_VT_LOGICAL_CHANNEL_BIT( iChannel ) ) != 0u &&
-			     t3d_vt_fixed_profile_channel_extent( source.m_eHighestAvailableProfile, ( t3dVTLogicalChannel_t )iChannel ) != 0u ) {
+			     t3d_vt_fixed_profile_channel_extent( source.m_eHighestAvailableProfile, static_cast<t3dVTLogicalChannel_t>(iChannel) ) != 0u ) {
 				nExpectedAllocationMask |= T3D_VT_LOGICAL_CHANNEL_BIT( iChannel );
 			}
 		}
@@ -1677,8 +1677,8 @@ static bool t3d_vt_godot_validate_shipping_package( const Ref<Terrain3DAssets>& 
 			return false;
 		}
 		for ( uint32_t iProfile = 0u; iProfile <= allocation.m_nHighestAvailableProfile; ++iProfile ) {
-			const t3dVTFixedProfile_t Profile = ( t3dVTFixedProfile_t )iProfile;
-			if ( !t3d_vt_fixed_profile_source_supports( Profile, ( t3dVTConsumer_t )source.m_nConsumer, source.m_nAuthoredChannelMask,
+			const t3dVTFixedProfile_t Profile = static_cast<t3dVTFixedProfile_t>(iProfile);
+			if ( !t3d_vt_fixed_profile_source_supports( Profile, static_cast<t3dVTConsumer_t>(source.m_nConsumer), source.m_nAuthoredChannelMask,
 			                                            sourceExtent ) ||
 			     nViewCursor >= view.m_pHeader->m_nQualityViewCount ) {
 				if ( pError ) {
@@ -1697,7 +1697,7 @@ static bool t3d_vt_godot_validate_shipping_package( const Ref<Terrain3DAssets>& 
 			for ( uint32_t iChannel = 0u; iChannel < T3D_VT_LOGICAL_CHANNEL_COUNT; ++iChannel ) {
 				const uint32_t nBit = T3D_VT_LOGICAL_CHANNEL_BIT( iChannel );
 				const bool bEnabled = ( nExpectedAllocationMask & nBit ) != 0u &&
-				                      t3d_vt_fixed_profile_channel_extent( Profile, ( t3dVTLogicalChannel_t )iChannel ) != 0u;
+				                      t3d_vt_fixed_profile_channel_extent( Profile, static_cast<t3dVTLogicalChannel_t>(iChannel) ) != 0u;
 				if ( !bEnabled ) {
 					if ( qualityView.m_nBaseMip[iChannel] != T3D_VT_PACK_INVALID_MIP ||
 					     qualityView.m_nMaxMip[iChannel] != T3D_VT_PACK_INVALID_MIP ) {
@@ -1708,7 +1708,7 @@ static bool t3d_vt_godot_validate_shipping_package( const Ref<Terrain3DAssets>& 
 				nExpectedViewMask |= nBit;
 				const t3dVTChannelAllocation_t& channel = view.m_pChannelAllocations[iAllocation * T3D_VT_LOGICAL_CHANNEL_COUNT + iChannel];
 				uint8_t nExpectedBaseMip = T3D_VT_PACK_INVALID_MIP;
-				if ( !t3d_vt_fixed_profile_quality_base_mip( source.m_eHighestAvailableProfile, Profile, ( t3dVTLogicalChannel_t )iChannel,
+				if ( !t3d_vt_fixed_profile_quality_base_mip( source.m_eHighestAvailableProfile, Profile, static_cast<t3dVTLogicalChannel_t>(iChannel),
 				                                             channel.m_nMipCount, nExpectedBaseMip ) ||
 				     qualityView.m_nBaseMip[iChannel] != nExpectedBaseMip || qualityView.m_nMaxMip[iChannel] != channel.m_nMipCount - 1u ) {
 					if ( pError ) {
@@ -1738,7 +1738,7 @@ bool t3d_vt_godot_cook_runtime_package( const Ref<Terrain3DAssets>& rAssets, con
                                         const t3dRenderingMaterialGpu_t *const pMaterialRecords, const uint32_t nMaterialCount,
                                         PackedByteArray& rPackageBytes, uint32_t& rPackageGeneration, String *const pError )
 {
-	( void )pMaterialRecords;
+	static_cast<void>(pMaterialRecords);
 	rPackageBytes.clear();
 	rPackageGeneration = 0u;
 	if ( rAssets.is_null() || pStableKeys == NULL || nMaterialCount == 0u ) {
@@ -1786,7 +1786,7 @@ bool t3d_vt_godot_cook_runtime_package( const Ref<Terrain3DAssets>& rAssets, con
 		nFingerprint = t3d_vt_godot_hash_u64( nFingerprint, fragments[iFragment].m_nStableKey );
 		nFingerprint = t3d_vt_godot_hash_u64( nFingerprint, fragments[iFragment].m_nKey );
 	}
-	rPackageGeneration = ( uint32_t )( nFingerprint ^ ( nFingerprint >> 32u ) );
+	rPackageGeneration = static_cast<uint32_t>(  nFingerprint ^ ( nFingerprint >> 32u )  );
 	if ( rPackageGeneration == 0u ) {
 		rPackageGeneration = 1u;
 	}
@@ -1838,7 +1838,7 @@ bool t3d_vt_godot_collect_asset_materials( const Ref<Terrain3DAssets>& rAssets, 
 		return false;
 	}
 	const uint32_t nTerrainMaterialCount =
-	    rAssets->usesPackedPbr() ? ( uint32_t )MIN( rAssets->getTextureCount(), T3D_MAX_TEXTURE_ASSETS ) : 0u;
+	    rAssets->usesPackedPbr() ? static_cast<uint32_t>(MIN( rAssets->getTextureCount(), T3D_MAX_TEXTURE_ASSETS )) : 0u;
 	uint32_t nMaxMaterialRefs = nTerrainMaterialCount;
 	const int nMeshCount = rAssets->getMeshCount();
 	for ( int iMesh = 0; iMesh < nMeshCount; ++iMesh ) {
@@ -1847,13 +1847,13 @@ bool t3d_vt_godot_collect_asset_materials( const Ref<Terrain3DAssets>& rAssets, 
 			continue;
 		}
 		const TypedArray<Terrain3DRenderingMaterial> surfaceMaterials = asset->getSurfaceRenderingMaterials();
-		if ( surfaceMaterials.size() > INT32_MAX - 2 || nMaxMaterialRefs > UINT32_MAX - ( uint32_t )surfaceMaterials.size() - 2u ) {
+		if ( surfaceMaterials.size() > INT32_MAX - 2 || nMaxMaterialRefs > UINT32_MAX - static_cast<uint32_t>(surfaceMaterials.size() - 2u )) {
 			if ( pError ) {
 				*pError = "VT asset material collector material reference count overflowed";
 			}
 			return false;
 		}
-		nMaxMaterialRefs += ( uint32_t )surfaceMaterials.size() + 2u;
+		nMaxMaterialRefs += static_cast<uint32_t>(surfaceMaterials.size()) + 2u;
 	}
 	if ( nMaxMaterialRefs == 0u ) {
 		if ( pError ) {
@@ -1873,7 +1873,7 @@ bool t3d_vt_godot_collect_asset_materials( const Ref<Terrain3DAssets>& rAssets, 
 	uint64_t *const pStableKeys = rMaterials.m_stableKeys.data();
 	t3dRenderingMaterialGpu_t *const pMaterialRecords = rMaterials.m_records.data();
 	for ( uint32_t iMaterial = 0u; iMaterial < nTerrainMaterialCount; ++iMaterial ) {
-		const Ref<Terrain3DTextureAsset> asset = rAssets->getTextureAsset( ( int )iMaterial );
+		const Ref<Terrain3DTextureAsset> asset = rAssets->getTextureAssetstatic_cast<int>(iMaterial);
 		if ( asset.is_null() ) {
 			continue;
 		}
@@ -1953,7 +1953,7 @@ bool t3d_vt_godot_cook_runtime_assets_package( const Ref<Terrain3DAssets>& rAsse
 	if ( !t3d_vt_godot_collect_asset_materials( rAssets, materials, pError ) ) {
 		return false;
 	}
-	rMaterialCount = ( uint32_t )materials.m_stableKeys.size();
+	rMaterialCount = static_cast<uint32_t>(materials.m_stableKeys.size());
 	if ( rMaterialCount == 0u ) {
 		return true;
 	}
@@ -2039,7 +2039,7 @@ static bool t3d_comp_surf_ucmp_prepare_channel_cold( const t3dComposedSurfaceSid
 {
 	rPrepared.clear();
 	if ( !t3d_vt_page_builder_layout_mips( nOutputExtent, nOutputExtent, nComponents, rLayout ) || rLayout.m_nTotalBytes > INT32_MAX ||
-	     rPrepared.resize( ( int64_t )rLayout.m_nTotalBytes ) != OK )
+	     rPrepared.resizestatic_cast<int64_t>(rLayout.m_nTotalBytes) != OK )
 		return false;
 	const uint32_t sourceExtent = nTiles * T3D_COMP_SURF_PAGE_INTERIOR;
 	uint32_t sourceMipMax = 0u;
@@ -2060,7 +2060,7 @@ static bool t3d_comp_surf_ucmp_prepare_channel_cold( const t3dComposedSurfaceSid
 		if ( checkExtent > extent )
 			break;
 		const uint32_t tiles = MAX( 1u, nTiles >> sampledMip );
-		if ( !t3d_comp_surf_ucmp_decode_mip_cold( rView, pSidecar, nSidecarBytes, nRegionKey, sampledMip, tiles, ( uint32_t )eFormat,
+		if ( !t3d_comp_surf_ucmp_decode_mip_cold( rView, pSidecar, nSidecarBytes, nRegionKey, sampledMip, tiles, static_cast<uint32_t>(eFormat),
 		                                          nChannel, nComponents, rPrepared.ptrw() + rLayout.m_Levels[level].m_nOffset, extent ) )
 			return false;
 		lastWritten = level;
@@ -2077,7 +2077,7 @@ static bool t3d_comp_surf_ucmp_prepare_channel_cold( const t3dComposedSurfaceSid
 	     tailLayout.m_nTotalBytes > INT32_MAX )
 		return false;
 	PackedByteArray tail;
-	if ( tail.resize( ( int64_t )tailLayout.m_nTotalBytes ) != OK )
+	if ( tail.resizestatic_cast<int64_t>(tailLayout.m_nTotalBytes) != OK )
 		return false;
 	memcpy( tail.ptrw(), rPrepared.ptr() + last.m_nOffset, last.m_nBytes );
 	if ( !t3d_vt_page_builder_build_logical_channel_mips_u8( eLogical, false, 0u, tail.ptrw(), tailLayout.m_nTotalBytes, tailLayout, 1u ) )
@@ -2106,8 +2106,8 @@ bool t3d_vt_godot_import_composed_sidecar( const uint8_t *const pSidecar, const 
 	     !nPackageGeneration )
 		return fail( "Invalid composed V1 sidecar import inputs" );
 	t3dComposedSurfaceSidecarView_t view{};
-	if ( !t3d_comp_surf_open_sidecar_cold( pSidecar, ( size_t )nSidecarBytes, nExpectedSourceFingerprint, view ) ||
-	     !view.m_header.m_nPageCount || !t3d_comp_surf_validate_sidecar_bytes( pSidecar, ( size_t )nSidecarBytes, true ) )
+	if ( !t3d_comp_surf_open_sidecar_cold( pSidecar, static_cast<size_t>(nSidecarBytes), nExpectedSourceFingerprint, view ) ||
+	     !view.m_header.m_nPageCount || !t3d_comp_surf_validate_sidecar_bytes( pSidecar, static_cast<size_t>(nSidecarBytes), true ) )
 		return fail( "Stale, corrupt or invalid composed sidecar" );
 
 	const t3dVTLogicalChannel_t logical[3] = { T3D_VT_LOGICAL_CHANNEL_ALBEDO, T3D_VT_LOGICAL_CHANNEL_NORMAL, T3D_VT_LOGICAL_CHANNEL_PBR };
@@ -2146,12 +2146,12 @@ bool t3d_vt_godot_import_composed_sidecar( const uint8_t *const pSidecar, const 
 		const uint32_t albedoExtent = MAX( nativeExtent, 256u );
 		const uint32_t outputExtent[3] = { albedoExtent, MAX( albedoExtent / 2u, 128u ), MAX( albedoExtent / 2u, 128u ) };
 		t3dVTCookSparseSource_t source{};
-		source.m_nStableKey = t3d_vt_composed_region_stable_key( ( uint32_t )( first.m_nRegionKey - 1u ) );
+		source.m_nStableKey = t3d_vt_composed_region_stable_key( static_cast<uint32_t>( first.m_nRegionKey - 1u ) );
 		source.m_nConsumer = T3D_VT_CONSUMER_COMPOSED;
 		source.m_nAuthoredChannelMask = T3D_VT_COMPOSED_REQUIRED_CHANNEL_MASK;
 		source.m_nWrapMode = T3D_VT_COOK_WRAP_CLAMP;
 		source.m_nAllocationFlags = T3D_VT_ALLOCATION_MEGATEXTURE | T3D_VT_ALLOCATION_CLAMP | T3D_VT_ALLOCATION_SHIPPING_IMMUTABLE;
-		source.m_nGenerationSeed = ( uint32_t )( signature ^ ( signature >> 32u ) );
+		source.m_nGenerationSeed = static_cast<uint32_t>(  signature ^ ( signature >> 32u )  );
 		if ( !source.m_nGenerationSeed )
 			source.m_nGenerationSeed = 1u;
 		PackedByteArray prepared[3];
@@ -2161,17 +2161,17 @@ bool t3d_vt_godot_import_composed_sidecar( const uint8_t *const pSidecar, const 
 			                                               logical[channel], format[channel], components[channel], outputExtent[channel],
 			                                               prepared[channel], layout ) )
 				return fail( "Composed mip decode or V1 channel preparation failed" );
-			t3dVTCookPreparedChannel_t& p = source.m_PreparedChannels[( uint32_t )logical[channel]];
+			t3dVTCookPreparedChannel_t& p = source.m_PreparedChannels[static_cast<uint32_t>(logical[channel])];
 			p.m_pMipBytes = prepared[channel].ptr();
 			p.m_Layout = layout;
 			p.m_nTargetExtent = outputExtent[channel];
-			t3dVTCookImageView_t& image = source.m_Channels[( uint32_t )logical[channel]];
+			t3dVTCookImageView_t& image = source.m_Channels[static_cast<uint32_t>(logical[channel])];
 			image.m_pPixels = prepared[channel].ptr();
 			image.m_nWidth = outputExtent[channel];
 			image.m_nHeight = outputExtent[channel];
 			image.m_nComponents = components[channel];
 			image.m_nRowBytes = outputExtent[channel] * components[channel];
-			source.m_nSourceFingerprint[( uint32_t )logical[channel]] = signature ^ ( uint64_t( channel + 1u ) << 56u );
+			source.m_nSourceFingerprint[static_cast<uint32_t>(logical[channel])] = signature ^ ( uint64_t( channel + 1u ) << 56u );
 		}
 		PackedByteArray fragment;
 		if ( !t3d_vt_godot_cook_source_fragment( source, fragment ) || fragment.is_empty() )
@@ -2179,7 +2179,7 @@ bool t3d_vt_godot_import_composed_sidecar( const uint8_t *const pSidecar, const 
 		fragments.push_back( fragment );
 	}
 	if ( fragments.empty() ||
-	     !t3d_vt_godot_merge_packages( fragments.data(), ( uint32_t )fragments.size(), nPackageGeneration, rFragment ) ||
+	     !t3d_vt_godot_merge_packages( fragments.data(), static_cast<uint32_t>(fragments.size(), nPackageGeneration, rFragment )) ||
 	     rFragment.is_empty() ) {
 		rFragment.clear();
 		return fail( "Composed V1 package merge failed" );

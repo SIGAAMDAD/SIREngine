@@ -14,7 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Mesh/SIRMeshCache.h>
-#include <Core/Platform/SIRAtomic.h>
+#include <atomic>
 
 #include <assert.h>
 #include <math.h>
@@ -37,19 +37,19 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #else
 #define SIR_MESH_INITIAL_OWNER_ID 1ULL
 #endif
-static SIRAtomic<uint64_t> s_nNextMeshCacheOwnerId( SIR_MESH_INITIAL_OWNER_ID );
+static std::atomic<uint64_t> s_nNextMeshCacheOwnerId( SIR_MESH_INITIAL_OWNER_ID );
 
 static uint64_t allocateMeshCacheOwnerId( void ) noexcept
 {
 	// Allocate the per-initialization identity through the engine atomic,
 	// with no STL synchronization or hot-path locks. Never recycle identifiers.
-	uint64_t nCandidate = s_nNextMeshCacheOwnerId.load( SIR_MEMORY_ORDER_RELAXED );
+	uint64_t nCandidate = s_nNextMeshCacheOwnerId.load( std::memory_order_relaxed );
 #ifdef SIR_MESH_TEST_FORCE_CAS_RETRY
 	// Force one failed compare/exchange in the scoped concurrency fixture.
 	nCandidate += 0x100000000ULL;
 #endif
 	while ( nCandidate != UINT64_MAX ) {
-		if ( s_nNextMeshCacheOwnerId.compareExchangeWeak( nCandidate, nCandidate + 1, SIR_MEMORY_ORDER_ACQUIRE_RELEASE ) ) {
+		if ( s_nNextMeshCacheOwnerId.compare_exchange_weak( nCandidate, nCandidate + 1, std::memory_order_acq_rel ) ) {
 			return nCandidate;
 		}
 	}
@@ -145,32 +145,32 @@ uint32_t SIRMeshCache::getBorrowCount( void ) const noexcept
 
 uint64_t SIRMeshCache::requiredBytes( uint32_t nCapacity ) noexcept
 {
-	return ( uint64_t )nCapacity * sizeof( sirMeshCacheSlot_t );
+	return static_cast<uint64_t>(nCapacity * sizeof(  sirMeshCacheSlot_t  ));
 }
 
 uint32_t SIRMeshCache::requiredAlignment( void ) noexcept
 {
-	return ( uint32_t )alignof( sirMeshCacheSlot_t );
+	return static_cast<uint32_t>(alignof( sirMeshCacheSlot_t ));
 }
 
-sirMeshResult_t SIRMeshCache::initialize( void *pStorage, uint64_t nStorageBytes, uint32_t nCapacity ) noexcept
+SIRMeshResult SIRMeshCache::initialize( void *pStorage, uint64_t nStorageBytes, uint32_t nCapacity ) noexcept
 {
 	if ( m_bReady || m_bShuttingDown ) {
-		return SIR_MESH_BUSY;
+		return SIRMeshResult::SIR_MESH_BUSY;
 	}
 	if ( pStorage == nullptr || nCapacity == 0 || nStorageBytes < requiredBytes( nCapacity ) ) {
-		return SIR_MESH_INVALID_ARGUMENT;
+		return SIRMeshResult::SIR_MESH_INVALID_ARGUMENT;
 	}
-	if ( ( ( uintptr_t )pStorage % requiredAlignment() ) != 0 ) {
-		return SIR_MESH_INVALID_ARGUMENT;
+	if ( ( reinterpret_cast<uintptr_t>(pStorage) % requiredAlignment() ) != 0 ) {
+		return SIRMeshResult::SIR_MESH_INVALID_ARGUMENT;
 	}
 
 	const uint64_t nOwnerId = allocateMeshCacheOwnerId();
 	if ( nOwnerId == 0 ) {
-		return SIR_MESH_OUT_OF_CAPACITY;
+		return SIRMeshResult::SIR_MESH_OUT_OF_CAPACITY;
 	}
 
-	m_pSlots = ( sirMeshCacheSlot_t * )pStorage;
+	m_pSlots = static_cast<sirMeshCacheSlot_t *>(pStorage);
 	m_nOwnerId = nOwnerId;
 	m_nCapacity = nCapacity;
 	m_nResidentCount = 0;
@@ -179,7 +179,7 @@ sirMeshResult_t SIRMeshCache::initialize( void *pStorage, uint64_t nStorageBytes
 		new ( &m_pSlots[iSlot] ) sirMeshCacheSlot_t{};
 	}
 	m_bReady = true;
-	return SIR_MESH_OK;
+	return SIRMeshResult::SIR_MESH_OK;
 }
 
 bool SIRMeshCache::isValidHandle( sirMeshHandle_t handle ) const noexcept
@@ -189,39 +189,39 @@ bool SIRMeshCache::isValidHandle( sirMeshHandle_t handle ) const noexcept
 	       m_pSlots[handle.nSlot].nGeneration == handle.nGeneration;
 }
 
-sirMeshResult_t SIRMeshCache::insert( const sirMeshGeometrySource_t *pSource, sirMeshHandle_t *pHandle ) noexcept
+SIRMeshResult SIRMeshCache::insert( const sirMeshGeometrySource_t *pSource, sirMeshHandle_t *pHandle ) noexcept
 {
 	if ( !m_bReady ) {
-		return SIR_MESH_NOT_READY;
+		return SIRMeshResult::SIR_MESH_NOT_READY;
 	}
 	if ( pHandle == nullptr ) {
-		return SIR_MESH_INVALID_ARGUMENT;
+		return SIRMeshResult::SIR_MESH_INVALID_ARGUMENT;
 	}
 	if ( pSource == nullptr ) {
-		return SIR_MESH_INVALID_ARGUMENT;
+		return SIRMeshResult::SIR_MESH_INVALID_ARGUMENT;
 	}
 	if ( !validateMeshSource( pSource ) ) {
-		return SIR_MESH_INVALID_ARGUMENT;
+		return SIRMeshResult::SIR_MESH_INVALID_ARGUMENT;
 	}
 
 	uint32_t iFree = m_nCapacity;
 	for ( uint32_t iSlot = 0; iSlot < m_nCapacity; ++iSlot ) {
 		const sirMeshCacheSlot_t *pSlot = &m_pSlots[iSlot];
 		if ( pSlot->bOccupied && sameMeshKey( &pSlot->source.key, &pSource->key ) ) {
-			return SIR_MESH_DUPLICATE;
+			return SIRMeshResult::SIR_MESH_DUPLICATE;
 		}
 		if ( !pSlot->bOccupied && iFree == m_nCapacity ) {
 			iFree = iSlot;
 		}
 	}
 	if ( iFree == m_nCapacity ) {
-		return SIR_MESH_OUT_OF_CAPACITY;
+		return SIRMeshResult::SIR_MESH_OUT_OF_CAPACITY;
 	}
 
 	// Never recycle a generation: a previously returned handle must not
 	// become valid again, even after repeated shutdown/reinitialize cycles.
 	if ( m_nNextGeneration == UINT32_MAX ) {
-		return SIR_MESH_OUT_OF_CAPACITY;
+		return SIRMeshResult::SIR_MESH_OUT_OF_CAPACITY;
 	}
 
 	sirMeshCacheSlot_t *pSlot = &m_pSlots[iFree];
@@ -233,16 +233,16 @@ sirMeshResult_t SIRMeshCache::insert( const sirMeshGeometrySource_t *pSource, si
 	pSlot->bOccupied = true;
 	++m_nResidentCount;
 	*pHandle = { iFree, pSlot->nGeneration, m_nOwnerId };
-	return SIR_MESH_OK;
+	return SIRMeshResult::SIR_MESH_OK;
 }
 
-sirMeshResult_t SIRMeshCache::find( const sirMeshKey_t *pKey, sirMeshHandle_t *pHandle ) const noexcept
+SIRMeshResult SIRMeshCache::find( const sirMeshKey_t *pKey, sirMeshHandle_t *pHandle ) const noexcept
 {
 	if ( !m_bReady ) {
-		return SIR_MESH_NOT_READY;
+		return SIRMeshResult::SIR_MESH_NOT_READY;
 	}
 	if ( pHandle == nullptr || pKey == nullptr ) {
-		return SIR_MESH_INVALID_ARGUMENT;
+		return SIRMeshResult::SIR_MESH_INVALID_ARGUMENT;
 	}
 	*pHandle = {};
 
@@ -250,31 +250,31 @@ sirMeshResult_t SIRMeshCache::find( const sirMeshKey_t *pKey, sirMeshHandle_t *p
 		const sirMeshCacheSlot_t *pSlot = &m_pSlots[iSlot];
 		if ( pSlot->bOccupied && !pSlot->bRetiring && sameMeshKey( &pSlot->source.key, pKey ) ) {
 			*pHandle = { iSlot, pSlot->nGeneration, m_nOwnerId };
-			return SIR_MESH_OK;
+			return SIRMeshResult::SIR_MESH_OK;
 		}
 	}
-	return SIR_MESH_NOT_FOUND;
+	return SIRMeshResult::SIR_MESH_NOT_FOUND;
 }
 
-sirMeshResult_t SIRMeshCache::acquire( sirMeshHandle_t handle, sirMeshGeometryRead_t *pRead ) noexcept
+SIRMeshResult SIRMeshCache::acquire( sirMeshHandle_t handle, sirMeshGeometryRead_t *pRead ) noexcept
 {
 	if ( !m_bReady ) {
-		return SIR_MESH_NOT_READY;
+		return SIRMeshResult::SIR_MESH_NOT_READY;
 	}
 	if ( pRead == nullptr ) {
-		return SIR_MESH_INVALID_ARGUMENT;
+		return SIRMeshResult::SIR_MESH_INVALID_ARGUMENT;
 	}
 	*pRead = {};
 	if ( !isValidHandle( handle ) ) {
-		return SIR_MESH_STALE_HANDLE;
+		return SIRMeshResult::SIR_MESH_STALE_HANDLE;
 	}
 
 	sirMeshCacheSlot_t *pSlot = &m_pSlots[handle.nSlot];
 	if ( pSlot->bRetiring ) {
-		return SIR_MESH_RETIRED;
+		return SIRMeshResult::SIR_MESH_RETIRED;
 	}
 	if ( pSlot->nBorrows == SIR_MESH_MAX_BORROWS || m_nBorrowCount == SIR_MESH_MAX_BORROWS ) {
-		return SIR_MESH_OUT_OF_CAPACITY;
+		return SIRMeshResult::SIR_MESH_OUT_OF_CAPACITY;
 	}
 
 	++pSlot->nBorrows;
@@ -290,7 +290,7 @@ sirMeshResult_t SIRMeshCache::acquire( sirMeshHandle_t handle, sirMeshGeometryRe
 	           pSlot->source.nSurfaceMaterialBytes,
 	           pSlot->source.pLodHierarchy,
 	           pSlot->source.nLodHierarchyBytes };
-	return SIR_MESH_OK;
+	return SIRMeshResult::SIR_MESH_OK;
 }
 
 void SIRMeshCache::finalizeSlot( uint32_t iSlot ) noexcept
@@ -306,18 +306,18 @@ void SIRMeshCache::finalizeSlot( uint32_t iSlot ) noexcept
 	pRelease( pPin );
 }
 
-sirMeshResult_t SIRMeshCache::release( sirMeshHandle_t handle ) noexcept
+SIRMeshResult SIRMeshCache::release( sirMeshHandle_t handle ) noexcept
 {
 	if ( !m_bReady ) {
-		return SIR_MESH_NOT_READY;
+		return SIRMeshResult::SIR_MESH_NOT_READY;
 	}
 	if ( !isValidHandle( handle ) ) {
-		return SIR_MESH_STALE_HANDLE;
+		return SIRMeshResult::SIR_MESH_STALE_HANDLE;
 	}
 
 	sirMeshCacheSlot_t *pSlot = &m_pSlots[handle.nSlot];
 	if ( pSlot->nBorrows == 0 ) {
-		return SIR_MESH_INVALID_ARGUMENT;
+		return SIRMeshResult::SIR_MESH_INVALID_ARGUMENT;
 	}
 
 	--pSlot->nBorrows;
@@ -325,37 +325,37 @@ sirMeshResult_t SIRMeshCache::release( sirMeshHandle_t handle ) noexcept
 	if ( pSlot->nBorrows == 0 && pSlot->bRetiring ) {
 		finalizeSlot( handle.nSlot );
 	}
-	return SIR_MESH_OK;
+	return SIRMeshResult::SIR_MESH_OK;
 }
 
-sirMeshResult_t SIRMeshCache::retire( sirMeshHandle_t handle ) noexcept
+SIRMeshResult SIRMeshCache::retire( sirMeshHandle_t handle ) noexcept
 {
 	if ( !m_bReady ) {
-		return SIR_MESH_NOT_READY;
+		return SIRMeshResult::SIR_MESH_NOT_READY;
 	}
 	if ( !isValidHandle( handle ) ) {
-		return SIR_MESH_STALE_HANDLE;
+		return SIRMeshResult::SIR_MESH_STALE_HANDLE;
 	}
 
 	sirMeshCacheSlot_t *pSlot = &m_pSlots[handle.nSlot];
 	if ( pSlot->bRetiring ) {
-		return SIR_MESH_RETIRED;
+		return SIRMeshResult::SIR_MESH_RETIRED;
 	}
 
 	pSlot->bRetiring = true;
 	if ( pSlot->nBorrows == 0 ) {
 		finalizeSlot( handle.nSlot );
 	}
-	return SIR_MESH_OK;
+	return SIRMeshResult::SIR_MESH_OK;
 }
 
-sirMeshResult_t SIRMeshCache::shutdown( void ) noexcept
+SIRMeshResult SIRMeshCache::shutdown( void ) noexcept
 {
 	if ( !m_bReady ) {
-		return SIR_MESH_NOT_READY;
+		return SIRMeshResult::SIR_MESH_NOT_READY;
 	}
 	if ( m_nBorrowCount != 0 ) {
-		return SIR_MESH_BUSY;
+		return SIRMeshResult::SIR_MESH_BUSY;
 	}
 
 	// Callbacks may re-enter this cache. Block new reads/writes and prevent
@@ -371,5 +371,5 @@ sirMeshResult_t SIRMeshCache::shutdown( void ) noexcept
 	m_nCapacity = 0;
 	m_nOwnerId = 0;
 	m_bShuttingDown = false;
-	return SIR_MESH_OK;
+	return SIRMeshResult::SIR_MESH_OK;
 }

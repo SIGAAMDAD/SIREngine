@@ -14,8 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSIZECLASSALLOCATOR_H__
-#define __SIRENGINE_SIRSIZECLASSALLOCATOR_H__
+#ifndef __SIR_SIZECLASSALLOCATOR_H__
+#define __SIR_SIZECLASSALLOCATOR_H__
 
 #include <Core/SIRPCH.h>
 
@@ -65,4 +65,4 @@ private:
 	bool m_bFineGrained;
 };
 
-#endif // __SIRENGINE_SIRSIZECLASSALLOCATOR_H__
+#endif // __SIR_SIZECLASSALLOCATOR_H__

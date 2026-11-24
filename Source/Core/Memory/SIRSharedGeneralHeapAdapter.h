@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef SIRENGINE_SIRSHAREDGENERALHEAPADAPTER_H
-#define SIRENGINE_SIRSHAREDGENERALHEAPADAPTER_H
+#ifndef __SIR_SHAREDGENERALHEAPADAPTER_H__
+#define __SIR_SHAREDGENERALHEAPADAPTER_H__
 
 #include <Core/SIRPCH.h>
 
@@ -24,7 +24,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-#include <Core/Memory/SIRSharedPtr.h>
+#include <Core/Memory/Pointers/SIRSharedPtr.h>
 #include <Core/Memory/SIRGeneralHeap.h>
 
 // The heap must remain initialized until the last weak control-block owner
@@ -41,12 +41,12 @@ public:
 private:
 	static void *allocate( void *pContext, size_t nBytes, size_t nAlignment ) noexcept
 	{
-		return ( ( SIRGeneralHeap * )pContext )->allocAligned( nBytes, nAlignment );
+		return static_cast<SIRGeneralHeap *>(pContext)->allocAligned( nBytes, nAlignment );
 	}
 	static void deallocate( void *pContext, void *pMemory ) noexcept
 	{
-		( ( SIRGeneralHeap * )pContext )->free( pMemory );
+		static_cast<SIRGeneralHeap *>(pContext)->free( pMemory );
 	}
 };
 
-#endif // SIRENGINE_SIRSHAREDGENERALHEAPADAPTER_H
+#endif // __SIR_SHAREDGENERALHEAPADAPTER_H__

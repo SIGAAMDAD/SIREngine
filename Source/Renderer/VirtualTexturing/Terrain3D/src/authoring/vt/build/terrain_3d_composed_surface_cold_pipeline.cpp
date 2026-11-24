@@ -101,7 +101,7 @@ static bool t3d_composed_surface_cold_current( const t3dComposedSurfaceColdCookR
 bool t3d_composed_surface_cook_source_pack_cold( const t3dComposedSurfaceColdCookRequest_t& r, t3dComposedSurfaceColdCookResult_t& result )
 {
 	result = {};
-	result.m_status = T3D_COMPOSED_SURFACE_COLD_COOK_INVALID_INPUT;
+	result.m_status = SIRComposedSurfaceColdCookStatus::T3D_COMPOSED_SURFACE_COLD_COOK_INVALID_INPUT;
 	uint64_t expected_bytes = 0u;
 	if ( !r.m_pPages || !r.m_nPageCount || !t3d_comp_surf_cook_total_bytes( r.m_nPageCount, expected_bytes ) || !r.m_pResolvedLayers ||
 	     r.m_nResolvedLayerCapacity < r.m_nLayerCount || !r.m_pDecode || !r.m_pDecodedCache || r.m_nCacheSlots == 0u ||
@@ -135,7 +135,7 @@ bool t3d_composed_surface_cook_source_pack_cold( const t3dComposedSurfaceColdCoo
 		return false;
 	result.m_nSourceFingerprint = fingerprint;
 	if ( !t3d_composed_surface_cold_current( r ) ) {
-		result.m_status = T3D_COMPOSED_SURFACE_COLD_COOK_STALE_REVISION;
+		result.m_status = SIRComposedSurfaceColdCookStatus::T3D_COMPOSED_SURFACE_COLD_COOK_STALE_REVISION;
 		return false;
 	}
 
@@ -145,13 +145,13 @@ bool t3d_composed_surface_cook_source_pack_cold( const t3dComposedSurfaceColdCoo
 	t3dComposedSurfacePackSampler_t sampler{};
 	if ( !t3d_composed_surface_pack_open_source_pack( r.m_pSourcePackage, r.m_nSourcePackageBytes, view, sampler, r.m_pDecode,
 	                                                  r.m_pDecoderUser, r.m_pDecodedCache, r.m_nCacheSlots ) ) {
-		result.m_status = T3D_COMPOSED_SURFACE_COLD_COOK_INVALID_SOURCE_PACK;
+		result.m_status = SIRComposedSurfaceColdCookStatus::T3D_COMPOSED_SURFACE_COLD_COOK_INVALID_SOURCE_PACK;
 		return false;
 	}
 	for ( uint32_t i = 0u; i < r.m_nLayerCount; ++i ) {
 		uint32_t allocation = UINT32_MAX;
 		if ( !t3d_composed_surface_pack_find_material_allocation( view, i, allocation ) ) {
-			result.m_status = T3D_COMPOSED_SURFACE_COLD_COOK_MISSING_MATERIAL;
+			result.m_status = SIRComposedSurfaceColdCookStatus::T3D_COMPOSED_SURFACE_COLD_COOK_MISSING_MATERIAL;
 			return false;
 		}
 		r.m_pResolvedLayers[i] = r.m_pAuthoredLayers[i];
@@ -166,12 +166,12 @@ bool t3d_composed_surface_cook_source_pack_cold( const t3dComposedSurfaceColdCoo
 	adapter.m_pEncoderUser = r.m_pEncoderUser;
 	t3dComposedSurfacePackProducerBridge_t bridge{};
 	if ( !t3d_composed_surface_pack_bind_static_source( sampler, bridge, adapter.m_source ) ) {
-		result.m_status = T3D_COMPOSED_SURFACE_COLD_COOK_INVALID_INPUT;
+		result.m_status = SIRComposedSurfaceColdCookStatus::T3D_COMPOSED_SURFACE_COLD_COOK_INVALID_INPUT;
 		return false;
 	}
 	t3dComposedSurfaceCookSource_t cook{};
 	if ( !t3d_comp_surf_static_baseline_make_cook_source( adapter, fingerprint, cook ) ) {
-		result.m_status = T3D_COMPOSED_SURFACE_COLD_COOK_INVALID_INPUT;
+		result.m_status = SIRComposedSurfaceColdCookStatus::T3D_COMPOSED_SURFACE_COLD_COOK_INVALID_INPUT;
 		return false;
 	}
 	uint64_t written = 0u;
@@ -184,18 +184,18 @@ bool t3d_composed_surface_cook_source_pack_cold( const t3dComposedSurfaceColdCoo
 	result.m_nDecodedTiles = sampler.m_nDecodeCalls;
 	result.m_nCacheHits = sampler.m_nCacheHits;
 	if ( !composed ) {
-		result.m_status = T3D_COMPOSED_SURFACE_COLD_COOK_COMPOSE_FAILURE;
+		result.m_status = SIRComposedSurfaceColdCookStatus::T3D_COMPOSED_SURFACE_COLD_COOK_COMPOSE_FAILURE;
 		return false;
 	}
 	if ( !t3d_composed_surface_cold_current( r ) ) {
-		result.m_status = T3D_COMPOSED_SURFACE_COLD_COOK_STALE_REVISION;
+		result.m_status = SIRComposedSurfaceColdCookStatus::T3D_COMPOSED_SURFACE_COLD_COOK_STALE_REVISION;
 		return false;
 	}
 	if ( r.m_pDestination && !t3d_comp_surf_write_sidecar_cold( r.m_pDestination, r.m_pOutput, written ) ) {
-		result.m_status = T3D_COMPOSED_SURFACE_COLD_COOK_PUBLICATION_FAILURE;
+		result.m_status = SIRComposedSurfaceColdCookStatus::T3D_COMPOSED_SURFACE_COLD_COOK_PUBLICATION_FAILURE;
 		return false;
 	}
 	result.m_nWrittenBytes = written;
-	result.m_status = T3D_COMPOSED_SURFACE_COLD_COOK_SUCCESS;
+	result.m_status = SIRComposedSurfaceColdCookStatus::T3D_COMPOSED_SURFACE_COLD_COOK_SUCCESS;
 	return true;
 }

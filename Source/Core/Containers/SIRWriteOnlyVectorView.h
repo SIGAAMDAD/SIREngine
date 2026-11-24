@@ -9,8 +9,8 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRWRITEONLYVECTORVIEW_H__
-#define __SIRENGINE_SIRWRITEONLYVECTORVIEW_H__
+#ifndef __SIR_WRITEONLYVECTORVIEW_H__
+#define __SIR_WRITEONLYVECTORVIEW_H__
 
 #include <Core/SIRPCH.h>
 
@@ -35,26 +35,26 @@ public:
 	{
 		return m_nSize;
 	}
-	sirContainerResult_t tryWrite( uint32_t iIndex, const T& rValue ) noexcept
+	SIRContainerResult tryWrite( uint32_t iIndex, const T& rValue ) noexcept
 	{
 		static_assert( std::is_nothrow_copy_assignable<T>::value, "Write view requires nothrow copy assignment" );
 		if ( iIndex >= m_nSize ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		m_pData[iIndex] = rValue;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
-	sirContainerResult_t tryWriteRange( uint32_t iOffset, const T *pValues, uint32_t nCount ) noexcept
+	SIRContainerResult tryWriteRange( uint32_t iOffset, const T *pValues, uint32_t nCount ) noexcept
 	{
 		static_assert( std::is_nothrow_copy_assignable<T>::value, "Write view requires nothrow copy assignment" );
 		if ( iOffset > m_nSize || nCount > m_nSize - iOffset || ( nCount != 0 && pValues == nullptr ) ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		for ( uint32_t i = 0; i < nCount; ++i ) {
 			m_pData[iOffset + i] = pValues[i];
 		}
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 };
 
-#endif // __SIRENGINE_SIRWRITEONLYVECTORVIEW_H__
+#endif // __SIR_WRITEONLYVECTORVIEW_H__

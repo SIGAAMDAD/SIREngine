@@ -14,8 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRHEAPBLOCK_H__
-#define __SIRENGINE_SIRHEAPBLOCK_H__
+#ifndef __SIR_HEAPBLOCK_H__
+#define __SIR_HEAPBLOCK_H__
 
 #include <Core/SIRPCH.h>
 
@@ -50,4 +50,4 @@ public:
 	static bool isFree( const sirHeapBlock_t *pBlock ) noexcept;
 };
 
-#endif // __SIRENGINE_SIRHEAPBLOCK_H__
+#endif // __SIR_HEAPBLOCK_H__

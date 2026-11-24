@@ -37,32 +37,32 @@ public:
 	    : m_nodes( pAllocator ), m_less( std::move( less ) ), m_pAllocatorStore( pAllocator )
 	{
 	}
-	sirContainerResult_t tryBuildSorted( const Entry *pSorted, uint32_t nCount )
+	SIRContainerResult tryBuildSorted( const Entry *pSorted, uint32_t nCount )
 	{
 		if ( nCount != 0 && pSorted == nullptr ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		for ( uint32_t iIndex = 1; iIndex < nCount; ++iIndex ) {
 			if ( !m_less( pSorted[iIndex - 1].key, pSorted[iIndex].key ) ) {
-				return SIR_CONTAINER_INVALID_ARGUMENT;
+				return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 			}
 		}
 		SIRVector<std::optional<Entry>> staged( m_pAllocator() );
-		const sirContainerResult_t eResult = staged.tryResize( nCount );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		const SIRContainerResult eResult = staged.tryResize( nCount );
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		uint32_t iInput = 0;
 		layout( staged, pSorted, nCount, 1, iInput );
 		m_nodes = std::move( staged );
 		m_nSize = nCount;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 	const V *find( const K& key ) const
 	{
 		uint64_t iHeap = 1;
 		while ( iHeap <= m_nSize ) {
-			const Entry& entry = *m_nodes[( uint32_t )iHeap - 1];
+			const Entry& entry = *m_nodes[static_cast<uint32_t>(iHeap) - 1];
 			if ( m_less( key, entry.key ) ) {
 				iHeap *= 2;
 			} else if ( m_less( entry.key, key ) ) {

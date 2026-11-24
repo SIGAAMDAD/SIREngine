@@ -13,10 +13,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRRENDERSWAPCHAIN_H__
-#define __SIRENGINE_SIRRENDERSWAPCHAIN_H__
+#ifndef __SIR_RENDER_SWAP_CHAIN_H__
+#define __SIR_RENDER_SWAP_CHAIN_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -31,10 +31,10 @@ class SIRRenderingDevice;
 
 // Surface/window generation belongs to the platform subsystem. This facade
 // borrows the device-owned surface; native swapchain/images stay backend-owned.
-class SIRRenderSwapchain final
+class SIRRenderSwapchain
 {
 public:
-	SIRRenderSwapchain( void ) noexcept = default;
+	constexpr SIRRenderSwapchain( void ) noexcept = default;
 	SIRRenderSwapchain( SIRRenderingDevice& device, sirGraphicsHandle_t hSurface ) noexcept : m_pDevice( &device ), m_hSurface( hSurface )
 	{
 	}
@@ -46,16 +46,16 @@ public:
 	bool isValid( void ) const noexcept
 	{
 		return m_pDevice != nullptr && m_hSurface.nGeneration != 0 && m_hSurface.nDeviceGeneration != 0 &&
-		       m_hSurface.eType == SIR_GRAPHICS_HANDLE_SURFACE;
+		       m_hSurface.eType == SIRGraphicsHandleType::SIR_GRAPHICS_HANDLE_SURFACE;
 	}
 
-	sirGraphicsResult_t acquire( sirGraphicsSurfaceImage_t *pImage ) noexcept;
-	sirGraphicsResult_t present( const sirGraphicsSurfaceImage_t& image, const sirGraphicsCompletion_t& completion ) noexcept;
-	sirGraphicsResult_t resize( const sirGraphicsNativeSurface_t& native, const sirGraphicsPresentDesc_t& desc ) noexcept;
+	SIRGraphicsResult acquire( sirGraphicsSurfaceImage_t *pImage ) noexcept;
+	SIRGraphicsResult present( const sirGraphicsSurfaceImage_t& image, const sirGraphicsCompletion_t& completion ) noexcept;
+	SIRGraphicsResult resize( const sirGraphicsNativeSurface_t& native, const sirGraphicsPresentDesc_t& desc ) noexcept;
 
 private:
 	SIRRenderingDevice *m_pDevice = nullptr;
-	sirGraphicsHandle_t m_hSurface = {};
+	sirGraphicsHandle_t m_hSurface {};
 };
 
-#endif // __SIRENGINE_SIRRENDERSWAPCHAIN_H__
+#endif // __SIR_RENDER_SWAP_CHAIN_H__

@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRRESOURCEFILELOAD_H__
-#define __SIRENGINE_SIRRESOURCEFILELOAD_H__
+#ifndef __SIR_RESOURCEFILELOAD_H__
+#define __SIR_RESOURCEFILELOAD_H__
 
 #include <Core/SIRPCH.h>
 
@@ -28,11 +28,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Platform/SIRPlatformFile.h>
 #include <Resources/SIRResourceGraph.h>
 
-typedef enum sirResourceFileReadMode_e : uint8_t
-{
+enum class SIRResourceFileReadMode : uint8_t {
 	SIR_RESOURCE_FILE_READ_AT = 0,
 	SIR_RESOURCE_FILE_READ_MAPPED = 1
-} sirResourceFileReadMode_t;
+};
 
 // One cooked file interval becomes one canonical GRDG chunk. Dependencies
 // are borrowed until poll() finishes the load. Source files must remain
@@ -43,7 +42,7 @@ typedef struct sirResourceFileLoadRequest_s
 	SIRResourceContentKey keyContent;
 	SIRResourceChunkId idChunk;
 	SIRResourceKind eKind;
-	sirResourceFileReadMode_t eMode;
+	SIRResourceFileReadMode eMode;
 	uint16_t nSchemaVersion;
 	uint32_t nFormatId;
 	uint32_t nAlignment;
@@ -78,10 +77,10 @@ public:
 	SIRResourceResult cancel( void ) noexcept;
 	bool isActive( void ) const noexcept;
 	// Meaningful after begin() rejects a file or poll() returns terminal.
-	sirFileResult_t getLastFileResult( void ) const noexcept;
+	SIRFileResult getLastFileResult( void ) const noexcept;
 
 private:
-	static sirTaskResult_t readTask( void *pContext, sirTaskHandle_t hTask ) noexcept;
+	static SIRTaskResult readTask( void *pContext, sirTaskHandle_t hTask ) noexcept;
 	void clearStaging( void ) noexcept;
 	void closeTransfer( void ) noexcept;
 
@@ -92,10 +91,10 @@ private:
 	SIRResourceStagingHandle m_Staging;
 	SIRResourceMutableBytes m_Bytes;
 	sirTaskHandle_t m_Task;
-	sirFileResult_t m_eTransferResult;
-	sirFileResult_t m_eLastFileResult;
+	SIRFileResult m_eTransferResult;
+	SIRFileResult m_eLastFileResult;
 	bool m_bActive;
 	bool m_bDiscard;
 };
 
-#endif // __SIRENGINE_SIRRESOURCEFILELOAD_H__
+#endif // __SIR_RESOURCEFILELOAD_H__

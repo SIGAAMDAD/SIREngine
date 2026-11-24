@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRTERRAINRESOURCEBRIDGE_H__
-#define __SIRENGINE_SIRTERRAINRESOURCEBRIDGE_H__
+#ifndef __SIR_TERRAINRESOURCEBRIDGE_H__
+#define __SIR_TERRAINRESOURCEBRIDGE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -63,4 +63,4 @@ private:
 	static SIRResourceContentKey fingerprint( sirTerrainConstByteSpan_t source ) noexcept;
 };
 
-#endif // __SIRENGINE_SIRTERRAINRESOURCEBRIDGE_H__
+#endif // __SIR_TERRAINRESOURCEBRIDGE_H__

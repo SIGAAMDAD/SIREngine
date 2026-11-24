@@ -16,7 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/Memory/Allocators/SIRVirtualStackAllocator.h>
 #include <Core/Memory/SIRMemorySegment.h>
-#include <Core/Memory/SIRMemoryUtils.h>
+#include <Core/SIRMath.h>
 
 #include <cassert>
 #include <limits>
@@ -34,13 +34,13 @@ SIRStackBookmark::~SIRStackBookmark( void )
 }
 
 SIRVirtualStackAllocator::SIRVirtualStackAllocator( void )
-    : m_nRecentHighWaterMark( 0 ), m_nBookmarkDepth( 0 ), m_eMode( SIR_STACK_DECOMMIT_ON_SHUTDOWN )
+    : m_nRecentHighWaterMark( 0 ), m_nBookmarkDepth( 0 ), m_eMode( SIRStackDecommitMode::SIR_STACK_DECOMMIT_ON_SHUTDOWN )
 {
 }
 
-bool SIRVirtualStackAllocator::init( SIRMemorySegment *pSegment, sirStackDecommitMode_e eMode, uint64_t nCommitIncrementBytes )
+bool SIRVirtualStackAllocator::init( SIRMemorySegment *pSegment, SIRStackDecommitMode eMode, uint64_t nCommitIncrementBytes )
 {
-	if ( pSegment == nullptr || m_Linear.getSegment() != nullptr || eMode > SIR_STACK_DECOMMIT_EXCESS_ON_EMPTY ) {
+	if ( pSegment == nullptr || m_Linear.getSegment() != nullptr || eMode > SIRStackDecommitMode::SIR_STACK_DECOMMIT_EXCESS_ON_EMPTY ) {
 		return false;
 	}
 
@@ -94,7 +94,7 @@ void SIRVirtualStackAllocator::popBookmark( uint64_t nMark, uint32_t nDepth )
 	--m_nBookmarkDepth;
 	if ( m_Linear.getUsedBytes() == 0 ) {
 		const bool bReclaimed = onStackEmpty();
-		( void )bReclaimed;
+		static_cast<void>(bReclaimed);
 		assert( bReclaimed );
 	}
 }
@@ -116,23 +116,23 @@ bool SIRVirtualStackAllocator::shutdown( void )
 		return false;
 	}
 	m_nRecentHighWaterMark = 0;
-	m_eMode = SIR_STACK_DECOMMIT_ON_SHUTDOWN;
+	m_eMode = SIRStackDecommitMode::SIR_STACK_DECOMMIT_ON_SHUTDOWN;
 	return true;
 }
 
 bool SIRVirtualStackAllocator::onStackEmpty( void )
 {
 	const uint64_t nCommitted = m_Linear.getCommittedPrefixBytes();
-	if ( m_eMode == SIR_STACK_DECOMMIT_ON_EMPTY ) {
+	if ( m_eMode == SIRStackDecommitMode::SIR_STACK_DECOMMIT_ON_EMPTY ) {
 		if ( !m_Linear.trimTo( 0 ) ) {
 			return false;
 		}
-	} else if ( m_eMode == SIR_STACK_DECOMMIT_EXCESS_ON_EMPTY ) {
+	} else if ( m_eMode == SIRStackDecommitMode::SIR_STACK_DECOMMIT_EXCESS_ON_EMPTY ) {
 		// Align once on the cold reclamation path, not on every allocation.
 		uint64_t nKeep = 0;
 		if ( !SIR_IS_POWER_OF_TWO( m_Linear.getSegment()->getPageSize() ) ||
-		     ( uint64_t )( m_Linear.getSegment()->getPageSize() ) > UINTPTR_MAX ||
-		     ( uint64_t )( m_nRecentHighWaterMark ) > UINTPTR_MAX - ( ( uint64_t )( m_Linear.getSegment()->getPageSize() ) - 1 ) ) {
+		     static_cast<uint64_t>(  m_Linear.getSegment()->getPageSize()  ) > UINTPTR_MAX ||
+		     static_cast<uint64_t>( m_nRecentHighWaterMark ) > UINTPTR_MAX - ( ( uint64_t )( m_Linear.getSegment()->getPageSize() ) - 1 ) ) {
 			return false;
 		}
 		nKeep = SIR_ALIGN_UP( m_nRecentHighWaterMark, m_Linear.getSegment()->getPageSize() );

@@ -23,7 +23,7 @@ bool t3d_composed_surface_editor_cook_cold( Terrain3DComposedSurfaceEditJournal&
                                             t3dComposedSurfaceEditorCookResult_t& result )
 {
 	result = {};
-	result.m_status = T3D_COMPOSED_SURFACE_EDITOR_COOK_INVALID_INPUT;
+	result.m_status = SIRComposedSurfaceEditorCookStatus::T3D_COMPOSED_SURFACE_EDITOR_COOK_INVALID_INPUT;
 	const t3dComposedSurfaceColdCookRequest_t& input = request.m_cook;
 	if ( !request.m_nRegionKey || !request.m_nJournalFingerprint || !request.m_nJournalTopologyGeneration ||
 	     request.m_nRegionIndex >= T3D_COMP_SURF_EDITOR_REGION_COUNT || !request.m_pDirtyFlags ||
@@ -34,7 +34,7 @@ bool t3d_composed_surface_editor_cook_cold( Terrain3DComposedSurfaceEditJournal&
 
 	t3dComposedSurfaceEditTicket_t ticket{};
 	if ( !journal.claimCold( request.m_nRegionIndex, ticket ) ) {
-		result.m_status = T3D_COMPOSED_SURFACE_EDITOR_COOK_NOT_DIRTY;
+		result.m_status = SIRComposedSurfaceEditorCookStatus::T3D_COMPOSED_SURFACE_EDITOR_COOK_NOT_DIRTY;
 		return false;
 	}
 	result.m_nClaimRevision = ticket.m_nRevision;
@@ -44,7 +44,7 @@ bool t3d_composed_surface_editor_cook_cold( Terrain3DComposedSurfaceEditJournal&
 	     !t3d_comp_surf_make_recook_flags_cold( ticket, request.m_nRegionKey, request.m_nMip0Width, request.m_nMip0Height, input.m_pPages,
 	                                            input.m_nPageCount, request.m_pDirtyFlags, request.m_nDirtyCapacity ) ) {
 		journal.cancelCold( ticket );
-		result.m_status = T3D_COMPOSED_SURFACE_EDITOR_COOK_STALE;
+		result.m_status = SIRComposedSurfaceEditorCookStatus::T3D_COMPOSED_SURFACE_EDITOR_COOK_STALE;
 		return false;
 	}
 
@@ -58,15 +58,15 @@ bool t3d_composed_surface_editor_cook_cold( Terrain3DComposedSurfaceEditJournal&
 	cook.m_pDestination = nullptr;
 	if ( !t3d_composed_surface_cook_source_pack_cold( cook, result.m_cook ) ) {
 		journal.cancelCold( ticket );
-		result.m_status = result.m_cook.m_status == T3D_COMPOSED_SURFACE_COLD_COOK_STALE_REVISION
-		                      ? T3D_COMPOSED_SURFACE_EDITOR_COOK_STALE
-		                      : T3D_COMPOSED_SURFACE_EDITOR_COOK_COOK_FAILED;
+		result.m_status = result.m_cook.m_status == SIRComposedSurfaceColdCookStatus::T3D_COMPOSED_SURFACE_COLD_COOK_STALE_REVISION
+		                      ? SIRComposedSurfaceEditorCookStatus::T3D_COMPOSED_SURFACE_EDITOR_COOK_STALE
+		                      : SIRComposedSurfaceEditorCookStatus::T3D_COMPOSED_SURFACE_EDITOR_COOK_COOK_FAILED;
 		return false;
 	}
 
 	if ( !request.m_pBeginCommit( request.m_pCommitUser ) ) {
 		journal.cancelCold( ticket );
-		result.m_status = T3D_COMPOSED_SURFACE_EDITOR_COOK_COMMIT_FAILED;
+		result.m_status = SIRComposedSurfaceEditorCookStatus::T3D_COMPOSED_SURFACE_EDITOR_COOK_COMMIT_FAILED;
 		return false;
 	}
 	const bool current =
@@ -77,9 +77,9 @@ bool t3d_composed_surface_editor_cook_cold( Terrain3DComposedSurfaceEditJournal&
 	request.m_pEndCommit( request.m_pCommitUser );
 	if ( !accepted ) {
 		journal.cancelCold( ticket );
-		result.m_status = current ? T3D_COMPOSED_SURFACE_EDITOR_COOK_COMMIT_FAILED : T3D_COMPOSED_SURFACE_EDITOR_COOK_STALE;
+		result.m_status = current ? SIRComposedSurfaceEditorCookStatus::T3D_COMPOSED_SURFACE_EDITOR_COOK_COMMIT_FAILED : SIRComposedSurfaceEditorCookStatus::T3D_COMPOSED_SURFACE_EDITOR_COOK_STALE;
 		return false;
 	}
-	result.m_status = T3D_COMPOSED_SURFACE_EDITOR_COOK_SUCCESS;
+	result.m_status = SIRComposedSurfaceEditorCookStatus::T3D_COMPOSED_SURFACE_EDITOR_COOK_SUCCESS;
 	return true;
 }

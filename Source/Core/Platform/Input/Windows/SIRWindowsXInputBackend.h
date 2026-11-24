@@ -13,10 +13,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRWINDOWSXINPUTBACKEND_H__
-#define __SIRENGINE_SIRWINDOWSXINPUTBACKEND_H__
+#ifndef __SIR_WINDOWSXINPUTBACKEND_H__
+#define __SIR_WINDOWSXINPUTBACKEND_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
 #pragma once
@@ -39,7 +39,7 @@ class SIRWindowsXInputBackend final : public SIRInputBackend
 {
 public:
 	SIRWindowsXInputBackend( void ) noexcept;
-	sirInputBackendId_t id( void ) const noexcept override;
+	SIRInputBackendId id( void ) const noexcept override;
 	bool initialize( void ) noexcept;
 	void sample( SIRInputService& service ) noexcept override;
 	void resynchronize( SIRInputService& service ) noexcept override;
@@ -54,4 +54,4 @@ private:
 	sirXInputNativeSlot_t m_Slots[4];
 };
 
-#endif // __SIRENGINE_SIRWINDOWSXINPUTBACKEND_H__
+#endif // __SIR_WINDOWSXINPUTBACKEND_H__

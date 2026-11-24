@@ -34,9 +34,9 @@ SIRWindowsGameInputBackend::SIRWindowsGameInputBackend( void ) noexcept
 	}
 }
 
-sirInputBackendId_t SIRWindowsGameInputBackend::id( void ) const noexcept
+SIRInputBackendId SIRWindowsGameInputBackend::id( void ) const noexcept
 {
-	return SIR_INPUT_WIN_GAMEINPUT;
+	return SIRInputBackendId::SIR_INPUT_WIN_GAMEINPUT;
 }
 
 bool SIRWindowsGameInputBackend::initialized( void ) const noexcept
@@ -49,11 +49,11 @@ void CALLBACK SIRWindowsGameInputBackend::onDeviceChanged( GameInput::v1::GameIn
                                                            GameInput::v1::GameInputDeviceStatus eCurrent,
                                                            GameInput::v1::GameInputDeviceStatus ePrevious ) noexcept
 {
-	( void )nToken;
-	( void )nTimestamp;
-	( void )eCurrent;
-	( void )ePrevious;
-	SIRWindowsGameInputBackend *pBackend = ( SIRWindowsGameInputBackend * )pContext;
+	static_cast<void>(nToken);
+	static_cast<void>(nTimestamp);
+	static_cast<void>(eCurrent);
+	static_cast<void>(ePrevious);
+	SIRWindowsGameInputBackend *pBackend = static_cast<SIRWindowsGameInputBackend *>(pContext);
 	if ( pBackend != nullptr && pDevice != nullptr ) {
 		pBackend->enqueueDevice( pDevice );
 	}
@@ -61,7 +61,7 @@ void CALLBACK SIRWindowsGameInputBackend::onDeviceChanged( GameInput::v1::GameIn
 
 void SIRWindowsGameInputBackend::enqueueDevice( void *pDevice ) noexcept
 {
-	GameInput::v1::IGameInputDevice *pNative = ( GameInput::v1::IGameInputDevice * )pDevice;
+	GameInput::v1::IGameInputDevice *pNative = static_cast<GameInput::v1::IGameInputDevice *>(pDevice);
 	pNative->AddRef();
 	for ( uint32_t i = 0; i < PENDING_CAPACITY; ++i ) {
 		void *pExpected = nullptr;
@@ -83,7 +83,7 @@ bool SIRWindowsGameInputBackend::initialize( void ) noexcept
 		return false;
 	}
 	typedef HRESULT( WINAPI * sirGameInputCreateFn_t )( IUnknown ** );
-	const sirGameInputCreateFn_t pCreate = ( sirGameInputCreateFn_t )GetProcAddress( hDLL, "GameInputCreate" );
+	const sirGameInputCreateFn_t pCreate = static_cast<sirGameInputCreateFn_t>(GetProcAddress( hDLL, "GameInputCreate" ));
 	IUnknown *pLegacy = nullptr;
 	GameInput::v1::IGameInput *pInput = nullptr;
 	if ( pCreate == nullptr || FAILED( pCreate( &pLegacy ) ) || pLegacy == nullptr ||
@@ -99,7 +99,7 @@ bool SIRWindowsGameInputBackend::initialize( void ) noexcept
 	m_pInput = pInput;
 	const HRESULT nStatus = pInput->RegisterDeviceCallback(
 	    nullptr, GameInput::v1::GameInputKindGamepad, GameInput::v1::GameInputDeviceConnected, GameInput::v1::GameInputBlockingEnumeration,
-	    this, &onDeviceChanged, ( GameInput::v1::GameInputCallbackToken * )&m_nDeviceCallback );
+	    this, &onDeviceChanged, static_cast<GameInput::v1::GameInputCallbackToken *>(&m_nDeviceCallback) );
 	if ( FAILED( nStatus ) ) {
 		pInput->Release();
 		m_pInput = nullptr;
@@ -114,7 +114,7 @@ int32_t SIRWindowsGameInputBackend::findDevice( const void *pDevice ) const noex
 {
 	for ( uint32_t i = 0; i < SIR_INPUT_DEVICE_CAPACITY; ++i ) {
 		if ( m_Devices[i].pDevice == pDevice ) {
-			return ( int32_t )i;
+			return static_cast<int32_t>(i);
 		}
 	}
 	return -1;
@@ -127,12 +127,12 @@ bool SIRWindowsGameInputBackend::addDevice( SIRInputService& service, void *pDev
 	}
 	for ( uint32_t i = 0; i < SIR_INPUT_DEVICE_CAPACITY; ++i ) {
 		if ( m_Devices[i].pDevice == nullptr ) {
-			sirInputDeviceId_t id = {};
-			const uint64_t nNative = ( uint64_t )( uintptr_t )pDevice;
-			if ( !service.connect( { 0, nNative, SIR_INPUT_WIN_GAMEINPUT, SIR_INPUT_CONTROLLER }, &id ) ) {
+			sirInputDeviceId_t id {};
+			const uint64_t nNative = static_cast<uint64_t>reinterpret_cast<uintptr_t>(pDevice);
+			if ( !service.connect( { 0, nNative, SIRInputBackendId::SIR_INPUT_WIN_GAMEINPUT, SIRInputDeviceClass::SIR_INPUT_CONTROLLER }, &id ) ) {
 				return false;
 			}
-			( ( GameInput::v1::IGameInputDevice * )pDevice )->AddRef();
+			static_cast<GameInput::v1::IGameInputDevice *>(pDevice)->AddRef();
 			m_Devices[i].pDevice = pDevice;
 			m_Devices[i].id = id;
 			m_Devices[i].decoded = {};
@@ -147,8 +147,8 @@ void SIRWindowsGameInputBackend::dropDevice( SIRInputService& service, uint32_t 
 	if ( m_Devices[iSlot].pDevice == nullptr ) {
 		return;
 	}
-	( void )service.disconnect( id(), m_Devices[iSlot].id );
-	( ( GameInput::v1::IGameInputDevice * )m_Devices[iSlot].pDevice )->Release();
+	static_cast<void>(service.disconnect( id(), m_Devices[iSlot].id ));
+	( static_cast<GameInput::v1::IGameInputDevice *>(m_Devices)[iSlot].pDevice )->Release();
 	m_Devices[iSlot] = {};
 }
 
@@ -156,16 +156,16 @@ void SIRWindowsGameInputBackend::consumeDeviceChanges( SIRInputService& service 
 {
 	for ( uint32_t i = 0; i < PENDING_CAPACITY; ++i ) {
 		GameInput::v1::IGameInputDevice *pDevice =
-		    ( GameInput::v1::IGameInputDevice * )m_Pending[i].exchange( nullptr, std::memory_order_acquire );
+		    static_cast<GameInput::v1::IGameInputDevice *>(m_Pending)[i].exchange( nullptr, std::memory_order_acquire );
 		if ( pDevice == nullptr ) {
 			continue;
 		}
 		const bool bConnected = ( pDevice->GetDeviceStatus() & GameInput::v1::GameInputDeviceConnected ) != 0;
 		const int32_t iSlot = findDevice( pDevice );
 		if ( bConnected && iSlot < 0 ) {
-			( void )addDevice( service, pDevice );
+			static_cast<void>(addDevice( service, pDevice ));
 		} else if ( !bConnected && iSlot >= 0 ) {
-			dropDevice( service, ( uint32_t )iSlot );
+			dropDevice( service, static_cast<uint32_t>(iSlot) );
 		}
 		pDevice->Release();
 	}
@@ -173,7 +173,7 @@ void SIRWindowsGameInputBackend::consumeDeviceChanges( SIRInputService& service 
 
 bool SIRWindowsGameInputBackend::processReading( SIRInputService& service, void *pReading ) noexcept
 {
-	GameInput::v1::IGameInputReading *pNative = ( GameInput::v1::IGameInputReading * )pReading;
+	GameInput::v1::IGameInputReading *pNative = static_cast<GameInput::v1::IGameInputReading *>(pReading);
 	GameInput::v1::IGameInputDevice *pDevice = nullptr;
 	pNative->GetDevice( &pDevice );
 	if ( pDevice == nullptr ) {
@@ -192,15 +192,16 @@ bool SIRWindowsGameInputBackend::processReading( SIRInputService& service, void 
 	if ( iSlot < 0 ) {
 		return false;
 	}
-	GameInput::v1::GameInputGamepadState nativeState = {};
+	GameInput::v1::GameInputGamepadState nativeState {};
 	if ( !pNative->GetGamepadState( &nativeState ) ) {
 		return true;
 	}
-	const sirGameInputRawGamepad_t raw = { ( uint32_t )nativeState.buttons, nativeState.leftThumbstickX,  nativeState.leftThumbstickY,
+	const sirGameInputRawGamepad_t raw = { static_cast<uint32_t>(nativeState.buttons), nativeState.leftThumbstickX,  nativeState.leftThumbstickY,
 	                                       nativeState.rightThumbstickX,    nativeState.rightThumbstickY, nativeState.leftTrigger,
 	                                       nativeState.rightTrigger };
-	sirGameInputDecodedGamepad_t next = {};
-	sirInputControlChange_t changes[SIRWindowsGameInputCodec::MAX_CHANGES] = {};
+	sirGameInputDecodedGamepad_t next {};
+	sirInputControlChange_t changes[SIRWindowsGameInputCodec::MAX_CHANGES];
+	memset( changes, 0, sizeof( changes ) );
 	uint32_t nCount = 0;
 	if ( !SIRWindowsGameInputCodec::decode( raw, m_Devices[iSlot].decoded, &next, changes, SIRWindowsGameInputCodec::MAX_CHANGES,
 	                                        &nCount ) ) {
@@ -208,7 +209,7 @@ bool SIRWindowsGameInputBackend::processReading( SIRInputService& service, void 
 	}
 	if ( nCount != 0 ) {
 		const uint64_t nSourceNs = SIRWindowsGameInputCodec::timestampNanoseconds( pNative->GetTimestamp() );
-		if ( !service.emitControls( id(), m_Devices[iSlot].id, changes, nCount, nSourceNs, SIR_INPUT_CLOCK_GAMEINPUT ) ) {
+		if ( !service.emitControls( id(), m_Devices[iSlot].id, changes, nCount, nSourceNs, SIRInputClockSource::SIR_INPUT_CLOCK_GAMEINPUT ) ) {
 			return false;
 		}
 	}
@@ -219,20 +220,20 @@ bool SIRWindowsGameInputBackend::processReading( SIRInputService& service, void 
 void SIRWindowsGameInputBackend::invalidateHistory( SIRInputService& service ) noexcept
 {
 	if ( m_pCursor != nullptr ) {
-		( ( GameInput::v1::IGameInputReading * )m_pCursor )->Release();
+		static_cast<GameInput::v1::IGameInputReading *>(m_pCursor)->Release();
 		m_pCursor = nullptr;
 	}
 	for ( uint32_t i = 0; i < SIR_INPUT_DEVICE_CAPACITY; ++i ) {
 		if ( m_Devices[i].pDevice != nullptr ) {
 			m_Devices[i].decoded.bValid = false;
-			( void )service.loseState( id(), m_Devices[i].id );
+			static_cast<void>(service.loseState( id(), m_Devices[i].id ));
 		}
 	}
 }
 
 void SIRWindowsGameInputBackend::refreshEnumeration( void ) noexcept
 {
-	GameInput::v1::IGameInput *pInput = ( GameInput::v1::IGameInput * )m_pInput;
+	GameInput::v1::IGameInput *pInput = static_cast<GameInput::v1::IGameInput *>(m_pInput);
 	if ( pInput == nullptr ) {
 		return;
 	}
@@ -240,14 +241,14 @@ void SIRWindowsGameInputBackend::refreshEnumeration( void ) noexcept
 		pInput->UnregisterCallback( m_nDeviceCallback );
 		m_nDeviceCallback = 0;
 	}
-	( void )pInput->RegisterDeviceCallback( nullptr, GameInput::v1::GameInputKindGamepad, GameInput::v1::GameInputDeviceConnected,
+	static_cast<void>( pInput->RegisterDeviceCallback( nullptr, GameInput::v1::GameInputKindGamepad, GameInput::v1::GameInputDeviceConnected,
 	                                        GameInput::v1::GameInputBlockingEnumeration, this, &onDeviceChanged,
-	                                        ( GameInput::v1::GameInputCallbackToken * )&m_nDeviceCallback );
+	                                        reinterpret_cast<GameInput::v1::GameInputCallbackToken *>( &m_nDeviceCallback ) ) );
 }
 
 void SIRWindowsGameInputBackend::sample( SIRInputService& service ) noexcept
 {
-	GameInput::v1::IGameInput *pInput = ( GameInput::v1::IGameInput * )m_pInput;
+	GameInput::v1::IGameInput *pInput = static_cast<GameInput::v1::IGameInput *>(m_pInput);
 	if ( pInput == nullptr ) {
 		return;
 	}
@@ -256,7 +257,7 @@ void SIRWindowsGameInputBackend::sample( SIRInputService& service ) noexcept
 	}
 	consumeDeviceChanges( service );
 	for ( uint32_t i = 0; i < SIR_INPUT_DEVICE_CAPACITY; ++i ) {
-		GameInput::v1::IGameInputDevice *pDevice = ( GameInput::v1::IGameInputDevice * )m_Devices[i].pDevice;
+		GameInput::v1::IGameInputDevice *pDevice = static_cast<GameInput::v1::IGameInputDevice *>(m_Devices)[i].pDevice;
 		if ( pDevice != nullptr && ( pDevice->GetDeviceStatus() & GameInput::v1::GameInputDeviceConnected ) == 0 ) {
 			dropDevice( service, i );
 		}
@@ -264,7 +265,7 @@ void SIRWindowsGameInputBackend::sample( SIRInputService& service ) noexcept
 	for ( uint32_t i = 0; i < HISTORY_BUDGET; ++i ) {
 		GameInput::v1::IGameInputReading *pReading = nullptr;
 		const HRESULT nStatus = m_pCursor == nullptr ? pInput->GetCurrentReading( GameInput::v1::GameInputKindGamepad, nullptr, &pReading )
-		                                             : pInput->GetNextReading( ( GameInput::v1::IGameInputReading * )m_pCursor,
+		                                             : pInput->GetNextReading( static_cast<GameInput::v1::IGameInputReading *>(m_pCursor),
 		                                                                       GameInput::v1::GameInputKindGamepad, nullptr, &pReading );
 		if ( nStatus == GameInput::v1::GAMEINPUT_E_REFERENCE_READING_TOO_OLD ) {
 			invalidateHistory( service );
@@ -278,7 +279,7 @@ void SIRWindowsGameInputBackend::sample( SIRInputService& service ) noexcept
 			break;
 		}
 		if ( m_pCursor != nullptr ) {
-			( ( GameInput::v1::IGameInputReading * )m_pCursor )->Release();
+			static_cast<GameInput::v1::IGameInputReading *>(m_pCursor)->Release();
 		}
 		m_pCursor = pReading;
 	}
@@ -299,10 +300,10 @@ bool SIRWindowsGameInputBackend::vibrate( sirInputDeviceId_t id, uint16_t nLeft,
 		if ( device.pDevice != nullptr && device.id.nSlot == id.nSlot && device.id.nGeneration == id.nGeneration ) {
 			device.nMotorLeft = nLeft;
 			device.nMotorRight = nRight;
-			const GameInput::v1::GameInputRumbleParams rumble = { ( float )nLeft / 65535.0f, ( float )nRight / 65535.0f,
-			                                                      ( float )device.nTriggerLeft / 65535.0f,
-			                                                      ( float )device.nTriggerRight / 65535.0f };
-			( ( GameInput::v1::IGameInputDevice * )device.pDevice )->SetRumbleState( &rumble );
+			const GameInput::v1::GameInputRumbleParams rumble = { static_cast<float>(nLeft) / 65535.0f, static_cast<float>(nRight) / 65535.0f,
+			                                                      static_cast<float>(device.nTriggerLeft) / 65535.0f,
+			                                                      static_cast<float>(device.nTriggerRight) / 65535.0f };
+			static_cast<GameInput::v1::IGameInputDevice *>(device.pDevice)->SetRumbleState( &rumble );
 			return true;
 		}
 	}
@@ -316,10 +317,10 @@ bool SIRWindowsGameInputBackend::vibrateTriggers( sirInputDeviceId_t id, uint16_
 		if ( device.pDevice != nullptr && device.id.nSlot == id.nSlot && device.id.nGeneration == id.nGeneration ) {
 			device.nTriggerLeft = nLeft;
 			device.nTriggerRight = nRight;
-			const GameInput::v1::GameInputRumbleParams rumble = { ( float )device.nMotorLeft / 65535.0f,
-			                                                      ( float )device.nMotorRight / 65535.0f, ( float )nLeft / 65535.0f,
-			                                                      ( float )nRight / 65535.0f };
-			( ( GameInput::v1::IGameInputDevice * )device.pDevice )->SetRumbleState( &rumble );
+			const GameInput::v1::GameInputRumbleParams rumble = { static_cast<float>(device.nMotorLeft) / 65535.0f,
+			                                                      static_cast<float>(device.nMotorRight) / 65535.0f, static_cast<float>(nLeft) / 65535.0f,
+			                                                      static_cast<float>(nRight) / 65535.0f };
+			static_cast<GameInput::v1::IGameInputDevice *>(device.pDevice)->SetRumbleState( &rumble );
 			return true;
 		}
 	}
@@ -334,46 +335,46 @@ uint32_t SIRWindowsGameInputBackend::hapticCapabilities( sirInputDeviceId_t hDev
 			continue;
 		}
 		const GameInput::v1::GameInputDeviceInfo *pInfo = nullptr;
-		const HRESULT nResult = ( ( GameInput::v1::IGameInputDevice * )device.pDevice )->GetDeviceInfo( &pInfo );
+		const HRESULT nResult = static_cast<GameInput::v1::IGameInputDevice *>(device.pDevice)->GetDeviceInfo( &pInfo );
 		if ( FAILED( nResult ) || pInfo == nullptr ) {
-			return SIR_INPUT_HAPTIC_CAP_NONE;
+			return SIRInputHapticCapability::SIR_INPUT_HAPTIC_CAP_NONE;
 		}
-		const uint32_t nMotors = ( uint32_t )pInfo->supportedRumbleMotors;
-		uint32_t nCaps = SIR_INPUT_HAPTIC_CAP_NONE;
+		const uint32_t nMotors = static_cast<uint32_t>(pInfo->supportedRumbleMotors);
+		uint32_t nCaps = SIRInputHapticCapability::SIR_INPUT_HAPTIC_CAP_NONE;
 		if ( ( nMotors & ( GameInput::v1::GameInputRumbleLowFrequency | GameInput::v1::GameInputRumbleHighFrequency ) ) != 0 ) {
-			nCaps |= SIR_INPUT_HAPTIC_CAP_RUMBLE;
+			nCaps |= SIRInputHapticCapability::SIR_INPUT_HAPTIC_CAP_RUMBLE;
 		}
 		if ( ( nMotors & ( GameInput::v1::GameInputRumbleLeftTrigger | GameInput::v1::GameInputRumbleRightTrigger ) ) != 0 ) {
-			nCaps |= SIR_INPUT_HAPTIC_CAP_TRIGGER_RUMBLE;
+			nCaps |= SIRInputHapticCapability::SIR_INPUT_HAPTIC_CAP_TRIGGER_RUMBLE;
 		}
 		return nCaps;
 	}
-	return SIR_INPUT_HAPTIC_CAP_NONE;
+	return SIRInputHapticCapability::SIR_INPUT_HAPTIC_CAP_NONE;
 }
 
 void SIRWindowsGameInputBackend::stop( SIRInputService& service ) noexcept
 {
-	GameInput::v1::IGameInput *pInput = ( GameInput::v1::IGameInput * )m_pInput;
+	GameInput::v1::IGameInput *pInput = static_cast<GameInput::v1::IGameInput *>(m_pInput);
 	if ( pInput != nullptr && m_nDeviceCallback != 0 ) {
 		pInput->UnregisterCallback( m_nDeviceCallback );
 		m_nDeviceCallback = 0;
 	}
 	for ( uint32_t i = 0; i < PENDING_CAPACITY; ++i ) {
 		GameInput::v1::IGameInputDevice *pDevice =
-		    ( GameInput::v1::IGameInputDevice * )m_Pending[i].exchange( nullptr, std::memory_order_acquire );
+		    static_cast<GameInput::v1::IGameInputDevice *>(m_Pending)[i].exchange( nullptr, std::memory_order_acquire );
 		if ( pDevice != nullptr ) {
 			pDevice->Release();
 		}
 	}
 	for ( uint32_t i = 0; i < SIR_INPUT_DEVICE_CAPACITY; ++i ) {
 		if ( m_Devices[i].pDevice != nullptr ) {
-			( void )vibrateTriggers( m_Devices[i].id, 0, 0 );
-			( void )vibrate( m_Devices[i].id, 0, 0 );
+			static_cast<void>(vibrateTriggers( m_Devices[i].id, 0, 0 ));
+			static_cast<void>(vibrate( m_Devices[i].id, 0, 0 ));
 			dropDevice( service, i );
 		}
 	}
 	if ( m_pCursor != nullptr ) {
-		( ( GameInput::v1::IGameInputReading * )m_pCursor )->Release();
+		static_cast<GameInput::v1::IGameInputReading *>(m_pCursor)->Release();
 		m_pCursor = nullptr;
 	}
 	if ( pInput != nullptr ) {
@@ -381,7 +382,7 @@ void SIRWindowsGameInputBackend::stop( SIRInputService& service ) noexcept
 		m_pInput = nullptr;
 	}
 	if ( m_pLibrary != nullptr ) {
-		FreeLibrary( ( HMODULE )m_pLibrary );
+		FreeLibrary( static_cast<HMODULE>(m_pLibrary) );
 		m_pLibrary = nullptr;
 	}
 	m_bOverflow.store( false, std::memory_order_relaxed );

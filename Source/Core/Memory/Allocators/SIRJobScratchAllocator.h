@@ -14,8 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRJOBSCRATCHALLOCATOR_H__
-#define __SIRENGINE_SIRJOBSCRATCHALLOCATOR_H__
+#ifndef __SIR_JOBSCRATCHALLOCATOR_H__
+#define __SIR_JOBSCRATCHALLOCATOR_H__
 
 #include <Core/SIRPCH.h>
 
@@ -25,7 +25,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-#include <Core/Platform/SIRAtomic.h>
+#include <atomic>
 #include <Core/Memory/Allocators/SIRLinearAllocator.h>
 #include <cstdint>
 
@@ -43,8 +43,8 @@ typedef struct sirJobScratchToken_s
 typedef struct sirJobSlot_s
 {
 	SIRLinearAllocator Linear;
-	SIRAtomic<uint32_t> nState;
-	SIRAtomic<uint64_t> nPeakUsage;
+	std::atomic<uint32_t> nState;
+	std::atomic<uint64_t> nPeakUsage;
 	uint32_t nGeneration;
 	sirJobSlot_s( void );
 } sirJobSlot_t;
@@ -69,7 +69,7 @@ private:
 	bool finishJob( sirJobScratchToken_t token, uint64_t nWarmBytes );
 	sirJobSlot_t *m_pSlots;
 	uint32_t m_nSlotCount;
-	SIRAtomic<uint64_t> m_nPeakUsage;
+	std::atomic<uint64_t> m_nPeakUsage;
 };
 
-#endif // __SIRENGINE_SIRJOBSCRATCHALLOCATOR_H__
+#endif // __SIR_JOBSCRATCHALLOCATOR_H__

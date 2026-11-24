@@ -42,7 +42,6 @@ set(SIR_CORE_PLATFORM_COMMON
     ${PROJECT_SOURCE_DIR}/Source/Core/Platform/SIRThread.cpp
     ${PROJECT_SOURCE_DIR}/Source/Core/Platform/SIRSync.cpp
     ${PROJECT_SOURCE_DIR}/Source/Core/Platform/SIRSyncAdvanced.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Core/Platform/SIRAtomic.cpp
     ${PROJECT_SOURCE_DIR}/Source/Core/Platform/SIRPlatformRootDirectory.cpp
     ${PROJECT_SOURCE_DIR}/Source/Core/Platform/SIRPlatformAtomicFile.cpp
 )
@@ -76,7 +75,7 @@ if(WIN32)
     # GameInput is first-party Windows controller I/O. The runtime is loaded
     # from the OS, while its v1 SDK header is an explicitly pinned build input.
     if(SIR_WITH_GAMEINPUT)
-        find_path(SIR_GAMEINPUT_INCLUDE_DIR NAMES ${PROJECT_SOURCE_DIR}/Source/Core/Platform/GameInput.h HINTS "$ENV{SIR_GAMEINPUT_SDK_INCLUDE}")
+        find_path(SIR_GAMEINPUT_INCLUDE_DIR NAMES GameInput.h HINTS "$ENV{SIR_GAMEINPUT_SDK_INCLUDE}")
         if(SIR_GAMEINPUT_INCLUDE_DIR)
             # Some Windows SDKs expose a different, incompatible GameInput.h.
             # Compile the actual v1 symbols before enabling the native backend.
@@ -273,9 +272,9 @@ block(SCOPE_FOR VARIABLES)
 # Framework allocator implementations are subordinate to the SIR memory page authority.
 # The existing SIRMemoryManager.cpp remains owned by Source/Core/CMakeLists.txt.
 target_sources(SIRCore PRIVATE
-    ${PROJECT_SOURCE_DIR}/Source/Core/Memory/SIRAllocationRouter.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Memory/Allocators/SIRAllocationRouter.cpp
     ${PROJECT_SOURCE_DIR}/Source/Core/Memory/SIRBitmapAllocator.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Core/Memory/SIRBuddyAllocator.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Memory/Allocators/SIRBuddyAllocator.cpp
     ${PROJECT_SOURCE_DIR}/Source/Core/Memory/SIRCacheAllocator.cpp
     ${PROJECT_SOURCE_DIR}/Source/Core/Memory/SIRCompactBucketAllocator.cpp
     ${PROJECT_SOURCE_DIR}/Source/Core/Memory/SIRFrameAllocator.cpp

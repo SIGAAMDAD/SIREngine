@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRGRAPHICSDRIVERABI_H__
-#define __SIRENGINE_SIRGRAPHICSDRIVERABI_H__
+#ifndef __SIR_GRAPHICSDRIVERABI_H__
+#define __SIR_GRAPHICSDRIVERABI_H__
 
 #include <Core/SIRPCH.h>
 
@@ -39,24 +39,22 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // Binary modules must use the same architecture and calling convention.
 // A binary callback returns the canonical graphics result code verbatim.
 // No parallel error numbering is introduced by the module interface.
-typedef sirGraphicsResult_t sirGraphicsABIResult_t;
-#define SIR_GRAPHICS_ABI_SUCCESS SIR_GRAPHICS_SUCCESS
-#define SIR_GRAPHICS_ABI_INVALID_ARGUMENT SIR_GRAPHICS_INVALID_ARGUMENT
-#define SIR_GRAPHICS_ABI_VERSION_MISMATCH SIR_GRAPHICS_VERSION_MISMATCH
-#define SIR_GRAPHICS_ABI_UNSUPPORTED SIR_GRAPHICS_UNSUPPORTED
-#define SIR_GRAPHICS_ABI_DRIVER_ERROR SIR_GRAPHICS_DRIVER_ERROR
+typedef SIRGraphicsResult sirGraphicsABIResult_t;
+#define SIR_GRAPHICS_ABI_SUCCESS SIRGraphicsResult::SIR_GRAPHICS_SUCCESS
+#define SIR_GRAPHICS_ABI_INVALID_ARGUMENT SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT
+#define SIR_GRAPHICS_ABI_VERSION_MISMATCH SIRGraphicsResult::SIR_GRAPHICS_VERSION_MISMATCH
+#define SIR_GRAPHICS_ABI_UNSUPPORTED SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED
+#define SIR_GRAPHICS_ABI_DRIVER_ERROR SIRGraphicsResult::SIR_GRAPHICS_DRIVER_ERROR
 
-typedef enum sirGraphicsABIAdapterKind_e : uint32_t
-{
+enum class SIRGraphicsABIAdapterKind : uint32_t {
 	SIR_GRAPHICS_ABI_ADAPTER_DISCRETE = 1,
 	SIR_GRAPHICS_ABI_ADAPTER_INTEGRATED = 2,
 	SIR_GRAPHICS_ABI_ADAPTER_VIRTUAL = 3,
 	SIR_GRAPHICS_ABI_ADAPTER_SOFTWARE = 4,
 	SIR_GRAPHICS_ABI_ADAPTER_OTHER = 5
-} sirGraphicsABIAdapterKind_t;
+};
 
-typedef enum sirGraphicsABIFormatFeature_e : uint32_t
-{
+enum class SIRGraphicsABIFormatFeature : uint32_t {
 	SIR_GRAPHICS_ABI_FORMAT_SAMPLED = 1U << 0,
 	SIR_GRAPHICS_ABI_FORMAT_STORAGE = 1U << 1,
 	SIR_GRAPHICS_ABI_FORMAT_COLOR_ATTACHMENT = 1U << 2,
@@ -64,7 +62,7 @@ typedef enum sirGraphicsABIFormatFeature_e : uint32_t
 	SIR_GRAPHICS_ABI_FORMAT_TRANSFER_SRC = 1U << 4,
 	SIR_GRAPHICS_ABI_FORMAT_TRANSFER_DST = 1U << 5,
 	SIR_GRAPHICS_ABI_FORMAT_LINEAR_FILTER = 1U << 6
-} sirGraphicsABIFormatFeature_t;
+};
 
 typedef struct sirGraphicsABIHost_s
 {
@@ -223,4 +221,4 @@ sirGraphicsABIResult_t sirGraphicsSelectABIProfile( const sirGraphicsABICapabili
 static_assert( sizeof( void * ) == 8, "graphics module ABI requires a 64-bit process" );
 static_assert( sizeof( uint32_t ) == 4 && sizeof( uint64_t ) == 8, "graphics module ABI requires fixed-width integers" );
 
-#endif // __SIRENGINE_SIRGRAPHICSDRIVERABI_H__
+#endif // __SIR_GRAPHICSDRIVERABI_H__

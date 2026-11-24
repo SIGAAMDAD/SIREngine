@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRD3D12TRANSFERS_H__
-#define __SIRENGINE_SIRD3D12TRANSFERS_H__
+#ifndef __SIR_D3_D12_TRANSFERS_H__
+#define __SIR_D3_D12_TRANSFERS_H__
 
 #include <Core/SIRPCH.h>
 
@@ -59,7 +59,7 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12Fence> m_pFence;
 	sirD3D12TransferSlot_t m_szSlots[s_nSlotCount];
 	SIRD3D12Memory *m_pMemory = nullptr;
-	sirD3D12ResidentTransferView_t m_Arena = {};
+	sirD3D12ResidentTransferView_t m_Arena {};
 	HANDLE m_hEvent = nullptr;
 	uint64_t m_nNextSerial = 1;
 	uint64_t m_nNextFence = 1;
@@ -102,4 +102,4 @@ public:
 	bool discard( sirD3D12TransferTicket_t ticket ) noexcept;
 };
 
-#endif // __SIRENGINE_SIRD3D12TRANSFERS_H__
+#endif // __SIR_D3_D12_TRANSFERS_H__

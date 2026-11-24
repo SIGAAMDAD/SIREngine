@@ -14,8 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRHIGHLOWALLOCATOR_H__
-#define __SIRENGINE_SIRHIGHLOWALLOCATOR_H__
+#ifndef __SIR_HIGHLOWALLOCATOR_H__
+#define __SIR_HIGHLOWALLOCATOR_H__
 
 #include <Core/SIRPCH.h>
 
@@ -64,4 +64,4 @@ private:
 	uint64_t m_nHighCommittedBegin;
 };
 
-#endif // __SIRENGINE_SIRHIGHLOWALLOCATOR_H__
+#endif // __SIR_HIGHLOWALLOCATOR_H__

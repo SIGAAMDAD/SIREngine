@@ -40,17 +40,17 @@ int main( void )
 	sirWorldHLODDemandDeltaOutput_t output = { szOperations, 6, &nCount };
 
 	// Unchanged node 1 is ignored. Add node 2; replace the changed revision at node 3.
-	SIR_DEMAND_CHECK( sirWorldHLODReconcileDemands( input, output ) == SIR_WORLD_HLOD_OK );
+	SIR_DEMAND_CHECK( sirWorldHLODReconcileDemands( input, output ) == SIRWorldHLODResult::SIR_WORLD_HLOD_OK );
 	SIR_DEMAND_CHECK( nCount == 3 );
-	SIR_DEMAND_CHECK( szOperations[0].eAction == SIR_WORLD_HLOD_DEMAND_REQUEST && szOperations[0].demand.nNodeIndex == 2 );
-	SIR_DEMAND_CHECK( szOperations[1].eAction == SIR_WORLD_HLOD_DEMAND_CANCEL && szOperations[1].demand.nNodeIndex == 3 );
+	SIR_DEMAND_CHECK( szOperations[0].eAction == SIRWorldHLODDemandAction::SIR_WORLD_HLOD_DEMAND_REQUEST && szOperations[0].demand.nNodeIndex == 2 );
+	SIR_DEMAND_CHECK( szOperations[1].eAction == SIRWorldHLODDemandAction::SIR_WORLD_HLOD_DEMAND_CANCEL && szOperations[1].demand.nNodeIndex == 3 );
 	SIR_DEMAND_CHECK( szOperations[1].demand.nSourceRevision == 7 );
-	SIR_DEMAND_CHECK( szOperations[2].eAction == SIR_WORLD_HLOD_DEMAND_REQUEST && szOperations[2].demand.nSourceRevision == 8 );
+	SIR_DEMAND_CHECK( szOperations[2].eAction == SIRWorldHLODDemandAction::SIR_WORLD_HLOD_DEMAND_REQUEST && szOperations[2].demand.nSourceRevision == 8 );
 
 	// Identical snapshots produce no work.
 	input.pPrevious = szNext;
 	input.nPreviousCount = 3;
-	SIR_DEMAND_CHECK( sirWorldHLODReconcileDemands( input, output ) == SIR_WORLD_HLOD_OK && nCount == 0 );
+	SIR_DEMAND_CHECK( sirWorldHLODReconcileDemands( input, output ) == SIRWorldHLODResult::SIR_WORLD_HLOD_OK && nCount == 0 );
 
 	// A new world generation cancels every old request before its replacement.
 	for ( uint32_t i = 0; i < 3; ++i ) {
@@ -58,11 +58,11 @@ int main( void )
 	}
 	sirWorldHLODDemand_t szOld[] = { sirDemand( 1, 7, 4 ), sirDemand( 2, 7, 4 ), sirDemand( 3, 8, 4 ) };
 	input.pPrevious = szOld;
-	SIR_DEMAND_CHECK( sirWorldHLODReconcileDemands( input, output ) == SIR_WORLD_HLOD_OK );
+	SIR_DEMAND_CHECK( sirWorldHLODReconcileDemands( input, output ) == SIRWorldHLODResult::SIR_WORLD_HLOD_OK );
 	SIR_DEMAND_CHECK( nCount == 6 );
 	for ( uint32_t i = 0; i < 3; ++i ) {
-		SIR_DEMAND_CHECK( szOperations[i * 2].eAction == SIR_WORLD_HLOD_DEMAND_CANCEL );
-		SIR_DEMAND_CHECK( szOperations[i * 2 + 1].eAction == SIR_WORLD_HLOD_DEMAND_REQUEST );
+		SIR_DEMAND_CHECK( szOperations[i * 2].eAction == SIRWorldHLODDemandAction::SIR_WORLD_HLOD_DEMAND_CANCEL );
+		SIR_DEMAND_CHECK( szOperations[i * 2 + 1].eAction == SIRWorldHLODDemandAction::SIR_WORLD_HLOD_DEMAND_REQUEST );
 		SIR_DEMAND_CHECK( szOperations[i * 2 + 1].demand.nWorldGeneration == 5 );
 	}
 
@@ -70,30 +70,30 @@ int main( void )
 	nCount = 77;
 	szOperations[0].demand.nNodeIndex = 123;
 	output.nCapacity = 5;
-	SIR_DEMAND_CHECK( sirWorldHLODReconcileDemands( input, output ) == SIR_WORLD_HLOD_CAPACITY );
+	SIR_DEMAND_CHECK( sirWorldHLODReconcileDemands( input, output ) == SIRWorldHLODResult::SIR_WORLD_HLOD_CAPACITY );
 	SIR_DEMAND_CHECK( nCount == 77 && szOperations[0].demand.nNodeIndex == 123 );
 	output.nCapacity = 6;
 
 	// Invalid source revisions, mixed epochs, and nonascending node identities fail transactionally.
 	szNext[1].nSourceRevision = 0;
-	SIR_DEMAND_CHECK( sirWorldHLODReconcileDemands( input, output ) == SIR_WORLD_HLOD_INVALID_ARGUMENT );
+	SIR_DEMAND_CHECK( sirWorldHLODReconcileDemands( input, output ) == SIRWorldHLODResult::SIR_WORLD_HLOD_INVALID_ARGUMENT );
 	szNext[1].nSourceRevision = 7;
 	szNext[1].nWorldGeneration = 4;
-	SIR_DEMAND_CHECK( sirWorldHLODReconcileDemands( input, output ) == SIR_WORLD_HLOD_INVALID_ARGUMENT );
+	SIR_DEMAND_CHECK( sirWorldHLODReconcileDemands( input, output ) == SIRWorldHLODResult::SIR_WORLD_HLOD_INVALID_ARGUMENT );
 	szNext[1].nWorldGeneration = 5;
 	szNext[1].nNodeIndex = 1;
-	SIR_DEMAND_CHECK( sirWorldHLODReconcileDemands( input, output ) == SIR_WORLD_HLOD_INVALID_ARGUMENT );
+	SIR_DEMAND_CHECK( sirWorldHLODReconcileDemands( input, output ) == SIRWorldHLODResult::SIR_WORLD_HLOD_INVALID_ARGUMENT );
 	szNext[1].nNodeIndex = 2;
 	input.pCurrent = nullptr;
-	SIR_DEMAND_CHECK( sirWorldHLODReconcileDemands( input, output ) == SIR_WORLD_HLOD_INVALID_ARGUMENT );
+	SIR_DEMAND_CHECK( sirWorldHLODReconcileDemands( input, output ) == SIRWorldHLODResult::SIR_WORLD_HLOD_INVALID_ARGUMENT );
 	input.pCurrent = szNext;
 	SIR_DEMAND_CHECK( nCount == 77 && szOperations[0].demand.nNodeIndex == 123 );
 
 	// Empty current batch cancels all pending requests, never the loaded resources.
 	input.pCurrent = nullptr;
 	input.nCurrentCount = 0;
-	SIR_DEMAND_CHECK( sirWorldHLODReconcileDemands( input, output ) == SIR_WORLD_HLOD_OK );
-	SIR_DEMAND_CHECK( nCount == 3 && szOperations[0].eAction == SIR_WORLD_HLOD_DEMAND_CANCEL );
+	SIR_DEMAND_CHECK( sirWorldHLODReconcileDemands( input, output ) == SIRWorldHLODResult::SIR_WORLD_HLOD_OK );
+	SIR_DEMAND_CHECK( nCount == 3 && szOperations[0].eAction == SIRWorldHLODDemandAction::SIR_WORLD_HLOD_DEMAND_CANCEL );
 
 	// Integrate with the actual HLOD selector's emitted missing-child demand.
 	sirWorldHLODNode_t szNodes[] = { { { 11, 3, 0 }, 7, 1, 2 }, { { 12, 3, 0 }, 7, 0, 0 }, { { 13, 3, 0 }, 7, 0, 0 } };
@@ -106,16 +106,16 @@ int main( void )
 	uint32_t nSelected = 0;
 	uint32_t nDemands = 0;
 	sirWorldHLODOutput_t cut = { szScratch, 3, szSelected, 3, &nSelected, szDemands, 3, &nDemands };
-	SIR_DEMAND_CHECK( sirWorldHLODPlan( cutInput, cut ) == SIR_WORLD_HLOD_OK );
+	SIR_DEMAND_CHECK( sirWorldHLODPlan( cutInput, cut ) == SIRWorldHLODResult::SIR_WORLD_HLOD_OK );
 	SIR_DEMAND_CHECK( nSelected == 1 && szSelected[0] == 0 && nDemands == 1 && szDemands[0].nNodeIndex == 2 );
 	input = { nullptr, 0, szDemands, nDemands };
-	SIR_DEMAND_CHECK( sirWorldHLODReconcileDemands( input, output ) == SIR_WORLD_HLOD_OK );
-	SIR_DEMAND_CHECK( nCount == 1 && szOperations[0].eAction == SIR_WORLD_HLOD_DEMAND_REQUEST );
+	SIR_DEMAND_CHECK( sirWorldHLODReconcileDemands( input, output ) == SIRWorldHLODResult::SIR_WORLD_HLOD_OK );
+	SIR_DEMAND_CHECK( nCount == 1 && szOperations[0].eAction == SIRWorldHLODDemandAction::SIR_WORLD_HLOD_DEMAND_REQUEST );
 	sirWorldHLODDemand_t priorMissing = szDemands[0];
 	szResidency[2].bReady = true;
-	SIR_DEMAND_CHECK( sirWorldHLODPlan( cutInput, cut ) == SIR_WORLD_HLOD_OK && nDemands == 0 );
+	SIR_DEMAND_CHECK( sirWorldHLODPlan( cutInput, cut ) == SIRWorldHLODResult::SIR_WORLD_HLOD_OK && nDemands == 0 );
 	input = { &priorMissing, 1, nullptr, 0 };
-	SIR_DEMAND_CHECK( sirWorldHLODReconcileDemands( input, output ) == SIR_WORLD_HLOD_OK );
-	SIR_DEMAND_CHECK( nCount == 1 && szOperations[0].eAction == SIR_WORLD_HLOD_DEMAND_CANCEL );
+	SIR_DEMAND_CHECK( sirWorldHLODReconcileDemands( input, output ) == SIRWorldHLODResult::SIR_WORLD_HLOD_OK );
+	SIR_DEMAND_CHECK( nCount == 1 && szOperations[0].eAction == SIRWorldHLODDemandAction::SIR_WORLD_HLOD_DEMAND_CANCEL );
 	return 0;
 }

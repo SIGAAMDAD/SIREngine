@@ -46,13 +46,13 @@ static bool sirWorldHLODSameDemand( const sirWorldHLODDemand_t& previous, const 
 	       previous.keyGeometry.m_nVariantId == current.keyGeometry.m_nVariantId;
 }
 
-sirWorldHLODResult_t sirWorldHLODReconcileDemands( const sirWorldHLODDemandDeltaInput_t& input,
+SIRWorldHLODResult sirWorldHLODReconcileDemands( const sirWorldHLODDemandDeltaInput_t& input,
                                                    const sirWorldHLODDemandDeltaOutput_t& output ) noexcept
 {
 	if ( output.pnOperationCount == nullptr || ( output.nCapacity != 0 && output.pOperations == nullptr ) ||
 	     !sirWorldHLODValidDemandBatch( input.pPrevious, input.nPreviousCount ) ||
 	     !sirWorldHLODValidDemandBatch( input.pCurrent, input.nCurrentCount ) ) {
-		return SIR_WORLD_HLOD_INVALID_ARGUMENT;
+		return SIRWorldHLODResult::SIR_WORLD_HLOD_INVALID_ARGUMENT;
 	}
 
 	// Pass zero validates the exact required capacity. Pass one is guaranteed
@@ -73,13 +73,13 @@ sirWorldHLODResult_t sirWorldHLODReconcileDemands( const sirWorldHLODDemandDelta
 
 			if ( bCancel && !bIdentical ) {
 				if ( iPass != 0 ) {
-					output.pOperations[nWritten++] = { input.pPrevious[iPrevious], SIR_WORLD_HLOD_DEMAND_CANCEL };
+					output.pOperations[nWritten++] = { input.pPrevious[iPrevious], SIRWorldHLODDemandAction::SIR_WORLD_HLOD_DEMAND_CANCEL };
 				}
 				++nRequired;
 			}
 			if ( bRequest && !bIdentical ) {
 				if ( iPass != 0 ) {
-					output.pOperations[nWritten++] = { input.pCurrent[iCurrent], SIR_WORLD_HLOD_DEMAND_REQUEST };
+					output.pOperations[nWritten++] = { input.pCurrent[iCurrent], SIRWorldHLODDemandAction::SIR_WORLD_HLOD_DEMAND_REQUEST };
 				}
 				++nRequired;
 			}
@@ -91,9 +91,9 @@ sirWorldHLODResult_t sirWorldHLODReconcileDemands( const sirWorldHLODDemandDelta
 			}
 		}
 		if ( iPass == 0 && nRequired > output.nCapacity ) {
-			return SIR_WORLD_HLOD_CAPACITY;
+			return SIRWorldHLODResult::SIR_WORLD_HLOD_CAPACITY;
 		}
 	}
 	*output.pnOperationCount = nWritten;
-	return SIR_WORLD_HLOD_OK;
+	return SIRWorldHLODResult::SIR_WORLD_HLOD_OK;
 }

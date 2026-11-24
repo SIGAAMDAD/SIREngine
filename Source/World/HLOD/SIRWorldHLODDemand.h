@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRWORLDHLODDEMAND_H__
-#define __SIRENGINE_SIRWORLDHLODDEMAND_H__
+#ifndef __SIR_WORLDHLODDEMAND_H__
+#define __SIR_WORLDHLODDEMAND_H__
 
 #include <Core/SIRPCH.h>
 
@@ -29,17 +29,17 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // Cancellation revokes an outstanding request; it never evicts a loaded
 // geometry resource. Loading, deduplication, and provider lifetimes belong
 // to the shared streaming coordinator, GRDG, and renderer.
-typedef enum sirWorldHLODDemandAction_e : uint8_t
+enum class SIRWorldHLODDemandAction : uint8_t
 {
 	SIR_WORLD_HLOD_DEMAND_CANCEL = 0,
 	SIR_WORLD_HLOD_DEMAND_REQUEST = 1
-} sirWorldHLODDemandAction_t;
+};
 
 typedef struct sirWorldHLODDemandOperation_s
 {
 	sirWorldHLODDemand_t demand;
-	sirWorldHLODDemandAction_t eAction;
-} sirWorldHLODDemandOperation_t;
+	SIRWorldHLODDemandAction eAction;
+}; sirWorldHLODDemandOperation_t;
 
 // Input arrays are the node-index-ascending unique demands returned by
 // consecutive sirWorldHLODPlan calls. Each batch has one world generation;
@@ -65,7 +65,7 @@ typedef struct sirWorldHLODDemandDeltaOutput_s
 // the output count changes. All input/output memory ranges must be disjoint.
 // On success, the owner may adopt the current batch as its next previous batch
 // only after the streaming coordinator accepts the complete operation list.
-sirWorldHLODResult_t sirWorldHLODReconcileDemands( const sirWorldHLODDemandDeltaInput_t& input,
+SIRWorldHLODResult sirWorldHLODReconcileDemands( const sirWorldHLODDemandDeltaInput_t& input,
                                                    const sirWorldHLODDemandDeltaOutput_t& output ) noexcept;
 
-#endif // __SIRENGINE_SIRWORLDHLODDEMAND_H__
+#endif // __SIR_WORLDHLODDEMAND_H__

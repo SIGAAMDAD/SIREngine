@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRVFSPATH_H__
-#define __SIRENGINE_SIRVFSPATH_H__
+#ifndef __SIR_VFSPATH_H__
+#define __SIR_VFSPATH_H__
 
 #include <Core/SIRPCH.h>
 
@@ -29,8 +29,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 constexpr uint32_t SIR_VFS_MAX_PATH_BYTES = 1024;
 constexpr uint32_t SIR_VFS_MAX_NAMESPACE_BYTES = 32;
 
-typedef enum sirVFSPathResult_e : uint8_t
-{
+enum class SIRVFSPathResult : uint8_t {
 	SIR_VFS_PATH_OK = 0,
 	SIR_VFS_PATH_INVALID_ARGUMENT,
 	SIR_VFS_PATH_INVALID_NAMESPACE,
@@ -38,7 +37,7 @@ typedef enum sirVFSPathResult_e : uint8_t
 	SIR_VFS_PATH_FORBIDDEN,
 	SIR_VFS_PATH_TOO_LONG,
 	SIR_VFS_PATH_INVALID_SEGMENT
-} sirVFSPathResult_t;
+};
 
 typedef struct sirVFSPath_s
 {
@@ -55,10 +54,10 @@ public:
 	SIRVFSPath( void ) = delete;
 	~SIRVFSPath( void ) = delete;
 
-	static sirVFSPathResult_t normalize( const char *pszInput, uint32_t nInputBytes, sirVFSPath_t *pOutput ) noexcept;
+	static SIRVFSPathResult normalize( const char *pszInput, uint32_t nInputBytes, sirVFSPath_t *pOutput ) noexcept;
 
 protected:
 private:
 };
 
-#endif // __SIRENGINE_SIRVFSPATH_H__
+#endif // __SIR_VFSPATH_H__

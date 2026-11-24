@@ -20,14 +20,14 @@ of merchantability, fitness for a particular purpose and noninfringement.
 static void sirLangWrite32( uint8_t *pDestination, uint32_t nValue ) noexcept
 {
 	for ( uint32_t i = 0; i < 4; ++i ) {
-		pDestination[i] = ( uint8_t )( nValue >> ( i * 8 ) );
+		pDestination[i] = static_cast<uint8_t>(  nValue >> ( i * 8 )  );
 	}
 }
 
 static void sirLangWrite64( uint8_t *pDestination, uint64_t nValue ) noexcept
 {
 	for ( uint32_t i = 0; i < 8; ++i ) {
-		pDestination[i] = ( uint8_t )( nValue >> ( i * 8 ) );
+		pDestination[i] = static_cast<uint8_t>(  nValue >> ( i * 8 )  );
 	}
 }
 
@@ -35,7 +35,7 @@ static uint32_t sirLangRead32( const uint8_t *pSource ) noexcept
 {
 	uint32_t nValue = 0;
 	for ( uint32_t i = 0; i < 4; ++i ) {
-		nValue |= ( uint32_t )pSource[i] << ( i * 8 );
+		nValue |= static_cast<uint32_t>(pSource[i]) << ( i * 8 );
 	}
 	return nValue;
 }
@@ -44,41 +44,42 @@ static uint64_t sirLangRead64( const uint8_t *pSource ) noexcept
 {
 	uint64_t nValue = 0;
 	for ( uint32_t i = 0; i < 8; ++i ) {
-		nValue |= ( uint64_t )pSource[i] << ( i * 8 );
+		nValue |= static_cast<uint64_t>(pSource[i]) << ( i * 8 );
 	}
 	return nValue;
 }
 
 static uint64_t sirLangBytecodeSize( const sirLangCIRProgram_t *pProgram ) noexcept
 {
-	return SIR_LANG_BYTECODE_HEADER_BYTES + ( uint64_t )pProgram->nFunctionCount * SIR_LANG_BYTECODE_FUNCTION_BYTES +
-	       ( uint64_t )pProgram->nInstructionCount * SIR_LANG_BYTECODE_INSTRUCTION_BYTES + ( uint64_t )pProgram->nParameterTypeCount +
-	       ( uint64_t )pProgram->nCallArgumentCount * 4 + ( uint64_t )pProgram->nCapabilityCount * SIR_LANG_BYTECODE_CAPABILITY_BYTES;
+	return SIR_LANG_BYTECODE_HEADER_BYTES + static_cast<uint64_t>(pProgram->nFunctionCount) * SIR_LANG_BYTECODE_FUNCTION_BYTES +
+	       static_cast<uint64_t>(pProgram->nInstructionCount) * SIR_LANG_BYTECODE_INSTRUCTION_BYTES + static_cast<uint64_t>(pProgram->nParameterTypeCount) +
+	       static_cast<uint64_t>(pProgram->nCallArgumentCount) * 4 + static_cast<uint64_t>(pProgram->nCapabilityCount) * SIR_LANG_BYTECODE_CAPABILITY_BYTES;
 }
 
 static void sirLangComputeDigest( const uint8_t *pBytes, uint32_t nBytes, uint8_t szDigest[32] ) noexcept
 {
-	uint8_t szPair[64] = {};
+	uint8_t szPair[64];
+	memset( szPair, 0, sizeof( szPair ) );
 	SIRScriptSHA256::digest( pBytes, 64, szPair );
 	SIRScriptSHA256::digest( pBytes + SIR_LANG_BYTECODE_HEADER_BYTES, nBytes - SIR_LANG_BYTECODE_HEADER_BYTES, szPair + 32 );
 	SIRScriptSHA256::digest( szPair, sizeof( szPair ), szDigest );
 }
 
-sirLangVMError_t SIRLangEncodeGraphVM( const sirLangCIRProgram_t *pProgram, uint8_t *pBytes, uint32_t nCapacity, uint32_t *pUsed ) noexcept
+SIRLangVMError SIRLangEncodeGraphVM( const sirLangCIRProgram_t *pProgram, uint8_t *pBytes, uint32_t nCapacity, uint32_t *pUsed ) noexcept
 {
 	if ( pUsed == nullptr || pBytes == nullptr ) {
-		return SIR_LANG_VM_INVALID_ARGUMENT;
+		return SIRLangVMError::SIR_LANG_VM_INVALID_ARGUMENT;
 	}
 	*pUsed = 0;
-	const sirLangVMError_t eVerified = SIRLangVerifyCIR( pProgram );
-	if ( eVerified != SIR_LANG_VM_OK ) {
+	const SIRLangVMError eVerified = SIRLangVerifyCIR( pProgram );
+	if ( eVerified != SIRLangVMError::SIR_LANG_VM_OK ) {
 		return eVerified;
 	}
 	const uint64_t nRequired = sirLangBytecodeSize( pProgram );
 	if ( nRequired > UINT32_MAX || nRequired > nCapacity ) {
-		return SIR_LANG_VM_CAPACITY;
+		return SIRLangVMError::SIR_LANG_VM_CAPACITY;
 	}
-	const uint32_t nBytes = ( uint32_t )nRequired;
+	const uint32_t nBytes = static_cast<uint32_t>(nRequired);
 	memset( pBytes, 0, nBytes );
 	const uint8_t szMagic[8] = { 'S', 'I', 'R', 'L', 'B', 'C', '0', '1' };
 	memcpy( pBytes, szMagic, sizeof( szMagic ) );
@@ -102,15 +103,15 @@ sirLangVMError_t SIRLangEncodeGraphVM( const sirLangCIRProgram_t *pProgram, uint
 		sirLangWrite32( pWrite + 16, function.nRegisterCount );
 		sirLangWrite32( pWrite + 20, function.nParameterCount );
 		sirLangWrite32( pWrite + 24, function.iFirstParameterType );
-		pWrite[28] = ( uint8_t )function.eReturnType;
+		pWrite[28] = static_cast<uint8_t>(function.eReturnType);
 		pWrite += SIR_LANG_BYTECODE_FUNCTION_BYTES;
 	}
 	for ( uint32_t i = 0; i < pProgram->nInstructionCount; ++i ) {
 		const sirLangCIRInstruction_t& ins = pProgram->pInstructions[i];
-		pWrite[0] = ( uint8_t )ins.eOpcode;
-		pWrite[1] = ( uint8_t )ins.eType;
-		pWrite[2] = ( uint8_t )ins.nFlags;
-		pWrite[3] = ( uint8_t )( ins.nFlags >> 8 );
+		pWrite[0] = static_cast<uint8_t>(ins.eOpcode);
+		pWrite[1] = static_cast<uint8_t>(ins.eType);
+		pWrite[2] = static_cast<uint8_t>(ins.nFlags);
+		pWrite[3] = static_cast<uint8_t>( ins.nFlags >> 8 );
 		sirLangWrite32( pWrite + 4, ins.iDestination );
 		sirLangWrite32( pWrite + 8, ins.iFirstSource );
 		sirLangWrite32( pWrite + 12, ins.iSecondSource );
@@ -120,7 +121,7 @@ sirLangVMError_t SIRLangEncodeGraphVM( const sirLangCIRProgram_t *pProgram, uint
 		pWrite += SIR_LANG_BYTECODE_INSTRUCTION_BYTES;
 	}
 	for ( uint32_t i = 0; i < pProgram->nParameterTypeCount; ++i ) {
-		*pWrite++ = ( uint8_t )pProgram->pParameterTypes[i];
+		*pWrite++ = static_cast<uint8_t>(pProgram->pParameterTypes[i]);
 	}
 	for ( uint32_t i = 0; i < pProgram->nCallArgumentCount; ++i ) {
 		sirLangWrite32( pWrite, pProgram->pCallArguments[i] );
@@ -135,27 +136,27 @@ sirLangVMError_t SIRLangEncodeGraphVM( const sirLangCIRProgram_t *pProgram, uint
 		sirLangWrite32( pWrite + 24, capability.nEffects );
 		sirLangWrite32( pWrite + 28, capability.iFirstParameterType );
 		sirLangWrite32( pWrite + 32, capability.nParameterCount );
-		pWrite[36] = ( uint8_t )capability.eReturnType;
+		pWrite[36] = static_cast<uint8_t>(capability.eReturnType);
 		pWrite += SIR_LANG_BYTECODE_CAPABILITY_BYTES;
 	}
-	if ( ( uint32_t )( pWrite - pBytes ) != nBytes ) {
-		return SIR_LANG_VM_INVALID_FORMAT;
+	if ( static_cast<uint32_t>( pWrite - pBytes ) != nBytes ) {
+		return SIRLangVMError::SIR_LANG_VM_INVALID_FORMAT;
 	}
 	sirLangComputeDigest( pBytes, nBytes, pBytes + 64 );
 	*pUsed = nBytes;
-	return SIR_LANG_VM_OK;
+	return SIRLangVMError::SIR_LANG_VM_OK;
 }
 
-sirLangVMError_t SIRLangDecodeGraphVM( const uint8_t *pBytes, uint32_t nBytes, sirLangCIRStorage_t *pStorage ) noexcept
+SIRLangVMError SIRLangDecodeGraphVM( const uint8_t *pBytes, uint32_t nBytes, sirLangCIRStorage_t *pStorage ) noexcept
 {
 	if ( pStorage == nullptr || pBytes == nullptr ) {
-		return SIR_LANG_VM_INVALID_ARGUMENT;
+		return SIRLangVMError::SIR_LANG_VM_INVALID_ARGUMENT;
 	}
 	pStorage->program = {};
 	if ( nBytes < SIR_LANG_BYTECODE_HEADER_BYTES || memcmp( pBytes, "SIRLBC01", 8 ) != 0 ||
 	     sirLangRead32( pBytes + 8 ) != SIR_LANG_VM_VERSION || sirLangRead32( pBytes + 12 ) != SIR_LANG_BYTECODE_HEADER_BYTES ||
 	     sirLangRead32( pBytes + 60 ) != nBytes ) {
-		return SIR_LANG_VM_INVALID_FORMAT;
+		return SIRLangVMError::SIR_LANG_VM_INVALID_FORMAT;
 	}
 	const uint32_t nFunctions = sirLangRead32( pBytes + 40 );
 	const uint32_t nInstructions = sirLangRead32( pBytes + 44 );
@@ -167,22 +168,24 @@ sirLangVMError_t SIRLangDecodeGraphVM( const uint8_t *pBytes, uint32_t nBytes, s
 	     nCapabilities > pStorage->nCapabilityCount || pStorage->pFunctions == nullptr || pStorage->pInstructions == nullptr ||
 	     pStorage->pParameterTypes == nullptr || ( nCallArguments && pStorage->pCallArguments == nullptr ) ||
 	     ( nCapabilities && pStorage->pCapabilities == nullptr ) ) {
-		return SIR_LANG_VM_CAPACITY;
+		return SIRLangVMError::SIR_LANG_VM_CAPACITY;
 	}
-	const uint64_t nExpectedSize = SIR_LANG_BYTECODE_HEADER_BYTES + ( uint64_t )nFunctions * SIR_LANG_BYTECODE_FUNCTION_BYTES +
-	                               ( uint64_t )nInstructions * SIR_LANG_BYTECODE_INSTRUCTION_BYTES + nTypes +
-	                               ( uint64_t )nCallArguments * 4 + ( uint64_t )nCapabilities * SIR_LANG_BYTECODE_CAPABILITY_BYTES;
+	const uint64_t nExpectedSize = SIR_LANG_BYTECODE_HEADER_BYTES + static_cast<uint64_t>(nFunctions) * SIR_LANG_BYTECODE_FUNCTION_BYTES +
+	                               static_cast<uint64_t>(nInstructions) * SIR_LANG_BYTECODE_INSTRUCTION_BYTES + nTypes +
+	                               static_cast<uint64_t>(nCallArguments) * 4 + static_cast<uint64_t>(nCapabilities) * SIR_LANG_BYTECODE_CAPABILITY_BYTES;
 	if ( nExpectedSize != nBytes ) {
-		return SIR_LANG_VM_INVALID_FORMAT;
+		return SIRLangVMError::SIR_LANG_VM_INVALID_FORMAT;
 	}
-	uint8_t szExpectedDigest[32] = {};
-	uint8_t szDigest[32] = {};
+	uint8_t szExpectedDigest[32];
+	memset( szExpectedDigest, 0, sizeof( szExpectedDigest ) );
+	uint8_t szDigest[32];
+	memset( szDigest, 0, sizeof( szDigest ) );
 	memcpy( szExpectedDigest, pBytes + 64, sizeof( szExpectedDigest ) );
 	// The digest binds the fixed header prefix and payload without copying
 	// untrusted package bytes to an unbounded scratch allocation.
 	sirLangComputeDigest( pBytes, nBytes, szDigest );
 	if ( memcmp( szExpectedDigest, szDigest, 32 ) != 0 ) {
-		return SIR_LANG_VM_INVALID_FORMAT;
+		return SIRLangVMError::SIR_LANG_VM_INVALID_FORMAT;
 	}
 	const uint8_t *pRead = pBytes + SIR_LANG_BYTECODE_HEADER_BYTES;
 	for ( uint32_t i = 0; i < nFunctions; ++i ) {
@@ -194,18 +197,18 @@ sirLangVMError_t SIRLangDecodeGraphVM( const uint8_t *pBytes, uint32_t nBytes, s
 		function.nRegisterCount = sirLangRead32( pRead + 16 );
 		function.nParameterCount = sirLangRead32( pRead + 20 );
 		function.iFirstParameterType = sirLangRead32( pRead + 24 );
-		function.eReturnType = ( sirLangValueKind_t )pRead[28];
+		function.eReturnType = static_cast<SIRLangValueKind>(pRead[28]);
 		if ( pRead[29] || pRead[30] || pRead[31] ) {
-			return SIR_LANG_VM_INVALID_FORMAT;
+			return SIRLangVMError::SIR_LANG_VM_INVALID_FORMAT;
 		}
 		pRead += SIR_LANG_BYTECODE_FUNCTION_BYTES;
 	}
 	for ( uint32_t i = 0; i < nInstructions; ++i ) {
 		sirLangCIRInstruction_t& ins = pStorage->pInstructions[i];
 		ins = {};
-		ins.eOpcode = ( sirLangOpcode_t )pRead[0];
-		ins.eType = ( sirLangValueKind_t )pRead[1];
-		ins.nFlags = ( uint16_t )( pRead[2] | ( uint16_t )pRead[3] << 8 );
+		ins.eOpcode = static_cast<SIRLangOpcode>(pRead[0]);
+		ins.eType = static_cast<SIRLangValueKind>(pRead[1]);
+		ins.nFlags = ( uint16_t )( pRead[2] | static_cast<uint16_t>(pRead[3]) << 8 );
 		ins.iDestination = sirLangRead32( pRead + 4 );
 		ins.iFirstSource = sirLangRead32( pRead + 8 );
 		ins.iSecondSource = sirLangRead32( pRead + 12 );
@@ -215,7 +218,7 @@ sirLangVMError_t SIRLangDecodeGraphVM( const uint8_t *pBytes, uint32_t nBytes, s
 		pRead += SIR_LANG_BYTECODE_INSTRUCTION_BYTES;
 	}
 	for ( uint32_t i = 0; i < nTypes; ++i ) {
-		pStorage->pParameterTypes[i] = ( sirLangValueKind_t )*pRead++;
+		pStorage->pParameterTypes[i] = static_cast<SIRLangValueKind>( *pRead++ );
 	}
 	for ( uint32_t i = 0; i < nCallArguments; ++i ) {
 		pStorage->pCallArguments[i] = sirLangRead32( pRead );
@@ -228,13 +231,13 @@ sirLangVMError_t SIRLangDecodeGraphVM( const uint8_t *pBytes, uint32_t nBytes, s
 		if ( capability.nFunctionId != sirLangRead64( pRead ) || capability.nSignatureId != sirLangRead64( pRead + 8 ) ||
 		     capability.nBindingRevision != sirLangRead32( pRead + 16 ) || capability.nOwnerLane != sirLangRead32( pRead + 20 ) ||
 		     capability.nEffects != sirLangRead32( pRead + 24 ) || capability.iFirstParameterType != sirLangRead32( pRead + 28 ) ||
-		     capability.nParameterCount != sirLangRead32( pRead + 32 ) || capability.eReturnType != ( sirLangValueKind_t )pRead[36] ||
+		     capability.nParameterCount != sirLangRead32( pRead + 32 ) || capability.eReturnType != static_cast<SIRLangValueKind>(pRead[36]) ||
 		     pRead[37] || pRead[38] || pRead[39] ) {
-			return SIR_LANG_VM_INVALID_CAPABILITY;
+			return SIRLangVMError::SIR_LANG_VM_INVALID_CAPABILITY;
 		}
 		pRead += SIR_LANG_BYTECODE_CAPABILITY_BYTES;
 	}
-	sirLangCIRProgram_t candidate = {};
+	sirLangCIRProgram_t candidate {};
 	candidate.pFunctions = pStorage->pFunctions;
 	candidate.nFunctionCount = nFunctions;
 	candidate.pInstructions = pStorage->pInstructions;
@@ -249,10 +252,10 @@ sirLangVMError_t SIRLangDecodeGraphVM( const uint8_t *pBytes, uint32_t nBytes, s
 	candidate.nLayoutDigest = sirLangRead64( pBytes + 24 );
 	candidate.nBindingDigest = sirLangRead64( pBytes + 32 );
 	candidate.nRevision = sirLangRead32( pBytes + 8 );
-	const sirLangVMError_t eVerified = SIRLangVerifyCIR( &candidate );
-	if ( eVerified != SIR_LANG_VM_OK ) {
+	const SIRLangVMError eVerified = SIRLangVerifyCIR( &candidate );
+	if ( eVerified != SIRLangVMError::SIR_LANG_VM_OK ) {
 		return eVerified;
 	}
 	pStorage->program = candidate;
-	return SIR_LANG_VM_OK;
+	return SIRLangVMError::SIR_LANG_VM_OK;
 }

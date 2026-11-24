@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRGLFUNCTIONLOADER_H__
-#define __SIRENGINE_SIRGLFUNCTIONLOADER_H__
+#ifndef __SIR_GLFUNCTIONLOADER_H__
+#define __SIR_GLFUNCTIONLOADER_H__
 
 #include <Core/SIRPCH.h>
 
@@ -29,4 +29,4 @@ typedef void *( *sirGLProcedureLookup_t )( void *pContext, const char *pszName )
 bool sirGLIsUsableProcedure( const void *pAddress ) noexcept;
 bool sirGLValidateRequired46Functions( sirGLProcedureLookup_t pLookup, void *pContext ) noexcept;
 
-#endif // __SIRENGINE_SIRGLFUNCTIONLOADER_H__
+#endif // __SIR_GLFUNCTIONLOADER_H__

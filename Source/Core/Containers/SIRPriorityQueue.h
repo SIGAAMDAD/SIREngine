@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRPRIORITYQUEUE_H__
-#define __SIRENGINE_SIRPRIORITYQUEUE_H__
+#ifndef __SIR_PRIORITYQUEUE_H__
+#define __SIR_PRIORITYQUEUE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -112,25 +112,25 @@ public:
 	{
 		return m_values.getFootprint();
 	}
-	sirContainerResult_t tryReserve( uint32_t nCapacity )
+	SIRContainerResult tryReserve( uint32_t nCapacity )
 	{
 		return m_values.tryReserve( nCapacity );
 	}
 
 	template <typename... Args>
-	sirContainerResult_t tryEmplace( Args&&...args )
+	SIRContainerResult tryEmplace( Args&&...args )
 	{
-		sirContainerResult_t eResult = m_values.tryEmplaceBack( std::forward<Args>( args )... );
-		if ( eResult == SIR_CONTAINER_OK ) {
+		SIRContainerResult eResult = m_values.tryEmplaceBack( std::forward<Args>( args )... );
+		if ( eResult == SIRContainerResult::SIR_CONTAINER_OK ) {
 			siftUp( m_values.getSize() - 1 );
 		}
 		return eResult;
 	}
 
-	sirContainerResult_t tryPush( const T& value )
+	SIRContainerResult tryPush( const T& value )
 	{
-		sirContainerResult_t eResult = m_values.tryPushBack( value );
-		if ( eResult == SIR_CONTAINER_OK ) {
+		SIRContainerResult eResult = m_values.tryPushBack( value );
+		if ( eResult == SIRContainerResult::SIR_CONTAINER_OK ) {
 			siftUp( m_values.getSize() - 1 );
 		}
 		return eResult;
@@ -138,21 +138,21 @@ public:
 
 	// Construct a replacement heap in linear time after reserving its storage.
 	// The original heap remains untouched if allocation or copying fails.
-	sirContainerResult_t tryBuild( const T *pItems, uint32_t nCount )
+	SIRContainerResult tryBuild( const T *pItems, uint32_t nCount )
 	{
 		static_assert( std::is_copy_constructible<T>::value, "Bulk build requires copy constructible values" );
 		if ( pItems == nullptr && nCount != 0 ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 
 		SIRPriorityQueue<T, Compare> staged( m_values.getAllocator(), m_compare );
-		sirContainerResult_t eResult = staged.tryReserve( nCount );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		SIRContainerResult eResult = staged.tryReserve( nCount );
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		for ( uint32_t iItem = 0; iItem < nCount; ++iItem ) {
 			eResult = staged.m_values.tryEmplaceBack( pItems[iItem] );
-			if ( eResult != SIR_CONTAINER_OK ) {
+			if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 				return eResult;
 			}
 		}
@@ -161,22 +161,22 @@ public:
 		}
 
 		m_values = std::move( staged.m_values );
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
-	sirContainerResult_t tryPop( void ) noexcept
+	SIRContainerResult tryPop( void ) noexcept
 	{
 		if ( m_values.isEmpty() ) {
-			return SIR_CONTAINER_EMPTY;
+			return SIRContainerResult::SIR_CONTAINER_EMPTY;
 		}
-		sirContainerResult_t eResult = m_values.tryEraseSwap( 0 );
-		if ( eResult == SIR_CONTAINER_OK && !m_values.isEmpty() ) {
+		SIRContainerResult eResult = m_values.tryEraseSwap( 0 );
+		if ( eResult == SIRContainerResult::SIR_CONTAINER_OK && !m_values.isEmpty() ) {
 			siftDown( 0 );
 		}
 		return eResult;
 	}
 
-	sirContainerResult_t tryShrinkToFit( void )
+	SIRContainerResult tryShrinkToFit( void )
 	{
 		return m_values.tryShrinkToFit();
 	}
@@ -186,4 +186,4 @@ public:
 	}
 };
 
-#endif // __SIRENGINE_SIRPRIORITYQUEUE_H__
+#endif // __SIR_PRIORITYQUEUE_H__

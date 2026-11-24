@@ -12,8 +12,8 @@ express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIREDITORWORKFLOW_H__
-#define __SIRENGINE_SIREDITORWORKFLOW_H__
+#ifndef __SIR_EDITORWORKFLOW_H__
+#define __SIR_EDITORWORKFLOW_H__
 #include <Core/SIRPCH.h>
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -32,16 +32,16 @@ public:
 	uint64_t getSelectedId( void ) const noexcept;
 	uint64_t getLastKnownRevision( void ) const noexcept;
 
-	sirEditorResult_t initialize( SIREditorSceneDocument *pDocument, SIREditorHierarchyModel *pHierarchy ) noexcept;
+	SIREditorResult initialize( SIREditorSceneDocument *pDocument, SIREditorHierarchyModel *pHierarchy ) noexcept;
 	void shutdown( void ) noexcept;
-	sirEditorResult_t select( uint64_t nNodeId ) noexcept;
-	sirEditorResult_t createNode( const sirEditorNode_t& node ) noexcept;
-	sirEditorResult_t removeSelected( void ) noexcept;
-	sirEditorResult_t setSelectedProperty( uint32_t nPropertyId, const sirPropertyValue_t& value ) noexcept;
-	sirEditorResult_t removeSelectedProperty( uint32_t nPropertyId ) noexcept;
-	sirEditorResult_t undo( void ) noexcept;
-	sirEditorResult_t redo( void ) noexcept;
-	sirEditorResult_t synchronize( void ) noexcept;
+	SIREditorResult select( uint64_t nNodeId ) noexcept;
+	SIREditorResult createNode( const sirEditorNode_t& node ) noexcept;
+	SIREditorResult removeSelected( void ) noexcept;
+	SIREditorResult setSelectedProperty( uint32_t nPropertyId, const sirPropertyValue_t& value ) noexcept;
+	SIREditorResult removeSelectedProperty( uint32_t nPropertyId ) noexcept;
+	SIREditorResult undo( void ) noexcept;
+	SIREditorResult redo( void ) noexcept;
+	SIREditorResult synchronize( void ) noexcept;
 
 protected:
 private:
@@ -50,6 +50,6 @@ private:
 	uint64_t m_nSelectedId;
 	uint64_t m_nRevision;
 
-	sirEditorResult_t commit( void ) noexcept;
+	SIREditorResult commit( void ) noexcept;
 };
-#endif // __SIRENGINE_SIREDITORWORKFLOW_H__
+#endif // __SIR_EDITORWORKFLOW_H__

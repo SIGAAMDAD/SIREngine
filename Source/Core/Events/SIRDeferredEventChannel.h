@@ -14,8 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRDEFERREDEVENTCHANNEL_H__
-#define __SIRENGINE_SIRDEFERREDEVENTCHANNEL_H__
+#ifndef __SIR_DEFERREDEVENTCHANNEL_H__
+#define __SIR_DEFERREDEVENTCHANNEL_H__
 
 #include <Core/SIRPCH.h>
 
@@ -69,7 +69,7 @@ public:
 	uint32_t pump( void ) noexcept
 	{
 		return m_Stream.drain( this, []( void *pContext, const TPayload& payload ) noexcept {
-			( ( SIRDeferredEventChannel * )pContext )->m_Event.publish( payload );
+			static_cast<SIRDeferredEventChannel *>(pContext)->m_Event.publish( payload );
 		} );
 	}
 	uint32_t pendingCount( void ) const noexcept
@@ -90,4 +90,4 @@ private:
 	SIREventStream<TPayload, QueueCapacity> m_Stream;
 };
 
-#endif // __SIRENGINE_SIRDEFERREDEVENTCHANNEL_H__
+#endif // __SIR_DEFERREDEVENTCHANNEL_H__

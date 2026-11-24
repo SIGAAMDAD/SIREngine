@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSCRIPTOPTIMIZERINPUTSTORE_H__
-#define __SIRENGINE_SIRSCRIPTOPTIMIZERINPUTSTORE_H__
+#ifndef __SIR_SCRIPTOPTIMIZERINPUTSTORE_H__
+#define __SIR_SCRIPTOPTIMIZERINPUTSTORE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -46,12 +46,12 @@ public:
 	SIRScriptOptimizerInputStore( const SIRScriptOptimizerInputStore& ) = delete;
 	SIRScriptOptimizerInputStore& operator=( const SIRScriptOptimizerInputStore& ) = delete;
 
-	sirScriptResult_t configure( const char *pszRoot, uint64_t nMaximumInputBytes, uint64_t nMaximumRecipeBytes ) noexcept;
-	sirScriptResult_t stage( const sirScriptOptimizationRequest_t& request, const void *pRecipe, uint64_t nRecipeBytes,
+	SIRScriptResult configure( const char *pszRoot, uint64_t nMaximumInputBytes, uint64_t nMaximumRecipeBytes ) noexcept;
+	SIRScriptResult stage( const sirScriptOptimizationRequest_t& request, const void *pRecipe, uint64_t nRecipeBytes,
 	                         const void *pInput ) noexcept;
-	sirScriptResult_t inspect( const sirScriptOptimizationRequest_t& request, uint64_t *pRecipeBytes ) const noexcept;
-	sirScriptResult_t fetch( const sirScriptOptimizationRequest_t& request, sirScriptOptimizerInputBuffers_t *pBuffers ) const noexcept;
-	sirScriptResult_t erase( sirScriptCacheKey_t key ) noexcept;
+	SIRScriptResult inspect( const sirScriptOptimizationRequest_t& request, uint64_t *pRecipeBytes ) const noexcept;
+	SIRScriptResult fetch( const sirScriptOptimizationRequest_t& request, sirScriptOptimizerInputBuffers_t *pBuffers ) const noexcept;
+	SIRScriptResult erase( sirScriptCacheKey_t key ) noexcept;
 
 protected:
 	// The caller provisions and owns the input directory.
@@ -62,7 +62,7 @@ private:
 
 	bool isOwnerThread( void ) const noexcept;
 	bool formatPath( const sirScriptCacheKey_t& key, char szPath[MAX_PATH_BYTES] ) const noexcept;
-	sirScriptResult_t readHeader( const sirScriptOptimizationRequest_t& request, uint8_t szHeader[HEADER_BYTES],
+	SIRScriptResult readHeader( const sirScriptOptimizationRequest_t& request, uint8_t szHeader[HEADER_BYTES],
 	                              uint64_t *pRecipeBytes ) const noexcept;
 	static void encodeHeader( const sirScriptOptimizationRequest_t& request, uint64_t nRecipeBytes, const uint8_t szInputDigest[32],
 	                          uint8_t szHeader[HEADER_BYTES] ) noexcept;
@@ -75,4 +75,4 @@ private:
 	const sirThreadId_t m_OwnerThread;
 };
 
-#endif // __SIRENGINE_SIRSCRIPTOPTIMIZERINPUTSTORE_H__
+#endif // __SIR_SCRIPTOPTIMIZERINPUTSTORE_H__

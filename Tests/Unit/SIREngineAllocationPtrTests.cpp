@@ -15,11 +15,11 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include "SIRAllocatorTestCommon.h"
 
-#include <Core/Memory/SIRAllocationHandle.h>
-#include <Core/Memory/SIRArenaPtr.h>
-#include <Core/Memory/SIRFramePtr.h>
-#include <Core/Memory/SIRPoolPtr.h>
-#include <Core/Memory/SIRSelfRelativePtr.h>
+#include <Core/Memory/Allocators/SIRAllocationHandle.h>
+#include <Core/Memory/Pointers/SIRArenaPtr.h>
+#include <Core/Memory/Pointers/SIRFramePtr.h>
+#include <Core/Memory/Pointers/SIRPoolPtr.h>
+#include <Core/Memory/Pointers/SIRSelfRelativePtr.h>
 #include <Core/Memory/Allocators/SIRPoolAllocator.h>
 #include <Core/Memory/Allocators/SIRFrameAllocator.h>
 #include <Core/Memory/Allocators/SIRLinearAllocator.h>

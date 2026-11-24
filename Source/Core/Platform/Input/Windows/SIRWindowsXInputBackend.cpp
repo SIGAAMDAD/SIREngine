@@ -25,29 +25,29 @@ typedef struct sirXInputButtonMapping_s
 	WORD nNative;
 	uint16_t nCode;
 } sirXInputButtonMapping_t;
-static constexpr sirXInputButtonMapping_t s_ButtonMap[] = { { XINPUT_GAMEPAD_A, SIR_INPUT_PAD_SOUTH },
-                                                            { XINPUT_GAMEPAD_B, SIR_INPUT_PAD_EAST },
-                                                            { XINPUT_GAMEPAD_X, SIR_INPUT_PAD_WEST },
-                                                            { XINPUT_GAMEPAD_Y, SIR_INPUT_PAD_NORTH },
-                                                            { XINPUT_GAMEPAD_LEFT_SHOULDER, SIR_INPUT_PAD_LB },
-                                                            { XINPUT_GAMEPAD_RIGHT_SHOULDER, SIR_INPUT_PAD_RB },
-                                                            { XINPUT_GAMEPAD_BACK, SIR_INPUT_PAD_BACK },
-                                                            { XINPUT_GAMEPAD_START, SIR_INPUT_PAD_START },
-                                                            { XINPUT_GAMEPAD_LEFT_THUMB, SIR_INPUT_PAD_L3 },
-                                                            { XINPUT_GAMEPAD_RIGHT_THUMB, SIR_INPUT_PAD_R3 },
-                                                            { XINPUT_GAMEPAD_DPAD_UP, SIR_INPUT_PAD_DPAD_UP },
-                                                            { XINPUT_GAMEPAD_DPAD_DOWN, SIR_INPUT_PAD_DPAD_DOWN },
-                                                            { XINPUT_GAMEPAD_DPAD_LEFT, SIR_INPUT_PAD_DPAD_LEFT },
-                                                            { XINPUT_GAMEPAD_DPAD_RIGHT, SIR_INPUT_PAD_DPAD_RIGHT } };
+static constexpr sirXInputButtonMapping_t s_ButtonMap[] = { { XINPUT_GAMEPAD_A, SIRInputControllerControl::SIR_INPUT_PAD_SOUTH },
+                                                            { XINPUT_GAMEPAD_B, SIRInputControllerControl::SIR_INPUT_PAD_EAST },
+                                                            { XINPUT_GAMEPAD_X, SIRInputControllerControl::SIR_INPUT_PAD_WEST },
+                                                            { XINPUT_GAMEPAD_Y, SIRInputControllerControl::SIR_INPUT_PAD_NORTH },
+                                                            { XINPUT_GAMEPAD_LEFT_SHOULDER, SIRInputControllerControl::SIR_INPUT_PAD_LB },
+                                                            { XINPUT_GAMEPAD_RIGHT_SHOULDER, SIRInputControllerControl::SIR_INPUT_PAD_RB },
+                                                            { XINPUT_GAMEPAD_BACK, SIRInputControllerControl::SIR_INPUT_PAD_BACK },
+                                                            { XINPUT_GAMEPAD_START, SIRInputControllerControl::SIR_INPUT_PAD_START },
+                                                            { XINPUT_GAMEPAD_LEFT_THUMB, SIRInputControllerControl::SIR_INPUT_PAD_L3 },
+                                                            { XINPUT_GAMEPAD_RIGHT_THUMB, SIRInputControllerControl::SIR_INPUT_PAD_R3 },
+                                                            { XINPUT_GAMEPAD_DPAD_UP, SIRInputControllerControl::SIR_INPUT_PAD_DPAD_UP },
+                                                            { XINPUT_GAMEPAD_DPAD_DOWN, SIRInputControllerControl::SIR_INPUT_PAD_DPAD_DOWN },
+                                                            { XINPUT_GAMEPAD_DPAD_LEFT, SIRInputControllerControl::SIR_INPUT_PAD_DPAD_LEFT },
+                                                            { XINPUT_GAMEPAD_DPAD_RIGHT, SIRInputControllerControl::SIR_INPUT_PAD_DPAD_RIGHT } };
 
 SIRWindowsXInputBackend::SIRWindowsXInputBackend( void ) noexcept
     : m_pLibrary( nullptr ), m_pGetState( nullptr ), m_pSetState( nullptr ), m_Slots{}
 {
 }
 
-sirInputBackendId_t SIRWindowsXInputBackend::id( void ) const noexcept
+SIRInputBackendId SIRWindowsXInputBackend::id( void ) const noexcept
 {
-	return SIR_INPUT_WIN_XINPUT;
+	return SIRInputBackendId::SIR_INPUT_WIN_XINPUT;
 }
 
 bool SIRWindowsXInputBackend::initialize( void ) noexcept
@@ -65,8 +65,8 @@ bool SIRWindowsXInputBackend::initialize( void ) noexcept
 		FARPROC pSet = GetProcAddress( hDLL, "XInputSetState" );
 		if ( pGet != nullptr && pSet != nullptr ) {
 			m_pLibrary = hDLL;
-			m_pGetState = ( void * )pGet;
-			m_pSetState = ( void * )pSet;
+			m_pGetState = static_cast<void *>(pGet);
+			m_pSetState = static_cast<void *>(pSet);
 			return true;
 		}
 		FreeLibrary( hDLL );
@@ -76,7 +76,7 @@ bool SIRWindowsXInputBackend::initialize( void ) noexcept
 
 void SIRWindowsXInputBackend::resynchronize( SIRInputService& service ) noexcept
 {
-	( void )service;
+	static_cast<void>(service);
 	for ( uint32_t i = 0; i < 4; ++i ) {
 		m_Slots[i].bForceSample = true;
 	}
@@ -88,9 +88,9 @@ void SIRWindowsXInputBackend::sample( SIRInputService& service ) noexcept
 		return;
 	}
 	typedef DWORD( WINAPI * stateFn_t )( DWORD, XINPUT_STATE * );
-	const stateFn_t pGet = ( stateFn_t )m_pGetState;
+	const stateFn_t pGet = static_cast<stateFn_t>(m_pGetState);
 	for ( DWORD nUser = 0; nUser < 4; ++nUser ) {
-		XINPUT_STATE state = {};
+		XINPUT_STATE state {};
 		const DWORD nStatus = pGet( nUser, &state );
 		sirXInputNativeSlot_t& slot = m_Slots[nUser];
 		if ( nStatus == ERROR_DEVICE_NOT_CONNECTED ) {
@@ -104,8 +104,8 @@ void SIRWindowsXInputBackend::sample( SIRInputService& service ) noexcept
 			continue;
 		}
 		if ( !slot.bConnected ) {
-			const uint64_t nNative = UINT64_C( 0x58494e0000000000 ) | ( uint64_t )( nUser + 1 );
-			if ( !service.connect( { 0, nNative, id(), SIR_INPUT_CONTROLLER }, &slot.id ) ) {
+			const uint64_t nNative = UINT64_C( 0x58494e0000000000 ) | static_cast<uint64_t>( nUser + 1 );
+			if ( !service.connect( { 0, nNative, id(), SIRInputDeviceClass::SIR_INPUT_CONTROLLER }, &slot.id ) ) {
 				continue;
 			}
 			slot.bConnected = true;
@@ -114,22 +114,23 @@ void SIRWindowsXInputBackend::sample( SIRInputService& service ) noexcept
 		if ( slot.nPacket == state.dwPacketNumber && !slot.bForceSample ) {
 			continue;
 		}
-		sirInputControlChange_t changes[24] = {};
+		sirInputControlChange_t changes[24];
+		memset( changes, 0, sizeof( changes ) );
 		uint32_t nCount = 0;
 		for ( uint32_t i = 0; i < sizeof( s_ButtonMap ) / sizeof( s_ButtonMap[0] ); ++i ) {
-			changes[nCount++] = { SIR_INPUT_BUTTON, s_ButtonMap[i].nCode,
+			changes[nCount++] = { SIRInputSignal::SIR_INPUT_BUTTON, s_ButtonMap[i].nCode,
 			                      ( state.Gamepad.wButtons & s_ButtonMap[i].nNative ) != 0 ? 1 : 0 };
 		}
 		const SHORT nLX = state.Gamepad.sThumbLX, nLY = state.Gamepad.sThumbLY;
 		const SHORT nRX = state.Gamepad.sThumbRX, nRY = state.Gamepad.sThumbRY;
-		const int32_t axes[SIR_INPUT_AXIS_COUNT] = { nLX == -32768 ? -32767 : nLX,
+		const int32_t axes[SIRInputAxisCode::SIR_INPUT_AXIS_COUNT] = { nLX == -32768 ? -32767 : nLX,
 		                                             nLY == -32768 ? -32767 : nLY,
 		                                             nRX == -32768 ? -32767 : nRX,
 		                                             nRY == -32768 ? -32767 : nRY,
-		                                             ( int32_t )state.Gamepad.bLeftTrigger * 32767 / 255,
-		                                             ( int32_t )state.Gamepad.bRightTrigger * 32767 / 255 };
-		for ( uint16_t i = 0; i < SIR_INPUT_AXIS_COUNT; ++i ) {
-			changes[nCount++] = { SIR_INPUT_AXIS, i, axes[i] };
+		                                             static_cast<int32_t>(state.Gamepad.bLeftTrigger) * 32767 / 255,
+		                                             static_cast<int32_t>(state.Gamepad.bRightTrigger) * 32767 / 255 };
+		for ( uint16_t i = 0; i < SIRInputAxisCode::SIR_INPUT_AXIS_COUNT; ++i ) {
+			changes[nCount++] = { SIRInputSignal::SIR_INPUT_AXIS, i, axes[i] };
 		}
 		if ( service.emitControls( id(), slot.id, changes, nCount ) ) {
 			slot.nPacket = state.dwPacketNumber;
@@ -147,7 +148,7 @@ bool SIRWindowsXInputBackend::vibrate( sirInputDeviceId_t id, uint16_t nLeft, ui
 	for ( DWORD i = 0; i < 4; ++i ) {
 		if ( m_Slots[i].bConnected && m_Slots[i].id.nSlot == id.nSlot && m_Slots[i].id.nGeneration == id.nGeneration ) {
 			XINPUT_VIBRATION vibrations = { nLeft, nRight };
-			return ( ( rumbleFn_t )m_pSetState )( i, &vibrations ) == ERROR_SUCCESS;
+			return static_cast<rumbleFn_t>(m_pSetState)( i, &vibrations ) == ERROR_SUCCESS;
 		}
 	}
 	return false;
@@ -156,15 +157,15 @@ bool SIRWindowsXInputBackend::vibrate( sirInputDeviceId_t id, uint16_t nLeft, ui
 uint32_t SIRWindowsXInputBackend::hapticCapabilities( sirInputDeviceId_t hDevice ) const noexcept
 {
 	if ( m_pSetState == nullptr ) {
-		return SIR_INPUT_HAPTIC_CAP_NONE;
+		return SIRInputHapticCapability::SIR_INPUT_HAPTIC_CAP_NONE;
 	}
 	for ( uint32_t i = 0; i < 4; ++i ) {
 		const sirXInputNativeSlot_t& slot = m_Slots[i];
 		if ( slot.bConnected && slot.id.nSlot == hDevice.nSlot && slot.id.nGeneration == hDevice.nGeneration ) {
-			return SIR_INPUT_HAPTIC_CAP_RUMBLE;
+			return SIRInputHapticCapability::SIR_INPUT_HAPTIC_CAP_RUMBLE;
 		}
 	}
-	return SIR_INPUT_HAPTIC_CAP_NONE;
+	return SIRInputHapticCapability::SIR_INPUT_HAPTIC_CAP_NONE;
 }
 
 void SIRWindowsXInputBackend::stop( SIRInputService& service ) noexcept
@@ -177,7 +178,7 @@ void SIRWindowsXInputBackend::stop( SIRInputService& service ) noexcept
 		}
 	}
 	if ( m_pLibrary != nullptr ) {
-		FreeLibrary( ( HMODULE )m_pLibrary );
+		FreeLibrary( static_cast<HMODULE>(m_pLibrary) );
 	}
 	m_pLibrary = m_pGetState = m_pSetState = nullptr;
 }

@@ -14,8 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRBITMAPALLOCATOR_H__
-#define __SIRENGINE_SIRBITMAPALLOCATOR_H__
+#ifndef __SIR_BITMAPALLOCATOR_H__
+#define __SIR_BITMAPALLOCATOR_H__
 
 #include <Core/SIRPCH.h>
 
@@ -77,4 +77,4 @@ private:
 	uint32_t m_nHotWord;
 };
 
-#endif // __SIRENGINE_SIRBITMAPALLOCATOR_H__
+#endif // __SIR_BITMAPALLOCATOR_H__

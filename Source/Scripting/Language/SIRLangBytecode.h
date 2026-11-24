@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRLANGBYTECODE_H__
-#define __SIRENGINE_SIRLANGBYTECODE_H__
+#ifndef __SIR_LANGBYTECODE_H__
+#define __SIR_LANGBYTECODE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -31,7 +31,7 @@ constexpr uint32_t SIR_LANG_BYTECODE_CAPABILITY_BYTES = 40;
 
 // Stable, little-endian, alignment-independent program representation.
 // SHA-256 is an integrity digest; authenticity remains a loader policy.
-sirLangVMError_t SIRLangEncodeGraphVM( const sirLangCIRProgram_t *pProgram, uint8_t *pBytes, uint32_t nCapacity, uint32_t *pUsed ) noexcept;
-sirLangVMError_t SIRLangDecodeGraphVM( const uint8_t *pBytes, uint32_t nBytes, sirLangCIRStorage_t *pStorage ) noexcept;
+SIRLangVMError SIRLangEncodeGraphVM( const sirLangCIRProgram_t *pProgram, uint8_t *pBytes, uint32_t nCapacity, uint32_t *pUsed ) noexcept;
+SIRLangVMError SIRLangDecodeGraphVM( const uint8_t *pBytes, uint32_t nBytes, sirLangCIRStorage_t *pStorage ) noexcept;
 
-#endif // __SIRENGINE_SIRLANGBYTECODE_H__
+#endif // __SIR_LANGBYTECODE_H__

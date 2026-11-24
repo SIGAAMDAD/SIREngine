@@ -21,7 +21,7 @@ bool SIRLangCompileSource( const sirLangSourceView_t& source, sirLangCompileWork
 		return false;
 	}
 
-	pWorkspace->report = { SIR_LANG_COMPILE_INPUT, 0, SIR_LANG_INVALID_INDEX };
+	pWorkspace->report = { SIRLangCompilePhase::SIR_LANG_COMPILE_INPUT, 0, SIR_LANG_INVALID_INDEX };
 	pWorkspace->cir.program = {};
 	pWorkspace->hir.nCount = 0;
 	pWorkspace->effects.nCount = 0;
@@ -32,55 +32,55 @@ bool SIRLangCompileSource( const sirLangSourceView_t& source, sirLangCompileWork
 		return false;
 	}
 
-	pWorkspace->report.ePhase = SIR_LANG_COMPILE_PARSE;
-	const sirLangParseError_t eParse = SIRLangParse( source, &pWorkspace->syntax );
-	if ( eParse != SIR_LANG_PARSE_OK ) {
-		pWorkspace->report.nStageResult = ( uint32_t )eParse;
+	pWorkspace->report.ePhase = SIRLangCompilePhase::SIR_LANG_COMPILE_PARSE;
+	const SIRLangParseError eParse = SIRLangParse( source, &pWorkspace->syntax );
+	if ( eParse != SIRLangParseError::SIR_LANG_PARSE_OK ) {
+		pWorkspace->report.nStageResult = static_cast<uint32_t>(eParse);
 		return false;
 	}
 
-	pWorkspace->report.ePhase = SIR_LANG_COMPILE_SEMANTIC;
-	const sirLangSemanticError_t eSemantic = SIRLangAnalyze( &pWorkspace->syntax, &pWorkspace->semantic );
-	if ( eSemantic != SIR_LANG_SEMANTIC_OK ) {
-		pWorkspace->report.nStageResult = ( uint32_t )eSemantic;
+	pWorkspace->report.ePhase = SIRLangCompilePhase::SIR_LANG_COMPILE_SEMANTIC;
+	const SIRLangSemanticError eSemantic = SIRLangAnalyze( &pWorkspace->syntax, &pWorkspace->semantic );
+	if ( eSemantic != SIRLangSemanticError::SIR_LANG_SEMANTIC_OK ) {
+		pWorkspace->report.nStageResult = static_cast<uint32_t>(eSemantic);
 		return false;
 	}
 
-	pWorkspace->report.ePhase = SIR_LANG_COMPILE_SIGNATURES;
-	const sirLangSignatureError_t eSignatures =
+	pWorkspace->report.ePhase = SIRLangCompilePhase::SIR_LANG_COMPILE_SIGNATURES;
+	const SIRLangSignatureError eSignatures =
 	    SIRLangResolveSignatures( &pWorkspace->syntax, &pWorkspace->semantic, &pWorkspace->signatures );
-	if ( eSignatures != SIR_LANG_SIGNATURE_OK ) {
-		pWorkspace->report.nStageResult = ( uint32_t )eSignatures;
+	if ( eSignatures != SIRLangSignatureError::SIR_LANG_SIGNATURE_OK ) {
+		pWorkspace->report.nStageResult = static_cast<uint32_t>(eSignatures);
 		return false;
 	}
 
-	pWorkspace->report.ePhase = SIR_LANG_COMPILE_HIR;
-	const sirLangLowerError_t eHIR =
+	pWorkspace->report.ePhase = SIRLangCompilePhase::SIR_LANG_COMPILE_HIR;
+	const SIRLangLowerError eHIR =
 	    SIRLangBuildHIR( &pWorkspace->syntax, &pWorkspace->semantic, &pWorkspace->signatures, &pWorkspace->hir );
-	if ( eHIR != SIR_LANG_LOWER_OK ) {
-		pWorkspace->report.nStageResult = ( uint32_t )eHIR;
+	if ( eHIR != SIRLangLowerError::SIR_LANG_LOWER_OK ) {
+		pWorkspace->report.nStageResult = static_cast<uint32_t>(eHIR);
 		return false;
 	}
 
-	pWorkspace->report.ePhase = SIR_LANG_COMPILE_CIR;
-	const sirLangLowerError_t eCIR = SIRLangBuildCIR( &pWorkspace->syntax, &pWorkspace->signatures, &pWorkspace->hir, &pWorkspace->cir );
-	if ( eCIR != SIR_LANG_LOWER_OK ) {
-		pWorkspace->report.nStageResult = ( uint32_t )eCIR;
+	pWorkspace->report.ePhase = SIRLangCompilePhase::SIR_LANG_COMPILE_CIR;
+	const SIRLangLowerError eCIR = SIRLangBuildCIR( &pWorkspace->syntax, &pWorkspace->signatures, &pWorkspace->hir, &pWorkspace->cir );
+	if ( eCIR != SIRLangLowerError::SIR_LANG_LOWER_OK ) {
+		pWorkspace->report.nStageResult = static_cast<uint32_t>(eCIR);
 		pWorkspace->report.iErrorNode = pWorkspace->cir.iErrorNode;
 		pWorkspace->cir.program = {};
 		return false;
 	}
 
-	pWorkspace->report.ePhase = SIR_LANG_COMPILE_EFFECTS;
+	pWorkspace->report.ePhase = SIRLangCompilePhase::SIR_LANG_COMPILE_EFFECTS;
 	const sirLangEffectInputs_t inputs = { &pWorkspace->syntax, &pWorkspace->hir, &pWorkspace->signatures, &pWorkspace->cir.program };
-	const sirLangEffectError_t eEffects = SIRLangAnalyzeEffects( inputs, &pWorkspace->effects );
-	if ( eEffects != SIR_LANG_EFFECT_OK ) {
+	const SIRLangEffectError eEffects = SIRLangAnalyzeEffects( inputs, &pWorkspace->effects );
+	if ( eEffects != SIRLangEffectError::SIR_LANG_EFFECT_OK ) {
 		pWorkspace->cir.program = {};
-		pWorkspace->report.nStageResult = ( uint32_t )eEffects;
+		pWorkspace->report.nStageResult = static_cast<uint32_t>(eEffects);
 		pWorkspace->report.iErrorNode = pWorkspace->effects.iErrorNode;
 		return false;
 	}
 
-	pWorkspace->report.ePhase = SIR_LANG_COMPILE_COMPLETE;
+	pWorkspace->report.ePhase = SIRLangCompilePhase::SIR_LANG_COMPILE_COMPLETE;
 	return true;
 }

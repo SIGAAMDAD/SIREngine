@@ -1,6 +1,6 @@
 /* SIREngine MPLv2 - lazy-lifetime, heterogeneous array-of-structures-of-arrays. */
-#ifndef __SIRENGINE_SIRAOSOAMULTIVECTOR_H__
-#define __SIRENGINE_SIRAOSOAMULTIVECTOR_H__
+#ifndef __SIR_AOSOAMULTIVECTOR_H__
+#define __SIR_AOSOAMULTIVECTOR_H__
 
 #include <Core/SIRPCH.h>
 #include <Core/Containers/SIRVector.h>
@@ -23,7 +23,7 @@ class SIRAoSoAMultiVector
 		alignas( T ) unsigned char szData[LANES * sizeof( T )];
 		T *slot( uint32_t iLane ) noexcept
 		{
-			return ( T * )( szData + ( size_t )iLane * sizeof( T ) );
+			return ( T * )( szData + static_cast<size_t>(iLane * sizeof(  T  )) );
 		}
 		T *at( uint32_t iLane ) noexcept
 		{
@@ -31,7 +31,7 @@ class SIRAoSoAMultiVector
 		}
 		const T *at( uint32_t iLane ) const noexcept
 		{
-			return std::launder( ( const T * )( szData + ( size_t )iLane * sizeof( T ) ) );
+			return std::launder( ( const T * )( szData + static_cast<size_t>(iLane * sizeof(  T  )) ) );
 		}
 	};
 
@@ -104,19 +104,19 @@ public:
 	SIRAoSoAMultiVector( const SIRAoSoAMultiVector& ) = delete;
 	SIRAoSoAMultiVector& operator=( const SIRAoSoAMultiVector& ) = delete;
 
-	sirContainerResult_t tryEmplaceBack( const Fields&...values )
+	SIRContainerResult tryEmplaceBack( const Fields&...values )
 	{
 		if ( m_nSize == UINT32_MAX ) {
-			return SIR_CONTAINER_SIZE_OVERFLOW;
+			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
 		if ( m_nSize % LANES != 0 ) {
 			m_Blocks[m_nSize / LANES]->emplace( values... );
 			++m_nSize;
-			return SIR_CONTAINER_OK;
+			return SIRContainerResult::SIR_CONTAINER_OK;
 		}
 		void *pMemory = nullptr;
-		sirContainerResult_t eResult = SIRRawStorage::tryAllocate( m_pAllocator, sizeof( Block ), alignof( Block ), &pMemory );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		SIRContainerResult eResult = SIRRawStorage::tryAllocate( m_pAllocator, sizeof( Block ), alignof( Block ), &pMemory );
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		Block *pBlock = new ( pMemory ) Block;
@@ -128,13 +128,13 @@ public:
 			SIRRawStorage::deallocate( m_pAllocator, pBlock, sizeof( Block ), alignof( Block ) );
 			throw;
 		}
-		if ( eResult != SIR_CONTAINER_OK ) {
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			pBlock->~Block();
 			SIRRawStorage::deallocate( m_pAllocator, pBlock, sizeof( Block ), alignof( Block ) );
 			return eResult;
 		}
 		++m_nSize;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
 	template <size_t I>
@@ -169,4 +169,4 @@ public:
 	}
 };
 
-#endif // __SIRENGINE_SIRAOSOAMULTIVECTOR_H__
+#endif // __SIR_AOSOAMULTIVECTOR_H__

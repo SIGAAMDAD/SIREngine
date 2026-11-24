@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRINLINEVECTOR_H__
-#define __SIRENGINE_SIRINLINEVECTOR_H__
+#ifndef __SIR_INLINEVECTOR_H__
+#define __SIR_INLINEVECTOR_H__
 
 #include <Core/SIRPCH.h>
 
@@ -51,11 +51,11 @@ private:
 
 	T *inlineData( void ) noexcept
 	{
-		return ( T * )m_szInlineStorage;
+		return reinterpret_cast<T *>(m_szInlineStorage);
 	}
 	const T *inlineData( void ) const noexcept
 	{
-		return ( const T * )m_szInlineStorage;
+		return reinterpret_cast<const T *>(m_szInlineStorage);
 	}
 	bool isInline( void ) const noexcept
 	{
@@ -63,27 +63,27 @@ private:
 	}
 
 	template <typename... Args>
-	sirContainerResult_t growAndEmplace( Args&&...args )
+	SIRContainerResult growAndEmplace( Args&&...args )
 	{
 		if ( m_nSize == UINT32_MAX ) {
-			return SIR_CONTAINER_SIZE_OVERFLOW;
+			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
 		static_assert( SIRLifetimeOps<T>::CAN_RELOCATE, "Growth requires copy or nothrow move construction" );
 		uint32_t nGrowth = 0;
-		sirContainerResult_t eResult = SIRVectorStorage::calculateGrowth( m_nCapacity, m_nSize + 1, &nGrowth );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		SIRContainerResult eResult = SIRVectorStorage::calculateGrowth( m_nCapacity, m_nSize + 1, &nGrowth );
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		size_t nBytes = 0;
 		if ( !SIRRawStorage::checkedMultiply( nGrowth, sizeof( T ), &nBytes ) ) {
-			return SIR_CONTAINER_SIZE_OVERFLOW;
+			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
 		void *pStorage = nullptr;
 		eResult = SIRRawStorage::tryAllocate( m_pAllocator, nBytes, alignof( T ), &pStorage );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
-		T *pNewData = ( T * )pStorage;
+		T *pNewData = static_cast<T *>(pStorage);
 		// Construct before relocating: arguments may refer into the old array.
 		try {
 			new ( pNewData + m_nSize ) T( std::forward<Args>( args )... );
@@ -100,12 +100,12 @@ private:
 		}
 		SIRLifetimeOps<T>::destroySourceAfterRelocate( m_pData, m_nSize );
 		if ( !isInline() ) {
-			SIRRawStorage::deallocate( m_pAllocator, m_pData, ( size_t )m_nCapacity * sizeof( T ), alignof( T ) );
+			SIRRawStorage::deallocate( m_pAllocator, m_pData, static_cast<size_t>(m_nCapacity * sizeof(  T  )), alignof( T ) );
 		}
 		m_pData = pNewData;
 		m_nCapacity = nGrowth;
 		++m_nSize;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
 public:
@@ -118,7 +118,7 @@ public:
 	{
 		clear();
 		if ( !isInline() ) {
-			SIRRawStorage::deallocate( m_pAllocator, m_pData, ( size_t )m_nCapacity * sizeof( T ), alignof( T ) );
+			SIRRawStorage::deallocate( m_pAllocator, m_pData, static_cast<size_t>(m_nCapacity * sizeof(  T  )), alignof( T ) );
 		}
 	}
 
@@ -176,26 +176,26 @@ public:
 
 	sirContainerFootprint_t getFootprint( void ) const noexcept
 	{
-		return { ( uint64_t )N * sizeof( T ), isInline() ? 0u : ( uint64_t )m_nCapacity * sizeof( T ), 0, 0,
-		         ( uint64_t )m_nSize * sizeof( T ) };
+		return { static_cast<uint64_t>(N * sizeof(  T  )), isInline() ? 0u : static_cast<uint64_t>(m_nCapacity * sizeof(  T  )), 0, 0,
+		         static_cast<uint64_t>(m_nSize * sizeof(  T  )) };
 	}
 
-	sirContainerResult_t tryReserve( uint32_t nCapacity )
+	SIRContainerResult tryReserve( uint32_t nCapacity )
 	{
 		if ( nCapacity <= m_nCapacity ) {
-			return SIR_CONTAINER_OK;
+			return SIRContainerResult::SIR_CONTAINER_OK;
 		}
 		static_assert( SIRLifetimeOps<T>::CAN_RELOCATE, "Inline vector growth requires copy or nothrow move" );
 		size_t nBytes = 0;
 		if ( !SIRRawStorage::checkedMultiply( nCapacity, sizeof( T ), &nBytes ) ) {
-			return SIR_CONTAINER_SIZE_OVERFLOW;
+			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
 		void *pMemory = nullptr;
-		sirContainerResult_t eResult = SIRRawStorage::tryAllocate( m_pAllocator, nBytes, alignof( T ), &pMemory );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		SIRContainerResult eResult = SIRRawStorage::tryAllocate( m_pAllocator, nBytes, alignof( T ), &pMemory );
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
-		T *pNew = ( T * )pMemory;
+		T *pNew = static_cast<T *>(pMemory);
 		try {
 			SIRLifetimeOps<T>::relocate( pNew, m_pData, m_nSize );
 		} catch ( ... ) {
@@ -204,37 +204,37 @@ public:
 		}
 		SIRLifetimeOps<T>::destroySourceAfterRelocate( m_pData, m_nSize );
 		if ( !isInline() ) {
-			SIRRawStorage::deallocate( m_pAllocator, m_pData, ( size_t )m_nCapacity * sizeof( T ), alignof( T ) );
+			SIRRawStorage::deallocate( m_pAllocator, m_pData, static_cast<size_t>(m_nCapacity * sizeof(  T  )), alignof( T ) );
 		}
 		m_pData = pNew;
 		m_nCapacity = nCapacity;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 	// On small sizes, return to inline storage and release the domain allocation.
-	sirContainerResult_t tryShrinkToFit( void )
+	SIRContainerResult tryShrinkToFit( void )
 	{
 		if ( isInline() || m_nCapacity == m_nSize ) {
-			return SIR_CONTAINER_OK;
+			return SIRContainerResult::SIR_CONTAINER_OK;
 		}
 		static_assert( SIRLifetimeOps<T>::CAN_RELOCATE, "Shrinking requires copy or nothrow move construction" );
 		if ( m_nSize <= N ) {
 			SIRLifetimeOps<T>::relocate( inlineData(), m_pData, m_nSize );
 			SIRLifetimeOps<T>::destroySourceAfterRelocate( m_pData, m_nSize );
-			SIRRawStorage::deallocate( m_pAllocator, m_pData, ( size_t )m_nCapacity * sizeof( T ), alignof( T ) );
+			SIRRawStorage::deallocate( m_pAllocator, m_pData, static_cast<size_t>(m_nCapacity * sizeof(  T  )), alignof( T ) );
 			m_pData = inlineData();
 			m_nCapacity = N;
-			return SIR_CONTAINER_OK;
+			return SIRContainerResult::SIR_CONTAINER_OK;
 		}
 		size_t nBytes = 0;
 		if ( !SIRRawStorage::checkedMultiply( m_nSize, sizeof( T ), &nBytes ) ) {
-			return SIR_CONTAINER_SIZE_OVERFLOW;
+			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
 		void *pMemory = nullptr;
-		sirContainerResult_t eResult = SIRRawStorage::tryAllocate( m_pAllocator, nBytes, alignof( T ), &pMemory );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		SIRContainerResult eResult = SIRRawStorage::tryAllocate( m_pAllocator, nBytes, alignof( T ), &pMemory );
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
-		T *pNew = ( T * )pMemory;
+		T *pNew = static_cast<T *>(pMemory);
 		try {
 			SIRLifetimeOps<T>::relocate( pNew, m_pData, m_nSize );
 		} catch ( ... ) {
@@ -242,75 +242,75 @@ public:
 			throw;
 		}
 		SIRLifetimeOps<T>::destroySourceAfterRelocate( m_pData, m_nSize );
-		SIRRawStorage::deallocate( m_pAllocator, m_pData, ( size_t )m_nCapacity * sizeof( T ), alignof( T ) );
+		SIRRawStorage::deallocate( m_pAllocator, m_pData, static_cast<size_t>(m_nCapacity * sizeof(  T  )), alignof( T ) );
 		m_pData = pNew;
 		m_nCapacity = m_nSize;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
 	// Optional heap-backend expansion. Inline-to-heap growth follows the
 	// normal safe relocation path.
-	sirContainerResult_t tryReserveExtended( uint32_t nCapacity, const sirContainerAllocatorCapabilities_t *pCapabilities )
+	SIRContainerResult tryReserveExtended( uint32_t nCapacity, const sirContainerAllocatorCapabilities_t *pCapabilities )
 	{
 		if ( nCapacity <= m_nCapacity ) {
-			return SIR_CONTAINER_OK;
+			return SIRContainerResult::SIR_CONTAINER_OK;
 		}
 		size_t nBytes = 0;
 		if ( !SIRRawStorage::checkedMultiply( nCapacity, sizeof( T ), &nBytes ) ) {
-			return SIR_CONTAINER_SIZE_OVERFLOW;
+			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
 		size_t nActualBytes = 0;
-		if ( !isInline() && SIRRawStorage::tryExpandInPlace( pCapabilities, m_pData, ( size_t )m_nCapacity * sizeof( T ), nBytes,
+		if ( !isInline() && SIRRawStorage::tryExpandInPlace( pCapabilities, m_pData, static_cast<size_t>(m_nCapacity * sizeof(  T  )), nBytes,
 		                                                     alignof( T ), &nActualBytes ) ) {
 			m_nCapacity = nCapacity;
-			return SIR_CONTAINER_OK;
+			return SIRContainerResult::SIR_CONTAINER_OK;
 		}
 		return tryReserve( nCapacity );
 	}
 
-	sirContainerResult_t tryAppendRange( const T *pValues, uint32_t nCount )
+	SIRContainerResult tryAppendRange( const T *pValues, uint32_t nCount )
 	{
 		if ( nCount == 0 ) {
-			return SIR_CONTAINER_OK;
+			return SIRContainerResult::SIR_CONTAINER_OK;
 		}
 		if ( pValues == nullptr || nCount > UINT32_MAX - m_nSize ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
-		const uintptr_t nPointer = ( uintptr_t )pValues;
-		const uintptr_t nStart = ( uintptr_t )m_pData;
-		if ( nPointer >= nStart && nPointer - nStart < ( size_t )m_nSize * sizeof( T ) ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+		const uintptr_t nPointer = reinterpret_cast<uintptr_t>(pValues);
+		const uintptr_t nStart = reinterpret_cast<uintptr_t>(m_pData);
+		if ( nPointer >= nStart && nPointer - nStart < static_cast<size_t>(m_nSize * sizeof(  T  )) ) {
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		const uint32_t nRequired = m_nSize + nCount;
 		if ( nRequired > m_nCapacity ) {
 			uint32_t nGrowth = 0;
-			sirContainerResult_t eResult = SIRVectorStorage::calculateGrowth( m_nCapacity, nRequired, &nGrowth );
-			if ( eResult != SIR_CONTAINER_OK ) {
+			SIRContainerResult eResult = SIRVectorStorage::calculateGrowth( m_nCapacity, nRequired, &nGrowth );
+			if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 				return eResult;
 			}
 			eResult = tryReserve( nGrowth );
-			if ( eResult != SIR_CONTAINER_OK ) {
+			if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 				return eResult;
 			}
 		}
 		SIRLifetimeOps<T>::copyConstructRange( m_pData + m_nSize, pValues, nCount );
 		m_nSize = nRequired;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
-	sirContainerResult_t tryEraseRange( uint32_t iFirst, uint32_t nCount ) noexcept
+	SIRContainerResult tryEraseRange( uint32_t iFirst, uint32_t nCount ) noexcept
 	{
 		static_assert( std::is_nothrow_move_assignable<T>::value, "Range erase requires nothrow move assignment" );
 		if ( iFirst > m_nSize || nCount > m_nSize - iFirst ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		if ( nCount == 0 ) {
-			return SIR_CONTAINER_OK;
+			return SIRContainerResult::SIR_CONTAINER_OK;
 		}
 		const uint32_t nRemaining = m_nSize - iFirst - nCount;
 		if constexpr ( std::is_trivially_copyable<T>::value ) {
 			if ( nRemaining != 0 ) {
-				memmove( m_pData + iFirst, m_pData + iFirst + nCount, ( size_t )nRemaining * sizeof( T ) );
+				memmove( m_pData + iFirst, m_pData + iFirst + nCount, static_cast<size_t>(nRemaining * sizeof(  T  )) );
 			}
 		} else {
 			for ( uint32_t i = 0; i < nRemaining; ++i ) {
@@ -319,26 +319,26 @@ public:
 		}
 		SIRLifetimeOps<T>::destroy( m_pData + m_nSize - nCount, nCount );
 		m_nSize -= nCount;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
 	template <typename... Args>
-	sirContainerResult_t tryEmplaceBack( Args&&...args )
+	SIRContainerResult tryEmplaceBack( Args&&...args )
 	{
 		if ( m_nSize < m_nCapacity ) {
 			new ( m_pData + m_nSize ) T( std::forward<Args>( args )... );
 			++m_nSize;
-			return SIR_CONTAINER_OK;
+			return SIRContainerResult::SIR_CONTAINER_OK;
 		}
 		return growAndEmplace( std::forward<Args>( args )... );
 	}
 
-	sirContainerResult_t tryPushBack( const T& value )
+	SIRContainerResult tryPushBack( const T& value )
 	{
 		if ( m_nSize == m_nCapacity ) {
-			uintptr_t nAddress = ( uintptr_t )&value;
-			uintptr_t nStart = ( uintptr_t )m_pData;
-			if ( nAddress >= nStart && nAddress - nStart < ( size_t )m_nSize * sizeof( T ) ) {
+			uintptr_t nAddress = reinterpret_cast<uintptr_t>(&value);
+			uintptr_t nStart = reinterpret_cast<uintptr_t>(m_pData);
+			if ( nAddress >= nStart && nAddress - nStart < static_cast<size_t>(m_nSize * sizeof(  T  )) ) {
 				T staged( value );
 				return tryEmplaceBack( std::move( staged ) );
 			}
@@ -346,42 +346,42 @@ public:
 		return tryEmplaceBack( value );
 	}
 
-	sirContainerResult_t tryPushBack( T&& value )
+	SIRContainerResult tryPushBack( T&& value )
 	{
 		if ( m_nSize == m_nCapacity && m_pData != nullptr ) {
-			uintptr_t nAddress = ( uintptr_t )&value;
-			uintptr_t nStart = ( uintptr_t )m_pData;
-			if ( nAddress >= nStart && nAddress - nStart < ( size_t )m_nSize * sizeof( T ) ) {
+			uintptr_t nAddress = static_cast<uintptr_t>(&value);
+			uintptr_t nStart = reinterpret_cast<uintptr_t>(m_pData);
+			if ( nAddress >= nStart && nAddress - nStart < static_cast<size_t>(m_nSize * sizeof(  T  )) ) {
 				if constexpr ( std::is_copy_constructible<T>::value ) {
 					T staged( value );
 					return tryEmplaceBack( std::move( staged ) );
 				}
-				return SIR_CONTAINER_INVALID_ARGUMENT;
+				return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 			}
 		}
 		return tryEmplaceBack( std::move( value ) );
 	}
 
-	sirContainerResult_t tryResize( uint32_t nSize )
+	SIRContainerResult tryResize( uint32_t nSize )
 	{
 		if ( nSize < m_nSize ) {
 			for ( uint32_t iIndex = m_nSize; iIndex > nSize; --iIndex ) {
 				m_pData[iIndex - 1].~T();
 			}
 			m_nSize = nSize;
-			return SIR_CONTAINER_OK;
+			return SIRContainerResult::SIR_CONTAINER_OK;
 		}
 		if ( nSize == m_nSize ) {
-			return SIR_CONTAINER_OK;
+			return SIRContainerResult::SIR_CONTAINER_OK;
 		}
 		if ( nSize > m_nCapacity ) {
 			uint32_t nGrowth = 0;
-			sirContainerResult_t eResult = SIRVectorStorage::calculateGrowth( m_nCapacity, nSize, &nGrowth );
-			if ( eResult != SIR_CONTAINER_OK ) {
+			SIRContainerResult eResult = SIRVectorStorage::calculateGrowth( m_nCapacity, nSize, &nGrowth );
+			if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 				return eResult;
 			}
 			eResult = tryReserve( nGrowth );
-			if ( eResult != SIR_CONTAINER_OK ) {
+			if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 				return eResult;
 			}
 		}
@@ -397,27 +397,27 @@ public:
 			throw;
 		}
 		m_nSize = nSize;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
 	// Extend storage for byte-wise overwrite without zero-initializing the new range.
 	// The caller must initialize all new elements before reading them.
-	sirContainerResult_t tryResizeForOverwrite( uint32_t nSize )
+	SIRContainerResult tryResizeForOverwrite( uint32_t nSize )
 	{
 		static_assert( std::is_trivially_default_constructible<T>::value && std::is_trivially_destructible<T>::value,
 		               "Uninitialized growth is restricted to trivial element types" );
 		if ( nSize <= m_nSize ) {
 			m_nSize = nSize;
-			return SIR_CONTAINER_OK;
+			return SIRContainerResult::SIR_CONTAINER_OK;
 		}
 		if ( nSize > m_nCapacity ) {
 			uint32_t nGrowth = 0;
-			sirContainerResult_t eResult = SIRVectorStorage::calculateGrowth( m_nCapacity, nSize, &nGrowth );
-			if ( eResult != SIR_CONTAINER_OK ) {
+			SIRContainerResult eResult = SIRVectorStorage::calculateGrowth( m_nCapacity, nSize, &nGrowth );
+			if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 				return eResult;
 			}
 			eResult = tryReserve( nGrowth );
-			if ( eResult != SIR_CONTAINER_OK ) {
+			if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 				return eResult;
 			}
 		}
@@ -425,14 +425,14 @@ public:
 			new ( m_pData + iIndex ) T;
 		}
 		m_nSize = nSize;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
-	sirContainerResult_t tryEraseSwap( uint32_t iIndex ) noexcept
+	SIRContainerResult tryEraseSwap( uint32_t iIndex ) noexcept
 	{
 		static_assert( std::is_nothrow_move_assignable<T>::value, "Swap erase requires nothrow move assignment" );
 		if ( iIndex >= m_nSize ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		uint32_t iLast = m_nSize - 1;
 		if ( iIndex != iLast ) {
@@ -441,17 +441,17 @@ public:
 		return tryPopBack();
 	}
 
-	sirContainerResult_t tryEraseOrdered( uint32_t iIndex ) noexcept
+	SIRContainerResult tryEraseOrdered( uint32_t iIndex ) noexcept
 	{
 		static_assert( std::is_nothrow_move_assignable<T>::value, "Ordered erase requires nothrow move assignment" );
 		if ( iIndex >= m_nSize ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 #if defined( __clang__ )
 		if constexpr ( std::is_trivially_copyable<T>::value && sizeof( T ) >= 16 ) {
 			const uint32_t nTrailing = m_nSize - iIndex - 1;
 			if ( nTrailing != 0 ) {
-				memmove( m_pData + iIndex, m_pData + iIndex + 1, ( size_t )nTrailing * sizeof( T ) );
+				memmove( m_pData + iIndex, m_pData + iIndex + 1, static_cast<size_t>(nTrailing * sizeof(  T  )) );
 			}
 			return tryPopBack();
 		}
@@ -462,14 +462,14 @@ public:
 		return tryPopBack();
 	}
 
-	sirContainerResult_t tryPopBack( void ) noexcept
+	SIRContainerResult tryPopBack( void ) noexcept
 	{
 		if ( m_nSize == 0 ) {
-			return SIR_CONTAINER_EMPTY;
+			return SIRContainerResult::SIR_CONTAINER_EMPTY;
 		}
 		--m_nSize;
 		m_pData[m_nSize].~T();
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
 	void clear( void ) noexcept
@@ -479,4 +479,4 @@ public:
 	}
 };
 
-#endif // __SIRENGINE_SIRINLINEVECTOR_H__
+#endif // __SIR_INLINEVECTOR_H__

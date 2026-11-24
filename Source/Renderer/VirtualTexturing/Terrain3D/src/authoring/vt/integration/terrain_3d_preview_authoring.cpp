@@ -12,7 +12,7 @@
 
 static uint64_t t3dRdPreviewVtRetryDelayUsec( const uint64_t nRetryCount )
 {
-	const uint32_t nShift = ( uint32_t )( MIN( nRetryCount > 0u ? nRetryCount - 1u : 0u, 4u ) );
+	const uint32_t nShift = static_cast<uint32_t>(  MIN( nRetryCount > 0u ? nRetryCount - 1u : 0u, 4u )  );
 	return 100000u << nShift;
 }
 
@@ -139,7 +139,7 @@ bool Terrain3DRdPreviewService::preparePreviewAuthoringPackageCold( const t3dPre
 		}
 	}
 	if ( bRepublishPending ) {
-		( void )queuePreviewVtRepublishCold( rServices );
+		static_cast<void>(queuePreviewVtRepublishCold( rServices ));
 		return true;
 	}
 
@@ -157,7 +157,7 @@ bool Terrain3DRdPreviewService::preparePreviewAuthoringPackageCold( const t3dPre
 		return false;
 	}
 
-	const uint32_t nMaterialCount = ( uint32_t )materials.m_stableKeys.size();
+	const uint32_t nMaterialCount = static_cast<uint32_t>(materials.m_stableKeys.size());
 	PackedByteArray packageBytes;
 	Terrain3DSharedMemoryReservation package_memory;
 	uint64_t nFingerprint = 0u;
@@ -225,7 +225,7 @@ bool Terrain3DRdPreviewService::preparePreviewAuthoringPackageCold( const t3dPre
 	const t3dRenderLifecycleStatus_t renderStatus = rServices.m_host.previewLifecycleStatus();
 	const bool bConsumersLive = renderStatus.m_nSharedResourceClass != T3D_VT_SHARED_RESOURCES_NONE ||
 	                            ( renderStatus.m_nReadyMask & T3D_RENDER_READY_RESOURCE_CONSUMERS ) != 0u;
-	const t3dVTSharedResourceClass_t eLiveClass = ( t3dVTSharedResourceClass_t )renderStatus.m_nSharedResourceClass;
+	const t3dVTSharedResourceClass_t eLiveClass = static_cast<t3dVTSharedResourceClass_t>(renderStatus.m_nSharedResourceClass);
 	bool bNeedsPublication = false;
 	{
 		Terrain3DScopedLock lock( m_previewVtMutex );
@@ -261,12 +261,12 @@ bool Terrain3DRdPreviewService::preparePreviewAuthoringPackageCold( const t3dPre
 		return true;
 	}
 	if ( bConsumersLive ) {
-		( void )queuePreviewVtRepublishCold( rServices );
+		static_cast<void>(queuePreviewVtRepublishCold( rServices ));
 		return true;
 	}
 
 	const bool bPublished = bStageNeutral ? rServices.m_virtualTexture.clearPackageCold()
-	                                      : rServices.m_host.loadPreviewPackage( packageBytes.ptr(), ( uint64_t )packageBytes.size() );
+	                                      : rServices.m_host.loadPreviewPackage( packageBytes.ptr(), static_cast<uint64_t>(packageBytes.size() ));
 	if ( !bPublished ) {
 		const uint64_t nNowUsec = Time::get_singleton() != NULL ? Time::get_singleton()->get_ticks_usec() : 0u;
 		{

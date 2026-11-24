@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRD3D12DIAGNOSTICS_H__
-#define __SIRENGINE_SIRD3D12DIAGNOSTICS_H__
+#ifndef __SIR_D3_D12_DIAGNOSTICS_H__
+#define __SIR_D3_D12_DIAGNOSTICS_H__
 
 #include <Core/SIRPCH.h>
 
@@ -62,7 +62,7 @@ class SIRD3D12Diagnostics
 {
 private:
 	ID3D12Device *m_pDevice = nullptr;
-	sirD3D12DiagnosticSnapshot_t m_Snapshot = {};
+	sirD3D12DiagnosticSnapshot_t m_Snapshot {};
 	bool m_bDredConfigurationPending = false;
 
 	void captureDred( void ) noexcept;
@@ -74,7 +74,7 @@ public:
 	SIRD3D12Diagnostics& operator=( const SIRD3D12Diagnostics& ) = delete;
 	~SIRD3D12Diagnostics( void ) noexcept;
 
-	sirGraphicsResult_t configureBeforeDevice( const sirD3D12DiagnosticConfig_t& config ) noexcept;
+	SIRGraphicsResult configureBeforeDevice( const sirD3D12DiagnosticConfig_t& config ) noexcept;
 	void attachDevice( ID3D12Device *pDevice ) noexcept;
 	void detachDevice( void ) noexcept;
 	void captureStatus( HRESULT nResult ) noexcept;
@@ -83,6 +83,6 @@ public:
 };
 
 // Pure status translation, also used by tests without forcing real GPU loss.
-sirGraphicsResult_t sirD3D12ClassifyStatus( HRESULT nResult ) noexcept;
+SIRGraphicsResult sirD3D12ClassifyStatus( HRESULT nResult ) noexcept;
 
-#endif // __SIRENGINE_SIRD3D12DIAGNOSTICS_H__
+#endif // __SIR_D3_D12_DIAGNOSTICS_H__

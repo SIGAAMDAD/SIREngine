@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRCHANNELEVENTQUEUE_H__
-#define __SIRENGINE_SIRCHANNELEVENTQUEUE_H__
+#ifndef __SIR_CHANNELEVENTQUEUE_H__
+#define __SIR_CHANNELEVENTQUEUE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -134,4 +134,4 @@ private:
 	bool m_bClearDuringPump;
 };
 
-#endif // __SIRENGINE_SIRCHANNELEVENTQUEUE_H__
+#endif // __SIR_CHANNELEVENTQUEUE_H__

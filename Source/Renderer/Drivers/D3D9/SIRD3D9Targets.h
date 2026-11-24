@@ -12,8 +12,8 @@ express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIRD3D9TARGETS_H__
-#define __SIRENGINE_SIRD3D9TARGETS_H__
+#ifndef __SIR_D3_D9_TARGETS_H__
+#define __SIR_D3_D9_TARGETS_H__
 #include <Core/SIRPCH.h>
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
 #pragma once
@@ -26,7 +26,7 @@ typedef struct sirD3D9TargetDesc_s
 	uint32_t nWidth;
 	uint32_t nHeight;
 	uint32_t nSamples;
-	sirGraphicsFormat_t eFormat;
+	SIRGraphicsFormat eFormat;
 	bool bDepth;
 } sirD3D9TargetDesc_t;
 
@@ -44,11 +44,11 @@ typedef struct sirD3D9SurfaceCopy_s
 	bool bStretch;
 } sirD3D9SurfaceCopy_t;
 
-sirGraphicsResult_t sirD3D9NativeCreateTarget( sirD3D9Native_t *pNative, const sirD3D9TargetDesc_t *pDesc,
+SIRGraphicsResult sirD3D9NativeCreateTarget( sirD3D9Native_t *pNative, const sirD3D9TargetDesc_t *pDesc,
                                                IDirect3DSurface9 **ppSurface ) noexcept;
-sirGraphicsResult_t sirD3D9NativeSetTargets( sirD3D9Native_t *pNative, const sirD3D9TargetSet_t *pTargets ) noexcept;
-sirGraphicsResult_t sirD3D9NativeCopySurface( sirD3D9Native_t *pNative, const sirD3D9SurfaceCopy_t *pCopy ) noexcept;
-sirGraphicsResult_t sirD3D9NativeUpdateTexture( sirD3D9Native_t *pNative, IDirect3DBaseTexture9 *pSource,
+SIRGraphicsResult sirD3D9NativeSetTargets( sirD3D9Native_t *pNative, const sirD3D9TargetSet_t *pTargets ) noexcept;
+SIRGraphicsResult sirD3D9NativeCopySurface( sirD3D9Native_t *pNative, const sirD3D9SurfaceCopy_t *pCopy ) noexcept;
+SIRGraphicsResult sirD3D9NativeUpdateTexture( sirD3D9Native_t *pNative, IDirect3DBaseTexture9 *pSource,
                                                 IDirect3DBaseTexture9 *pDestination ) noexcept;
 #endif
-#endif // __SIRENGINE_SIRD3D9TARGETS_H__
+#endif // __SIR_D3_D9_TARGETS_H__

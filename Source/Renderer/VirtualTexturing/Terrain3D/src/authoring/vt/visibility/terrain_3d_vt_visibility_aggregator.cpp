@@ -12,7 +12,7 @@ struct Candidate
 };
 static int32_t group4( const int32_t x )
 {
-	return x >= 0 ? x / 4 : ( int32_t )( -( ( -( int64_t )x + 3 ) / 4 ) );
+	return x >= 0 ? x / 4 : ( int32_t )( -( ( -static_cast<int64_t>(x) + 3 ) / 4 ) );
 }
 static bool cellBefore( const t3dVTVisibilityProbeResult_t& a, const t3dVTVisibilityProbeResult_t& b )
 {
@@ -28,7 +28,7 @@ static bool cellBefore( const t3dVTVisibilityProbeResult_t& a, const t3dVTVisibi
 }
 static uint32_t saturate32( const uint64_t x )
 {
-	return x > UINT32_MAX ? UINT32_MAX : ( uint32_t )x;
+	return x > UINT32_MAX ? UINT32_MAX : static_cast<uint32_t>(x);
 }
 }
 
@@ -45,7 +45,7 @@ bool Terrain3DVTVisibilityAggregator::reduce( const t3dVTVisibilityProbeResult_t
 	for ( uint32_t k = 0u; k < materialCount; ++k )
 		if ( !keys[k] || ( k && keys[k] <= keys[k - 1u] ) )
 			return false;
-	const size_t countPerProbe = ( size_t )materialCount * 8u * 16u;
+	const size_t countPerProbe = static_cast<size_t>(materialCount) * 8u * 16u;
 	std::vector<uint32_t> order( probeCount );
 	for ( uint32_t i = 0u; i < probeCount; ++i ) {
 		const auto& p = probes[i];
@@ -59,7 +59,7 @@ bool Terrain3DVTVisibilityAggregator::reduce( const t3dVTVisibilityProbeResult_t
 	std::vector<t3dVTDemandBakedVisibilityRecord_t> records;
 	std::vector<uint32_t> maximum( countPerProbe, 0u );
 	std::vector<Candidate> candidates;
-	candidates.reserve( ( size_t )materialCount * 8u );
+	candidates.reserve( static_cast<size_t>(materialCount) * 8u );
 	for ( size_t begin = 0u; begin < order.size(); ) {
 		size_t end = begin + 1u;
 		const auto& first = probes[order[begin]];
@@ -83,16 +83,16 @@ bool Terrain3DVTVisibilityAggregator::reduce( const t3dVTVisibilityProbeResult_t
 			uint64_t viewTotal = 0u;
 			for ( uint32_t m = 0u; m < materialCount; ++m )
 				for ( uint32_t mip = 0u; mip < 16u; ++mip )
-					viewTotal += maximum[( ( size_t )m * 8u + view ) * 16u + mip];
+					viewTotal += maximum[( static_cast<size_t>(m) * 8u + view ) * 16u + mip];
 			if ( !viewTotal )
 				continue;
 			for ( uint32_t material = 0u; material < materialCount; ++material ) {
 				uint64_t count = 0u;
 				uint64_t score = 0u;
-				const uint32_t *const bins = maximum.data() + ( ( size_t )material * 8u + view ) * 16u;
+				const uint32_t *const bins = maximum.data() + ( static_cast<size_t>(material) * 8u + view ) * 16u;
 				for ( uint32_t mip = 0u; mip < 16u; ++mip ) {
 					count += bins[mip];
-					score += ( uint64_t )bins[mip] * ( 16u - mip );
+					score += static_cast<uint64_t>(bins[mip]) * ( 16u - mip );
 				}
 				if ( !count )
 					continue;
@@ -101,18 +101,18 @@ bool Terrain3DVTVisibilityAggregator::reduce( const t3dVTVisibilityProbeResult_t
 				c.record.m_nStableMaterialKey = keys[material];
 				c.record.m_nSampleCount = saturate32( count );
 				c.record.m_nCoverageSampleCount = c.record.m_nSampleCount;
-				c.record.m_nProbeCount = ( uint32_t )( end - begin );
+				c.record.m_nProbeCount = static_cast<uint32_t>( end - begin );
 				c.record.m_nSourceRevision = first.m_nSourceRevision;
-				c.record.m_nViewBin = ( uint8_t )view;
-				c.record.m_nCoverageConfidence = ( uint16_t )std::max( 1ull, std::min( 65535ull, count * 65535ull / viewTotal ) );
-				c.record.m_nFlags = partial ? T3D_VT_VISIBILITY_PARTIAL : 0u;
+				c.record.m_nViewBin = static_cast<uint8_t>(view);
+				c.record.m_nCoverageConfidence = static_cast<uint16_t>(std::max( 1ull, std::min( 65535ull, count * 65535ull / viewTotal ) ));
+				c.record.m_nFlags = partial ? SIRVTVisibilityRecordFlag::T3D_VT_VISIBILITY_PARTIAL : 0u;
 				uint32_t minMip = 0u;
 				while ( minMip < 16u && bins[minMip] == 0u )
 					++minMip;
-				c.record.m_nNominalMipBase = ( uint16_t )std::min( minMip, 15u );
+				c.record.m_nNominalMipBase = static_cast<uint16_t>(std::min( minMip, 15u ));
 				for ( uint32_t mip = 0u; mip < 16u; ++mip ) {
 					c.record.m_szMipWeight[mip] =
-					    bins[mip] ? ( uint16_t )std::max( 1ull, std::min( 65535ull, ( uint64_t )bins[mip] * 65535ull / count ) ) : 0u;
+					    bins[mip] ? static_cast<uint16_t>(std::max( 1ull, std::min( 65535ull, static_cast<uint64_t>(bins[mip]) * 65535ull / count ) )) : 0u;
 				}
 				candidates.push_back( c );
 			}
@@ -127,15 +127,15 @@ bool Terrain3DVTVisibilityAggregator::reduce( const t3dVTVisibilityProbeResult_t
 					return a.record.m_nStableMaterialKey < b.record.m_nStableMaterialKey;
 				return a.record.m_nViewBin < b.record.m_nViewBin;
 			} );
-			const uint32_t keep = std::min( perCellLimit, ( uint32_t )candidates.size() );
+			const uint32_t keep = std::min( perCellLimit, static_cast<uint32_t>(candidates.size() ));
 			if ( keep < candidates.size() ) {
-				stats.m_nDroppedRecords += ( uint32_t )candidates.size() - keep;
+				stats.m_nDroppedRecords += static_cast<uint32_t>(candidates.size()) - keep;
 				partial = true;
 			}
 			t3dVTDemandVisibilityCell_t cell;
 			cell.m_nX = first.m_nCellX;
 			cell.m_nZ = first.m_nCellZ;
-			cell.m_nFirstRecord = ( uint32_t )records.size();
+			cell.m_nFirstRecord = static_cast<uint32_t>(records.size());
 			cell.m_nRecordCount = keep;
 			cell.m_nFlags = partial ? 1u : 0u;
 			if ( partial )
@@ -143,10 +143,10 @@ bool Terrain3DVTVisibilityAggregator::reduce( const t3dVTVisibilityProbeResult_t
 			for ( uint32_t k = 0u; k < keep; ++k ) {
 				t3dVTDemandBakedVisibilityRecord_t r = candidates[k].record;
 				if ( partial )
-					r.m_nFlags |= T3D_VT_VISIBILITY_PARTIAL;
+					r.m_nFlags |= SIRVTVisibilityRecordFlag::T3D_VT_VISIBILITY_PARTIAL;
 				for ( uint32_t mip = 0u; mip < 16u; ++mip )
 					stats.m_szMipSamples[mip] +=
-					    maximum[( ( size_t )( std::lower_bound( keys, keys + materialCount, r.m_nStableMaterialKey ) - keys ) * 8u +
+					    maximum[( static_cast<size_t>(  std::lower_bound( keys, keys + materialCount, r.m_nStableMaterialKey ) - keys  ) * 8u +
 						          r.m_nViewBin ) *
 						            16u +
 						        mip];
@@ -161,13 +161,13 @@ bool Terrain3DVTVisibilityAggregator::reduce( const t3dVTVisibilityProbeResult_t
 			           } );
 			cells.push_back( cell );
 		}
-		stats.m_nProbes += ( uint32_t )( end - begin );
+		stats.m_nProbes += static_cast<uint32_t>( end - begin );
 		begin = end;
 	}
 	if ( records.empty() || records.size() > T3D_VT_DEMAND_BAKED_VISIBILITY_MAX_RECORDS )
 		return false;
-	stats.m_nCells = ( uint32_t )cells.size();
-	stats.m_nRecords = ( uint32_t )records.size();
+	stats.m_nCells = static_cast<uint32_t>(cells.size());
+	stats.m_nRecords = static_cast<uint32_t>(records.size());
 	outCells.swap( cells );
 	outRecords.swap( records );
 	outStats = stats;

@@ -14,8 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRVIRTUALSTACKALLOCATOR_H__
-#define __SIRENGINE_SIRVIRTUALSTACKALLOCATOR_H__
+#ifndef __SIR_VIRTUALSTACKALLOCATOR_H__
+#define __SIR_VIRTUALSTACKALLOCATOR_H__
 
 #include <Core/SIRPCH.h>
 
@@ -28,12 +28,11 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Memory/Allocators/SIRLinearAllocator.h>
 
 // Retain all commitment, release all on empty, or release idle excess on empty.
-typedef enum sirStackDecommitMode_e : uint8_t
-{
+enum class SIRStackDecommitMode : uint8_t {
 	SIR_STACK_DECOMMIT_ON_SHUTDOWN = 0,
 	SIR_STACK_DECOMMIT_ON_EMPTY,
 	SIR_STACK_DECOMMIT_EXCESS_ON_EMPTY
-} sirStackDecommitMode_t;
+};
 
 class SIRVirtualStackAllocator;
 
@@ -70,7 +69,7 @@ public:
 	SIRVirtualStackAllocator( SIRVirtualStackAllocator&& ) = delete;
 	SIRVirtualStackAllocator& operator=( SIRVirtualStackAllocator&& ) = delete;
 
-	bool init( SIRMemorySegment *pSegment, sirStackDecommitMode_t eMode, uint64_t nCommitIncrementBytes = 0 );
+	bool init( SIRMemorySegment *pSegment, SIRStackDecommitMode eMode, uint64_t nCommitIncrementBytes = 0 );
 
 	void *alloc( uint64_t nBytes, uint64_t nAlignment = 16 );
 	bool precommit( uint64_t nBytes );
@@ -91,7 +90,7 @@ private:
 	SIRLinearAllocator m_Linear;
 	uint64_t m_nRecentHighWaterMark;
 	uint32_t m_nBookmarkDepth;
-	sirStackDecommitMode_t m_eMode;
+	SIRStackDecommitMode m_eMode;
 };
 
-#endif // __SIRENGINE_SIRVIRTUALSTACKALLOCATOR_H__
+#endif // __SIR_VIRTUALSTACKALLOCATOR_H__

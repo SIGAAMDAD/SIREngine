@@ -14,8 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRMEMORYPRESSURECOORDINATOR_H__
-#define __SIRENGINE_SIRMEMORYPRESSURECOORDINATOR_H__
+#ifndef __SIR_MEMORYPRESSURECOORDINATOR_H__
+#define __SIR_MEMORYPRESSURECOORDINATOR_H__
 
 #include <Core/SIRPCH.h>
 
@@ -25,14 +25,13 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-#include <Core/Platform/SIRAtomic.h>
+#include <atomic>
 #include <Core/Platform/SIRSync.h>
 
 class SIRMemoryManager;
 class SIRMemorySegment;
 
-typedef enum sirReclaimOwnerType_e : uint8_t
-{
+enum class SIRReclaimOwnerType : uint8_t {
 	SIR_RECLAIM_SLAB,
 	SIR_RECLAIM_SIZE_CLASSES,
 	SIR_RECLAIM_THREAD_SEAT,
@@ -47,7 +46,7 @@ typedef enum sirReclaimOwnerType_e : uint8_t
 	SIR_RECLAIM_CACHE_EVICT,
 	SIR_RECLAIM_SIZE_CLASSES_PRESSURE,
 	SIR_RECLAIM_COMPACT_BUCKET
-} sirReclaimOwnerType_t;
+};
 
 typedef struct sirReclaimOwnerConfig_s
 {
@@ -84,8 +83,8 @@ typedef struct sirOwner_s
 	uint32_t nWarmSlabs;
 	uint32_t nMaximumVictims;
 	uint32_t nPriority;
-	SIRAtomic<uint64_t> nPendingBytes;
-	SIRAtomic<uint32_t> nServicing;
+	std::atomic<uint64_t> nPendingBytes;
+	std::atomic<uint32_t> nServicing;
 	sirOwner_s( void );
 } sirOwner_t;
 
@@ -110,11 +109,11 @@ private:
 	SIRMemoryManager *m_pManager;
 	sirOwner_t *m_pOwners;
 	uint32_t m_nOwnerCapacity;
-	SIRAtomic<uint32_t> m_nOwnerCount;
-	SIRAtomic<uint64_t> m_nRequestedBytes;
-	SIRAtomic<uint64_t> m_nReclaimedBytes;
-	SIRAtomic<uint64_t> m_nCanceledBytes;
+	std::atomic<uint32_t> m_nOwnerCount;
+	std::atomic<uint64_t> m_nRequestedBytes;
+	std::atomic<uint64_t> m_nReclaimedBytes;
+	std::atomic<uint64_t> m_nCanceledBytes;
 	mutable SIRMutex m_RequestMutex;
 };
 
-#endif // __SIRENGINE_SIRMEMORYPRESSURECOORDINATOR_H__
+#endif // __SIR_MEMORYPRESSURECOORDINATOR_H__

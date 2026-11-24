@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRINTRUSIVELIST_H__
-#define __SIRENGINE_SIRINTRUSIVELIST_H__
+#ifndef __SIR_INTRUSIVELIST_H__
+#define __SIR_INTRUSIVELIST_H__
 
 #include <Core/SIRPCH.h>
 
@@ -70,13 +70,13 @@ public:
 		return m_pTail;
 	}
 
-	sirContainerResult_t tryPushBack( sirIntrusiveLink_t *pLink ) noexcept
+	SIRContainerResult tryPushBack( sirIntrusiveLink_t *pLink ) noexcept
 	{
 		if ( pLink == nullptr || pLink->pOwner != nullptr ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		if ( m_nSize == UINT32_MAX ) {
-			return SIR_CONTAINER_SIZE_OVERFLOW;
+			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
 		pLink->pPrevious = m_pTail;
 		pLink->pNext = nullptr;
@@ -88,16 +88,16 @@ public:
 		}
 		m_pTail = pLink;
 		++m_nSize;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
-	sirContainerResult_t tryPushFront( sirIntrusiveLink_t *pLink ) noexcept
+	SIRContainerResult tryPushFront( sirIntrusiveLink_t *pLink ) noexcept
 	{
 		if ( pLink == nullptr || pLink->pOwner != nullptr ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		if ( m_nSize == UINT32_MAX ) {
-			return SIR_CONTAINER_SIZE_OVERFLOW;
+			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
 		pLink->pPrevious = nullptr;
 		pLink->pNext = m_pHead;
@@ -109,13 +109,13 @@ public:
 		}
 		m_pHead = pLink;
 		++m_nSize;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
-	sirContainerResult_t tryRemove( sirIntrusiveLink_t *pLink ) noexcept
+	SIRContainerResult tryRemove( sirIntrusiveLink_t *pLink ) noexcept
 	{
 		if ( pLink == nullptr || pLink->pOwner != this ) {
-			return SIR_CONTAINER_INVALID_HANDLE;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_HANDLE;
 		}
 		if ( pLink->pPrevious != nullptr ) {
 			pLink->pPrevious->pNext = pLink->pNext;
@@ -131,7 +131,7 @@ public:
 		pLink->pNext = nullptr;
 		pLink->pOwner = nullptr;
 		--m_nSize;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
 	void clear( void ) noexcept
@@ -150,4 +150,4 @@ public:
 	}
 };
 
-#endif // __SIRENGINE_SIRINTRUSIVELIST_H__
+#endif // __SIR_INTRUSIVELIST_H__

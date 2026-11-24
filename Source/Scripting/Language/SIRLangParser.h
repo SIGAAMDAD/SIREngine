@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRLANGPARSER_H__
-#define __SIRENGINE_SIRLANGPARSER_H__
+#ifndef __SIR_LANGPARSER_H__
+#define __SIR_LANGPARSER_H__
 
 #include <Core/SIRPCH.h>
 
@@ -28,8 +28,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // while the original borrowed source retains whitespace, comments and spelling.
 // Nodes reference half-open token ranges, and children link by stable indexes.
 // The caller owns every buffer and keeps the source bytes alive until finished.
-typedef enum sirLangSyntaxKind_e : uint8_t
-{
+enum class SIRLangSyntaxKind : uint8_t {
 	SIR_LANG_SYNTAX_MODULE = 0,
 	SIR_LANG_SYNTAX_IMPORT,
 	SIR_LANG_SYNTAX_SCHEMA,
@@ -74,10 +73,9 @@ typedef enum sirLangSyntaxKind_e : uint8_t
 	SIR_LANG_SYNTAX_SWITCH,
 	SIR_LANG_SYNTAX_CASE,
 	SIR_LANG_SYNTAX_DEFAULT
-} sirLangSyntaxKind_t;
+};
 
-typedef enum sirLangParseError_e : uint8_t
-{
+enum class SIRLangParseError : uint8_t {
 	SIR_LANG_PARSE_OK = 0,
 	SIR_LANG_PARSE_INVALID_INPUT,
 	SIR_LANG_PARSE_CAPACITY,
@@ -91,11 +89,11 @@ typedef enum sirLangParseError_e : uint8_t
 	SIR_LANG_PARSE_EXPECTED_INDENT,
 	SIR_LANG_PARSE_UNEXPECTED_TOKEN,
 	SIR_LANG_PARSE_NESTING_LIMIT
-} sirLangParseError_t;
+};
 
 typedef struct sirLangSyntaxNode_s
 {
-	sirLangSyntaxKind_t eKind;
+	SIRLangSyntaxKind eKind;
 	uint32_t nStartToken;
 	uint32_t nEndToken;
 	uint32_t nFirstChild;
@@ -105,8 +103,8 @@ typedef struct sirLangSyntaxNode_s
 
 typedef struct sirLangParseDiagnostic_s
 {
-	sirLangParseError_t eError;
-	sirLangLexError_t eLexError;
+	SIRLangParseError eError;
+	SIRLangLexError eLexError;
 	uint32_t nOffset;
 	uint32_t nLength;
 	uint32_t nLine;
@@ -143,6 +141,6 @@ bool SIRLangSyntaxSpan( const sirLangSyntaxTree_t *pTree, uint32_t iNode, sirLan
 // Syntax only. No engine bindings, persistent state or runtime code are created.
 // Returns OK for a syntactically clean module, otherwise the first error;
 // error recovery retains later independent declarations when capacity permits.
-sirLangParseError_t SIRLangParse( const sirLangSourceView_t& source, sirLangSyntaxTree_t *pTree ) noexcept;
+SIRLangParseError SIRLangParse( const sirLangSourceView_t& source, sirLangSyntaxTree_t *pTree ) noexcept;
 
-#endif // __SIRENGINE_SIRLANGPARSER_H__
+#endif // __SIR_LANGPARSER_H__

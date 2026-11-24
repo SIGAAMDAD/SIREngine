@@ -19,8 +19,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 typedef struct sirLangDeclarationSpec_s
 {
 	uint32_t iScope;
-	sirLangSymbolKind_t eKind;
-	sirLangValueKind_t eValue;
+	SIRLangSymbolKind eKind;
+	SIRLangValueKind eValue;
 } sirLangDeclarationSpec_t;
 
 typedef struct sirLangSemanticState_s
@@ -31,8 +31,8 @@ typedef struct sirLangSemanticState_s
 	uint32_t nScopeDepth;
 	uint32_t nDepth;
 	uint32_t iSchema;
-	sirLangValueKind_t eReturnType;
-	sirLangSemanticError_t eFirstError;
+	SIRLangValueKind eReturnType;
+	SIRLangSemanticError eFirstError;
 } sirLangSemanticState_t;
 
 static bool sirLangEqualToken( const sirLangSyntaxTree_t *pTree, uint32_t iToken, const char *pszText ) noexcept
@@ -72,15 +72,15 @@ static uint32_t sirLangNextChild( const sirLangSemanticState_t *pState, uint32_t
 	return pState->pTree->pNodes[iNode].nNextSibling;
 }
 
-static void sirLangSemanticReport( sirLangSemanticState_t *pState, sirLangSemanticError_t eError, uint32_t iNode ) noexcept
+static void sirLangSemanticReport( sirLangSemanticState_t *pState, SIRLangSemanticError eError, uint32_t iNode ) noexcept
 {
-	if ( pState->eFirstError == SIR_LANG_SEMANTIC_OK ) {
+	if ( pState->eFirstError == SIRLangSemanticError::SIR_LANG_SEMANTIC_OK ) {
 		pState->eFirstError = eError;
 	}
 	sirLangSemanticOutput_t *pOutput = pState->pOutput;
 	if ( pOutput->nDiagnosticCount >= pOutput->nDiagnosticCapacity ) {
 		pOutput->bTruncated = true;
-		pState->eFirstError = SIR_LANG_SEMANTIC_CAPACITY;
+		pState->eFirstError = SIRLangSemanticError::SIR_LANG_SEMANTIC_CAPACITY;
 		return;
 	}
 	uint32_t iToken = 0;
@@ -92,12 +92,12 @@ static void sirLangSemanticReport( sirLangSemanticState_t *pState, sirLangSemant
 }
 
 static void sirLangRecordReference( sirLangSemanticState_t *pState, uint32_t iNode, uint32_t iDeclaration,
-                                    sirLangValueKind_t eValue ) noexcept
+                                    SIRLangValueKind eValue ) noexcept
 {
 	sirLangSemanticOutput_t *pOutput = pState->pOutput;
 	if ( pOutput->nReferenceCount >= pOutput->nReferenceCapacity ) {
 		pOutput->bTruncated = true;
-		pState->eFirstError = SIR_LANG_SEMANTIC_CAPACITY;
+		pState->eFirstError = SIRLangSemanticError::SIR_LANG_SEMANTIC_CAPACITY;
 		return;
 	}
 	pOutput->pReferences[pOutput->nReferenceCount++] = { iNode, iDeclaration, eValue };
@@ -107,7 +107,7 @@ static void sirLangRecordReference( sirLangSemanticState_t *pState, uint32_t iNo
 static bool sirLangPushScope( sirLangSemanticState_t *pState, uint32_t iScope ) noexcept
 {
 	if ( pState->nScopeDepth >= SIR_LANG_MAX_SEMANTIC_DEPTH ) {
-		sirLangSemanticReport( pState, SIR_LANG_SEMANTIC_DEPTH_LIMIT, iScope );
+		sirLangSemanticReport( pState, SIRLangSemanticError::SIR_LANG_SEMANTIC_DEPTH_LIMIT, iScope );
 		return false;
 	}
 	pState->szScopes[pState->nScopeDepth++] = iScope;
@@ -118,29 +118,29 @@ static bool sirLangEnterNode( sirLangSemanticState_t *pState, uint32_t iNode ) n
 {
 	if ( ++pState->nDepth > SIR_LANG_MAX_SEMANTIC_DEPTH ) {
 		--pState->nDepth;
-		sirLangSemanticReport( pState, SIR_LANG_SEMANTIC_DEPTH_LIMIT, iNode );
+		sirLangSemanticReport( pState, SIRLangSemanticError::SIR_LANG_SEMANTIC_DEPTH_LIMIT, iNode );
 		return false;
 	}
 	return true;
 }
 
-static sirLangValueKind_t sirLangPrimitiveType( const sirLangSyntaxTree_t *pTree, uint32_t iToken ) noexcept
+static SIRLangValueKind sirLangPrimitiveType( const sirLangSyntaxTree_t *pTree, uint32_t iToken ) noexcept
 {
 	static constexpr struct
 	{
 		const char *pszName;
-		sirLangValueKind_t eKind;
-	} s_szTypes[] = { { "void", SIR_LANG_VALUE_VOID }, { "bool", SIR_LANG_VALUE_BOOL }, { "i8", SIR_LANG_VALUE_I8 },
-	                  { "u8", SIR_LANG_VALUE_U8 },     { "i16", SIR_LANG_VALUE_I16 },   { "u16", SIR_LANG_VALUE_U16 },
-	                  { "i32", SIR_LANG_VALUE_I32 },   { "u32", SIR_LANG_VALUE_U32 },   { "i64", SIR_LANG_VALUE_I64 },
-	                  { "u64", SIR_LANG_VALUE_U64 },   { "f16", SIR_LANG_VALUE_F16 },   { "f32", SIR_LANG_VALUE_F32 },
-	                  { "f64", SIR_LANG_VALUE_F64 },   { "atom", SIR_LANG_VALUE_ATOM } };
+		SIRLangValueKind eKind;
+	} s_szTypes[] = { { "void", SIRLangValueKind::SIR_LANG_VALUE_VOID }, { "bool", SIRLangValueKind::SIR_LANG_VALUE_BOOL }, { "i8", SIRLangValueKind::SIR_LANG_VALUE_I8 },
+	                  { "u8", SIRLangValueKind::SIR_LANG_VALUE_U8 },     { "i16", SIRLangValueKind::SIR_LANG_VALUE_I16 },   { "u16", SIRLangValueKind::SIR_LANG_VALUE_U16 },
+	                  { "i32", SIRLangValueKind::SIR_LANG_VALUE_I32 },   { "u32", SIRLangValueKind::SIR_LANG_VALUE_U32 },   { "i64", SIRLangValueKind::SIR_LANG_VALUE_I64 },
+	                  { "u64", SIRLangValueKind::SIR_LANG_VALUE_U64 },   { "f16", SIRLangValueKind::SIR_LANG_VALUE_F16 },   { "f32", SIRLangValueKind::SIR_LANG_VALUE_F32 },
+	                  { "f64", SIRLangValueKind::SIR_LANG_VALUE_F64 },   { "atom", SIRLangValueKind::SIR_LANG_VALUE_ATOM } };
 	for ( uint32_t iType = 0; iType < sizeof( s_szTypes ) / sizeof( s_szTypes[0] ); ++iType ) {
 		if ( sirLangEqualToken( pTree, iToken, s_szTypes[iType].pszName ) ) {
 			return s_szTypes[iType].eKind;
 		}
 	}
-	return SIR_LANG_VALUE_UNKNOWN;
+	return SIRLangValueKind::SIR_LANG_VALUE_UNKNOWN;
 }
 
 static bool sirLangGenericTypeName( const sirLangSyntaxTree_t *pTree, uint32_t iToken ) noexcept
@@ -166,8 +166,8 @@ static bool sirLangOtherBuiltinType( const sirLangSyntaxTree_t *pTree, uint32_t 
 	return false;
 }
 
-static bool sirLangMatchExternal( const sirLangSemanticState_t *pState, uint32_t iToken, sirLangSymbolKind_t eKind,
-                                  sirLangValueKind_t *pValue ) noexcept
+static bool sirLangMatchExternal( const sirLangSemanticState_t *pState, uint32_t iToken, SIRLangSymbolKind eKind,
+                                  SIRLangValueKind *pValue ) noexcept
 {
 	for ( uint32_t iItem = 0; iItem < pState->pOutput->nExternalCount; ++iItem ) {
 		const sirLangExternalSymbol_t& ext = pState->pOutput->pExternals[iItem];
@@ -187,13 +187,13 @@ static uint32_t sirLangDeclarationName( const sirLangSyntaxTree_t *pTree, uint32
 		return SIR_LANG_INVALID_INDEX;
 	}
 	uint32_t iToken = iStart;
-	if ( node.eKind == SIR_LANG_SYNTAX_CONDITION_BANK ) {
+	if ( node.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_CONDITION_BANK ) {
 		iToken += 2;
-	} else if ( node.eKind == SIR_LANG_SYNTAX_EVENT ) {
+	} else if ( node.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_EVENT ) {
 		// Legacy hand-authored AST fixtures use "on Name"; the modern parser
 		// requires "on event Name". This does not accept legacy source syntax.
 		iToken += sirLangEqualToken( pTree, iStart + 1, "event" ) ? 2 : 1;
-	} else if ( node.eKind == SIR_LANG_SYNTAX_PARAMETER || node.eKind == SIR_LANG_SYNTAX_FIELD ) {
+	} else if ( node.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_PARAMETER || node.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_FIELD ) {
 		const bool bFieldPrefix = sirLangEqualToken( pTree, iStart, "field" );
 		if ( bFieldPrefix ) {
 			iToken = iStart + 1;
@@ -204,7 +204,7 @@ static uint32_t sirLangDeclarationName( const sirLangSyntaxTree_t *pTree, uint32
 		uint32_t iType = node.nFirstChild;
 		for ( uint32_t n = 0; iType < pTree->nNodeCount && n < pTree->nNodeCount; iType = pTree->pNodes[iType].nNextSibling, ++n ) {
 			const sirLangSyntaxNode_t& child = pTree->pNodes[iType];
-			if ( child.eKind == SIR_LANG_SYNTAX_TYPE && child.nStartToken == iToken ) {
+			if ( child.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_TYPE && child.nStartToken == iToken ) {
 				iToken = child.nEndToken;
 				break;
 			}
@@ -212,7 +212,7 @@ static uint32_t sirLangDeclarationName( const sirLangSyntaxTree_t *pTree, uint32
 	} else {
 		++iToken;
 	}
-	return iToken < node.nEndToken && iToken < pTree->nTokenCount && pTree->pTokens[iToken].eKind == SIR_LANG_TOKEN_IDENTIFIER
+	return iToken < node.nEndToken && iToken < pTree->nTokenCount && pTree->pTokens[iToken].eKind == SIRLangTokenKind::SIR_LANG_TOKEN_IDENTIFIER
 	           ? iToken
 			   : SIR_LANG_INVALID_INDEX;
 }
@@ -247,7 +247,7 @@ static sirLangSemanticSymbol_t *sirLangFindTypeDeclaration( sirLangSemanticState
 	for ( uint32_t iSymbol = 0; iSymbol < pState->pOutput->nSymbolCount; ++iSymbol ) {
 		sirLangSemanticSymbol_t& symbol = pState->pOutput->pSymbols[iSymbol];
 		if ( symbol.iScopeNode == pState->pTree->nRoot &&
-		     ( symbol.eKind == SIR_LANG_SYMBOL_TYPE || symbol.eKind == SIR_LANG_SYMBOL_BEHAVIOR ) &&
+		     ( symbol.eKind == SIRLangSymbolKind::SIR_LANG_SYMBOL_TYPE || symbol.eKind == SIRLangSymbolKind::SIR_LANG_SYMBOL_BEHAVIOR ) &&
 		     sirLangSameTokens( pState->pTree, symbol.iNameToken, iToken ) ) {
 			return &symbol;
 		}
@@ -267,12 +267,12 @@ static sirLangSemanticSymbol_t *sirLangDeclare( sirLangSemanticState_t *pState, 
 		if ( pPrevious->iDeclarationNode == iNode ) {
 			return pPrevious;
 		}
-		sirLangSemanticReport( pState, SIR_LANG_SEMANTIC_DUPLICATE_SYMBOL, iNode );
+		sirLangSemanticReport( pState, SIRLangSemanticError::SIR_LANG_SEMANTIC_DUPLICATE_SYMBOL, iNode );
 		return nullptr;
 	}
 	if ( pState->pOutput->nSymbolCount >= pState->pOutput->nSymbolCapacity ) {
 		pState->pOutput->bTruncated = true;
-		pState->eFirstError = SIR_LANG_SEMANTIC_CAPACITY;
+		pState->eFirstError = SIRLangSemanticError::SIR_LANG_SEMANTIC_CAPACITY;
 		return nullptr;
 	}
 	sirLangSemanticSymbol_t& symbol = pState->pOutput->pSymbols[pState->pOutput->nSymbolCount++];
@@ -280,24 +280,24 @@ static sirLangSemanticSymbol_t *sirLangDeclare( sirLangSemanticState_t *pState, 
 	return &symbol;
 }
 
-static bool sirLangDeclarationKind( sirLangSyntaxKind_t eSyntax, sirLangSymbolKind_t *pKind ) noexcept
+static bool sirLangDeclarationKind( SIRLangSyntaxKind eSyntax, SIRLangSymbolKind *pKind ) noexcept
 {
 	switch ( eSyntax ) {
-	case SIR_LANG_SYNTAX_SCHEMA:
-	case SIR_LANG_SYNTAX_INTERFACE:
-	case SIR_LANG_SYNTAX_RECORD:
-	case SIR_LANG_SYNTAX_ENUM:
-		*pKind = SIR_LANG_SYMBOL_TYPE;
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_SCHEMA:
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_INTERFACE:
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_RECORD:
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_ENUM:
+		*pKind = SIRLangSymbolKind::SIR_LANG_SYMBOL_TYPE;
 		return true;
-	case SIR_LANG_SYNTAX_CLASS:
-	case SIR_LANG_SYNTAX_BEHAVIOR:
-		*pKind = SIR_LANG_SYMBOL_BEHAVIOR;
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_CLASS:
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_BEHAVIOR:
+		*pKind = SIRLangSymbolKind::SIR_LANG_SYMBOL_BEHAVIOR;
 		return true;
-	case SIR_LANG_SYNTAX_FUNCTION:
-		*pKind = SIR_LANG_SYMBOL_FUNCTION;
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_FUNCTION:
+		*pKind = SIRLangSymbolKind::SIR_LANG_SYMBOL_FUNCTION;
 		return true;
-	case SIR_LANG_SYNTAX_EVENT:
-		*pKind = SIR_LANG_SYMBOL_EVENT;
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_EVENT:
+		*pKind = SIRLangSymbolKind::SIR_LANG_SYMBOL_EVENT;
 		return true;
 	default:
 		return false;
@@ -308,51 +308,51 @@ static void sirLangPredeclare( sirLangSemanticState_t *pState, uint32_t iScope )
 {
 	uint32_t iChild = sirLangFirstChild( pState, iScope );
 	for ( uint32_t nSteps = 0; iChild != SIR_LANG_INVALID_INDEX && nSteps < pState->pTree->nNodeCount; ++nSteps ) {
-		sirLangSymbolKind_t eKind = SIR_LANG_SYMBOL_LOCAL;
-		const sirLangSyntaxKind_t eSyntax = pState->pTree->pNodes[iChild].eKind;
+		SIRLangSymbolKind eKind = SIRLangSymbolKind::SIR_LANG_SYMBOL_LOCAL;
+		const SIRLangSyntaxKind eSyntax = pState->pTree->pNodes[iChild].eKind;
 		if ( sirLangDeclarationKind( eSyntax, &eKind ) ) {
 			sirLangDeclare(
 			    pState, iChild,
 			    { iScope, eKind,
-				  eKind == SIR_LANG_SYMBOL_FUNCTION || eKind == SIR_LANG_SYMBOL_EVENT ? SIR_LANG_VALUE_FUNCTION : SIR_LANG_VALUE_OTHER } );
+				  eKind == SIRLangSymbolKind::SIR_LANG_SYMBOL_FUNCTION || eKind == SIRLangSymbolKind::SIR_LANG_SYMBOL_EVENT ? SIRLangValueKind::SIR_LANG_VALUE_FUNCTION : SIRLangValueKind::SIR_LANG_VALUE_OTHER } );
 		}
 		iChild = sirLangNextChild( pState, iChild );
 	}
 }
 
-static sirLangValueKind_t sirLangCheckType( sirLangSemanticState_t *pState, uint32_t iNode ) noexcept
+static SIRLangValueKind sirLangCheckType( sirLangSemanticState_t *pState, uint32_t iNode ) noexcept
 {
 	if ( iNode >= pState->pTree->nNodeCount || !sirLangEnterNode( pState, iNode ) ) {
-		return SIR_LANG_VALUE_UNKNOWN;
+		return SIRLangValueKind::SIR_LANG_VALUE_UNKNOWN;
 	}
 	const sirLangSyntaxNode_t& node = pState->pTree->pNodes[iNode];
 	const uint32_t iStart = node.nStartToken;
-	sirLangValueKind_t eValue = SIR_LANG_VALUE_UNKNOWN;
+	SIRLangValueKind eValue = SIRLangValueKind::SIR_LANG_VALUE_UNKNOWN;
 	if ( sirLangEqualToken( pState->pTree, iStart, "[" ) ) {
-		eValue = SIR_LANG_VALUE_OTHER;
+		eValue = SIRLangValueKind::SIR_LANG_VALUE_OTHER;
 	} else {
 		eValue = sirLangPrimitiveType( pState->pTree, iStart );
-		if ( eValue == SIR_LANG_VALUE_UNKNOWN &&
+		if ( eValue == SIRLangValueKind::SIR_LANG_VALUE_UNKNOWN &&
 		     ( sirLangGenericTypeName( pState->pTree, iStart ) || sirLangOtherBuiltinType( pState->pTree, iStart ) ) ) {
-			eValue = SIR_LANG_VALUE_OTHER;
+			eValue = SIRLangValueKind::SIR_LANG_VALUE_OTHER;
 		}
-		if ( eValue == SIR_LANG_VALUE_UNKNOWN ) {
+		if ( eValue == SIRLangValueKind::SIR_LANG_VALUE_UNKNOWN ) {
 			sirLangSemanticSymbol_t *pDeclared = sirLangFindTypeDeclaration( pState, iStart );
 			if ( pDeclared != nullptr ) {
-				eValue = SIR_LANG_VALUE_OTHER;
+				eValue = SIRLangValueKind::SIR_LANG_VALUE_OTHER;
 				sirLangRecordReference( pState, iNode, pDeclared->iDeclarationNode, eValue );
 			}
 		}
-		if ( eValue == SIR_LANG_VALUE_UNKNOWN && sirLangMatchExternal( pState, iStart, SIR_LANG_SYMBOL_TYPE, &eValue ) ) {
+		if ( eValue == SIRLangValueKind::SIR_LANG_VALUE_UNKNOWN && sirLangMatchExternal( pState, iStart, SIRLangSymbolKind::SIR_LANG_SYMBOL_TYPE, &eValue ) ) {
 			sirLangRecordReference( pState, iNode, SIR_LANG_INVALID_INDEX, eValue );
 		}
 	}
-	if ( eValue == SIR_LANG_VALUE_UNKNOWN ) {
-		sirLangSemanticReport( pState, SIR_LANG_SEMANTIC_UNKNOWN_TYPE, iNode );
+	if ( eValue == SIRLangValueKind::SIR_LANG_VALUE_UNKNOWN ) {
+		sirLangSemanticReport( pState, SIRLangSemanticError::SIR_LANG_SEMANTIC_UNKNOWN_TYPE, iNode );
 	}
 	uint32_t iChild = node.nFirstChild;
 	for ( uint32_t nSteps = 0; iChild != SIR_LANG_INVALID_INDEX && nSteps < pState->pTree->nNodeCount; ++nSteps ) {
-		if ( pState->pTree->pNodes[iChild].eKind == SIR_LANG_SYNTAX_TYPE ) {
+		if ( pState->pTree->pNodes[iChild].eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_TYPE ) {
 			sirLangCheckType( pState, iChild );
 		}
 		iChild = sirLangNextChild( pState, iChild );
@@ -361,31 +361,31 @@ static sirLangValueKind_t sirLangCheckType( sirLangSemanticState_t *pState, uint
 	return eValue;
 }
 
-static uint64_t sirLangIntegerMaximum( sirLangValueKind_t eKind ) noexcept
+static uint64_t sirLangIntegerMaximum( SIRLangValueKind eKind ) noexcept
 {
 	switch ( eKind ) {
-	case SIR_LANG_VALUE_I8:
+	case SIRLangValueKind::SIR_LANG_VALUE_I8:
 		return INT8_MAX;
-	case SIR_LANG_VALUE_U8:
+	case SIRLangValueKind::SIR_LANG_VALUE_U8:
 		return UINT8_MAX;
-	case SIR_LANG_VALUE_I16:
+	case SIRLangValueKind::SIR_LANG_VALUE_I16:
 		return INT16_MAX;
-	case SIR_LANG_VALUE_U16:
+	case SIRLangValueKind::SIR_LANG_VALUE_U16:
 		return UINT16_MAX;
-	case SIR_LANG_VALUE_I32:
+	case SIRLangValueKind::SIR_LANG_VALUE_I32:
 		return INT32_MAX;
-	case SIR_LANG_VALUE_U32:
+	case SIRLangValueKind::SIR_LANG_VALUE_U32:
 		return UINT32_MAX;
-	case SIR_LANG_VALUE_I64:
+	case SIRLangValueKind::SIR_LANG_VALUE_I64:
 		return INT64_MAX;
-	case SIR_LANG_VALUE_U64:
+	case SIRLangValueKind::SIR_LANG_VALUE_U64:
 		return UINT64_MAX;
 	default:
 		return UINT64_MAX;
 	}
 }
 
-static bool sirLangValidInteger( const uint8_t *pBytes, uint32_t nEnd, uint32_t nBase, sirLangValueKind_t eKind ) noexcept
+static bool sirLangValidInteger( const uint8_t *pBytes, uint32_t nEnd, uint32_t nBase, SIRLangValueKind eKind ) noexcept
 {
 	const uint64_t nMaximum = sirLangIntegerMaximum( eKind );
 	uint64_t nValue = 0;
@@ -411,19 +411,19 @@ static bool sirLangValidInteger( const uint8_t *pBytes, uint32_t nEnd, uint32_t 
 	return true;
 }
 
-static sirLangValueKind_t sirLangLiteralType( sirLangSemanticState_t *pState, uint32_t iNode ) noexcept
+static SIRLangValueKind sirLangLiteralType( sirLangSemanticState_t *pState, uint32_t iNode ) noexcept
 {
 	const uint32_t iToken = pState->pTree->pNodes[iNode].nStartToken;
 	const sirLangToken_t& token = pState->pTree->pTokens[iToken];
-	if ( token.eKind == SIR_LANG_TOKEN_STRING ) {
-		return SIR_LANG_VALUE_ATOM;
+	if ( token.eKind == SIRLangTokenKind::SIR_LANG_TOKEN_STRING ) {
+		return SIRLangValueKind::SIR_LANG_VALUE_ATOM;
 	}
 	if ( sirLangEqualToken( pState->pTree, iToken, "true" ) || sirLangEqualToken( pState->pTree, iToken, "false" ) ||
 	     sirLangEqualToken( pState->pTree, iToken, "ON" ) || sirLangEqualToken( pState->pTree, iToken, "OFF" ) ) {
-		return SIR_LANG_VALUE_BOOL;
+		return SIRLangValueKind::SIR_LANG_VALUE_BOOL;
 	}
-	if ( token.eKind != SIR_LANG_TOKEN_NUMBER ) {
-		return SIR_LANG_VALUE_UNKNOWN;
+	if ( token.eKind != SIRLangTokenKind::SIR_LANG_TOKEN_NUMBER ) {
+		return SIRLangValueKind::SIR_LANG_VALUE_UNKNOWN;
 	}
 	const uint8_t *pBytes = pState->pTree->source.pBytes + token.nOffset;
 	const uint32_t nBytes = token.nLength;
@@ -468,58 +468,58 @@ static sirLangValueKind_t sirLangLiteralType( sirLangSemanticState_t *pState, ui
 	}
 	const uint32_t nBase = bHex ? ( pBytes[1] == 'b' ? 2U : 16U ) : 10U;
 	if ( iSuffix == nBytes ) {
-		if ( !bFloat && !sirLangValidInteger( pBytes, iSuffix, nBase, SIR_LANG_VALUE_U64 ) ) {
-			sirLangSemanticReport( pState, SIR_LANG_SEMANTIC_INVALID_LITERAL, iNode );
-			return SIR_LANG_VALUE_UNKNOWN;
+		if ( !bFloat && !sirLangValidInteger( pBytes, iSuffix, nBase, SIRLangValueKind::SIR_LANG_VALUE_U64 ) ) {
+			sirLangSemanticReport( pState, SIRLangSemanticError::SIR_LANG_SEMANTIC_INVALID_LITERAL, iNode );
+			return SIRLangValueKind::SIR_LANG_VALUE_UNKNOWN;
 		}
-		return bFloat ? SIR_LANG_VALUE_F32 : SIR_LANG_VALUE_I32;
+		return bFloat ? SIRLangValueKind::SIR_LANG_VALUE_F32 : SIRLangValueKind::SIR_LANG_VALUE_I32;
 	}
 	static constexpr struct
 	{
 		const char *pszSuffix;
-		sirLangValueKind_t eValue;
-	} s_szSuffixes[] = { { "i8", SIR_LANG_VALUE_I8 },   { "u8", SIR_LANG_VALUE_U8 },   { "i16", SIR_LANG_VALUE_I16 },
-	                     { "u16", SIR_LANG_VALUE_U16 }, { "i32", SIR_LANG_VALUE_I32 }, { "u32", SIR_LANG_VALUE_U32 },
-	                     { "i64", SIR_LANG_VALUE_I64 }, { "u64", SIR_LANG_VALUE_U64 }, { "f16", SIR_LANG_VALUE_F16 },
-	                     { "f32", SIR_LANG_VALUE_F32 }, { "f64", SIR_LANG_VALUE_F64 } };
+		SIRLangValueKind eValue;
+	} s_szSuffixes[] = { { "i8", SIRLangValueKind::SIR_LANG_VALUE_I8 },   { "u8", SIRLangValueKind::SIR_LANG_VALUE_U8 },   { "i16", SIRLangValueKind::SIR_LANG_VALUE_I16 },
+	                     { "u16", SIRLangValueKind::SIR_LANG_VALUE_U16 }, { "i32", SIRLangValueKind::SIR_LANG_VALUE_I32 }, { "u32", SIRLangValueKind::SIR_LANG_VALUE_U32 },
+	                     { "i64", SIRLangValueKind::SIR_LANG_VALUE_I64 }, { "u64", SIRLangValueKind::SIR_LANG_VALUE_U64 }, { "f16", SIRLangValueKind::SIR_LANG_VALUE_F16 },
+	                     { "f32", SIRLangValueKind::SIR_LANG_VALUE_F32 }, { "f64", SIRLangValueKind::SIR_LANG_VALUE_F64 } };
 	for ( uint32_t iItem = 0; iItem < sizeof( s_szSuffixes ) / sizeof( s_szSuffixes[0] ); ++iItem ) {
 		const size_t nSuffix = strlen( s_szSuffixes[iItem].pszSuffix );
 		if ( nBytes - iSuffix == nSuffix && memcmp( pBytes + iSuffix, s_szSuffixes[iItem].pszSuffix, nSuffix ) == 0 ) {
-			const sirLangValueKind_t eLiteral = s_szSuffixes[iItem].eValue;
-			if ( ( bFloat && eLiteral < SIR_LANG_VALUE_F16 ) ||
-			     ( eLiteral < SIR_LANG_VALUE_F16 && !sirLangValidInteger( pBytes, iSuffix, nBase, eLiteral ) ) ) {
-				sirLangSemanticReport( pState, SIR_LANG_SEMANTIC_INVALID_LITERAL, iNode );
-				return SIR_LANG_VALUE_UNKNOWN;
+			const SIRLangValueKind eLiteral = s_szSuffixes[iItem].eValue;
+			if ( ( bFloat && eLiteral < SIRLangValueKind::SIR_LANG_VALUE_F16 ) ||
+			     ( eLiteral < SIRLangValueKind::SIR_LANG_VALUE_F16 && !sirLangValidInteger( pBytes, iSuffix, nBase, eLiteral ) ) ) {
+				sirLangSemanticReport( pState, SIRLangSemanticError::SIR_LANG_SEMANTIC_INVALID_LITERAL, iNode );
+				return SIRLangValueKind::SIR_LANG_VALUE_UNKNOWN;
 			}
 			return eLiteral;
 		}
 	}
-	sirLangSemanticReport( pState, SIR_LANG_SEMANTIC_INVALID_LITERAL, iNode );
-	return SIR_LANG_VALUE_UNKNOWN;
+	sirLangSemanticReport( pState, SIRLangSemanticError::SIR_LANG_SEMANTIC_INVALID_LITERAL, iNode );
+	return SIRLangValueKind::SIR_LANG_VALUE_UNKNOWN;
 }
 
 // Resolve a bare integral literal against a known scalar storage type. The
 // literal's default i32 type does not constrain explicitly typed consumers.
-static bool sirLangContextualInteger( const sirLangSemanticState_t *pState, uint32_t iNode, sirLangValueKind_t eExpected ) noexcept
+static bool sirLangContextualInteger( const sirLangSemanticState_t *pState, uint32_t iNode, SIRLangValueKind eExpected ) noexcept
 {
-	if ( iNode >= pState->pTree->nNodeCount || eExpected < SIR_LANG_VALUE_I8 || eExpected > SIR_LANG_VALUE_U64 ) {
+	if ( iNode >= pState->pTree->nNodeCount || eExpected < SIRLangValueKind::SIR_LANG_VALUE_I8 || eExpected > SIRLangValueKind::SIR_LANG_VALUE_U64 ) {
 		return false;
 	}
 	const sirLangSyntaxNode_t& node = pState->pTree->pNodes[iNode];
-	if ( node.eKind == SIR_LANG_SYNTAX_UNARY && node.nStartToken < pState->pTree->nTokenCount ) {
+	if ( node.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_UNARY && node.nStartToken < pState->pTree->nTokenCount ) {
 		const sirLangToken_t& sign = pState->pTree->pTokens[node.nStartToken];
 		const uint8_t *pSign = pState->pTree->source.pBytes + sign.nOffset;
 		if ( sign.nLength == 1 && pSign[0] == '+' ) {
 			return sirLangContextualInteger( pState, node.nFirstChild, eExpected );
 		}
 		if ( sign.nLength == 1 && pSign[0] == '-' &&
-		     ( eExpected == SIR_LANG_VALUE_I8 || eExpected == SIR_LANG_VALUE_I16 || eExpected == SIR_LANG_VALUE_I32 ||
-		       eExpected == SIR_LANG_VALUE_I64 ) ) {
+		     ( eExpected == SIRLangValueKind::SIR_LANG_VALUE_I8 || eExpected == SIRLangValueKind::SIR_LANG_VALUE_I16 || eExpected == SIRLangValueKind::SIR_LANG_VALUE_I32 ||
+		       eExpected == SIRLangValueKind::SIR_LANG_VALUE_I64 ) ) {
 			uint32_t iChild = node.nFirstChild;
-			while ( iChild < pState->pTree->nNodeCount && pState->pTree->pNodes[iChild].eKind == SIR_LANG_SYNTAX_GROUP ) {
+			while ( iChild < pState->pTree->nNodeCount && pState->pTree->pNodes[iChild].eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_GROUP ) {
 				iChild = pState->pTree->pNodes[iChild].nFirstChild;
 			}
-			if ( iChild >= pState->pTree->nNodeCount || pState->pTree->pNodes[iChild].eKind != SIR_LANG_SYNTAX_LITERAL ) {
+			if ( iChild >= pState->pTree->nNodeCount || pState->pTree->pNodes[iChild].eKind != SIRLangSyntaxKind::SIR_LANG_SYNTAX_LITERAL ) {
 				return false;
 			}
 			const uint32_t iToken = pState->pTree->pNodes[iChild].nStartToken;
@@ -527,7 +527,7 @@ static bool sirLangContextualInteger( const sirLangSemanticState_t *pState, uint
 				return false;
 			}
 			const sirLangToken_t& token = pState->pTree->pTokens[iToken];
-			if ( token.eKind != SIR_LANG_TOKEN_NUMBER || token.nLength == 0 ) {
+			if ( token.eKind != SIRLangTokenKind::SIR_LANG_TOKEN_NUMBER || token.nLength == 0 ) {
 				return false;
 			}
 			const uint8_t *pData = pState->pTree->source.pBytes + token.nOffset;
@@ -535,7 +535,7 @@ static bool sirLangContextualInteger( const sirLangSemanticState_t *pState, uint
 			const uint32_t nBase = bPrefix ? ( pData[1] == 'x' ? 16U : 2U ) : 10U;
 			const uint64_t nLimit = sirLangIntegerMaximum( eExpected ) + 1;
 			uint64_t nValue = 0;
-			if ( !sirLangValidInteger( pData, token.nLength, nBase, SIR_LANG_VALUE_U64 ) ) {
+			if ( !sirLangValidInteger( pData, token.nLength, nBase, SIRLangValueKind::SIR_LANG_VALUE_U64 ) ) {
 				return false;
 			}
 			for ( uint32_t i = bPrefix ? 2 : 0; i < token.nLength; ++i ) {
@@ -549,14 +549,14 @@ static bool sirLangContextualInteger( const sirLangSemanticState_t *pState, uint
 			return true;
 		}
 	}
-	if ( node.eKind == SIR_LANG_SYNTAX_GROUP ) {
+	if ( node.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_GROUP ) {
 		return sirLangContextualInteger( pState, node.nFirstChild, eExpected );
 	}
-	if ( node.eKind != SIR_LANG_SYNTAX_LITERAL || node.nStartToken >= pState->pTree->nTokenCount ) {
+	if ( node.eKind != SIRLangSyntaxKind::SIR_LANG_SYNTAX_LITERAL || node.nStartToken >= pState->pTree->nTokenCount ) {
 		return false;
 	}
 	const sirLangToken_t& token = pState->pTree->pTokens[node.nStartToken];
-	if ( token.eKind != SIR_LANG_TOKEN_NUMBER || token.nLength == 0 ) {
+	if ( token.eKind != SIRLangTokenKind::SIR_LANG_TOKEN_NUMBER || token.nLength == 0 ) {
 		return false;
 	}
 	const uint8_t *pBytes = pState->pTree->source.pBytes + token.nOffset;
@@ -567,27 +567,27 @@ static bool sirLangContextualInteger( const sirLangSemanticState_t *pState, uint
 
 // Bare decimal fractions may adopt a known floating-point destination width.
 // A suffix fixes the literal type and must never be reinterpreted.
-static bool sirLangContextualFraction( const sirLangSemanticState_t *pState, uint32_t iNode, sirLangValueKind_t eExpected ) noexcept
+static bool sirLangContextualFraction( const sirLangSemanticState_t *pState, uint32_t iNode, SIRLangValueKind eExpected ) noexcept
 {
-	if ( iNode >= pState->pTree->nNodeCount || ( eExpected != SIR_LANG_VALUE_F32 && eExpected != SIR_LANG_VALUE_F64 ) ) {
+	if ( iNode >= pState->pTree->nNodeCount || ( eExpected != SIRLangValueKind::SIR_LANG_VALUE_F32 && eExpected != SIRLangValueKind::SIR_LANG_VALUE_F64 ) ) {
 		return false;
 	}
 	const sirLangSyntaxNode_t& node = pState->pTree->pNodes[iNode];
-	if ( node.eKind == SIR_LANG_SYNTAX_UNARY && node.nStartToken < pState->pTree->nTokenCount ) {
+	if ( node.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_UNARY && node.nStartToken < pState->pTree->nTokenCount ) {
 		const sirLangToken_t& sign = pState->pTree->pTokens[node.nStartToken];
 		const uint8_t *pSign = pState->pTree->source.pBytes + sign.nOffset;
 		if ( sign.nLength == 1 && ( pSign[0] == '-' || pSign[0] == '+' ) ) {
 			return sirLangContextualFraction( pState, node.nFirstChild, eExpected );
 		}
 	}
-	if ( node.eKind == SIR_LANG_SYNTAX_GROUP ) {
+	if ( node.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_GROUP ) {
 		return sirLangContextualFraction( pState, node.nFirstChild, eExpected );
 	}
-	if ( node.eKind != SIR_LANG_SYNTAX_LITERAL || node.nStartToken >= pState->pTree->nTokenCount ) {
+	if ( node.eKind != SIRLangSyntaxKind::SIR_LANG_SYNTAX_LITERAL || node.nStartToken >= pState->pTree->nTokenCount ) {
 		return false;
 	}
 	const sirLangToken_t& token = pState->pTree->pTokens[node.nStartToken];
-	if ( token.eKind != SIR_LANG_TOKEN_NUMBER || token.nLength == 0 || token.nLength > 96 ) {
+	if ( token.eKind != SIRLangTokenKind::SIR_LANG_TOKEN_NUMBER || token.nLength == 0 || token.nLength > 96 ) {
 		return false;
 	}
 	const uint8_t *pData = pState->pTree->source.pBytes + token.nOffset;
@@ -603,15 +603,15 @@ static bool sirLangContextualFraction( const sirLangSemanticState_t *pState, uin
 	return bFraction;
 }
 
-static bool sirLangNumeric( sirLangValueKind_t eValue ) noexcept
+static bool sirLangNumeric( SIRLangValueKind eValue ) noexcept
 {
-	return eValue >= SIR_LANG_VALUE_I8 && eValue <= SIR_LANG_VALUE_F64;
+	return eValue >= SIRLangValueKind::SIR_LANG_VALUE_I8 && eValue <= SIRLangValueKind::SIR_LANG_VALUE_F64;
 }
 
-static bool sirLangCompatible( sirLangValueKind_t eLeft, sirLangValueKind_t eRight ) noexcept
+static bool sirLangCompatible( SIRLangValueKind eLeft, SIRLangValueKind eRight ) noexcept
 {
-	return eLeft == SIR_LANG_VALUE_UNKNOWN || eRight == SIR_LANG_VALUE_UNKNOWN || eLeft == eRight ||
-	       ( eLeft == SIR_LANG_VALUE_OTHER && eRight == SIR_LANG_VALUE_OTHER );
+	return eLeft == SIRLangValueKind::SIR_LANG_VALUE_UNKNOWN || eRight == SIRLangValueKind::SIR_LANG_VALUE_UNKNOWN || eLeft == eRight ||
+	       ( eLeft == SIRLangValueKind::SIR_LANG_VALUE_OTHER && eRight == SIRLangValueKind::SIR_LANG_VALUE_OTHER );
 }
 
 static bool sirLangBuiltinCall( const sirLangSyntaxTree_t *pTree, uint32_t iToken ) noexcept
@@ -660,64 +660,64 @@ static bool sirLangBuiltinCall( const sirLangSyntaxTree_t *pTree, uint32_t iToke
 	return false;
 }
 
-static sirLangValueKind_t sirLangInferExpression( sirLangSemanticState_t *pState, uint32_t iNode ) noexcept;
+static SIRLangValueKind sirLangInferExpression( sirLangSemanticState_t *pState, uint32_t iNode ) noexcept;
 
-static sirLangValueKind_t sirLangInferName( sirLangSemanticState_t *pState, uint32_t iNode ) noexcept
+static SIRLangValueKind sirLangInferName( sirLangSemanticState_t *pState, uint32_t iNode ) noexcept
 {
 	const uint32_t iToken = pState->pTree->pNodes[iNode].nStartToken;
 	if ( sirLangEqualToken( pState->pTree, iToken, "this" ) && pState->iSchema != SIR_LANG_INVALID_INDEX ) {
-		return SIR_LANG_VALUE_OTHER;
+		return SIRLangValueKind::SIR_LANG_VALUE_OTHER;
 	}
 	sirLangSemanticSymbol_t *pSymbol = sirLangFindSymbol( pState, iToken );
 	if ( pSymbol != nullptr ) {
 		sirLangRecordReference( pState, iNode, pSymbol->iDeclarationNode, pSymbol->eValue );
 		return pSymbol->eValue;
 	}
-	sirLangValueKind_t eValue = SIR_LANG_VALUE_UNKNOWN;
-	if ( sirLangMatchExternal( pState, iToken, SIR_LANG_SYMBOL_FUNCTION, &eValue ) ||
-	     sirLangMatchExternal( pState, iToken, SIR_LANG_SYMBOL_LOCAL, &eValue ) || sirLangBuiltinCall( pState->pTree, iToken ) ) {
+	SIRLangValueKind eValue = SIRLangValueKind::SIR_LANG_VALUE_UNKNOWN;
+	if ( sirLangMatchExternal( pState, iToken, SIRLangSymbolKind::SIR_LANG_SYMBOL_FUNCTION, &eValue ) ||
+	     sirLangMatchExternal( pState, iToken, SIRLangSymbolKind::SIR_LANG_SYMBOL_LOCAL, &eValue ) || sirLangBuiltinCall( pState->pTree, iToken ) ) {
 		sirLangRecordReference( pState, iNode, SIR_LANG_INVALID_INDEX, eValue );
 		return eValue;
 	}
-	sirLangSemanticReport( pState, SIR_LANG_SEMANTIC_UNKNOWN_SYMBOL, iNode );
-	return SIR_LANG_VALUE_UNKNOWN;
+	sirLangSemanticReport( pState, SIRLangSemanticError::SIR_LANG_SEMANTIC_UNKNOWN_SYMBOL, iNode );
+	return SIRLangValueKind::SIR_LANG_VALUE_UNKNOWN;
 }
 
-static sirLangValueKind_t sirLangInferMember( sirLangSemanticState_t *pState, uint32_t iNode ) noexcept
+static SIRLangValueKind sirLangInferMember( sirLangSemanticState_t *pState, uint32_t iNode ) noexcept
 {
 	const sirLangSyntaxNode_t& node = pState->pTree->pNodes[iNode];
 	const uint32_t iChild = node.nFirstChild;
 	if ( iChild == SIR_LANG_INVALID_INDEX ) {
-		return SIR_LANG_VALUE_UNKNOWN;
+		return SIRLangValueKind::SIR_LANG_VALUE_UNKNOWN;
 	}
 	const sirLangSyntaxNode_t& object = pState->pTree->pNodes[iChild];
-	if ( object.eKind == SIR_LANG_SYNTAX_NAME && sirLangEqualToken( pState->pTree, object.nStartToken, "this" ) &&
+	if ( object.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_NAME && sirLangEqualToken( pState->pTree, object.nStartToken, "this" ) &&
 	     pState->iSchema != SIR_LANG_INVALID_INDEX ) {
 		const uint32_t iMemberToken = node.nEndToken > 0 ? node.nEndToken - 1 : SIR_LANG_INVALID_INDEX;
 		for ( uint32_t iSymbol = 0; iSymbol < pState->pOutput->nSymbolCount; ++iSymbol ) {
 			const sirLangSemanticSymbol_t& symbol = pState->pOutput->pSymbols[iSymbol];
-			if ( symbol.iScopeNode == pState->iSchema && symbol.eKind == SIR_LANG_SYMBOL_FIELD &&
+			if ( symbol.iScopeNode == pState->iSchema && symbol.eKind == SIRLangSymbolKind::SIR_LANG_SYMBOL_FIELD &&
 			     sirLangSameTokens( pState->pTree, symbol.iNameToken, iMemberToken ) ) {
 				sirLangRecordReference( pState, iNode, symbol.iDeclarationNode, symbol.eValue );
 				return symbol.eValue;
 			}
 		}
-		sirLangSemanticReport( pState, SIR_LANG_SEMANTIC_UNKNOWN_FIELD, iNode );
-		return SIR_LANG_VALUE_UNKNOWN;
+		sirLangSemanticReport( pState, SIRLangSemanticError::SIR_LANG_SEMANTIC_UNKNOWN_FIELD, iNode );
+		return SIRLangValueKind::SIR_LANG_VALUE_UNKNOWN;
 	}
 	// The host binding registry supplies native member signatures in a later
 	// integration stage. Unknown external member types remain conservative.
 	sirLangInferExpression( pState, iChild );
-	return SIR_LANG_VALUE_UNKNOWN;
+	return SIRLangValueKind::SIR_LANG_VALUE_UNKNOWN;
 }
 
-static sirLangValueKind_t sirLangInferBinary( sirLangSemanticState_t *pState, uint32_t iNode ) noexcept
+static SIRLangValueKind sirLangInferBinary( sirLangSemanticState_t *pState, uint32_t iNode ) noexcept
 {
 	const sirLangSyntaxNode_t& node = pState->pTree->pNodes[iNode];
 	const uint32_t iLeft = node.nFirstChild;
 	const uint32_t iRight = sirLangNextChild( pState, iLeft );
-	sirLangValueKind_t eLeft = sirLangInferExpression( pState, iLeft );
-	sirLangValueKind_t eRight = sirLangInferExpression( pState, iRight );
+	SIRLangValueKind eLeft = sirLangInferExpression( pState, iLeft );
+	SIRLangValueKind eRight = sirLangInferExpression( pState, iRight );
 	if ( eLeft != eRight && sirLangContextualInteger( pState, iRight, eLeft ) ) {
 		eRight = eLeft;
 	} else if ( eLeft != eRight && sirLangContextualInteger( pState, iLeft, eRight ) ) {
@@ -728,63 +728,63 @@ static sirLangValueKind_t sirLangInferBinary( sirLangSemanticState_t *pState, ui
 	                      sirLangEqualToken( pState->pTree, iOperator, "xor" );
 	const bool bCompare = sirLangEqualToken( pState->pTree, iOperator, "<" ) || sirLangEqualToken( pState->pTree, iOperator, ">" ) ||
 	                      sirLangEqualToken( pState->pTree, iOperator, "=" ) || sirLangEqualToken( pState->pTree, iOperator, "!" );
-	if ( ( sirLangContextualInteger( pState, iLeft, SIR_LANG_VALUE_U64 ) && !sirLangContextualInteger( pState, iLeft, eRight ) ) ||
-	     ( sirLangContextualInteger( pState, iRight, SIR_LANG_VALUE_U64 ) && !sirLangContextualInteger( pState, iRight, eLeft ) ) ) {
-		sirLangSemanticReport( pState, SIR_LANG_SEMANTIC_INVALID_LITERAL, iNode );
+	if ( ( sirLangContextualInteger( pState, iLeft, SIRLangValueKind::SIR_LANG_VALUE_U64 ) && !sirLangContextualInteger( pState, iLeft, eRight ) ) ||
+	     ( sirLangContextualInteger( pState, iRight, SIRLangValueKind::SIR_LANG_VALUE_U64 ) && !sirLangContextualInteger( pState, iRight, eLeft ) ) ) {
+		sirLangSemanticReport( pState, SIRLangSemanticError::SIR_LANG_SEMANTIC_INVALID_LITERAL, iNode );
 	}
-	if ( !sirLangCompatible( eLeft, eRight ) || ( bLogical && eLeft != SIR_LANG_VALUE_BOOL && eLeft != SIR_LANG_VALUE_UNKNOWN ) ||
-	     ( bLogical && eRight != SIR_LANG_VALUE_BOOL && eRight != SIR_LANG_VALUE_UNKNOWN ) ) {
-		sirLangSemanticReport( pState, SIR_LANG_SEMANTIC_TYPE_MISMATCH, iNode );
+	if ( !sirLangCompatible( eLeft, eRight ) || ( bLogical && eLeft != SIRLangValueKind::SIR_LANG_VALUE_BOOL && eLeft != SIRLangValueKind::SIR_LANG_VALUE_UNKNOWN ) ||
+	     ( bLogical && eRight != SIRLangValueKind::SIR_LANG_VALUE_BOOL && eRight != SIRLangValueKind::SIR_LANG_VALUE_UNKNOWN ) ) {
+		sirLangSemanticReport( pState, SIRLangSemanticError::SIR_LANG_SEMANTIC_TYPE_MISMATCH, iNode );
 	}
 	if ( bLogical || bCompare ) {
-		return SIR_LANG_VALUE_BOOL;
+		return SIRLangValueKind::SIR_LANG_VALUE_BOOL;
 	}
-	if ( eLeft != SIR_LANG_VALUE_UNKNOWN && !sirLangNumeric( eLeft ) ) {
-		sirLangSemanticReport( pState, SIR_LANG_SEMANTIC_TYPE_MISMATCH, iNode );
+	if ( eLeft != SIRLangValueKind::SIR_LANG_VALUE_UNKNOWN && !sirLangNumeric( eLeft ) ) {
+		sirLangSemanticReport( pState, SIRLangSemanticError::SIR_LANG_SEMANTIC_TYPE_MISMATCH, iNode );
 	}
 	return eLeft;
 }
 
-static sirLangValueKind_t sirLangInferExpression( sirLangSemanticState_t *pState, uint32_t iNode ) noexcept
+static SIRLangValueKind sirLangInferExpression( sirLangSemanticState_t *pState, uint32_t iNode ) noexcept
 {
 	if ( iNode == SIR_LANG_INVALID_INDEX || iNode >= pState->pTree->nNodeCount || !sirLangEnterNode( pState, iNode ) ) {
-		return SIR_LANG_VALUE_UNKNOWN;
+		return SIRLangValueKind::SIR_LANG_VALUE_UNKNOWN;
 	}
 	const sirLangSyntaxNode_t& node = pState->pTree->pNodes[iNode];
-	sirLangValueKind_t eValue = SIR_LANG_VALUE_UNKNOWN;
+	SIRLangValueKind eValue = SIRLangValueKind::SIR_LANG_VALUE_UNKNOWN;
 	switch ( node.eKind ) {
-	case SIR_LANG_SYNTAX_LITERAL:
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_LITERAL:
 		eValue = sirLangLiteralType( pState, iNode );
 		break;
-	case SIR_LANG_SYNTAX_NAME:
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_NAME:
 		eValue = sirLangInferName( pState, iNode );
 		break;
-	case SIR_LANG_SYNTAX_MEMBER:
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_MEMBER:
 		eValue = sirLangInferMember( pState, iNode );
 		break;
-	case SIR_LANG_SYNTAX_BINARY:
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_BINARY:
 		eValue = sirLangInferBinary( pState, iNode );
 		break;
-	case SIR_LANG_SYNTAX_UNARY:
-	case SIR_LANG_SYNTAX_GROUP:
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_UNARY:
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_GROUP:
 		eValue = sirLangInferExpression( pState, node.nFirstChild );
-		if ( node.eKind == SIR_LANG_SYNTAX_UNARY && sirLangEqualToken( pState->pTree, node.nStartToken, "not" ) ) {
-			if ( eValue != SIR_LANG_VALUE_UNKNOWN && eValue != SIR_LANG_VALUE_BOOL ) {
-				sirLangSemanticReport( pState, SIR_LANG_SEMANTIC_TYPE_MISMATCH, iNode );
+		if ( node.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_UNARY && sirLangEqualToken( pState->pTree, node.nStartToken, "not" ) ) {
+			if ( eValue != SIRLangValueKind::SIR_LANG_VALUE_UNKNOWN && eValue != SIRLangValueKind::SIR_LANG_VALUE_BOOL ) {
+				sirLangSemanticReport( pState, SIRLangSemanticError::SIR_LANG_SEMANTIC_TYPE_MISMATCH, iNode );
 			}
-			eValue = SIR_LANG_VALUE_BOOL;
+			eValue = SIRLangValueKind::SIR_LANG_VALUE_BOOL;
 		}
 		break;
-	case SIR_LANG_SYNTAX_CALL: {
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_CALL: {
 		uint32_t iArgument = node.nFirstChild;
-		const sirLangValueKind_t eCallee = sirLangInferExpression( pState, iArgument );
-		if ( eCallee != SIR_LANG_VALUE_FUNCTION && eCallee != SIR_LANG_VALUE_UNKNOWN ) {
-			sirLangSemanticReport( pState, SIR_LANG_SEMANTIC_TYPE_MISMATCH, iNode );
+		const SIRLangValueKind eCallee = sirLangInferExpression( pState, iArgument );
+		if ( eCallee != SIRLangValueKind::SIR_LANG_VALUE_FUNCTION && eCallee != SIRLangValueKind::SIR_LANG_VALUE_UNKNOWN ) {
+			sirLangSemanticReport( pState, SIRLangSemanticError::SIR_LANG_SEMANTIC_TYPE_MISMATCH, iNode );
 		}
 		iArgument = sirLangNextChild( pState, iArgument );
 		for ( uint32_t nSteps = 0; iArgument != SIR_LANG_INVALID_INDEX && nSteps < pState->pTree->nNodeCount; ++nSteps ) {
 			const sirLangSyntaxNode_t& argument = pState->pTree->pNodes[iArgument];
-			if ( argument.eKind == SIR_LANG_SYNTAX_NAMED_ARGUMENT ) {
+			if ( argument.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_NAMED_ARGUMENT ) {
 				sirLangInferExpression( pState, argument.nFirstChild );
 			} else {
 				sirLangInferExpression( pState, iArgument );
@@ -793,7 +793,7 @@ static sirLangValueKind_t sirLangInferExpression( sirLangSemanticState_t *pState
 		}
 		break;
 	}
-	case SIR_LANG_SYNTAX_INDEX:
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_INDEX:
 		for ( uint32_t iChild = node.nFirstChild, nSteps = 0; iChild != SIR_LANG_INVALID_INDEX && nSteps < pState->pTree->nNodeCount;
 		      iChild = sirLangNextChild( pState, iChild ), ++nSteps ) {
 			sirLangInferExpression( pState, iChild );
@@ -813,7 +813,7 @@ static void sirLangCheckDeclarationType( sirLangSemanticState_t *pState, uint32_
 	}
 	uint32_t iChild = sirLangFirstChild( pState, iNode );
 	for ( uint32_t nSteps = 0; iChild != SIR_LANG_INVALID_INDEX && nSteps < pState->pTree->nNodeCount; ++nSteps ) {
-		if ( pState->pTree->pNodes[iChild].eKind == SIR_LANG_SYNTAX_TYPE ) {
+		if ( pState->pTree->pNodes[iChild].eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_TYPE ) {
 			if ( pSymbol->iTypeNode != iChild ) {
 				pSymbol->iTypeNode = iChild;
 				pSymbol->eValue = sirLangCheckType( pState, iChild );
@@ -830,16 +830,16 @@ static void sirLangPredeclareFields( sirLangSemanticState_t *pState, uint32_t iB
 {
 	for ( uint32_t iChild = sirLangFirstChild( pState, iBlock ), nSteps = 0;
 	      iChild != SIR_LANG_INVALID_INDEX && nSteps < pState->pTree->nNodeCount; iChild = sirLangNextChild( pState, iChild ), ++nSteps ) {
-		const sirLangSyntaxKind_t eKind = pState->pTree->pNodes[iChild].eKind;
-		if ( eKind == SIR_LANG_SYNTAX_FIELD ) {
-			sirLangSemanticSymbol_t *pSymbol = sirLangDeclare( pState, iChild, { iBlock, SIR_LANG_SYMBOL_FIELD, SIR_LANG_VALUE_BOOL } );
+		const SIRLangSyntaxKind eKind = pState->pTree->pNodes[iChild].eKind;
+		if ( eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_FIELD ) {
+			sirLangSemanticSymbol_t *pSymbol = sirLangDeclare( pState, iChild, { iBlock, SIRLangSymbolKind::SIR_LANG_SYMBOL_FIELD, SIRLangValueKind::SIR_LANG_VALUE_BOOL } );
 			sirLangCheckDeclarationType( pState, iChild, pSymbol );
-		} else if ( eKind == SIR_LANG_SYNTAX_CONDITION_BANK ) {
+		} else if ( eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_CONDITION_BANK ) {
 			for ( uint32_t iFlag = sirLangFirstChild( pState, iChild ), nFlags = 0;
 			      iFlag != SIR_LANG_INVALID_INDEX && nFlags < pState->pTree->nNodeCount;
 			      iFlag = sirLangNextChild( pState, iFlag ), ++nFlags ) {
-				if ( pState->pTree->pNodes[iFlag].eKind == SIR_LANG_SYNTAX_FIELD ) {
-					sirLangDeclare( pState, iFlag, { iBlock, SIR_LANG_SYMBOL_FIELD, SIR_LANG_VALUE_BOOL } );
+				if ( pState->pTree->pNodes[iFlag].eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_FIELD ) {
+					sirLangDeclare( pState, iFlag, { iBlock, SIRLangSymbolKind::SIR_LANG_SYMBOL_FIELD, SIRLangValueKind::SIR_LANG_VALUE_BOOL } );
 				}
 			}
 		}
@@ -851,12 +851,12 @@ static void sirLangPredeclareSchemaFields( sirLangSemanticState_t *pState ) noex
 	for ( uint32_t iSchema = sirLangFirstChild( pState, pState->pTree->nRoot ), nSchemas = 0;
 	      iSchema != SIR_LANG_INVALID_INDEX && nSchemas < pState->pTree->nNodeCount;
 	      iSchema = sirLangNextChild( pState, iSchema ), ++nSchemas ) {
-		if ( pState->pTree->pNodes[iSchema].eKind != SIR_LANG_SYNTAX_SCHEMA ) {
+		if ( pState->pTree->pNodes[iSchema].eKind != SIRLangSyntaxKind::SIR_LANG_SYNTAX_SCHEMA ) {
 			continue;
 		}
 		for ( uint32_t iBlock = sirLangFirstChild( pState, iSchema ); iBlock != SIR_LANG_INVALID_INDEX;
 		      iBlock = sirLangNextChild( pState, iBlock ) ) {
-			if ( pState->pTree->pNodes[iBlock].eKind == SIR_LANG_SYNTAX_BLOCK ) {
+			if ( pState->pTree->pNodes[iBlock].eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_BLOCK ) {
 				sirLangPredeclareFields( pState, iBlock );
 			}
 		}
@@ -886,25 +886,25 @@ static void sirLangAnalyzeBlock( sirLangSemanticState_t *pState, uint32_t iNode 
 
 static void sirLangAnalyzeFunction( sirLangSemanticState_t *pState, uint32_t iNode ) noexcept
 {
-	const sirLangValueKind_t ePreviousReturn = pState->eReturnType;
-	pState->eReturnType = SIR_LANG_VALUE_VOID;
+	const SIRLangValueKind ePreviousReturn = pState->eReturnType;
+	pState->eReturnType = SIRLangValueKind::SIR_LANG_VALUE_VOID;
 	if ( !sirLangPushScope( pState, iNode ) ) {
 		return;
 	}
 	uint32_t iChild = sirLangFirstChild( pState, iNode );
 	for ( uint32_t nSteps = 0; iChild != SIR_LANG_INVALID_INDEX && nSteps < pState->pTree->nNodeCount; ++nSteps ) {
 		const sirLangSyntaxNode_t& child = pState->pTree->pNodes[iChild];
-		if ( child.eKind == SIR_LANG_SYNTAX_PARAMETER ) {
+		if ( child.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_PARAMETER ) {
 			sirLangSemanticSymbol_t *pSymbol =
-			    sirLangDeclare( pState, iChild, { iNode, SIR_LANG_SYMBOL_PARAMETER, SIR_LANG_VALUE_UNKNOWN } );
+			    sirLangDeclare( pState, iChild, { iNode, SIRLangSymbolKind::SIR_LANG_SYMBOL_PARAMETER, SIRLangValueKind::SIR_LANG_VALUE_UNKNOWN } );
 			sirLangCheckDeclarationType( pState, iChild, pSymbol );
-		} else if ( child.eKind == SIR_LANG_SYNTAX_TYPE ) {
+		} else if ( child.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_TYPE ) {
 			pState->eReturnType = sirLangCheckType( pState, iChild );
 		}
 		iChild = child.nNextSibling;
 	}
 	for ( iChild = sirLangFirstChild( pState, iNode ); iChild != SIR_LANG_INVALID_INDEX; iChild = sirLangNextChild( pState, iChild ) ) {
-		if ( pState->pTree->pNodes[iChild].eKind == SIR_LANG_SYNTAX_BLOCK ) {
+		if ( pState->pTree->pNodes[iChild].eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_BLOCK ) {
 			sirLangAnalyzeBlock( pState, iChild );
 		}
 	}
@@ -916,38 +916,38 @@ static void sirLangAnalyzeLet( sirLangSemanticState_t *pState, uint32_t iNode ) 
 {
 	const sirLangSyntaxNode_t& node = pState->pTree->pNodes[iNode];
 	if ( pState->nScopeDepth == 1 ) {
-		sirLangSemanticReport( pState, SIR_LANG_SEMANTIC_INVALID_GLOBAL, iNode );
+		sirLangSemanticReport( pState, SIRLangSemanticError::SIR_LANG_SEMANTIC_INVALID_GLOBAL, iNode );
 	}
 	uint32_t iType = SIR_LANG_INVALID_INDEX;
 	uint32_t iExpression = SIR_LANG_INVALID_INDEX;
 	for ( uint32_t iChild = node.nFirstChild; iChild != SIR_LANG_INVALID_INDEX; iChild = sirLangNextChild( pState, iChild ) ) {
-		if ( pState->pTree->pNodes[iChild].eKind == SIR_LANG_SYNTAX_TYPE ) {
+		if ( pState->pTree->pNodes[iChild].eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_TYPE ) {
 			iType = iChild;
 		} else {
 			iExpression = iChild;
 		}
 	}
-	const sirLangValueKind_t eDeclared = iType != SIR_LANG_INVALID_INDEX ? sirLangCheckType( pState, iType ) : SIR_LANG_VALUE_UNKNOWN;
-	const sirLangValueKind_t eInferred =
-	    iExpression != SIR_LANG_INVALID_INDEX ? sirLangInferExpression( pState, iExpression ) : SIR_LANG_VALUE_UNKNOWN;
+	const SIRLangValueKind eDeclared = iType != SIR_LANG_INVALID_INDEX ? sirLangCheckType( pState, iType ) : SIRLangValueKind::SIR_LANG_VALUE_UNKNOWN;
+	const SIRLangValueKind eInferred =
+	    iExpression != SIR_LANG_INVALID_INDEX ? sirLangInferExpression( pState, iExpression ) : SIRLangValueKind::SIR_LANG_VALUE_UNKNOWN;
 	if ( iType != SIR_LANG_INVALID_INDEX && iExpression != SIR_LANG_INVALID_INDEX ) {
-		const bool bBareInteger = sirLangContextualInteger( pState, iExpression, SIR_LANG_VALUE_U64 );
+		const bool bBareInteger = sirLangContextualInteger( pState, iExpression, SIRLangValueKind::SIR_LANG_VALUE_U64 );
 		const bool bFits =
 		    sirLangContextualInteger( pState, iExpression, eDeclared ) || sirLangContextualFraction( pState, iExpression, eDeclared );
 		if ( bBareInteger && !bFits ) {
-			sirLangSemanticReport( pState, SIR_LANG_SEMANTIC_INVALID_LITERAL, iExpression );
+			sirLangSemanticReport( pState, SIRLangSemanticError::SIR_LANG_SEMANTIC_INVALID_LITERAL, iExpression );
 		} else if ( !sirLangCompatible( eDeclared, eInferred ) && !bFits ) {
-			sirLangSemanticReport( pState, SIR_LANG_SEMANTIC_TYPE_MISMATCH, iNode );
+			sirLangSemanticReport( pState, SIRLangSemanticError::SIR_LANG_SEMANTIC_TYPE_MISMATCH, iNode );
 		}
 	}
-	if ( iType == SIR_LANG_INVALID_INDEX && iExpression != SIR_LANG_INVALID_INDEX && eInferred == SIR_LANG_VALUE_I32 &&
-	     sirLangContextualInteger( pState, iExpression, SIR_LANG_VALUE_U64 ) &&
-	     !sirLangContextualInteger( pState, iExpression, SIR_LANG_VALUE_I32 ) ) {
-		sirLangSemanticReport( pState, SIR_LANG_SEMANTIC_INVALID_LITERAL, iExpression );
+	if ( iType == SIR_LANG_INVALID_INDEX && iExpression != SIR_LANG_INVALID_INDEX && eInferred == SIRLangValueKind::SIR_LANG_VALUE_I32 &&
+	     sirLangContextualInteger( pState, iExpression, SIRLangValueKind::SIR_LANG_VALUE_U64 ) &&
+	     !sirLangContextualInteger( pState, iExpression, SIRLangValueKind::SIR_LANG_VALUE_I32 ) ) {
+		sirLangSemanticReport( pState, SIRLangSemanticError::SIR_LANG_SEMANTIC_INVALID_LITERAL, iExpression );
 	}
 	const uint32_t iScope = pState->szScopes[pState->nScopeDepth - 1];
 	sirLangSemanticSymbol_t *pSymbol =
-	    sirLangDeclare( pState, iNode, { iScope, SIR_LANG_SYMBOL_LOCAL, iType == SIR_LANG_INVALID_INDEX ? eInferred : eDeclared } );
+	    sirLangDeclare( pState, iNode, { iScope, SIRLangSymbolKind::SIR_LANG_SYMBOL_LOCAL, iType == SIR_LANG_INVALID_INDEX ? eInferred : eDeclared } );
 	if ( pSymbol != nullptr ) {
 		pSymbol->iTypeNode = iType;
 	}
@@ -960,16 +960,16 @@ static void sirLangAnalyzeAssignment( sirLangSemanticState_t *pState, uint32_t i
 	if ( iRight == SIR_LANG_INVALID_INDEX ) {
 		return;
 	}
-	const sirLangSyntaxKind_t eLeftNode = pState->pTree->pNodes[iLeft].eKind;
-	if ( eLeftNode != SIR_LANG_SYNTAX_NAME && eLeftNode != SIR_LANG_SYNTAX_MEMBER && eLeftNode != SIR_LANG_SYNTAX_INDEX ) {
-		sirLangSemanticReport( pState, SIR_LANG_SEMANTIC_INVALID_ASSIGNMENT, iNode );
+	const SIRLangSyntaxKind eLeftNode = pState->pTree->pNodes[iLeft].eKind;
+	if ( eLeftNode != SIRLangSyntaxKind::SIR_LANG_SYNTAX_NAME && eLeftNode != SIRLangSyntaxKind::SIR_LANG_SYNTAX_MEMBER && eLeftNode != SIRLangSyntaxKind::SIR_LANG_SYNTAX_INDEX ) {
+		sirLangSemanticReport( pState, SIRLangSemanticError::SIR_LANG_SEMANTIC_INVALID_ASSIGNMENT, iNode );
 	}
-	const sirLangValueKind_t eLeft = sirLangInferExpression( pState, iLeft );
-	const sirLangValueKind_t eRight = sirLangInferExpression( pState, iRight );
-	if ( sirLangContextualInteger( pState, iRight, SIR_LANG_VALUE_U64 ) && !sirLangContextualInteger( pState, iRight, eLeft ) ) {
-		sirLangSemanticReport( pState, SIR_LANG_SEMANTIC_INVALID_LITERAL, iRight );
+	const SIRLangValueKind eLeft = sirLangInferExpression( pState, iLeft );
+	const SIRLangValueKind eRight = sirLangInferExpression( pState, iRight );
+	if ( sirLangContextualInteger( pState, iRight, SIRLangValueKind::SIR_LANG_VALUE_U64 ) && !sirLangContextualInteger( pState, iRight, eLeft ) ) {
+		sirLangSemanticReport( pState, SIRLangSemanticError::SIR_LANG_SEMANTIC_INVALID_LITERAL, iRight );
 	} else if ( !sirLangCompatible( eLeft, eRight ) && !sirLangContextualInteger( pState, iRight, eLeft ) ) {
-		sirLangSemanticReport( pState, SIR_LANG_SEMANTIC_TYPE_MISMATCH, iNode );
+		sirLangSemanticReport( pState, SIRLangSemanticError::SIR_LANG_SEMANTIC_TYPE_MISMATCH, iNode );
 	}
 }
 
@@ -980,31 +980,31 @@ static void sirLangAnalyzeNode( sirLangSemanticState_t *pState, uint32_t iNode )
 	}
 	const sirLangSyntaxNode_t& node = pState->pTree->pNodes[iNode];
 	switch ( node.eKind ) {
-	case SIR_LANG_SYNTAX_BLOCK:
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_BLOCK:
 		sirLangAnalyzeBlock( pState, iNode );
 		break;
-	case SIR_LANG_SYNTAX_FUNCTION:
-	case SIR_LANG_SYNTAX_EVENT:
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_FUNCTION:
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_EVENT:
 		sirLangAnalyzeFunction( pState, iNode );
 		break;
-	case SIR_LANG_SYNTAX_SCHEMA:
-	case SIR_LANG_SYNTAX_RECORD:
-	case SIR_LANG_SYNTAX_INTERFACE:
-	case SIR_LANG_SYNTAX_ENUM:
-	case SIR_LANG_SYNTAX_CLASS:
-	case SIR_LANG_SYNTAX_BEHAVIOR: {
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_SCHEMA:
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_RECORD:
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_INTERFACE:
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_ENUM:
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_CLASS:
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_BEHAVIOR: {
 		const uint32_t iPreviousSchema = pState->iSchema;
-		if ( node.eKind == SIR_LANG_SYNTAX_BEHAVIOR || node.eKind == SIR_LANG_SYNTAX_CLASS ) {
+		if ( node.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_BEHAVIOR || node.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_CLASS ) {
 			for ( uint32_t iChild = node.nFirstChild; iChild != SIR_LANG_INVALID_INDEX; iChild = sirLangNextChild( pState, iChild ) ) {
-				if ( pState->pTree->pNodes[iChild].eKind == SIR_LANG_SYNTAX_TYPE ) {
+				if ( pState->pTree->pNodes[iChild].eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_TYPE ) {
 					sirLangCheckType( pState, iChild );
 					const uint32_t iNameToken = pState->pTree->pNodes[iChild].nStartToken;
 					sirLangSemanticSymbol_t *pSchema = sirLangFindTypeDeclaration( pState, iNameToken );
 					pState->iSchema = SIR_LANG_INVALID_INDEX;
-					if ( pSchema != nullptr && pState->pTree->pNodes[pSchema->iDeclarationNode].eKind == SIR_LANG_SYNTAX_SCHEMA ) {
+					if ( pSchema != nullptr && pState->pTree->pNodes[pSchema->iDeclarationNode].eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_SCHEMA ) {
 						for ( uint32_t iFieldBlock = sirLangFirstChild( pState, pSchema->iDeclarationNode );
 						      iFieldBlock != SIR_LANG_INVALID_INDEX; iFieldBlock = sirLangNextChild( pState, iFieldBlock ) ) {
-							if ( pState->pTree->pNodes[iFieldBlock].eKind == SIR_LANG_SYNTAX_BLOCK ) {
+							if ( pState->pTree->pNodes[iFieldBlock].eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_BLOCK ) {
 								pState->iSchema = iFieldBlock;
 								break;
 							}
@@ -1014,62 +1014,62 @@ static void sirLangAnalyzeNode( sirLangSemanticState_t *pState, uint32_t iNode )
 			}
 		}
 		for ( uint32_t iChild = node.nFirstChild; iChild != SIR_LANG_INVALID_INDEX; iChild = sirLangNextChild( pState, iChild ) ) {
-			if ( pState->pTree->pNodes[iChild].eKind == SIR_LANG_SYNTAX_BLOCK ) {
+			if ( pState->pTree->pNodes[iChild].eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_BLOCK ) {
 				sirLangAnalyzeBlock( pState, iChild );
 			}
 		}
 		pState->iSchema = iPreviousSchema;
 		break;
 	}
-	case SIR_LANG_SYNTAX_CONDITION_BANK:
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_CONDITION_BANK:
 		for ( uint32_t iChild = node.nFirstChild; iChild != SIR_LANG_INVALID_INDEX; iChild = sirLangNextChild( pState, iChild ) ) {
-			if ( pState->pTree->pNodes[iChild].eKind == SIR_LANG_SYNTAX_TYPE ) {
+			if ( pState->pTree->pNodes[iChild].eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_TYPE ) {
 				sirLangCheckType( pState, iChild );
-			} else if ( pState->pTree->pNodes[iChild].eKind == SIR_LANG_SYNTAX_FIELD ) {
-				sirLangDeclare( pState, iChild, { pState->szScopes[pState->nScopeDepth - 1], SIR_LANG_SYMBOL_FIELD, SIR_LANG_VALUE_BOOL } );
+			} else if ( pState->pTree->pNodes[iChild].eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_FIELD ) {
+				sirLangDeclare( pState, iChild, { pState->szScopes[pState->nScopeDepth - 1], SIRLangSymbolKind::SIR_LANG_SYMBOL_FIELD, SIRLangValueKind::SIR_LANG_VALUE_BOOL } );
 			}
 		}
 		break;
-	case SIR_LANG_SYNTAX_FIELD: {
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_FIELD: {
 		const uint32_t iScope = pState->szScopes[pState->nScopeDepth - 1];
-		sirLangSemanticSymbol_t *pSymbol = sirLangDeclare( pState, iNode, { iScope, SIR_LANG_SYMBOL_FIELD, SIR_LANG_VALUE_BOOL } );
+		sirLangSemanticSymbol_t *pSymbol = sirLangDeclare( pState, iNode, { iScope, SIRLangSymbolKind::SIR_LANG_SYMBOL_FIELD, SIRLangValueKind::SIR_LANG_VALUE_BOOL } );
 		sirLangCheckDeclarationType( pState, iNode, pSymbol );
 		break;
 	}
-	case SIR_LANG_SYNTAX_LET:
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_LET:
 		sirLangAnalyzeLet( pState, iNode );
 		break;
-	case SIR_LANG_SYNTAX_ASSIGNMENT:
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_ASSIGNMENT:
 		sirLangAnalyzeAssignment( pState, iNode );
 		break;
-	case SIR_LANG_SYNTAX_RETURN: {
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_RETURN: {
 		const uint32_t iChild = node.nFirstChild;
-		const sirLangValueKind_t eActual =
-		    iChild != SIR_LANG_INVALID_INDEX ? sirLangInferExpression( pState, iChild ) : SIR_LANG_VALUE_VOID;
-		const bool bBareInteger = sirLangContextualInteger( pState, iChild, SIR_LANG_VALUE_U64 );
+		const SIRLangValueKind eActual =
+		    iChild != SIR_LANG_INVALID_INDEX ? sirLangInferExpression( pState, iChild ) : SIRLangValueKind::SIR_LANG_VALUE_VOID;
+		const bool bBareInteger = sirLangContextualInteger( pState, iChild, SIRLangValueKind::SIR_LANG_VALUE_U64 );
 		const bool bFits = sirLangContextualInteger( pState, iChild, pState->eReturnType ) ||
 		                   sirLangContextualFraction( pState, iChild, pState->eReturnType );
 		if ( bBareInteger && !bFits ) {
-			sirLangSemanticReport( pState, SIR_LANG_SEMANTIC_INVALID_LITERAL, iChild );
+			sirLangSemanticReport( pState, SIRLangSemanticError::SIR_LANG_SEMANTIC_INVALID_LITERAL, iChild );
 		} else if ( !sirLangCompatible( pState->eReturnType, eActual ) && !bFits ) {
-			sirLangSemanticReport( pState, SIR_LANG_SEMANTIC_INVALID_RETURN, iNode );
+			sirLangSemanticReport( pState, SIRLangSemanticError::SIR_LANG_SEMANTIC_INVALID_RETURN, iNode );
 		}
 		break;
 	}
-	case SIR_LANG_SYNTAX_WHEN:
-	case SIR_LANG_SYNTAX_FOR:
-	case SIR_LANG_SYNTAX_MUTATE: {
-		const bool bLoop = node.eKind == SIR_LANG_SYNTAX_FOR;
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_WHEN:
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_FOR:
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_MUTATE: {
+		const bool bLoop = node.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_FOR;
 		if ( bLoop && !sirLangPushScope( pState, iNode ) ) {
 			break;
 		}
 		if ( bLoop ) {
-			sirLangDeclare( pState, iNode, { iNode, SIR_LANG_SYMBOL_LOCAL, SIR_LANG_VALUE_UNKNOWN } );
+			sirLangDeclare( pState, iNode, { iNode, SIRLangSymbolKind::SIR_LANG_SYMBOL_LOCAL, SIRLangValueKind::SIR_LANG_VALUE_UNKNOWN } );
 		}
 		const uint32_t iChild = node.nFirstChild;
-		const sirLangValueKind_t eCondition = sirLangInferExpression( pState, iChild );
-		if ( node.eKind == SIR_LANG_SYNTAX_WHEN && eCondition != SIR_LANG_VALUE_BOOL && eCondition != SIR_LANG_VALUE_UNKNOWN ) {
-			sirLangSemanticReport( pState, SIR_LANG_SEMANTIC_TYPE_MISMATCH, iNode );
+		const SIRLangValueKind eCondition = sirLangInferExpression( pState, iChild );
+		if ( node.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_WHEN && eCondition != SIRLangValueKind::SIR_LANG_VALUE_BOOL && eCondition != SIRLangValueKind::SIR_LANG_VALUE_UNKNOWN ) {
+			sirLangSemanticReport( pState, SIRLangSemanticError::SIR_LANG_SEMANTIC_TYPE_MISMATCH, iNode );
 		}
 		for ( uint32_t iOther = sirLangNextChild( pState, iChild ); iOther != SIR_LANG_INVALID_INDEX;
 		      iOther = sirLangNextChild( pState, iOther ) ) {
@@ -1080,24 +1080,24 @@ static void sirLangAnalyzeNode( sirLangSemanticState_t *pState, uint32_t iNode )
 		}
 		break;
 	}
-	case SIR_LANG_SYNTAX_OTHERWISE:
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_OTHERWISE:
 		sirLangAnalyzeChildren( pState, iNode );
 		break;
-	case SIR_LANG_SYNTAX_SWITCH: {
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_SWITCH: {
 		const uint32_t iSelector = node.nFirstChild;
-		const sirLangValueKind_t eSelector = sirLangInferExpression( pState, iSelector );
+		const SIRLangValueKind eSelector = sirLangInferExpression( pState, iSelector );
 		for ( uint32_t iCase = sirLangNextChild( pState, iSelector ); iCase != SIR_LANG_INVALID_INDEX;
 		      iCase = sirLangNextChild( pState, iCase ) ) {
 			const sirLangSyntaxNode_t& branch = pState->pTree->pNodes[iCase];
 			uint32_t iBlock = branch.nFirstChild;
-			if ( branch.eKind == SIR_LANG_SYNTAX_CASE ) {
-				const sirLangValueKind_t eValue = sirLangInferExpression( pState, iBlock );
-				const bool bBareInteger = sirLangContextualInteger( pState, iBlock, SIR_LANG_VALUE_U64 );
+			if ( branch.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_CASE ) {
+				const SIRLangValueKind eValue = sirLangInferExpression( pState, iBlock );
+				const bool bBareInteger = sirLangContextualInteger( pState, iBlock, SIRLangValueKind::SIR_LANG_VALUE_U64 );
 				const bool bFits = sirLangContextualInteger( pState, iBlock, eSelector );
 				if ( bBareInteger && !bFits ) {
-					sirLangSemanticReport( pState, SIR_LANG_SEMANTIC_INVALID_LITERAL, iBlock );
+					sirLangSemanticReport( pState, SIRLangSemanticError::SIR_LANG_SEMANTIC_INVALID_LITERAL, iBlock );
 				} else if ( !sirLangCompatible( eSelector, eValue ) && !bFits ) {
-					sirLangSemanticReport( pState, SIR_LANG_SEMANTIC_TYPE_MISMATCH, iCase );
+					sirLangSemanticReport( pState, SIRLangSemanticError::SIR_LANG_SEMANTIC_TYPE_MISMATCH, iCase );
 				}
 				iBlock = sirLangNextChild( pState, iBlock );
 			}
@@ -1107,12 +1107,12 @@ static void sirLangAnalyzeNode( sirLangSemanticState_t *pState, uint32_t iNode )
 		}
 		break;
 	} break;
-	case SIR_LANG_SYNTAX_EXPRESSION_STATEMENT:
-	case SIR_LANG_SYNTAX_EMIT:
-	case SIR_LANG_SYNTAX_AFTER:
-	case SIR_LANG_SYNTAX_SPAWN:
-	case SIR_LANG_SYNTAX_DESTROY:
-	case SIR_LANG_SYNTAX_TRANSITION:
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_EXPRESSION_STATEMENT:
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_EMIT:
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_AFTER:
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_SPAWN:
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_DESTROY:
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_TRANSITION:
 		for ( uint32_t iChild = node.nFirstChild; iChild != SIR_LANG_INVALID_INDEX; iChild = sirLangNextChild( pState, iChild ) ) {
 			sirLangInferExpression( pState, iChild );
 		}
@@ -1148,7 +1148,7 @@ static bool sirLangValidChildChains( const sirLangSyntaxTree_t *pTree ) noexcept
 	return true;
 }
 
-sirLangSemanticError_t SIRLangAnalyze( const sirLangSyntaxTree_t *pTree, sirLangSemanticOutput_t *pOutput ) noexcept
+SIRLangSemanticError SIRLangAnalyze( const sirLangSyntaxTree_t *pTree, sirLangSemanticOutput_t *pOutput ) noexcept
 {
 	if ( pTree == nullptr || pOutput == nullptr || pTree->pTokens == nullptr || pTree->pNodes == nullptr || pTree->nTokenCount == 0 ||
 	     pTree->nNodeCount == 0 || pTree->nRoot >= pTree->nNodeCount || ( pTree->source.nBytes > 0 && pTree->source.pBytes == nullptr ) ||
@@ -1156,7 +1156,7 @@ sirLangSemanticError_t SIRLangAnalyze( const sirLangSyntaxTree_t *pTree, sirLang
 	     pOutput->nSymbolCapacity == 0 || pOutput->pDiagnostics == nullptr || pOutput->nDiagnosticCapacity == 0 ||
 	     pOutput->pReferences == nullptr || pOutput->nReferenceCapacity == 0 ||
 	     ( pOutput->nExternalCount > 0 && pOutput->pExternals == nullptr ) ) {
-		return SIR_LANG_SEMANTIC_INVALID_INPUT;
+		return SIRLangSemanticError::SIR_LANG_SEMANTIC_INVALID_INPUT;
 	}
 	pOutput->nSymbolCount = 0;
 	pOutput->nDiagnosticCount = 0;
@@ -1166,8 +1166,8 @@ sirLangSemanticError_t SIRLangAnalyze( const sirLangSyntaxTree_t *pTree, sirLang
 	for ( uint32_t iToken = 0; iToken < pTree->nTokenCount; ++iToken ) {
 		const sirLangToken_t& token = pTree->pTokens[iToken];
 		if ( token.nOffset > pTree->source.nBytes || token.nLength > pTree->source.nBytes - token.nOffset ||
-		     token.eKind == SIR_LANG_TOKEN_ERROR ) {
-			return SIR_LANG_SEMANTIC_INVALID_TREE;
+		     token.eKind == SIRLangTokenKind::SIR_LANG_TOKEN_ERROR ) {
+			return SIRLangSemanticError::SIR_LANG_SEMANTIC_INVALID_TREE;
 		}
 	}
 	for ( uint32_t iNode = 0; iNode < pTree->nNodeCount; ++iNode ) {
@@ -1175,17 +1175,17 @@ sirLangSemanticError_t SIRLangAnalyze( const sirLangSyntaxTree_t *pTree, sirLang
 		if ( node.nStartToken > node.nEndToken || node.nEndToken > pTree->nTokenCount ||
 		     ( node.nFirstChild != SIR_LANG_INVALID_INDEX && node.nFirstChild >= pTree->nNodeCount ) ||
 		     ( node.nNextSibling != SIR_LANG_INVALID_INDEX && node.nNextSibling >= pTree->nNodeCount ) ) {
-			return SIR_LANG_SEMANTIC_INVALID_TREE;
+			return SIRLangSemanticError::SIR_LANG_SEMANTIC_INVALID_TREE;
 		}
 	}
-	if ( pTree->pNodes[pTree->nRoot].eKind != SIR_LANG_SYNTAX_MODULE || !sirLangValidChildChains( pTree ) ) {
-		return SIR_LANG_SEMANTIC_INVALID_TREE;
+	if ( pTree->pNodes[pTree->nRoot].eKind != SIRLangSyntaxKind::SIR_LANG_SYNTAX_MODULE || !sirLangValidChildChains( pTree ) ) {
+		return SIRLangSemanticError::SIR_LANG_SEMANTIC_INVALID_TREE;
 	}
-	sirLangSemanticState_t state = {};
+	sirLangSemanticState_t state {};
 	state.pTree = pTree;
 	state.pOutput = pOutput;
-	state.eFirstError = SIR_LANG_SEMANTIC_OK;
-	state.eReturnType = SIR_LANG_VALUE_VOID;
+	state.eFirstError = SIRLangSemanticError::SIR_LANG_SEMANTIC_OK;
+	state.eReturnType = SIRLangValueKind::SIR_LANG_VALUE_VOID;
 	state.iSchema = SIR_LANG_INVALID_INDEX;
 	if ( !sirLangPushScope( &state, pTree->nRoot ) ) {
 		return state.eFirstError;

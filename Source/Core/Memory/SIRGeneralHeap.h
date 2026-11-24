@@ -14,8 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRGENERALHEAP_H__
-#define __SIRENGINE_SIRGENERALHEAP_H__
+#ifndef __SIR_GENERALHEAP_H__
+#define __SIR_GENERALHEAP_H__
 
 #include <Core/SIRPCH.h>
 
@@ -54,13 +54,12 @@ typedef struct sirGeneralHeapConfig_s
 	bool bUsePageRuns = false;
 } sirGeneralHeapConfig_t;
 
-typedef enum sirHeapRoute_e : uint32_t
-{
+enum class SIRHeapRoute : uint32_t {
 	SIR_HEAP_NONE,
 	SIR_HEAP_SMALL,
 	SIR_HEAP_MEDIUM,
 	SIR_HEAP_LARGE
-} sirHeapRoute_t;
+};
 
 class SIRGeneralHeap
 {
@@ -70,7 +69,7 @@ public:
 	SIRGeneralHeap& operator=( const SIRGeneralHeap& ) = delete;
 
 	bool init( const sirGeneralHeapConfig_t& config );
-	bool isConfiguredForDomain( sirMemoryDomain_t eDomain ) const noexcept;
+	bool isConfiguredForDomain( SIRMemoryDomain eDomain ) const noexcept;
 	// Worker entry/exit can be explicitly tied to the engine worker lifecycle.
 	bool attachThread( void );
 	bool detachThread( void );
@@ -88,7 +87,7 @@ public:
 	bool shutdown( void );
 
 private:
-	sirHeapRoute_t routePointer( const void *pMemory ) const;
+	SIRHeapRoute routePointer( const void *pMemory ) const;
 	void *allocRaw( size_t nBytes, size_t nAlignment );
 	static bool contains( const SIRMemorySegment *pSegment, const void *pMemory );
 	static bool overlap( const SIRMemorySegment *pA, const SIRMemorySegment *pB );
@@ -99,4 +98,4 @@ private:
 	bool m_bInitialized;
 };
 
-#endif // __SIRENGINE_SIRGENERALHEAP_H__
+#endif // __SIR_GENERALHEAP_H__

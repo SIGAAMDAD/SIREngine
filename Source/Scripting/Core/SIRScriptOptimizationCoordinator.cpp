@@ -23,7 +23,7 @@ SIRScriptOptimizationCoordinator::SIRScriptOptimizationCoordinator( void ) noexc
 
 SIRScriptOptimizationCoordinator::~SIRScriptOptimizationCoordinator( void ) noexcept
 {
-	( void )shutdown();
+	static_cast<void>(shutdown());
 }
 
 uint32_t SIRScriptOptimizationCoordinator::nextGeneration( uint32_t nGeneration ) noexcept
@@ -43,84 +43,85 @@ int32_t SIRScriptOptimizationCoordinator::resolve( sirScriptOptimizationJobHandl
 		return -1;
 	}
 	const sirScriptOptimizationJobSlot_t& slot = m_szJobs[handle.nSlot - 1];
-	return slot.bOccupied && slot.nGeneration == handle.nGeneration ? ( int32_t )( handle.nSlot - 1 ) : -1;
+	return slot.bOccupied && slot.nGeneration == handle.nGeneration ? static_cast<int32_t>( handle.nSlot - 1 ) : -1;
 }
 
 int32_t SIRScriptOptimizationCoordinator::findByJobId( uint64_t nJobId ) const noexcept
 {
 	for ( uint32_t i = 0; i < MAX_JOBS; ++i ) {
 		if ( m_szJobs[i].bOccupied && m_szJobs[i].info.nJobId == nJobId && m_szJobs[i].info.bAwaitingReply ) {
-			return ( int32_t )i;
+			return static_cast<int32_t>(i);
 		}
 	}
 	return -1;
 }
 
-sirScriptResult_t SIRScriptOptimizationCoordinator::configure( const sirScriptOptimizationTransportAPI_t& transport,
+SIRScriptResult SIRScriptOptimizationCoordinator::configure( const sirScriptOptimizationTransportAPI_t& transport,
                                                                SIRScriptCachedProgramSource *pSource,
                                                                SIRScriptCodeManager *pManager ) noexcept
 {
 	if ( !isOwnerThread() || m_bInCallback ) {
-		return SIR_SCRIPT_BUSY;
+		return SIRScriptResult::SIR_SCRIPT_BUSY;
 	}
 	if ( m_bConfigured ) {
-		return SIR_SCRIPT_WRONG_STATE;
+		return SIRScriptResult::SIR_SCRIPT_WRONG_STATE;
 	}
 	if ( transport.nABIRevision != SIR_SCRIPT_OPT_TRANSPORT_ABI_REVISION || transport.pStart == nullptr || transport.pStop == nullptr ||
 	     transport.pSend == nullptr || transport.pReceive == nullptr || pSource == nullptr || pManager == nullptr ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 	m_Transport = transport;
 	m_pSource = pSource;
 	m_pManager = pManager;
 	m_bConfigured = true;
-	return SIR_SCRIPT_OK;
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
-sirScriptResult_t SIRScriptOptimizationCoordinator::start( void ) noexcept
+SIRScriptResult SIRScriptOptimizationCoordinator::start( void ) noexcept
 {
 	if ( !isOwnerThread() || m_bInCallback ) {
-		return SIR_SCRIPT_BUSY;
+		return SIRScriptResult::SIR_SCRIPT_BUSY;
 	}
 	if ( !m_bConfigured || m_bRunning ) {
-		return SIR_SCRIPT_WRONG_STATE;
+		return SIRScriptResult::SIR_SCRIPT_WRONG_STATE;
 	}
 	m_bInCallback = true;
-	const sirScriptResult_t eResult = m_Transport.pStart( m_Transport.pUser );
+	const SIRScriptResult eResult = m_Transport.pStart( m_Transport.pUser );
 	m_bInCallback = false;
-	if ( eResult == SIR_SCRIPT_OK ) {
+	if ( eResult == SIRScriptResult::SIR_SCRIPT_OK ) {
 		m_bRunning = true;
 	}
 	return eResult;
 }
 
-sirScriptResult_t SIRScriptOptimizationCoordinator::submit( const sirScriptOptimizationRequest_t& request, bool bActivate,
+SIRScriptResult SIRScriptOptimizationCoordinator::submit( const sirScriptOptimizationRequest_t& request, bool bActivate,
                                                             sirScriptOptimizationJobHandle_t *pHandle ) noexcept
 {
 	if ( !isOwnerThread() || m_bInCallback ) {
-		return SIR_SCRIPT_BUSY;
+		return SIRScriptResult::SIR_SCRIPT_BUSY;
 	}
 	if ( !m_bConfigured || !m_bRunning ) {
-		return SIR_SCRIPT_WRONG_STATE;
+		return SIRScriptResult::SIR_SCRIPT_WRONG_STATE;
 	}
 	if ( pHandle == nullptr || request.nJobId != 0 || m_nNextJobId == UINT64_MAX || m_nNextSequence == UINT64_MAX ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 	int32_t iFree = -1;
 	for ( uint32_t i = 0; i < MAX_JOBS; ++i ) {
 		if ( !m_szJobs[i].bOccupied ) {
-			iFree = ( int32_t )i;
+			iFree = static_cast<int32_t>(i);
 			break;
 		}
 	}
 	if ( iFree < 0 ) {
-		return SIR_SCRIPT_CAPACITY_EXCEEDED;
+		return SIRScriptResult::SIR_SCRIPT_CAPACITY_EXCEEDED;
 	}
 	sirScriptOptimizationRequest_t prepared = request;
 	prepared.nJobId = m_nNextJobId + 1;
-	uint8_t szWire[SIRScriptOptimizationProtocol::REQUEST_BYTES] = {};
-	const sirScriptResult_t eValid = SIRScriptOptimizationProtocol::encodeRequest( prepared, szWire );
-	if ( eValid != SIR_SCRIPT_OK ) {
+	uint8_t szWire[SIRScriptOptimizationProtocol::REQUEST_BYTES];
+	memset( szWire, 0, sizeof( szWire ) );
+	const SIRScriptResult eValid = SIRScriptOptimizationProtocol::encodeRequest( prepared, szWire );
+	if ( eValid != SIRScriptResult::SIR_SCRIPT_OK ) {
 		return eValid;
 	}
 	m_nNextJobId = prepared.nJobId;
@@ -128,75 +129,75 @@ sirScriptResult_t SIRScriptOptimizationCoordinator::submit( const sirScriptOptim
 	slot.nGeneration = nextGeneration( slot.nGeneration );
 	slot.nSequence = ++m_nNextSequence;
 	slot.request = prepared;
-	slot.info = { prepared.nJobId, SIR_SCRIPT_JOB_QUEUED, SIR_SCRIPT_BUSY, {}, {}, false };
+	slot.info = { prepared.nJobId, SIRScriptOptimizationJobState::SIR_SCRIPT_JOB_QUEUED, SIRScriptResult::SIR_SCRIPT_BUSY, {}, {}, false };
 	slot.bOccupied = true;
 	slot.bActivate = bActivate;
-	*pHandle = { ( uint32_t )iFree + 1, slot.nGeneration };
-	return SIR_SCRIPT_OK;
+	*pHandle = { static_cast<uint32_t>(iFree) + 1, slot.nGeneration };
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
-sirScriptResult_t SIRScriptOptimizationCoordinator::cancel( sirScriptOptimizationJobHandle_t handle ) noexcept
+SIRScriptResult SIRScriptOptimizationCoordinator::cancel( sirScriptOptimizationJobHandle_t handle ) noexcept
 {
 	if ( !isOwnerThread() || m_bInCallback ) {
-		return SIR_SCRIPT_BUSY;
+		return SIRScriptResult::SIR_SCRIPT_BUSY;
 	}
 	const int32_t iSlot = resolve( handle );
 	if ( iSlot < 0 ) {
-		return SIR_SCRIPT_INVALID_HANDLE;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_HANDLE;
 	}
 	sirScriptOptimizationJobInfo_t& info = m_szJobs[iSlot].info;
-	if ( info.eState != SIR_SCRIPT_JOB_QUEUED && info.eState != SIR_SCRIPT_JOB_IN_FLIGHT ) {
-		return SIR_SCRIPT_WRONG_STATE;
+	if ( info.eState != SIRScriptOptimizationJobState::SIR_SCRIPT_JOB_QUEUED && info.eState != SIRScriptOptimizationJobState::SIR_SCRIPT_JOB_IN_FLIGHT ) {
+		return SIRScriptResult::SIR_SCRIPT_WRONG_STATE;
 	}
 	// A dispatched cancellation is a tombstone until its late reply is drained
 	// or the worker terminates. Never recycle that slot/id prematurely.
-	info.eState = SIR_SCRIPT_JOB_CANCELED;
-	info.eResult = SIR_SCRIPT_BUSY;
-	return SIR_SCRIPT_OK;
+	info.eState = SIRScriptOptimizationJobState::SIR_SCRIPT_JOB_CANCELED;
+	info.eResult = SIRScriptResult::SIR_SCRIPT_BUSY;
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
-sirScriptResult_t SIRScriptOptimizationCoordinator::query( sirScriptOptimizationJobHandle_t handle,
+SIRScriptResult SIRScriptOptimizationCoordinator::query( sirScriptOptimizationJobHandle_t handle,
                                                            sirScriptOptimizationJobInfo_t *pInfo ) const noexcept
 {
 	if ( !isOwnerThread() || m_bInCallback ) {
-		return SIR_SCRIPT_BUSY;
+		return SIRScriptResult::SIR_SCRIPT_BUSY;
 	}
 	if ( pInfo == nullptr ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 	const int32_t iSlot = resolve( handle );
 	if ( iSlot < 0 ) {
-		return SIR_SCRIPT_INVALID_HANDLE;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_HANDLE;
 	}
 	*pInfo = m_szJobs[iSlot].info;
-	return SIR_SCRIPT_OK;
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
-sirScriptResult_t SIRScriptOptimizationCoordinator::release( sirScriptOptimizationJobHandle_t handle ) noexcept
+SIRScriptResult SIRScriptOptimizationCoordinator::release( sirScriptOptimizationJobHandle_t handle ) noexcept
 {
 	if ( !isOwnerThread() || m_bInCallback ) {
-		return SIR_SCRIPT_BUSY;
+		return SIRScriptResult::SIR_SCRIPT_BUSY;
 	}
 	const int32_t iSlot = resolve( handle );
 	if ( iSlot < 0 ) {
-		return SIR_SCRIPT_INVALID_HANDLE;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_HANDLE;
 	}
 	sirScriptOptimizationJobSlot_t& slot = m_szJobs[iSlot];
-	if ( slot.info.bAwaitingReply || slot.info.eState == SIR_SCRIPT_JOB_QUEUED || slot.info.eState == SIR_SCRIPT_JOB_IN_FLIGHT ) {
-		return SIR_SCRIPT_WRONG_STATE;
+	if ( slot.info.bAwaitingReply || slot.info.eState == SIRScriptOptimizationJobState::SIR_SCRIPT_JOB_QUEUED || slot.info.eState == SIRScriptOptimizationJobState::SIR_SCRIPT_JOB_IN_FLIGHT ) {
+		return SIRScriptResult::SIR_SCRIPT_WRONG_STATE;
 	}
 	// Successful artifact ownership was transferred into source/code manager.
 	// The caller owns their published code handle, not the job record.
 	slot.request = {};
 	slot.info = {};
 	slot.bOccupied = false;
-	return SIR_SCRIPT_OK;
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
-void SIRScriptOptimizationCoordinator::failJob( sirScriptOptimizationJobSlot_t& slot, sirScriptResult_t eResult ) noexcept
+void SIRScriptOptimizationCoordinator::failJob( sirScriptOptimizationJobSlot_t& slot, SIRScriptResult eResult ) noexcept
 {
 	slot.info.eResult = eResult;
-	slot.info.eState = SIR_SCRIPT_JOB_FAILED;
+	slot.info.eState = SIRScriptOptimizationJobState::SIR_SCRIPT_JOB_FAILED;
 	slot.info.bAwaitingReply = false;
 }
 
@@ -213,59 +214,60 @@ void SIRScriptOptimizationCoordinator::failWorker( void ) noexcept
 		if ( !slot.bOccupied ) {
 			continue;
 		}
-		if ( slot.info.eState == SIR_SCRIPT_JOB_IN_FLIGHT ) {
-			failJob( slot, SIR_SCRIPT_BACKEND_FAILURE );
-		} else if ( slot.info.eState == SIR_SCRIPT_JOB_CANCELED ) {
+		if ( slot.info.eState == SIRScriptOptimizationJobState::SIR_SCRIPT_JOB_IN_FLIGHT ) {
+			failJob( slot, SIRScriptResult::SIR_SCRIPT_BACKEND_FAILURE );
+		} else if ( slot.info.eState == SIRScriptOptimizationJobState::SIR_SCRIPT_JOB_CANCELED ) {
 			slot.info.bAwaitingReply = false;
 		}
 	}
 }
 
-sirScriptResult_t SIRScriptOptimizationCoordinator::workerFailed( void ) noexcept
+SIRScriptResult SIRScriptOptimizationCoordinator::workerFailed( void ) noexcept
 {
 	if ( !isOwnerThread() || m_bInCallback ) {
-		return SIR_SCRIPT_BUSY;
+		return SIRScriptResult::SIR_SCRIPT_BUSY;
 	}
 	if ( !m_bConfigured ) {
-		return SIR_SCRIPT_WRONG_STATE;
+		return SIRScriptResult::SIR_SCRIPT_WRONG_STATE;
 	}
 	failWorker();
-	return SIR_SCRIPT_OK;
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
 // Explicit retries must happen after the old transport is stopped. Its
 // previous receive queue is discarded on stop, and wire IDs never repeat.
-sirScriptResult_t SIRScriptOptimizationCoordinator::retryFailed( sirScriptOptimizationJobHandle_t handle ) noexcept
+SIRScriptResult SIRScriptOptimizationCoordinator::retryFailed( sirScriptOptimizationJobHandle_t handle ) noexcept
 {
 	if ( !isOwnerThread() || m_bInCallback ) {
-		return SIR_SCRIPT_BUSY;
+		return SIRScriptResult::SIR_SCRIPT_BUSY;
 	}
 	if ( !m_bConfigured || m_bRunning ) {
-		return SIR_SCRIPT_WRONG_STATE;
+		return SIRScriptResult::SIR_SCRIPT_WRONG_STATE;
 	}
 	const int32_t iSlot = resolve( handle );
 	if ( iSlot < 0 ) {
-		return SIR_SCRIPT_INVALID_HANDLE;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_HANDLE;
 	}
 	sirScriptOptimizationJobSlot_t& slot = m_szJobs[iSlot];
-	if ( slot.info.eState != SIR_SCRIPT_JOB_FAILED || slot.info.eResult != SIR_SCRIPT_BACKEND_FAILURE || slot.info.bAwaitingReply ) {
-		return SIR_SCRIPT_WRONG_STATE;
+	if ( slot.info.eState != SIRScriptOptimizationJobState::SIR_SCRIPT_JOB_FAILED || slot.info.eResult != SIRScriptResult::SIR_SCRIPT_BACKEND_FAILURE || slot.info.bAwaitingReply ) {
+		return SIRScriptResult::SIR_SCRIPT_WRONG_STATE;
 	}
 	if ( m_nNextJobId == UINT64_MAX || m_nNextSequence == UINT64_MAX ) {
-		return SIR_SCRIPT_CAPACITY_EXCEEDED;
+		return SIRScriptResult::SIR_SCRIPT_CAPACITY_EXCEEDED;
 	}
 	sirScriptOptimizationRequest_t prepared = slot.request;
 	prepared.nJobId = m_nNextJobId + 1;
-	uint8_t szWire[SIRScriptOptimizationProtocol::REQUEST_BYTES] = {};
-	const sirScriptResult_t eValid = SIRScriptOptimizationProtocol::encodeRequest( prepared, szWire );
-	if ( eValid != SIR_SCRIPT_OK ) {
+	uint8_t szWire[SIRScriptOptimizationProtocol::REQUEST_BYTES];
+	memset( szWire, 0, sizeof( szWire ) );
+	const SIRScriptResult eValid = SIRScriptOptimizationProtocol::encodeRequest( prepared, szWire );
+	if ( eValid != SIRScriptResult::SIR_SCRIPT_OK ) {
 		return eValid;
 	}
 	m_nNextJobId = prepared.nJobId;
 	slot.request = prepared;
 	slot.nSequence = ++m_nNextSequence;
-	slot.info = { prepared.nJobId, SIR_SCRIPT_JOB_QUEUED, SIR_SCRIPT_BUSY, {}, {}, false };
-	return SIR_SCRIPT_OK;
+	slot.info = { prepared.nJobId, SIRScriptOptimizationJobState::SIR_SCRIPT_JOB_QUEUED, SIRScriptResult::SIR_SCRIPT_BUSY, {}, {}, false };
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
 void SIRScriptOptimizationCoordinator::processReply( const sirScriptOptimizationReply_t& reply,
@@ -278,37 +280,37 @@ void SIRScriptOptimizationCoordinator::processReply( const sirScriptOptimization
 	}
 	sirScriptOptimizationJobSlot_t& slot = m_szJobs[iSlot];
 	slot.info.bAwaitingReply = false;
-	if ( slot.info.eState == SIR_SCRIPT_JOB_CANCELED ) {
+	if ( slot.info.eState == SIRScriptOptimizationJobState::SIR_SCRIPT_JOB_CANCELED ) {
 		++pStats->nIgnoredCanceled;
 		return;
 	}
-	const sirScriptResult_t eValidated = SIRScriptOptimizationProtocol::validateCompletion( slot.request, reply );
-	if ( eValidated != SIR_SCRIPT_OK ) {
+	const SIRScriptResult eValidated = SIRScriptOptimizationProtocol::validateCompletion( slot.request, reply );
+	if ( eValidated != SIRScriptResult::SIR_SCRIPT_OK ) {
 		failJob( slot, eValidated );
 		++pStats->nFailed;
 		return;
 	}
 	// Register first, acquire from verified disk through the code manager,
 	// and roll back every partially acquired owner if staging/activation fails.
-	sirScriptCachedEntryHandle_t entry = {};
+	sirScriptCachedEntryHandle_t entry {};
 	m_bInCallback = true;
-	sirScriptResult_t eResult = m_pSource->registerArtifact( reply.cached, &entry );
-	if ( eResult != SIR_SCRIPT_OK ) {
+	SIRScriptResult eResult = m_pSource->registerArtifact( reply.cached, &entry );
+	if ( eResult != SIRScriptResult::SIR_SCRIPT_OK ) {
 		m_bInCallback = false;
 		failJob( slot, eResult );
 		++pStats->nFailed;
 		return;
 	}
-	sirScriptCodeHandle_t code = {};
+	sirScriptCodeHandle_t code {};
 	eResult = m_pManager->stage( reply.cached.artifact, &code );
-	if ( eResult == SIR_SCRIPT_OK && slot.bActivate ) {
+	if ( eResult == SIRScriptResult::SIR_SCRIPT_OK && slot.bActivate ) {
 		eResult = m_pManager->activate( code );
 	}
-	if ( eResult != SIR_SCRIPT_OK ) {
+	if ( eResult != SIRScriptResult::SIR_SCRIPT_OK ) {
 		if ( code.nSlot != 0 ) {
-			( void )m_pManager->discard( code );
+			static_cast<void>(m_pManager->discard( code ));
 		}
-		( void )m_pSource->unregisterArtifact( entry );
+		static_cast<void>(m_pSource->unregisterArtifact( entry ));
 		m_bInCallback = false;
 		failJob( slot, eResult );
 		++pStats->nFailed;
@@ -317,22 +319,22 @@ void SIRScriptOptimizationCoordinator::processReply( const sirScriptOptimization
 	m_bInCallback = false;
 	slot.info.code = code;
 	slot.info.entry = entry;
-	slot.info.eState = SIR_SCRIPT_JOB_COMPLETED;
-	slot.info.eResult = SIR_SCRIPT_OK;
+	slot.info.eState = SIRScriptOptimizationJobState::SIR_SCRIPT_JOB_COMPLETED;
+	slot.info.eResult = SIRScriptResult::SIR_SCRIPT_OK;
 	++pStats->nCompleted;
 }
 
-sirScriptResult_t SIRScriptOptimizationCoordinator::pump( uint32_t nSendBudget, uint32_t nReceiveBudget,
+SIRScriptResult SIRScriptOptimizationCoordinator::pump( uint32_t nSendBudget, uint32_t nReceiveBudget,
                                                           sirScriptOptimizationPumpStats_t *pStats ) noexcept
 {
 	if ( !isOwnerThread() || m_bInCallback ) {
-		return SIR_SCRIPT_BUSY;
+		return SIRScriptResult::SIR_SCRIPT_BUSY;
 	}
 	if ( !m_bConfigured || !m_bRunning ) {
-		return SIR_SCRIPT_WRONG_STATE;
+		return SIRScriptResult::SIR_SCRIPT_WRONG_STATE;
 	}
 	if ( pStats == nullptr ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 	*pStats = {};
 	if ( nSendBudget > MAX_JOBS ) {
@@ -348,9 +350,9 @@ sirScriptResult_t SIRScriptOptimizationCoordinator::pump( uint32_t nSendBudget, 
 		uint64_t nFirstSequence = UINT64_MAX;
 		for ( uint32_t i = 0; i < MAX_JOBS; ++i ) {
 			const sirScriptOptimizationJobSlot_t& slot = m_szJobs[i];
-			if ( slot.bOccupied && slot.info.eState == SIR_SCRIPT_JOB_QUEUED && slot.nSequence <= nHighWater &&
+			if ( slot.bOccupied && slot.info.eState == SIRScriptOptimizationJobState::SIR_SCRIPT_JOB_QUEUED && slot.nSequence <= nHighWater &&
 			     slot.nSequence < nFirstSequence ) {
-				iNext = ( int32_t )i;
+				iNext = static_cast<int32_t>(i);
 				nFirstSequence = slot.nSequence;
 			}
 		}
@@ -358,57 +360,59 @@ sirScriptResult_t SIRScriptOptimizationCoordinator::pump( uint32_t nSendBudget, 
 			break;
 		}
 		sirScriptOptimizationJobSlot_t& slot = m_szJobs[iNext];
-		uint8_t szWire[SIRScriptOptimizationProtocol::REQUEST_BYTES] = {};
-		if ( SIRScriptOptimizationProtocol::encodeRequest( slot.request, szWire ) != SIR_SCRIPT_OK ) {
-			failJob( slot, SIR_SCRIPT_TYPE_MISMATCH );
+		uint8_t szWire[SIRScriptOptimizationProtocol::REQUEST_BYTES];
+		memset( szWire, 0, sizeof( szWire ) );
+		if ( SIRScriptOptimizationProtocol::encodeRequest( slot.request, szWire ) != SIRScriptResult::SIR_SCRIPT_OK ) {
+			failJob( slot, SIRScriptResult::SIR_SCRIPT_TYPE_MISMATCH );
 			++pStats->nFailed;
 			continue;
 		}
 		m_bInCallback = true;
-		const sirScriptResult_t eSend = m_Transport.pSend( m_Transport.pUser, szWire, sizeof( szWire ) );
+		const SIRScriptResult eSend = m_Transport.pSend( m_Transport.pUser, szWire, sizeof( szWire ) );
 		m_bInCallback = false;
-		if ( eSend == SIR_SCRIPT_BUSY ) {
+		if ( eSend == SIRScriptResult::SIR_SCRIPT_BUSY ) {
 			break;
 		}
-		if ( eSend != SIR_SCRIPT_OK ) {
+		if ( eSend != SIRScriptResult::SIR_SCRIPT_OK ) {
 			failWorker();
-			return SIR_SCRIPT_BACKEND_FAILURE;
+			return SIRScriptResult::SIR_SCRIPT_BACKEND_FAILURE;
 		}
-		slot.info.eState = SIR_SCRIPT_JOB_IN_FLIGHT;
+		slot.info.eState = SIRScriptOptimizationJobState::SIR_SCRIPT_JOB_IN_FLIGHT;
 		slot.info.bAwaitingReply = true;
 		++pStats->nSent;
 	}
 	for ( uint32_t iReply = 0; iReply < nReceiveBudget; ++iReply ) {
-		uint8_t szWire[SIRScriptOptimizationProtocol::REPLY_BYTES] = {};
+		uint8_t szWire[SIRScriptOptimizationProtocol::REPLY_BYTES];
+		memset( szWire, 0, sizeof( szWire ) );
 		uint32_t nBytes = 0;
 		m_bInCallback = true;
-		const sirScriptResult_t eReceive = m_Transport.pReceive( m_Transport.pUser, szWire, sizeof( szWire ), &nBytes );
+		const SIRScriptResult eReceive = m_Transport.pReceive( m_Transport.pUser, szWire, sizeof( szWire ), &nBytes );
 		m_bInCallback = false;
-		if ( eReceive == SIR_SCRIPT_BUSY ) {
+		if ( eReceive == SIRScriptResult::SIR_SCRIPT_BUSY ) {
 			break;
 		}
-		if ( eReceive != SIR_SCRIPT_OK || nBytes != sizeof( szWire ) ) {
+		if ( eReceive != SIRScriptResult::SIR_SCRIPT_OK || nBytes != sizeof( szWire ) ) {
 			failWorker();
-			return SIR_SCRIPT_BACKEND_FAILURE;
+			return SIRScriptResult::SIR_SCRIPT_BACKEND_FAILURE;
 		}
-		sirScriptOptimizationReply_t reply = {};
-		if ( SIRScriptOptimizationProtocol::decodeReply( szWire, nBytes, &reply ) != SIR_SCRIPT_OK ) {
+		sirScriptOptimizationReply_t reply {};
+		if ( SIRScriptOptimizationProtocol::decodeReply( szWire, nBytes, &reply ) != SIRScriptResult::SIR_SCRIPT_OK ) {
 			failWorker();
-			return SIR_SCRIPT_TYPE_MISMATCH;
+			return SIRScriptResult::SIR_SCRIPT_TYPE_MISMATCH;
 		}
 		++pStats->nReceived;
 		processReply( reply, pStats );
 		if ( !m_bRunning ) {
-			return SIR_SCRIPT_TYPE_MISMATCH;
+			return SIRScriptResult::SIR_SCRIPT_TYPE_MISMATCH;
 		}
 	}
-	return SIR_SCRIPT_OK;
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
-sirScriptResult_t SIRScriptOptimizationCoordinator::shutdown( void ) noexcept
+SIRScriptResult SIRScriptOptimizationCoordinator::shutdown( void ) noexcept
 {
 	if ( !isOwnerThread() || m_bInCallback ) {
-		return SIR_SCRIPT_BUSY;
+		return SIRScriptResult::SIR_SCRIPT_BUSY;
 	}
 	failWorker();
 	// The caller retains completed code handles and explicitly owns the code
@@ -418,5 +422,5 @@ sirScriptResult_t SIRScriptOptimizationCoordinator::shutdown( void ) noexcept
 		m_szJobs[i].info = {};
 		m_szJobs[i].request = {};
 	}
-	return SIR_SCRIPT_OK;
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }

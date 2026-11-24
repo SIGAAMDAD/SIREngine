@@ -12,8 +12,8 @@ express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIRMESHGRDGSOURCE_H__
-#define __SIRENGINE_SIRMESHGRDGSOURCE_H__
+#ifndef __SIR_MESHGRDGSOURCE_H__
+#define __SIR_MESHGRDGSOURCE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -60,7 +60,7 @@ typedef struct sirMeshGRDGSourceLease_s
 class SIRMeshGRDGSource
 {
 public:
-	static sirMeshResult_t insert( SIRMeshCache& cache, const sirMeshGRDGSourceRequest_t& request, sirMeshGRDGSourceLease_t *pLease,
+	static SIRMeshResult insert( SIRMeshCache& cache, const sirMeshGRDGSourceRequest_t& request, sirMeshGRDGSourceLease_t *pLease,
 	                               sirMeshHandle_t *pHandle ) noexcept;
 
 protected:
@@ -68,4 +68,4 @@ private:
 	static void releasePin( void *pContext ) noexcept;
 };
 
-#endif // __SIRENGINE_SIRMESHGRDGSOURCE_H__
+#endif // __SIR_MESHGRDGSOURCE_H__

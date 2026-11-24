@@ -150,8 +150,8 @@ static void sirTestPositionalIOAndMapping( void )
 static void sirTestPipeStream( void )
 {
 	SIRPlatformPipe pipe;
-	SIR_CHECK( pipe.create() == SIR_PIPE_OK );
-	SIR_CHECK( pipe.create() == SIR_PIPE_INVALID_ARGUMENT );
+	SIR_CHECK( pipe.create() == SIRPipeResult::SIR_PIPE_OK );
+	SIR_CHECK( pipe.create() == SIRPipeResult::SIR_PIPE_INVALID_ARGUMENT );
 
 	constexpr uint32_t N_BYTES = 2 * 1024 * 1024 + 59;
 	std::vector<uint8_t> szInput( N_BYTES );
@@ -162,9 +162,9 @@ static void sirTestPipeStream( void )
 	std::atomic<bool> bProducerOK{ false };
 	std::thread producer( [&]() {
 		uint64_t nTransferred = 0;
-		const sirPipeResult_t eResult = pipe.write( szInput.data(), N_BYTES, &nTransferred );
-		bProducerOK.store( eResult == SIR_PIPE_OK && nTransferred == N_BYTES, std::memory_order_relaxed );
-		SIR_CHECK( pipe.closeWrite() == SIR_PIPE_OK );
+		const SIRPipeResult eResult = pipe.write( szInput.data(), N_BYTES, &nTransferred );
+		bProducerOK.store( eResult == SIRPipeResult::SIR_PIPE_OK && nTransferred == N_BYTES, std::memory_order_relaxed );
+		SIR_CHECK( pipe.closeWrite() == SIRPipeResult::SIR_PIPE_OK );
 	} );
 	uint64_t nConsumed = 0;
 	while ( nConsumed < N_BYTES ) {
@@ -172,20 +172,20 @@ static void sirTestPipeStream( void )
 		const uint64_t nRequested = ( nConsumed % 12289 ) + 1;
 		const uint64_t nRemaining = N_BYTES - nConsumed;
 		const uint64_t nChunk = nRequested < nRemaining ? nRequested : nRemaining;
-		const sirPipeResult_t eResult = pipe.read( szOutput.data() + nConsumed, nChunk, &nTransferred );
-		SIR_CHECK( eResult == SIR_PIPE_OK && nTransferred != 0 && nTransferred <= nChunk );
+		const SIRPipeResult eResult = pipe.read( szOutput.data() + nConsumed, nChunk, &nTransferred );
+		SIR_CHECK( eResult == SIRPipeResult::SIR_PIPE_OK && nTransferred != 0 && nTransferred <= nChunk );
 		nConsumed += nTransferred;
 	}
 	producer.join();
 	SIR_CHECK( bProducerOK.load( std::memory_order_relaxed ) );
 	SIR_CHECK( memcmp( szInput.data(), szOutput.data(), N_BYTES ) == 0 );
 	uint64_t nTransferred = UINT64_MAX;
-	SIR_CHECK( pipe.read( szOutput.data(), 1, &nTransferred ) == SIR_PIPE_END_OF_STREAM && nTransferred == 0 );
-	SIR_CHECK( pipe.close() == SIR_PIPE_OK );
-	SIR_CHECK( pipe.create() == SIR_PIPE_OK );
-	SIR_CHECK( pipe.closeRead() == SIR_PIPE_OK );
-	SIR_CHECK( pipe.write( szInput.data(), 1, &nTransferred ) == SIR_PIPE_BROKEN && nTransferred == 0 );
-	SIR_CHECK( pipe.close() == SIR_PIPE_OK );
+	SIR_CHECK( pipe.read( szOutput.data(), 1, &nTransferred ) == SIRPipeResult::SIR_PIPE_END_OF_STREAM && nTransferred == 0 );
+	SIR_CHECK( pipe.close() == SIRPipeResult::SIR_PIPE_OK );
+	SIR_CHECK( pipe.create() == SIRPipeResult::SIR_PIPE_OK );
+	SIR_CHECK( pipe.closeRead() == SIRPipeResult::SIR_PIPE_OK );
+	SIR_CHECK( pipe.write( szInput.data(), 1, &nTransferred ) == SIRPipeResult::SIR_PIPE_BROKEN && nTransferred == 0 );
+	SIR_CHECK( pipe.close() == SIRPipeResult::SIR_PIPE_OK );
 }
 
 static void sirTestSemaphoreContention( void )

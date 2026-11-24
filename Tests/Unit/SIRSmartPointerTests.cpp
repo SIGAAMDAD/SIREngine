@@ -13,12 +13,13 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#include <Core/Memory/SIRSharedPtr.h>
-#include <Core/Memory/SIRWeakPtr.h>
+#include <Core/Memory/Pointers/SIRSharedPtr.h>
+#include <atomic>
+#include <Core/Memory/Pointers/SIRWeakPtr.h>
 #include <Core/Memory/SIRSharedGeneralHeapAdapter.h>
-#include <Core/Memory/SIRLocalSharedPtr.h>
-#include <Core/Memory/SIRNotNullPtr.h>
-#include <Core/Memory/SIRComPtr.h>
+#include <Core/Memory/Pointers/SIRLocalSharedPtr.h>
+#include <Core/Memory/Pointers/SIRNotNullPtr.h>
+#include <Core/Memory/Pointers/SIRComPtr.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -296,13 +297,13 @@ static void sirTestComPointer( void )
 typedef struct sirPointerThreadArgs_s
 {
 	SIRWeakPtr<sirPointerTestObject_t> *pWeak;
-	SIRAtomic<uint32_t> *pStarted;
+	std::atomic<uint32_t> *pStarted;
 } sirPointerThreadArgs_t;
 
 static void *sirPointerThreadWorker( void *pData )
 {
 	sirPointerThreadArgs_t *pArgs = ( sirPointerThreadArgs_t * )pData;
-	pArgs->pStarted->fetchAdd( 1, SIR_MEMORY_ORDER_RELEASE );
+	pArgs->pStarted->fetch_add( 1, std::memory_order_release );
 	for ( uint32_t iIteration = 0; iIteration < 20000; ++iIteration ) {
 		auto owner = pArgs->pWeak->lock();
 		if ( owner ) {
@@ -319,13 +320,13 @@ static void sirTestConcurrentWeakLock( const sirSharedAllocationCallbacks_t& rCa
 	uint32_t nDestroyed = 0;
 	auto owner = SIRMakeShared<sirPointerTestObject_t>( rCallbacks, &nDestroyed, 77 );
 	SIRWeakPtr<sirPointerTestObject_t> weak( owner );
-	SIRAtomic<uint32_t> nStarted( 0 );
+	std::atomic<uint32_t> nStarted( 0 );
 	pthread_t szThreads[4];
 	sirPointerThreadArgs_t args{ &weak, &nStarted };
 	for ( uint32_t iIndex = 0; iIndex < 4; ++iIndex ) {
 		SIR_CHECK( pthread_create( &szThreads[iIndex], nullptr, sirPointerThreadWorker, &args ) == 0 );
 	}
-	while ( nStarted.load( SIR_MEMORY_ORDER_ACQUIRE ) != 4 ) {
+	while ( nStarted.load( std::memory_order_acquire ) != 4 ) {
 	}
 	owner.reset();
 	for ( uint32_t iIndex = 0; iIndex < 4; ++iIndex ) {

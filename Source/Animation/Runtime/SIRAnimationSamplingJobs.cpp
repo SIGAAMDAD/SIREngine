@@ -15,24 +15,24 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include "SIRAnimationSamplingJobs.h"
 #include <Core/Jobs/SIRTaskScheduler.h>
 
-sirTaskResult_t SIRAnimationSamplingJobs::execute( void *pContext, sirTaskHandle_t ) noexcept
+SIRTaskResult SIRAnimationSamplingJobs::execute( void *pContext, sirTaskHandle_t ) noexcept
 {
-	sirAnimationSamplingJob_t *pJob = ( sirAnimationSamplingJob_t * )pContext;
+	sirAnimationSamplingJob_t *pJob = static_cast<sirAnimationSamplingJob_t *>(pContext);
 	if ( !pJob || !pJob->pCancellationGeneration ||
-	     pJob->pCancellationGeneration->load( SIR_MEMORY_ORDER_ACQUIRE ) != pJob->nExpectedGeneration ) {
+	     pJob->pCancellationGeneration->load( std::memory_order_acquire ) != pJob->nExpectedGeneration ) {
 		if ( pJob ) {
-			pJob->eResult = SIR_ANIM_COOK_MISSING;
+			pJob->eResult = SIRAnimationCookResult::SIR_ANIM_COOK_MISSING;
 		}
-		return SIR_TASK_RESULT_FAILURE;
+		return SIRTaskResult::SIR_TASK_RESULT_FAILURE;
 	}
 	pJob->eResult = SIRAnimationSampler::sample( pJob->clip, pJob->options, &pJob->scratch, &pJob->pose );
 	// Callers publish no pose while tasks are pending. A cancellation that
 	// races execution must fail this task rather than publish stale output.
-	if ( pJob->pCancellationGeneration->load( SIR_MEMORY_ORDER_ACQUIRE ) != pJob->nExpectedGeneration ) {
-		pJob->eResult = SIR_ANIM_COOK_MISSING;
-		return SIR_TASK_RESULT_FAILURE;
+	if ( pJob->pCancellationGeneration->load( std::memory_order_acquire ) != pJob->nExpectedGeneration ) {
+		pJob->eResult = SIRAnimationCookResult::SIR_ANIM_COOK_MISSING;
+		return SIRTaskResult::SIR_TASK_RESULT_FAILURE;
 	}
-	return pJob->eResult == SIR_ANIM_COOK_OK ? SIR_TASK_RESULT_SUCCESS : SIR_TASK_RESULT_FAILURE;
+	return pJob->eResult == SIRAnimationCookResult::SIR_ANIM_COOK_OK ? SIRTaskResult::SIR_TASK_RESULT_SUCCESS : SIRTaskResult::SIR_TASK_RESULT_FAILURE;
 }
 
 bool SIRAnimationSamplingJobs::submitBatch( SIRTaskScheduler& scheduler, const sirAnimationSamplingBatch_t& batch ) noexcept
@@ -47,7 +47,7 @@ bool SIRAnimationSamplingJobs::submitBatch( SIRTaskScheduler& scheduler, const s
 		}
 	}
 	for ( uint32_t i = 0; i < batch.nJobCount; ++i ) {
-		batch.pTasks[i] = { &SIRAnimationSamplingJobs::execute, &batch.pJobs[i], SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU };
+		batch.pTasks[i] = { &SIRAnimationSamplingJobs::execute, &batch.pJobs[i], SIRTaskPriority::SIR_TASK_PRIORITY_NORMAL, SIRTaskExecutor::SIR_TASK_EXEC_CPU };
 	}
 	return scheduler.submitBatch( { batch.pTasks, batch.nJobCount, nullptr, 0 }, batch.pHandles );
 }

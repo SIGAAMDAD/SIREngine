@@ -33,7 +33,7 @@ bool SIRD3D12Transfers::initialize( ID3D12Device *pDevice, SIRD3D12Memory *pMemo
 		return false;
 	}
 
-	D3D12_COMMAND_QUEUE_DESC queue = {};
+	D3D12_COMMAND_QUEUE_DESC queue {};
 	queue.Type = D3D12_COMMAND_LIST_TYPE_COPY;
 	queue.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
 	m_nLastError = pDevice->CreateCommandQueue( &queue, IID_PPV_ARGS( m_pQueue.GetAddressOf() ) );
@@ -80,7 +80,7 @@ bool SIRD3D12Transfers::initialize( ID3D12Device *pDevice, SIRD3D12Memory *pMemo
 			shutdown();
 			return false;
 		}
-		if ( m_Arena.ePath == SIR_D3D12_TRANSFER_STAGED ) {
+		if ( m_Arena.ePath == SIRD3D12TransferPath::SIR_D3D12_TRANSFER_STAGED ) {
 			m_nLastError =
 			    pDevice->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_COPY, IID_PPV_ARGS( pSlot->pReadbackAllocator.GetAddressOf() ) );
 			if ( FAILED( m_nLastError ) ) {
@@ -124,10 +124,10 @@ bool SIRD3D12Transfers::shutdown( void ) noexcept
 		} else {
 			// Retain native command objects and the resident arena when the
 			// GPU's last completion cannot be proved.
-			( void )pSlot->pCommands.Detach();
-			( void )pSlot->pAllocator.Detach();
-			( void )pSlot->pReadbackCommands.Detach();
-			( void )pSlot->pReadbackAllocator.Detach();
+			static_cast<void>(pSlot->pCommands.Detach());
+			static_cast<void>(pSlot->pAllocator.Detach());
+			static_cast<void>(pSlot->pReadbackCommands.Detach());
+			static_cast<void>(pSlot->pReadbackAllocator.Detach());
 		}
 		pSlot->bOccupied = false;
 		pSlot->nFence = 0;
@@ -140,8 +140,8 @@ bool SIRD3D12Transfers::shutdown( void ) noexcept
 			CloseHandle( m_hEvent );
 		}
 	} else {
-		( void )m_pFence.Detach();
-		( void )m_pQueue.Detach();
+		static_cast<void>(m_pFence.Detach());
+		static_cast<void>(m_pQueue.Detach());
 	}
 	m_hEvent = nullptr;
 	if ( bSafe && m_pMemory != nullptr ) {
@@ -305,10 +305,10 @@ bool SIRD3D12Transfers::submit( const void *pSource, uint64_t nBytes, sirD3D12Tr
 		return false;
 	}
 
-	const uint64_t nOffset = ( uint64_t )iFree * m_Arena.nSlotBytes;
+	const uint64_t nOffset = static_cast<uint64_t>(iFree) * m_Arena.nSlotBytes;
 	// CPU writes into the persistently mapped, preallocated slice. Slot
 	// ownership excludes any overwrite until its copy fence completes.
-	memcpy( m_Arena.pWriteBytes + nOffset, pSource, ( size_t )nBytes );
+	memcpy( m_Arena.pWriteBytes + nOffset, pSource, static_cast<size_t>(nBytes) );
 
 	m_nLastError = pSlot->pAllocator->Reset();
 	if ( FAILED( m_nLastError ) ) {
@@ -318,7 +318,7 @@ bool SIRD3D12Transfers::submit( const void *pSource, uint64_t nBytes, sirD3D12Tr
 	if ( FAILED( m_nLastError ) ) {
 		return false;
 	}
-	if ( m_Arena.ePath == SIR_D3D12_TRANSFER_STAGED ) {
+	if ( m_Arena.ePath == SIRD3D12TransferPath::SIR_D3D12_TRANSFER_STAGED ) {
 		pSlot->pCommands->CopyBufferRegion( m_Arena.pGpuResource, nOffset, m_Arena.pWriteResource, nOffset, nBytes );
 	} else {
 		pSlot->pCommands->CopyBufferRegion( m_Arena.pReadbackResource, nOffset, m_Arena.pWriteResource, nOffset, nBytes );
@@ -331,7 +331,7 @@ bool SIRD3D12Transfers::submit( const void *pSource, uint64_t nBytes, sirD3D12Tr
 	// Staged discrete memory needs a separate submission so the DEFAULT
 	// buffer can decay to COMMON before its COPY_SOURCE promotion. UMA and
 	// GPU_UPLOAD use the directly GPU-readable mapped source in one list.
-	if ( m_Arena.ePath == SIR_D3D12_TRANSFER_STAGED ) {
+	if ( m_Arena.ePath == SIRD3D12TransferPath::SIR_D3D12_TRANSFER_STAGED ) {
 		m_nLastError = pSlot->pReadbackAllocator->Reset();
 		if ( FAILED( m_nLastError ) ) {
 			return false;
@@ -354,7 +354,7 @@ bool SIRD3D12Transfers::submit( const void *pSource, uint64_t nBytes, sirD3D12Tr
 	ID3D12CommandList *pUploadLists[] = { pSlot->pCommands.Get() };
 	ID3D12CommandList *pReadbackLists[] = { pSlot->pReadbackCommands.Get() };
 	m_pQueue->ExecuteCommandLists( 1, pUploadLists );
-	if ( m_Arena.ePath == SIR_D3D12_TRANSFER_STAGED ) {
+	if ( m_Arena.ePath == SIRD3D12TransferPath::SIR_D3D12_TRANSFER_STAGED ) {
 		m_pQueue->ExecuteCommandLists( 1, pReadbackLists );
 	}
 	m_nLastError = m_pQueue->Signal( m_pFence.Get(), m_nNextFence );
@@ -453,8 +453,8 @@ bool SIRD3D12Transfers::receive( sirD3D12TransferTicket_t ticket, void *pDestina
 		return false;
 	}
 
-	const uint64_t nOffset = ( uint64_t )ticket.iSlot * m_Arena.nSlotBytes;
-	memcpy( pDestination, m_Arena.pReadbackBytes + nOffset, ( size_t )pSlot->nBytes );
+	const uint64_t nOffset = static_cast<uint64_t>(ticket.iSlot) * m_Arena.nSlotBytes;
+	memcpy( pDestination, m_Arena.pReadbackBytes + nOffset, static_cast<size_t>(pSlot->nBytes) );
 	pSlot->bOccupied = false;
 	pSlot->nFence = 0;
 	++m_nCompletedCopies;

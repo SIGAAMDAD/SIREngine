@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSTRING_H__
-#define __SIRENGINE_SIRSTRING_H__
+#ifndef __SIR_STRING_H__
+#define __SIR_STRING_H__
 
 #include <Core/SIRPCH.h>
 
@@ -66,23 +66,23 @@ private:
 		return isInline() ? m_szInline : m_pHeap;
 	}
 
-	sirContainerResult_t tryReserveBytes( uint32_t nCapacity )
+	SIRContainerResult tryReserveBytes( uint32_t nCapacity )
 	{
 		if ( nCapacity <= m_nCapacity ) {
-			return SIR_CONTAINER_OK;
+			return SIRContainerResult::SIR_CONTAINER_OK;
 		}
 		void *pStorage = nullptr;
-		sirContainerResult_t eResult = SIRRawStorage::tryAllocate( m_pAllocator, nCapacity, alignof( char ), &pStorage );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		SIRContainerResult eResult = SIRRawStorage::tryAllocate( m_pAllocator, nCapacity, alignof( char ), &pStorage );
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		memcpy( pStorage, data(), m_nLength + 1 );
 		if ( !isInline() ) {
 			SIRRawStorage::deallocate( m_pAllocator, m_pHeap, m_nCapacity, alignof( char ) );
 		}
-		m_pHeap = ( char * )pStorage;
+		m_pHeap = static_cast<char *>(pStorage);
 		m_nCapacity = nCapacity;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
 	void release( void ) noexcept
@@ -171,26 +171,26 @@ public:
 
 	sirContainerFootprint_t getFootprint( void ) const noexcept
 	{
-		return { INLINE_CAPACITY, isInline() ? 0u : m_nCapacity, 0, 0, ( uint64_t )m_nLength + 1 };
+		return { INLINE_CAPACITY, isInline() ? 0u : m_nCapacity, 0, 0, static_cast<uint64_t>(m_nLength) + 1 };
 	}
 
 	// Single-byte append stages the input before growth so even a byte borrowed
 	// from this string remains valid when the backing allocation moves.
-	sirContainerResult_t tryAppendChar( char nValue )
+	SIRContainerResult tryAppendChar( char nValue )
 	{
-		if ( ( uint64_t )m_nLength + 2 > UINT32_MAX ) {
-			return SIR_CONTAINER_SIZE_OVERFLOW;
+		if ( static_cast<uint64_t>(m_nLength) + 2 > UINT32_MAX ) {
+			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
 
 		const uint32_t nRequired = m_nLength + 2;
 		if ( nRequired > m_nCapacity ) {
 			uint32_t nGrowth = 0;
-			sirContainerResult_t eResult = SIRVectorStorage::calculateGrowth( m_nCapacity, nRequired, &nGrowth );
-			if ( eResult != SIR_CONTAINER_OK ) {
+			SIRContainerResult eResult = SIRVectorStorage::calculateGrowth( m_nCapacity, nRequired, &nGrowth );
+			if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 				return eResult;
 			}
 			eResult = tryReserveBytes( nGrowth );
-			if ( eResult != SIR_CONTAINER_OK ) {
+			if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 				return eResult;
 			}
 		}
@@ -199,36 +199,36 @@ public:
 		pDestination[m_nLength] = nValue;
 		++m_nLength;
 		pDestination[m_nLength] = '\0';
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
-	sirContainerResult_t tryAppendBytes( const char *pBytes, uint32_t nBytes )
+	SIRContainerResult tryAppendBytes( const char *pBytes, uint32_t nBytes )
 	{
 		if ( nBytes == 0 ) {
-			return SIR_CONTAINER_OK;
+			return SIRContainerResult::SIR_CONTAINER_OK;
 		}
 		if ( pBytes == nullptr ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
-		if ( ( uint64_t )m_nLength + nBytes + 1 > UINT32_MAX ) {
-			return SIR_CONTAINER_SIZE_OVERFLOW;
+		if ( static_cast<uint64_t>(m_nLength) + nBytes + 1 > UINT32_MAX ) {
+			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
-		uintptr_t nStart = ( uintptr_t )data();
-		uintptr_t nSource = ( uintptr_t )pBytes;
+		uintptr_t nStart = reinterpret_cast<uintptr_t>(data());
+		uintptr_t nSource = reinterpret_cast<uintptr_t>(pBytes);
 		bool bAliased = nSource >= nStart && nSource - nStart <= m_nLength;
-		uint32_t iSource = bAliased ? ( uint32_t )( nSource - nStart ) : 0;
-		if ( bAliased && ( uint64_t )iSource + nBytes > ( uint64_t )m_nLength + 1 ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+		uint32_t iSource = bAliased ? static_cast<uint32_t>( nSource - nStart ) : 0;
+		if ( bAliased && static_cast<uint64_t>(iSource) + nBytes > static_cast<uint64_t>(m_nLength) + 1 ) {
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		uint32_t nRequired = m_nLength + nBytes + 1;
 		if ( nRequired > m_nCapacity ) {
 			uint32_t nGrowth = 0;
-			sirContainerResult_t eResult = SIRVectorStorage::calculateGrowth( m_nCapacity, nRequired, &nGrowth );
-			if ( eResult != SIR_CONTAINER_OK ) {
+			SIRContainerResult eResult = SIRVectorStorage::calculateGrowth( m_nCapacity, nRequired, &nGrowth );
+			if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 				return eResult;
 			}
 			eResult = tryReserveBytes( nGrowth );
-			if ( eResult != SIR_CONTAINER_OK ) {
+			if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 				return eResult;
 			}
 		}
@@ -244,34 +244,34 @@ public:
 		} else if ( !isInline() ) {
 			m_pHeap[m_nLength] = '\0';
 		} else {
-			return SIR_CONTAINER_SIZE_OVERFLOW;
+			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
-	sirContainerResult_t tryAssignBytes( const char *pBytes, uint32_t nBytes )
+	SIRContainerResult tryAssignBytes( const char *pBytes, uint32_t nBytes )
 	{
 		if ( pBytes == nullptr && nBytes != 0 ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		if ( nBytes == UINT32_MAX ) {
-			return SIR_CONTAINER_SIZE_OVERFLOW;
+			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
-		uintptr_t nStart = ( uintptr_t )data();
-		uintptr_t nSource = ( uintptr_t )pBytes;
+		uintptr_t nStart = reinterpret_cast<uintptr_t>(data());
+		uintptr_t nSource = reinterpret_cast<uintptr_t>(pBytes);
 		bool bAliased = pBytes != nullptr && nSource >= nStart && nSource - nStart <= m_nLength;
-		uint32_t iSource = bAliased ? ( uint32_t )( nSource - nStart ) : 0;
-		if ( bAliased && ( uint64_t )iSource + nBytes > ( uint64_t )m_nLength + 1 ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+		uint32_t iSource = bAliased ? static_cast<uint32_t>( nSource - nStart ) : 0;
+		if ( bAliased && static_cast<uint64_t>(iSource) + nBytes > static_cast<uint64_t>(m_nLength) + 1 ) {
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		if ( nBytes + 1 > m_nCapacity ) {
 			uint32_t nGrowth = 0;
-			sirContainerResult_t eResult = SIRVectorStorage::calculateGrowth( m_nCapacity, nBytes + 1, &nGrowth );
-			if ( eResult != SIR_CONTAINER_OK ) {
+			SIRContainerResult eResult = SIRVectorStorage::calculateGrowth( m_nCapacity, nBytes + 1, &nGrowth );
+			if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 				return eResult;
 			}
 			eResult = tryReserveBytes( nGrowth );
-			if ( eResult != SIR_CONTAINER_OK ) {
+			if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 				return eResult;
 			}
 		}
@@ -288,15 +288,15 @@ public:
 		} else if ( !isInline() ) {
 			m_pHeap[nBytes] = '\0';
 		} else {
-			return SIR_CONTAINER_SIZE_OVERFLOW;
+			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
-	sirContainerResult_t tryShrinkToFit( void )
+	SIRContainerResult tryShrinkToFit( void )
 	{
 		if ( isInline() || m_nCapacity == m_nLength + 1 ) {
-			return SIR_CONTAINER_OK;
+			return SIRContainerResult::SIR_CONTAINER_OK;
 		}
 		if ( m_nLength + 1 <= INLINE_CAPACITY ) {
 			char *pOld = m_pHeap;
@@ -304,18 +304,18 @@ public:
 			memcpy( m_szInline, pOld, m_nLength + 1 );
 			SIRRawStorage::deallocate( m_pAllocator, pOld, nOldCapacity, alignof( char ) );
 			m_nCapacity = INLINE_CAPACITY;
-			return SIR_CONTAINER_OK;
+			return SIRContainerResult::SIR_CONTAINER_OK;
 		}
 		void *pMemory = nullptr;
-		sirContainerResult_t eResult = SIRRawStorage::tryAllocate( m_pAllocator, m_nLength + 1, alignof( char ), &pMemory );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		SIRContainerResult eResult = SIRRawStorage::tryAllocate( m_pAllocator, m_nLength + 1, alignof( char ), &pMemory );
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		memcpy( pMemory, m_pHeap, m_nLength + 1 );
 		SIRRawStorage::deallocate( m_pAllocator, m_pHeap, m_nCapacity, alignof( char ) );
-		m_pHeap = ( char * )pMemory;
+		m_pHeap = static_cast<char *>(pMemory);
 		m_nCapacity = m_nLength + 1;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
 	void clear( void ) noexcept
@@ -325,4 +325,4 @@ public:
 	}
 };
 
-#endif // __SIRENGINE_SIRSTRING_H__
+#endif // __SIR_STRING_H__

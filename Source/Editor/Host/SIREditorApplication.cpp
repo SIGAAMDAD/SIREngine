@@ -19,20 +19,20 @@ SIREditorApplication::FrameSystem::FrameSystem( SIREditorApplication& owner ) no
 {
 }
 
-sirSystemResult_t SIREditorApplication::FrameSystem::initialize( void ) noexcept
+SIRSystemResult SIREditorApplication::FrameSystem::initialize( void ) noexcept
 {
-	return SIR_SYSTEM_OK;
+	return SIRSystemResult::SIR_SYSTEM_OK;
 }
 
 void SIREditorApplication::FrameSystem::update( float fDeltaSeconds ) noexcept
 {
-	( void )fDeltaSeconds;
+	static_cast<void>(fDeltaSeconds);
 	m_Owner.updateFrame();
 }
 
-sirSystemResult_t SIREditorApplication::FrameSystem::shutdown( void ) noexcept
+SIRSystemResult SIREditorApplication::FrameSystem::shutdown( void ) noexcept
 {
-	return SIR_SYSTEM_OK;
+	return SIRSystemResult::SIR_SYSTEM_OK;
 }
 
 SIREditorApplication::SIREditorApplication( void ) noexcept
@@ -52,23 +52,23 @@ uint64_t SIREditorApplication::getFrameCount( void ) const noexcept
 
 bool SIREditorApplication::isRunning( void ) const noexcept
 {
-	return m_bRunning && m_Application.getState() == SIR_APP_READY;
+	return m_bRunning && m_Application.getState() == SIRAppState::SIR_APP_READY;
 }
 
-sirAppState_t SIREditorApplication::getCoreState( void ) const noexcept
+SIRAppState SIREditorApplication::getCoreState( void ) const noexcept
 {
 	return m_Application.getState();
 }
 
-sirEditorApplicationResult_t SIREditorApplication::initialize( sirEditorFrameCallback_t pfnFrame, void *pContext ) noexcept
+SIREditorApplicationResult SIREditorApplication::initialize( sirEditorFrameCallback_t pfnFrame, void *pContext ) noexcept
 {
-	if ( m_Application.getState() != SIR_APP_UNINITIALIZED && m_Application.getState() != SIR_APP_STOPPED ) {
-		return SIR_EDITOR_APP_ALREADY_INITIALIZED;
+	if ( m_Application.getState() != SIRAppState::SIR_APP_UNINITIALIZED && m_Application.getState() != SIRAppState::SIR_APP_STOPPED ) {
+		return SIREditorApplicationResult::SIR_EDITOR_APP_ALREADY_INITIALIZED;
 	}
 	if ( pfnFrame == nullptr ) {
-		return SIR_EDITOR_APP_INVALID_ARGUMENT;
+		return SIREditorApplicationResult::SIR_EDITOR_APP_INVALID_ARGUMENT;
 	}
-	if ( m_Application.getState() == SIR_APP_STOPPED ) {
+	if ( m_Application.getState() == SIRAppState::SIR_APP_STOPPED ) {
 		// A complete shutdown releases every borrowed system before rebuilding
 		// the core lifecycle in the same storage, without an extra heap owner.
 		m_Application.~SIRApplication();
@@ -77,13 +77,13 @@ sirEditorApplicationResult_t SIREditorApplication::initialize( sirEditorFrameCal
 
 	// The core application owns system registration, initialization and tick count.
 	if ( !m_Application.registerSystem( &m_FrameSystem ) || !m_Application.initialize() ) {
-		return SIR_EDITOR_APP_HOST_FAILED;
+		return SIREditorApplicationResult::SIR_EDITOR_APP_HOST_FAILED;
 	}
 	m_pfnFrame = pfnFrame;
 	m_pContext = pContext;
 	m_bFrameFailed = false;
 	m_bRunning = true;
-	return SIR_EDITOR_APP_OK;
+	return SIREditorApplicationResult::SIR_EDITOR_APP_OK;
 }
 
 void SIREditorApplication::updateFrame( void ) noexcept
@@ -98,41 +98,41 @@ void SIREditorApplication::updateFrame( void ) noexcept
 	}
 }
 
-sirEditorApplicationResult_t SIREditorApplication::tick( void ) noexcept
+SIREditorApplicationResult SIREditorApplication::tick( void ) noexcept
 {
-	if ( m_Application.getState() != SIR_APP_READY ) {
-		return SIR_EDITOR_APP_NOT_INITIALIZED;
+	if ( m_Application.getState() != SIRAppState::SIR_APP_READY ) {
+		return SIREditorApplicationResult::SIR_EDITOR_APP_NOT_INITIALIZED;
 	}
 	if ( !m_bRunning ) {
-		return SIR_EDITOR_APP_OK;
+		return SIREditorApplicationResult::SIR_EDITOR_APP_OK;
 	}
 	if ( m_Application.getTickCount() == UINT64_MAX ) {
 		m_bRunning = false;
-		return SIR_EDITOR_APP_FRAME_EXHAUSTED;
+		return SIREditorApplicationResult::SIR_EDITOR_APP_FRAME_EXHAUSTED;
 	}
 	m_bFrameFailed = false;
 	if ( !m_Application.tick() ) {
 		m_bRunning = false;
-		return SIR_EDITOR_APP_HOST_FAILED;
+		return SIREditorApplicationResult::SIR_EDITOR_APP_HOST_FAILED;
 	}
-	return m_bFrameFailed ? SIR_EDITOR_APP_CALLBACK_FAILED : SIR_EDITOR_APP_OK;
+	return m_bFrameFailed ? SIREditorApplicationResult::SIR_EDITOR_APP_CALLBACK_FAILED : SIREditorApplicationResult::SIR_EDITOR_APP_OK;
 }
 
-sirEditorApplicationResult_t SIREditorApplication::run( uint64_t nMaxFrames ) noexcept
+SIREditorApplicationResult SIREditorApplication::run( uint64_t nMaxFrames ) noexcept
 {
-	if ( m_Application.getState() != SIR_APP_READY ) {
-		return SIR_EDITOR_APP_NOT_INITIALIZED;
+	if ( m_Application.getState() != SIRAppState::SIR_APP_READY ) {
+		return SIREditorApplicationResult::SIR_EDITOR_APP_NOT_INITIALIZED;
 	}
 	if ( nMaxFrames == 0 ) {
-		return SIR_EDITOR_APP_INVALID_ARGUMENT;
+		return SIREditorApplicationResult::SIR_EDITOR_APP_INVALID_ARGUMENT;
 	}
 	for ( uint64_t iFrame = 0; iFrame < nMaxFrames && m_bRunning; ++iFrame ) {
-		const sirEditorApplicationResult_t eResult = tick();
-		if ( eResult != SIR_EDITOR_APP_OK ) {
+		const SIREditorApplicationResult eResult = tick();
+		if ( eResult != SIREditorApplicationResult::SIR_EDITOR_APP_OK ) {
 			return eResult;
 		}
 	}
-	return SIR_EDITOR_APP_OK;
+	return SIREditorApplicationResult::SIR_EDITOR_APP_OK;
 }
 
 void SIREditorApplication::requestQuit( void ) noexcept
@@ -143,7 +143,7 @@ void SIREditorApplication::requestQuit( void ) noexcept
 void SIREditorApplication::shutdown( void ) noexcept
 {
 	m_bRunning = false;
-	( void )m_Application.shutdown();
+	static_cast<void>(m_Application.shutdown());
 	m_pfnFrame = nullptr;
 	m_pContext = nullptr;
 	m_bFrameFailed = false;

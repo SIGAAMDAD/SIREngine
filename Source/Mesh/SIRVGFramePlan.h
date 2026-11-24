@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRVGFRAMEPLAN_H__
-#define __SIRENGINE_SIRVGFRAMEPLAN_H__
+#ifndef __SIR_VGFRAMEPLAN_H__
+#define __SIR_VGFRAMEPLAN_H__
 
 #include <Core/SIRPCH.h>
 
@@ -32,8 +32,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // owns native execution. This plan cannot transfer ownership to any of them.
 static constexpr uint32_t SIR_VG_FRAME_PLAN_VERSION = 1;
 
-typedef enum sirVGPlanResult_e : uint8_t
-{
+enum class SIRVGPlanResult : uint8_t {
 	SIR_VG_PLAN_OK = 0,
 	SIR_VG_PLAN_INVALID_ARGUMENT = 1,
 	SIR_VG_PLAN_UNSUPPORTED_VERSION = 2,
@@ -41,7 +40,7 @@ typedef enum sirVGPlanResult_e : uint8_t
 	SIR_VG_PLAN_INCOMPLETE_GROUP = 4,
 	SIR_VG_PLAN_OVERFLOW = 5,
 	SIR_VG_PLAN_DUPLICATE_DEMAND = 6
-} sirVGPlanResult_t;
+};
 
 // A group is selected atomically: all its cooked clusters must be selected
 // together. The cooker/manifest is responsible for supplying the expected
@@ -107,6 +106,6 @@ typedef struct sirVGFramePlan_s
 // Validates shape and local consistency only; never claims a GRDG pin,
 // residency snapshot or fence is current. Caller still validates source
 // revisions and publication epochs against the canonical owner.
-sirVGPlanResult_t sirVGValidateFramePlan( const sirVGFramePlan_t& plan ) noexcept;
+SIRVGPlanResult sirVGValidateFramePlan( const sirVGFramePlan_t& plan ) noexcept;
 
-#endif // __SIRENGINE_SIRVGFRAMEPLAN_H__
+#endif // __SIR_VGFRAMEPLAN_H__

@@ -8,8 +8,8 @@ License, v2. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIRD3D9MAPPING_H__
-#define __SIRENGINE_SIRD3D9MAPPING_H__
+#ifndef __SIR_D3_D9_MAPPING_H__
+#define __SIR_D3_D9_MAPPING_H__
 #include <Core/SIRPCH.h>
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
 #pragma once
@@ -18,7 +18,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 // Validate a CPU-upload lock against the actual D3D9 allocation extent.
 // The D3D9 backend only admits one outstanding CPU mapping per buffer.
-sirGraphicsResult_t sirD3D9ValidateBufferMap( const sirGraphicsABIBufferRange_t *pRange, uint64_t nAllocationBytes,
-                                              sirGraphicsMemoryClass_t eMemory, bool bAlreadyMapped ) noexcept;
+SIRGraphicsResult sirD3D9ValidateBufferMap( const sirGraphicsABIBufferRange_t *pRange, uint64_t nAllocationBytes,
+                                              SIRGraphicsMemoryClass eMemory, bool bAlreadyMapped ) noexcept;
 
-#endif // __SIRENGINE_SIRD3D9MAPPING_H__
+#endif // __SIR_D3_D9_MAPPING_H__

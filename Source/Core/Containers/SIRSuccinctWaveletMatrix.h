@@ -23,29 +23,29 @@ public:
 	explicit SIRSuccinctWaveletMatrix( const sirContainerAllocator_t *pAllocator ) : m_pAllocator( pAllocator ), m_levels( pAllocator )
 	{
 	}
-	sirContainerResult_t tryBuild( const uint32_t *pValues, uint32_t nCount, uint32_t nBits = 32 )
+	SIRContainerResult tryBuild( const uint32_t *pValues, uint32_t nCount, uint32_t nBits = 32 )
 	{
 		if ( nBits == 0 || nBits > 32 || ( nCount > 0 && pValues == nullptr ) ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		SIRVector<uint32_t> current( m_pAllocator );
 		SIRVector<uint32_t> next( m_pAllocator );
 		SIRVector<Level> levels( m_pAllocator );
-		sirContainerResult_t eResult = current.tryReserve( nCount );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		SIRContainerResult eResult = current.tryReserve( nCount );
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		eResult = next.tryResize( nCount );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		eResult = levels.tryReserve( nBits );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		for ( uint32_t iIndex = 0; iIndex < nCount; ++iIndex ) {
 			if ( nBits < 32 && pValues[iIndex] >= ( uint32_t( 1 ) << nBits ) ) {
-				return SIR_CONTAINER_INVALID_ARGUMENT;
+				return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 			}
 			current.tryEmplaceBack( pValues[iIndex] );
 		}
@@ -53,7 +53,7 @@ public:
 			const uint32_t nShift = nBits - 1 - iLevel;
 			SIRVector<uint64_t> words( m_pAllocator );
 			eResult = words.tryResize( ( nCount + 63ull ) / 64 );
-			if ( eResult != SIR_CONTAINER_OK ) {
+			if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 				return eResult;
 			}
 			uint32_t nZeros = 0;
@@ -65,12 +65,12 @@ public:
 				}
 			}
 			eResult = levels.tryEmplaceBack( m_pAllocator );
-			if ( eResult != SIR_CONTAINER_OK ) {
+			if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 				return eResult;
 			}
 			Level& level = levels[levels.getSize() - 1];
 			eResult = level.bits.tryBuild( words.data(), nCount );
-			if ( eResult != SIR_CONTAINER_OK ) {
+			if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 				return eResult;
 			}
 			level.nZeros = nZeros;
@@ -86,14 +86,14 @@ public:
 			current = std::move( next );
 			next = SIRVector<uint32_t>( m_pAllocator );
 			eResult = next.tryResize( nCount );
-			if ( eResult != SIR_CONTAINER_OK ) {
+			if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 				return eResult;
 			}
 		}
 		m_levels = std::move( levels );
 		m_nCount = nCount;
 		m_nBits = nBits;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 	uint32_t access( uint32_t iIndex ) const noexcept
 	{
@@ -106,9 +106,9 @@ public:
 			const uint64_t nOnes = level.bits.rank1( iIndex );
 			if ( level.bits.contains( iIndex ) ) {
 				nValue |= uint32_t( 1 ) << ( m_nBits - 1 - iLevel );
-				iIndex = level.nZeros + ( uint32_t )nOnes;
+				iIndex = level.nZeros + static_cast<uint32_t>(nOnes);
 			} else {
-				iIndex -= ( uint32_t )nOnes;
+				iIndex -= static_cast<uint32_t>(nOnes);
 			}
 		}
 		return nValue;
@@ -125,8 +125,8 @@ public:
 		uint32_t iLast = nExclusive;
 		for ( uint32_t iLevel = 0; iLevel < m_nBits; ++iLevel ) {
 			const Level& level = m_levels[iLevel];
-			const uint32_t nStartOnes = ( uint32_t )level.bits.rank1( iFirst );
-			const uint32_t nEndOnes = ( uint32_t )level.bits.rank1( iLast );
+			const uint32_t nStartOnes = static_cast<uint32_t>(level.bits.rank1( iFirst ));
+			const uint32_t nEndOnes = static_cast<uint32_t>(level.bits.rank1( iLast ));
 			if ( ( ( nValue >> ( m_nBits - 1 - iLevel ) ) & 1 ) != 0 ) {
 				iFirst = level.nZeros + nStartOnes;
 				iLast = level.nZeros + nEndOnes;
@@ -151,8 +151,8 @@ public:
 		uint32_t iLast = m_nCount;
 		for ( uint32_t iLevel = 0; iLevel < m_nBits; ++iLevel ) {
 			const Level& level = m_levels[iLevel];
-			const uint32_t nFirstOnes = ( uint32_t )level.bits.rank1( iFirst );
-			const uint32_t nLastOnes = ( uint32_t )level.bits.rank1( iLast );
+			const uint32_t nFirstOnes = static_cast<uint32_t>(level.bits.rank1( iFirst ));
+			const uint32_t nLastOnes = static_cast<uint32_t>(level.bits.rank1( iLast ));
 			const uint32_t nBit = ( nValue >> ( m_nBits - iLevel - 1 ) ) & 1;
 			if ( nBit != 0 ) {
 				iFirst = level.nZeros + nFirstOnes;

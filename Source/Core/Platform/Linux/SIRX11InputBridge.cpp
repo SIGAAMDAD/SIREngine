@@ -8,20 +8,20 @@ SIRX11InputBridge::~SIRX11InputBridge( void ) noexcept
 
 bool SIRX11InputBridge::bind( SIRInputService& input, SIRLinuxX11Backend& backend, const sirWindowNativeView_t& view ) noexcept
 {
-	sirLinuxNativeWindow_t native = {};
-	if ( m_pInput != nullptr || !sirPlatformDecodeLinuxWindow( view, &native ) || native.eDisplayType != SIR_LINUX_DISPLAY_X11 ||
+	sirLinuxNativeWindow_t native {};
+	if ( m_pInput != nullptr || !sirPlatformDecodeLinuxWindow( view, &native ) || native.eDisplayType != SIRLinuxDisplayKind::SIR_LINUX_DISPLAY_X11 ||
 	     !input.attach( backend ) ) {
 		return false;
 	}
-	const Window hWindow = ( Window )native.nSurface;
-	Display *pDisplay = ( Display * )native.nDisplay;
+	const Window hWindow = static_cast<Window>(native.nSurface);
+	Display *pDisplay = static_cast<Display *>(native.nDisplay);
 	m_pInput = &input;
 	m_pBackend = &backend;
 	m_pDisplay = pDisplay;
 	m_hWindow = hWindow;
-	( void )SIRLinuxX11Backend::enableDetectableRepeat( pDisplay );
+	static_cast<void>(SIRLinuxX11Backend)::enableDetectableRepeat( pDisplay );
 	if ( XSupportsLocale() ) {
-		( void )XSetLocaleModifiers( "" );
+		static_cast<void>(XSetLocaleModifiers( "" ));
 		m_hInputMethod = XOpenIM( pDisplay, nullptr, nullptr, nullptr );
 	}
 	if ( !registerWindow( view ) ) {
@@ -45,7 +45,7 @@ bool SIRX11InputBridge::beginFrame( void ) noexcept
 		m_bDeferredResync = false; // focusWindow already publishes the state loss.
 	}
 	if ( m_bDeferredResync ) {
-		if ( !m_pInput->loseBackendState( SIR_INPUT_LINUX_X11 ) ) {
+		if ( !m_pInput->loseBackendState( SIRInputBackendId::SIR_INPUT_LINUX_X11 ) ) {
 			return false;
 		}
 		m_bDeferredResync = false;
@@ -55,7 +55,7 @@ bool SIRX11InputBridge::beginFrame( void ) noexcept
 			return false;
 		}
 		m_bAttached = true;
-		( void )m_pBackend->enableRawPointer( m_pDisplay );
+		static_cast<void>(m_pBackend->enableRawPointer( m_pDisplay ));
 	}
 	return true;
 }
@@ -67,12 +67,12 @@ bool SIRX11InputBridge::isBound( void ) const noexcept
 
 bool SIRX11InputBridge::registerWindow( const sirWindowNativeView_t& view ) noexcept
 {
-	sirLinuxNativeWindow_t native = {};
-	if ( m_pInput == nullptr || !sirPlatformDecodeLinuxWindow( view, &native ) || native.eDisplayType != SIR_LINUX_DISPLAY_X11 ||
-	     native.nDisplay != ( uintptr_t )m_pDisplay || m_nWindowCount >= SIR_WINDOW_MAX_WINDOWS ) {
+	sirLinuxNativeWindow_t native {};
+	if ( m_pInput == nullptr || !sirPlatformDecodeLinuxWindow( view, &native ) || native.eDisplayType != SIRLinuxDisplayKind::SIR_LINUX_DISPLAY_X11 ||
+	     native.nDisplay != reinterpret_cast<uintptr_t>(m_pDisplay) || m_nWindowCount >= SIR_WINDOW_MAX_WINDOWS ) {
 		return false;
 	}
-	const Window hWindow = ( Window )native.nSurface;
+	const Window hWindow = static_cast<Window>(native.nSurface);
 	for ( uint32_t i = 0; i < m_nWindowCount; ++i ) {
 		if ( m_hRegisteredWindows[i] == hWindow ) {
 			return false;
@@ -99,7 +99,7 @@ bool SIRX11InputBridge::unregisterWindow( uintptr_t nNativeWindow ) noexcept
 		return false;
 	}
 	for ( uint32_t i = 0; i < m_nWindowCount; ++i ) {
-		if ( m_hRegisteredWindows[i] != ( Window )nNativeWindow ) {
+		if ( m_hRegisteredWindows[i] != static_cast<Window>(nNativeWindow) ) {
 			continue;
 		}
 		if ( m_hRegisteredContexts[i] != nullptr ) {
@@ -109,7 +109,7 @@ bool SIRX11InputBridge::unregisterWindow( uintptr_t nNativeWindow ) noexcept
 			}
 			XDestroyIC( m_hRegisteredContexts[i] );
 		}
-		if ( m_hWindow == ( Window )nNativeWindow ) {
+		if ( m_hWindow == static_cast<Window>(nNativeWindow) ) {
 			// unregisterWindow may run after publish() in the application
 			// lifecycle. Keep the reset pending until the next beginFrame.
 			m_bDeferredResync = true;
@@ -140,13 +140,13 @@ bool SIRX11InputBridge::unregisterWindow( uintptr_t nNativeWindow ) noexcept
 	return false;
 }
 
-bool SIRX11InputBridge::setCursorMode( sirInputCursorMode_t eMode ) noexcept
+bool SIRX11InputBridge::setCursorMode( SIRInputCursorMode eMode ) noexcept
 {
-	if ( eMode > SIR_INPUT_CURSOR_CAPTURED || m_pInput == nullptr || m_pDisplay == nullptr ) {
+	if ( eMode > SIRInputCursorMode::SIR_INPUT_CURSOR_CAPTURED || m_pInput == nullptr || m_pDisplay == nullptr ) {
 		return false;
 	}
 	Display *pDisplay = m_pDisplay;
-	const Window hWindow = ( Window )m_hWindow;
+	const Window hWindow = static_cast<Window>(m_hWindow);
 	if ( hWindow == 0 ) {
 		return false;
 	}
@@ -154,27 +154,27 @@ bool SIRX11InputBridge::setCursorMode( sirInputCursorMode_t eMode ) noexcept
 		XUngrabPointer( pDisplay, CurrentTime );
 		m_bCursorCaptured = false;
 	}
-	if ( eMode != SIR_INPUT_CURSOR_FREE && m_nInvisibleCursor == 0 ) {
+	if ( eMode != SIRInputCursorMode::SIR_INPUT_CURSOR_FREE && m_nInvisibleCursor == 0 ) {
 		const char szBlank[1] = { 0 };
 		const Pixmap nBlank = XCreateBitmapFromData( pDisplay, hWindow, szBlank, 1, 1 );
 		if ( nBlank == 0 ) {
 			return false;
 		}
-		XColor black = {};
-		m_nInvisibleCursor = ( uintptr_t )XCreatePixmapCursor( pDisplay, nBlank, nBlank, &black, &black, 0, 0 );
+		XColor black {};
+		m_nInvisibleCursor = static_cast<uintptr_t>(XCreatePixmapCursor( pDisplay, nBlank, nBlank, &black, &black, 0, 0 ));
 		XFreePixmap( pDisplay, nBlank );
 		if ( m_nInvisibleCursor == 0 ) {
 			return false;
 		}
 	}
-	if ( eMode == SIR_INPUT_CURSOR_FREE ) {
+	if ( eMode == SIRInputCursorMode::SIR_INPUT_CURSOR_FREE ) {
 		XUndefineCursor( pDisplay, hWindow );
 	} else {
-		XDefineCursor( pDisplay, hWindow, ( Cursor )m_nInvisibleCursor );
+		XDefineCursor( pDisplay, hWindow, static_cast<Cursor>(m_nInvisibleCursor) );
 	}
-	if ( eMode == SIR_INPUT_CURSOR_CAPTURED && m_bFocused ) {
+	if ( eMode == SIRInputCursorMode::SIR_INPUT_CURSOR_CAPTURED && m_bFocused ) {
 		const int nResult = XGrabPointer( pDisplay, hWindow, True, ButtonPressMask | ButtonReleaseMask | PointerMotionMask, GrabModeAsync,
-		                                  GrabModeAsync, hWindow, ( Cursor )m_nInvisibleCursor, CurrentTime );
+		                                  GrabModeAsync, hWindow, static_cast<Cursor>(m_nInvisibleCursor), CurrentTime );
 		if ( nResult != GrabSuccess ) {
 			XFlush( pDisplay );
 			return false;
@@ -186,7 +186,7 @@ bool SIRX11InputBridge::setCursorMode( sirInputCursorMode_t eMode ) noexcept
 	return true;
 }
 
-sirInputCursorMode_t SIRX11InputBridge::cursorMode( void ) const noexcept
+SIRInputCursorMode SIRX11InputBridge::cursorMode( void ) const noexcept
 {
 	return m_eCursorMode;
 }
@@ -199,9 +199,9 @@ void SIRX11InputBridge::setTextEnabled( bool bEnabled ) noexcept
 	m_pInput->text().setEnabled( bEnabled );
 	if ( m_hInputContext != nullptr && m_bFocused ) {
 		if ( bEnabled ) {
-			XSetICFocus( ( XIC )m_hInputContext );
+			XSetICFocus( static_cast<XIC>(m_hInputContext) );
 		} else {
-			XUnsetICFocus( ( XIC )m_hInputContext );
+			XUnsetICFocus( static_cast<XIC>(m_hInputContext) );
 		}
 	}
 }
@@ -214,7 +214,7 @@ void SIRX11InputBridge::processEvent( const XEvent& event ) noexcept
 	SIRInputService& input = *m_pInput;
 	SIRLinuxX11Backend *pX11 = m_pBackend;
 	if ( event.type == GenericEvent ) {
-		( void )pX11->processEvent( input, event );
+		static_cast<void>(pX11->processEvent( input, event ));
 		return;
 	}
 	uint32_t nIndex = m_nWindowCount;
@@ -228,7 +228,7 @@ void SIRX11InputBridge::processEvent( const XEvent& event ) noexcept
 		return;
 	}
 	if ( event.type == DestroyNotify ) {
-		( void )unregisterWindow( ( uintptr_t )event.xany.window );
+		static_cast<void>(unregisterWindow( static_cast<uintptr_t>(event.xany.window) ));
 		return;
 	}
 	// When a focused window is unregistered during an input collection tick,
@@ -263,31 +263,32 @@ void SIRX11InputBridge::processEvent( const XEvent& event ) noexcept
 		input.setHapticsPaused( !m_bFocused );
 		if ( m_hInputContext != nullptr ) {
 			if ( m_bFocused && input.text().snapshot().bEnabled ) {
-				XSetICFocus( ( XIC )m_hInputContext );
+				XSetICFocus( static_cast<XIC>(m_hInputContext) );
 			} else {
-				XUnsetICFocus( ( XIC )m_hInputContext );
+				XUnsetICFocus( static_cast<XIC>(m_hInputContext) );
 			}
 		}
-		if ( m_eCursorMode == SIR_INPUT_CURSOR_CAPTURED ) {
-			( void )setCursorMode( m_eCursorMode );
+		if ( m_eCursorMode == SIRInputCursorMode::SIR_INPUT_CURSOR_CAPTURED ) {
+			static_cast<void>(setCursorMode( m_eCursorMode ));
 		}
 	}
 	if ( m_bFocused && input.text().snapshot().bEnabled && m_hInputContext != nullptr &&
 	     ( event.type == KeyPress || event.type == KeyRelease ) ) {
-		if ( XFilterEvent( &nativeEvent, ( Window )m_hWindow ) ) {
+		if ( XFilterEvent( &nativeEvent, static_cast<Window>(m_hWindow) ) ) {
 			return;
 		}
 		if ( event.type == KeyPress ) {
-			char szUtf8[1024] = {};
+			char szUtf8[1024];
+			memset( szUtf8, 0, sizeof( szUtf8 ) );
 			KeySym eKey = NoSymbol;
 			Status eStatus = XLookupNone;
-			const int nLength = Xutf8LookupString( ( XIC )m_hInputContext, &nativeEvent.xkey, szUtf8, sizeof( szUtf8 ), &eKey, &eStatus );
-			if ( nLength > 0 && nLength <= ( int )sizeof( szUtf8 ) && ( eStatus == XLookupChars || eStatus == XLookupBoth ) ) {
-				( void )input.text().appendUtf8( szUtf8, ( uint32_t )nLength );
+			const int nLength = Xutf8LookupString( static_cast<XIC>(m_hInputContext), &nativeEvent.xkey, szUtf8, sizeof( szUtf8 ), &eKey, &eStatus );
+			if ( nLength > 0 && nLength <= static_cast<int>(sizeof( szUtf8 ) && ( eStatus == XLookupChars || eStatus == XLookupBoth ) )) {
+				static_cast<void>(input.text().appendUtf8( szUtf8, static_cast<uint32_t>(nLength) ));
 			}
 		}
 	}
-	( void )pX11->processEvent( input, event );
+	static_cast<void>(pX11->processEvent( input, event ));
 }
 
 void SIRX11InputBridge::unbind( void ) noexcept
@@ -301,7 +302,7 @@ void SIRX11InputBridge::unbind( void ) noexcept
 		XUngrabPointer( m_pDisplay, CurrentTime );
 	}
 	if ( m_nInvisibleCursor != 0 ) {
-		XFreeCursor( m_pDisplay, ( Cursor )m_nInvisibleCursor );
+		XFreeCursor( m_pDisplay, static_cast<Cursor>(m_nInvisibleCursor) );
 	}
 	for ( uint32_t i = 0; i < m_nWindowCount; ++i ) {
 		if ( m_hRegisteredContexts[i] != nullptr ) {
@@ -326,6 +327,6 @@ void SIRX11InputBridge::unbind( void ) noexcept
 	m_bDeferredResync = false;
 	m_bDeferredRetarget = false;
 	m_bCursorCaptured = false;
-	m_eCursorMode = SIR_INPUT_CURSOR_FREE;
+	m_eCursorMode = SIRInputCursorMode::SIR_INPUT_CURSOR_FREE;
 	m_nInvisibleCursor = 0;
 }

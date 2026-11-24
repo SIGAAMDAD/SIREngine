@@ -38,9 +38,9 @@ uint32_t SIRSizeClassAllocator::getClassIndex( uint32_t nBytes )
 #if defined( _MSC_VER ) && defined( _M_X64 )
 	unsigned long nHighestBit = 0;
 	_BitScanReverse( &nHighestBit, nBytes - 1 );
-	return ( ( uint32_t )( nHighestBit ) ) - 3;
+	return static_cast<uint32_t>( nHighestBit ) - 3;
 #elif defined( __GNUC__ ) || defined( __clang__ )
-	return 28u - ( ( uint32_t )( __builtin_clz( nBytes - 1 ) ) );
+	return 28u - ( static_cast<uint32_t>(  __builtin_clz( nBytes - 1 )  ) );
 #else
 	uint32_t nSize = 16;
 	uint32_t nClass = 0;
@@ -120,11 +120,11 @@ bool SIRSizeClassAllocator::initInternal( SIRMemorySegment *const *ppSegments, u
 		}
 	}
 
-	void *pMemory = pManager->allocateMetadata( ( ( uint64_t )( nClassCount ) ) * sizeof( SIRPoolAllocator ), alignof( SIRPoolAllocator ) );
+	void *pMemory = pManager->allocateMetadata( static_cast<uint64_t>( nClassCount ) * sizeof( SIRPoolAllocator ), alignof( SIRPoolAllocator ) );
 	if ( pMemory == nullptr ) {
 		return false;
 	}
-	m_pPools = ( ( SIRPoolAllocator * )( pMemory ) );
+	m_pPools = static_cast<SIRPoolAllocator *>( pMemory );
 	m_nClassCount = nClassCount;
 	m_bFineGrained = bFineGrained;
 	for ( uint32_t i = 0; i < nClassCount; ++i ) {

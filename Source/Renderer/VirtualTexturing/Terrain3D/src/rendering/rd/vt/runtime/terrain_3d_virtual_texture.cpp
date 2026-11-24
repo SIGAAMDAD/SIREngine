@@ -26,13 +26,13 @@ static uint64_t t3dVtTicksUsec( void )
 
 static void *t3dVtRuntimePackAllocate( void *const pUser, const size_t nBytes, const size_t nAlignment )
 {
-	Terrain3DMemoryZone *const pZone = ( Terrain3DMemoryZone * )pUser;
+	Terrain3DMemoryZone *const pZone = static_cast<Terrain3DMemoryZone *>(pUser);
 	return pZone != NULL ? pZone->allocate( nBytes, nAlignment ) : NULL;
 }
 
 static void t3dVtRuntimePackFree( void *const pUser, void *const pMemory )
 {
-	Terrain3DMemoryZone *const pZone = ( Terrain3DMemoryZone * )pUser;
+	Terrain3DMemoryZone *const pZone = static_cast<Terrain3DMemoryZone *>(pUser);
 	if ( pZone != NULL && pMemory != NULL ) {
 		pZone->deallocate( pMemory );
 	}
@@ -55,7 +55,7 @@ struct t3dVtWarmPackAllocator_t
 
 static void *t3dVtWarmPackAllocate( void *const pUser, const size_t nBytes, const size_t nAlignment )
 {
-	auto& allocator = *( t3dVtWarmPackAllocator_t * )pUser;
+	auto& allocator = *static_cast<t3dVtWarmPackAllocator_t *>(pUser);
 	void *const memory = allocator.m_pZone->allocate( nBytes, nAlignment );
 	allocator.m_bDenied |= memory == NULL;
 	return memory;
@@ -63,7 +63,7 @@ static void *t3dVtWarmPackAllocate( void *const pUser, const size_t nBytes, cons
 
 static void t3dVtWarmPackFree( void *const pUser, void *const pMemory )
 {
-	( ( t3dVtWarmPackAllocator_t * )pUser )->m_pZone->deallocate( pMemory );
+	static_cast<t3dVtWarmPackAllocator_t *>(pUser)->m_pZone->deallocate( pMemory );
 }
 
 Terrain3DVirtualTexture::Terrain3DVirtualTexture()
@@ -258,74 +258,74 @@ void Terrain3DVirtualTexture::cancel_startup_cold( const uint32_t nGeneration )
 	if ( eStage == T3D_STARTUP_FAILED || eStage == T3D_STARTUP_CANCELLED ) {
 		return;
 	}
-	( void )t3dStartupDomainCancel( m_startupState, nGeneration, t3dVtTicksUsec() );
+	static_cast<void>(t3dStartupDomainCancel( m_startupState, nGeneration, t3dVtTicksUsec() ));
 }
 
 godot::Dictionary Terrain3DVirtualTexture::get_startup_diagnostics() const
 {
 	Terrain3DScopedLock packageLock( m_packageMutex );
 	godot::Dictionary result;
-	result["fragment_requests_accepted"] = ( int64_t )m_Gpu.get_fragment_feedback_consumed();
-	result["fragment_requests_dropped"] = ( int64_t )m_Gpu.get_fragment_feedback_dropped();
-	result["fragment_misses"] = ( int64_t )m_Gpu.get_fragment_feedback_misses();
-	result["fragment_hash_overflow"] = ( int64_t )m_Gpu.get_fragment_feedback_overflow();
-	result["spatial_demand_cells"] = ( int64_t )m_spatialDemand.getCellCount();
-	result["spatial_demand_version"] = ( int64_t )m_spatialDemand.getVersion();
-	result["spatial_demand_mapped_records"] = ( int64_t )m_spatialDemand.getMappedRecordCount();
+	result["fragment_requests_accepted"] = static_cast<int64_t>(m_Gpu.get_fragment_feedback_consumed());
+	result["fragment_requests_dropped"] = static_cast<int64_t>(m_Gpu.get_fragment_feedback_dropped());
+	result["fragment_misses"] = static_cast<int64_t>(m_Gpu.get_fragment_feedback_misses());
+	result["fragment_hash_overflow"] = static_cast<int64_t>(m_Gpu.get_fragment_feedback_overflow());
+	result["spatial_demand_cells"] = static_cast<int64_t>(m_spatialDemand.getCellCount());
+	result["spatial_demand_version"] = static_cast<int64_t>(m_spatialDemand.getVersion());
+	result["spatial_demand_mapped_records"] = static_cast<int64_t>(m_spatialDemand.getMappedRecordCount());
 	result["spatial_demand_primary"] = m_spatialDemand.hasBoundPredictor();
 	result["spatial_demand_source"] = m_demandIndexSourceIdentity;
-	result["spatial_demand_prefetch_attempts"] = ( int64_t )m_nSpatialDemandAttempts;
-	result["spatial_demand_incomplete_fallbacks"] = ( int64_t )m_nSpatialDemandIncompleteFallbacks;
+	result["spatial_demand_prefetch_attempts"] = static_cast<int64_t>(m_nSpatialDemandAttempts);
+	result["spatial_demand_incomplete_fallbacks"] = static_cast<int64_t>(m_nSpatialDemandIncompleteFallbacks);
 	result["spatial_demand_current_cell_complete"] = m_bSpatialDemandCurrentCellComplete;
-	result["fragment_feedback_mask_uploads_saved"] = ( int64_t )m_Gpu.get_predicted_mask_uploads_saved();
+	result["fragment_feedback_mask_uploads_saved"] = static_cast<int64_t>(m_Gpu.get_predicted_mask_uploads_saved());
 	result["spatial_demand_package_match"] =
 	    m_Residency.pDatabase != NULL && m_spatialDemand.isValidFor( m_Residency.pDatabase->nPackageContentSignature );
 	const t3dStartupDomainSnapshot_t startup = t3dStartupDomainSnapshot( m_startupState );
-	result["startup_generation"] = ( int64_t )( m_nStartupGeneration );
+	result["startup_generation"] = static_cast<int64_t>( m_nStartupGeneration );
 	const t3dStartupStage_t eStartupStage = startup.m_eStage;
-	result["startup_stage"] = ( int64_t )( eStartupStage );
+	result["startup_stage"] = static_cast<int64_t>( eStartupStage );
 	result["startup_stage_name"] = godot::String( t3dStartupStageName( eStartupStage ) );
-	result["startup_state_generation"] = ( int64_t )( startup.m_nGeneration );
-	result["startup_completed_units"] = ( int64_t )( startup.m_nCompletedUnits );
-	result["startup_total_units"] = ( int64_t )( startup.m_nTotalUnits );
-	result["startup_start_usec"] = ( int64_t )( startup.m_nStartUsec );
-	result["startup_end_usec"] = ( int64_t )( startup.m_nEndUsec );
-	result["package_prepare_count"] = ( int64_t )( m_nStartupPackagePrepareCount );
-	result["package_prepare_usec_last"] = ( int64_t )( m_nStartupPackagePrepareUsecLast );
-	result["cpu_image_prepare_count"] = ( int64_t )( m_nStartupCpuImagePrepareCount );
-	result["cpu_image_prepare_usec_last"] = ( int64_t )( m_nStartupCpuImagePrepareUsecLast );
-	result["gpu_initialize_count"] = ( int64_t )( m_nStartupGpuInitializeCount );
-	result["gpu_initialize_usec_last"] = ( int64_t )( m_nStartupGpuInitializeUsecLast );
-	result["gpu_storage_prepare_count"] = ( int64_t )( m_nStartupGpuStoragePrepareCount );
-	result["gpu_storage_prepare_usec_last"] = ( int64_t )( m_nStartupGpuStoragePrepareUsecLast );
-	result["gpu_bind_count"] = ( int64_t )( m_nStartupGpuBindCount );
-	result["gpu_bind_usec_last"] = ( int64_t )( m_nStartupGpuBindUsecLast );
+	result["startup_state_generation"] = static_cast<int64_t>( startup.m_nGeneration );
+	result["startup_completed_units"] = static_cast<int64_t>( startup.m_nCompletedUnits );
+	result["startup_total_units"] = static_cast<int64_t>( startup.m_nTotalUnits );
+	result["startup_start_usec"] = static_cast<int64_t>( startup.m_nStartUsec );
+	result["startup_end_usec"] = static_cast<int64_t>( startup.m_nEndUsec );
+	result["package_prepare_count"] = static_cast<int64_t>( m_nStartupPackagePrepareCount );
+	result["package_prepare_usec_last"] = static_cast<int64_t>( m_nStartupPackagePrepareUsecLast );
+	result["cpu_image_prepare_count"] = static_cast<int64_t>( m_nStartupCpuImagePrepareCount );
+	result["cpu_image_prepare_usec_last"] = static_cast<int64_t>( m_nStartupCpuImagePrepareUsecLast );
+	result["gpu_initialize_count"] = static_cast<int64_t>( m_nStartupGpuInitializeCount );
+	result["gpu_initialize_usec_last"] = static_cast<int64_t>( m_nStartupGpuInitializeUsecLast );
+	result["gpu_storage_prepare_count"] = static_cast<int64_t>( m_nStartupGpuStoragePrepareCount );
+	result["gpu_storage_prepare_usec_last"] = static_cast<int64_t>( m_nStartupGpuStoragePrepareUsecLast );
+	result["gpu_bind_count"] = static_cast<int64_t>( m_nStartupGpuBindCount );
+	result["gpu_bind_usec_last"] = static_cast<int64_t>( m_nStartupGpuBindUsecLast );
 	result["cpu_ready"] = m_bCpuPrepared;
 	result["gpu_storage_ready"] = m_bGpuStoragePrepared;
 	result["gpu_ready"] = m_bExecutableBound;
 	result["initial_published"] = m_bInitialPublished;
-	result["warm_publication_attempt_count"] = ( int64_t )m_nWarmPublicationAttemptCount;
-	result["warm_publication_success_count"] = ( int64_t )m_nWarmPublicationSuccessCount;
-	result["warm_publication_failure_count"] = ( int64_t )m_nWarmPublicationFailureCount;
-	result["vt_identical_republish_skips"] = ( int64_t )m_nIdenticalRepublishSkips;
-	result["warm_publication_usec_last"] = ( int64_t )m_nWarmPublicationUsecLast;
-	result["package_publication_generation"] = ( int64_t )m_nPackagePublicationGeneration;
+	result["warm_publication_attempt_count"] = static_cast<int64_t>(m_nWarmPublicationAttemptCount);
+	result["warm_publication_success_count"] = static_cast<int64_t>(m_nWarmPublicationSuccessCount);
+	result["warm_publication_failure_count"] = static_cast<int64_t>(m_nWarmPublicationFailureCount);
+	result["vt_identical_republish_skips"] = static_cast<int64_t>(m_nIdenticalRepublishSkips);
+	result["warm_publication_usec_last"] = static_cast<int64_t>(m_nWarmPublicationUsecLast);
+	result["package_publication_generation"] = static_cast<int64_t>(m_nPackagePublicationGeneration);
 	result["warm_package_pending"] = m_bWarmPackagePending;
 	result["warm_resource_rebuild_required"] = m_bWarmResourceRebuildRequired;
 	result["warm_rollback_ready"] = m_bWarmRollbackReady;
-	result["physical_bank_prepare_count"] = ( int64_t )m_nStartupGpuStoragePrepareCount;
-	result["initial_publication_count"] = ( int64_t )( m_nStartupInitialPublicationCount );
-	result["initial_publication_usec_last"] = ( int64_t )( m_nStartupInitialPublicationUsecLast );
+	result["physical_bank_prepare_count"] = static_cast<int64_t>(m_nStartupGpuStoragePrepareCount);
+	result["initial_publication_count"] = static_cast<int64_t>( m_nStartupInitialPublicationCount );
+	result["initial_publication_usec_last"] = static_cast<int64_t>( m_nStartupInitialPublicationUsecLast );
 	result["vt_cpu_ready"] = m_bCpuPrepared;
 	result["vt_storage_ready"] = m_bGpuStoragePrepared;
 	result["vt_gpu_ready"] = m_bExecutableBound;
-	result["vt_cpu_bytes"] = ( int64_t )( m_nCpuImageBytes );
+	result["vt_cpu_bytes"] = static_cast<int64_t>( m_nCpuImageBytes );
 	result["vt_package_file_backed"] = m_bRuntimePackLoaded && m_RuntimePack.pFileSource != NULL;
-	result["vt_package_metadata_bytes"] = ( int64_t )( m_bRuntimePackLoaded ? m_RuntimePack.nOwnedBytes : 0u );
-	result["vt_package_file_bytes"] = ( int64_t )( m_bRuntimePackLoaded ? m_RuntimePack.nPackageBytes : 0u );
-	result["vt_gpu_bytes"] = ( int64_t )( get_gpu_reserved_bytes() );
+	result["vt_package_metadata_bytes"] = static_cast<int64_t>( m_bRuntimePackLoaded ? m_RuntimePack.nOwnedBytes : 0u );
+	result["vt_package_file_bytes"] = static_cast<int64_t>( m_bRuntimePackLoaded ? m_RuntimePack.nPackageBytes : 0u );
+	result["vt_gpu_bytes"] = static_cast<int64_t>(  get_gpu_reserved_bytes()  );
 	const uint64_t nNowUsec = t3dVtTicksUsec();
-	result["vt_elapsed_ms"] = ( double )( t3dStartupDomainElapsedUsec( startup, nNowUsec ) ) / 1000.0;
+	result["vt_elapsed_ms"] = static_cast<double>(  t3dStartupDomainElapsedUsec( startup, nNowUsec )  ) / 1000.0;
 	return result;
 }
 
@@ -578,16 +578,16 @@ bool Terrain3DVirtualTexture::servicePackageRepublishWarm( const uint64_t nMaxBy
 		t3d_vt_pack_runtime_clear( Previous );
 		// The neutral package has no owned block; clear it without transferring.
 		if ( m_bRuntimePackLoaded ) {
-			( void )t3d_vt_pack_runtime_transfer( Previous, m_RuntimePack );
+			static_cast<void>(t3d_vt_pack_runtime_transfer( Previous, m_RuntimePack ));
 		}
 		if ( !m_bWarmCandidateNeutral ) {
-			( void )t3d_vt_pack_runtime_transfer( m_RuntimePack, m_WarmCandidate );
+			static_cast<void>(t3d_vt_pack_runtime_transfer( m_RuntimePack, m_WarmCandidate ));
 		}
 		m_bRuntimePackLoaded = !m_bWarmCandidateNeutral;
 		rebuildFarRegionAllocationTableCold();
 		m_Residency.pDatabase = m_bRuntimePackLoaded ? &m_RuntimePack.Database : &m_NeutralDatabase;
 		m_Gpu.set_database_view_warm( m_Residency.pDatabase );
-		( void )apply_quality_profile_state_v1( m_pAllocations, m_Residency.nAllocationCount );
+		static_cast<void>(apply_quality_profile_state_v1( m_pAllocations, m_Residency.nAllocationCount ));
 		++m_nQualityGeneration;
 		++m_nPackagePublicationGeneration;
 		++m_nWarmPublicationSuccessCount;
@@ -681,7 +681,7 @@ bool Terrain3DVirtualTexture::snapshotMaterialReadStateCold( t3dVTMaterialReadSn
 	rSnapshot.nPackageGeneration = pDatabase != NULL ? pDatabase->nPackageGeneration : 0u;
 	rSnapshot.nPackageContentSignature = pDatabase != NULL ? pDatabase->nPackageContentSignature : 0u;
 	rSnapshot.nPackagePublicationGeneration = m_nPackagePublicationGeneration.load( T3D_MEMORY_ORDER_ACQUIRE );
-	rSnapshot.nMaterialCount = MIN( m_Limits.nMaxMaterials, ( uint32_t )T3D_RD_MATERIAL_LAYER_COUNT );
+	rSnapshot.nMaterialCount = MIN( m_Limits.nMaxMaterials, static_cast<uint32_t>(T3D_RD_MATERIAL_LAYER_COUNT) );
 	if ( !m_bRuntimePackLoaded ) {
 		return true;
 	}
@@ -738,108 +738,108 @@ bool Terrain3DVirtualTexture::allocate_cpu_image_cold()
 	// Retired GPU multi-feedback pilot has no production shader or dispatch.
 	m_bMultiFeedbackParityRequested = false;
 	uint64_t nBytes = 0u;
-	nBytes = t3dAlignUpOrZero<uint64_t>( nBytes, 64u ) + ( uint64_t )nAllocationCapacity * sizeof( t3dVTAllocation_t );
-	nBytes = t3dAlignUpOrZero<uint64_t>( nBytes, 64u ) + ( uint64_t )nAllocationCapacity * sizeof( t3dVTTailMetadata_t );
-	nBytes = t3dAlignUpOrZero<uint64_t>( nBytes, 64u ) + ( uint64_t )m_Limits.nMaxVtVirtualPages * sizeof( t3dVTPageTableEntry_t );
-	nBytes = t3dAlignUpOrZero<uint64_t>( nBytes, 64u ) + ( uint64_t )m_Limits.nMaxVtPhysicalPageSets * sizeof( t3dVTPhysicalSlot_t );
-	nBytes = t3dAlignUpOrZero<uint64_t>( nBytes, 64u ) + ( uint64_t )m_Limits.nMaxStreamJobs * sizeof( t3dVTStreamJob_t );
-	nBytes = t3dAlignUpOrZero<uint64_t>( nBytes, 64u ) + ( uint64_t )m_Limits.nMaxVtVirtualPages * sizeof( uint16_t );
+	nBytes = t3dAlignUpOrZero<uint64_t>( nBytes, 64u ) + static_cast<uint64_t>(nAllocationCapacity * sizeof(  t3dVTAllocation_t  ));
+	nBytes = t3dAlignUpOrZero<uint64_t>( nBytes, 64u ) + static_cast<uint64_t>(nAllocationCapacity * sizeof(  t3dVTTailMetadata_t  ));
+	nBytes = t3dAlignUpOrZero<uint64_t>( nBytes, 64u ) + static_cast<uint64_t>(m_Limits.nMaxVtVirtualPages) * sizeof( t3dVTPageTableEntry_t );
+	nBytes = t3dAlignUpOrZero<uint64_t>( nBytes, 64u ) + static_cast<uint64_t>(m_Limits.nMaxVtPhysicalPageSets) * sizeof( t3dVTPhysicalSlot_t );
+	nBytes = t3dAlignUpOrZero<uint64_t>( nBytes, 64u ) + static_cast<uint64_t>(m_Limits.nMaxStreamJobs) * sizeof( t3dVTStreamJob_t );
+	nBytes = t3dAlignUpOrZero<uint64_t>( nBytes, 64u ) + static_cast<uint64_t>(m_Limits.nMaxVtVirtualPages) * sizeof( uint16_t );
 	for ( uint32_t i = 0u; i < 6u; ++i ) {
-		nBytes = t3dAlignUpOrZero<uint64_t>( nBytes, 64u ) + ( uint64_t )m_Limits.nMaxStreamJobs * sizeof( uint16_t );
+		nBytes = t3dAlignUpOrZero<uint64_t>( nBytes, 64u ) + static_cast<uint64_t>(m_Limits.nMaxStreamJobs) * sizeof( uint16_t );
 	}
-	nBytes = t3dAlignUpOrZero<uint64_t>( nBytes, 64u ) + ( uint64_t )m_Limits.nMaxVtPhysicalPageSets * sizeof( uint32_t );
-	nBytes = t3dAlignUpOrZero<uint64_t>( nBytes, 64u ) + ( uint64_t )m_Limits.nMaxVtPhysicalPageSets * sizeof( t3dVTRetiredPageSet_t );
-	nBytes = t3dAlignUpOrZero<uint64_t>( nBytes, 64u ) + ( uint64_t )m_Limits.nMaxVtVirtualPages * sizeof( uint32_t );
-	nBytes = t3dAlignUpOrZero<uint64_t>( nBytes, 64u ) + ( uint64_t )m_Limits.nMaxVtVirtualPages * sizeof( uint32_t );
-	nBytes = t3dAlignUpOrZero<uint64_t>( nBytes, 64u ) + ( uint64_t )m_Limits.nMaxVtRequests * sizeof( t3dVTStagedRequest_t );
+	nBytes = t3dAlignUpOrZero<uint64_t>( nBytes, 64u ) + static_cast<uint64_t>(m_Limits.nMaxVtPhysicalPageSets) * sizeof( uint32_t );
+	nBytes = t3dAlignUpOrZero<uint64_t>( nBytes, 64u ) + static_cast<uint64_t>(m_Limits.nMaxVtPhysicalPageSets) * sizeof( t3dVTRetiredPageSet_t );
+	nBytes = t3dAlignUpOrZero<uint64_t>( nBytes, 64u ) + static_cast<uint64_t>(m_Limits.nMaxVtVirtualPages) * sizeof( uint32_t );
+	nBytes = t3dAlignUpOrZero<uint64_t>( nBytes, 64u ) + static_cast<uint64_t>(m_Limits.nMaxVtVirtualPages) * sizeof( uint32_t );
+	nBytes = t3dAlignUpOrZero<uint64_t>( nBytes, 64u ) + static_cast<uint64_t>(m_Limits.nMaxVtRequests) * sizeof( t3dVTStagedRequest_t );
 	// Sparse epoch-stamped histogram plus bounded top-K. All scratch is cold-owned.
 	for ( uint32_t i = 0u; i < 4u; ++i ) {
-		nBytes = t3dAlignUpOrZero<uint64_t>( nBytes, 64u ) + ( uint64_t )m_Limits.nMaxVtVirtualPages * sizeof( uint32_t );
+		nBytes = t3dAlignUpOrZero<uint64_t>( nBytes, 64u ) + static_cast<uint64_t>(m_Limits.nMaxVtVirtualPages) * sizeof( uint32_t );
 	}
-	nBytes = t3dAlignUpOrZero<uint64_t>( nBytes, 64u ) + ( uint64_t )m_Limits.nMaxVtRequests * sizeof( t3dVTFeedbackCandidate_t );
+	nBytes = t3dAlignUpOrZero<uint64_t>( nBytes, 64u ) + static_cast<uint64_t>(m_Limits.nMaxVtRequests) * sizeof( t3dVTFeedbackCandidate_t );
 	if ( m_bMultiFeedbackParityRequested ) {
-		nBytes = t3dAlignUpOrZero<uint64_t>( nBytes, 64u ) + ( uint64_t )T3D_VT_MULTI_PARITY_TOTAL_WORDS * sizeof( uint32_t );
+		nBytes = t3dAlignUpOrZero<uint64_t>( nBytes, 64u ) + static_cast<uint64_t>(T3D_VT_MULTI_PARITY_TOTAL_WORDS * sizeof(  uint32_t  ));
 	}
-	nBytes = t3dAlignUpOrZero<uint64_t>( nBytes, 64u ) + ( uint64_t )m_Limits.nStreamScratchLaneCount * m_Limits.nStreamScratchBytesPerLane;
-	nBytes = t3dAlignUpOrZero<uint64_t>( nBytes, 64u ) + ( uint64_t )m_Limits.nStreamScratchLaneCount * sizeof( uint32_t );
+	nBytes = t3dAlignUpOrZero<uint64_t>( nBytes, 64u ) + static_cast<uint64_t>(m_Limits.nStreamScratchLaneCount) * m_Limits.nStreamScratchBytesPerLane;
+	nBytes = t3dAlignUpOrZero<uint64_t>( nBytes, 64u ) + static_cast<uint64_t>(m_Limits.nStreamScratchLaneCount) * sizeof( uint32_t );
 	if ( nBytes == 0u || nBytes > SIZE_MAX ) {
 		return false;
 	}
-	m_pCpuImage = m_pRuntimeAllocatorZone->allocate( ( size_t )nBytes, 64u );
+	m_pCpuImage = m_pRuntimeAllocatorZone->allocate( static_cast<size_t>(nBytes), 64u );
 	if ( m_pCpuImage == NULL ) {
 		return false;
 	}
 	m_nCpuImageBytes = nBytes;
-	memset( m_pCpuImage, 0, ( size_t )nBytes );
-	uint8_t *const pBase = ( uint8_t * )m_pCpuImage;
+	memset( m_pCpuImage, 0, static_cast<size_t>(nBytes) );
+	uint8_t *const pBase = static_cast<uint8_t *>(m_pCpuImage);
 	uint64_t nOffset = 0u;
 	nOffset = t3dAlignUpOrZero<uint64_t>( nOffset, 64u );
-	m_pAllocations = ( t3dVTAllocation_t * )( pBase + nOffset );
-	nOffset += ( uint64_t )nAllocationCapacity * sizeof( t3dVTAllocation_t );
+	m_pAllocations = static_cast<t3dVTAllocation_t *>( pBase + nOffset );
+	nOffset += static_cast<uint64_t>(nAllocationCapacity * sizeof(  t3dVTAllocation_t  ));
 	nOffset = t3dAlignUpOrZero<uint64_t>( nOffset, 64u );
-	m_pTailMetadata = ( t3dVTTailMetadata_t * )( pBase + nOffset );
-	nOffset += ( uint64_t )nAllocationCapacity * sizeof( t3dVTTailMetadata_t );
+	m_pTailMetadata = static_cast<t3dVTTailMetadata_t *>( pBase + nOffset );
+	nOffset += static_cast<uint64_t>(nAllocationCapacity * sizeof(  t3dVTTailMetadata_t  ));
 	nOffset = t3dAlignUpOrZero<uint64_t>( nOffset, 64u );
-	m_pPageTable = ( t3dVTPageTableEntry_t * )( pBase + nOffset );
-	nOffset += ( uint64_t )m_Limits.nMaxVtVirtualPages * sizeof( t3dVTPageTableEntry_t );
+	m_pPageTable = static_cast<t3dVTPageTableEntry_t *>( pBase + nOffset );
+	nOffset += static_cast<uint64_t>(m_Limits.nMaxVtVirtualPages) * sizeof( t3dVTPageTableEntry_t );
 	nOffset = t3dAlignUpOrZero<uint64_t>( nOffset, 64u );
-	m_pPhysicalPageSets = ( t3dVTPhysicalSlot_t * )( pBase + nOffset );
-	nOffset += ( uint64_t )m_Limits.nMaxVtPhysicalPageSets * sizeof( t3dVTPhysicalSlot_t );
+	m_pPhysicalPageSets = static_cast<t3dVTPhysicalSlot_t *>( pBase + nOffset );
+	nOffset += static_cast<uint64_t>(m_Limits.nMaxVtPhysicalPageSets) * sizeof( t3dVTPhysicalSlot_t );
 	nOffset = t3dAlignUpOrZero<uint64_t>( nOffset, 64u );
-	m_pStreamJobs = ( t3dVTStreamJob_t * )( pBase + nOffset );
-	nOffset += ( uint64_t )m_Limits.nMaxStreamJobs * sizeof( t3dVTStreamJob_t );
+	m_pStreamJobs = static_cast<t3dVTStreamJob_t *>( pBase + nOffset );
+	nOffset += static_cast<uint64_t>(m_Limits.nMaxStreamJobs) * sizeof( t3dVTStreamJob_t );
 	nOffset = t3dAlignUpOrZero<uint64_t>( nOffset, 64u );
-	m_pStreamPageToJob = ( uint16_t * )( pBase + nOffset );
-	nOffset += ( uint64_t )m_Limits.nMaxVtVirtualPages * sizeof( uint16_t );
+	m_pStreamPageToJob = static_cast<uint16_t *>( pBase + nOffset );
+	nOffset += static_cast<uint64_t>(m_Limits.nMaxVtVirtualPages) * sizeof( uint16_t );
 	uint16_t **const pJobArrays[6] = { &m_pStreamFreeJobs,  &m_pStreamQueuedJobs,      &m_pStreamJobQueuePosition,
 	                                   &m_pStreamReadyJobs, &m_pStreamMergedWantedMip, &m_pStreamMergedPriority };
 	for ( uint32_t i = 0u; i < 6u; ++i ) {
 		nOffset = t3dAlignUpOrZero<uint64_t>( nOffset, 64u );
-		*pJobArrays[i] = ( uint16_t * )( pBase + nOffset );
-		nOffset += ( uint64_t )m_Limits.nMaxStreamJobs * sizeof( uint16_t );
+		*pJobArrays[i] = static_cast<uint16_t *>( pBase + nOffset );
+		nOffset += static_cast<uint64_t>(m_Limits.nMaxStreamJobs) * sizeof( uint16_t );
 	}
 	nOffset = t3dAlignUpOrZero<uint64_t>( nOffset, 64u );
-	m_pFreePhysicalSlots = ( uint32_t * )( pBase + nOffset );
-	nOffset += ( uint64_t )m_Limits.nMaxVtPhysicalPageSets * sizeof( uint32_t );
+	m_pFreePhysicalSlots = static_cast<uint32_t *>( pBase + nOffset );
+	nOffset += static_cast<uint64_t>(m_Limits.nMaxVtPhysicalPageSets) * sizeof( uint32_t );
 	nOffset = t3dAlignUpOrZero<uint64_t>( nOffset, 64u );
-	m_pRetiredPageSets = ( t3dVTRetiredPageSet_t * )( pBase + nOffset );
-	nOffset += ( uint64_t )m_Limits.nMaxVtPhysicalPageSets * sizeof( t3dVTRetiredPageSet_t );
+	m_pRetiredPageSets = static_cast<t3dVTRetiredPageSet_t *>( pBase + nOffset );
+	nOffset += static_cast<uint64_t>(m_Limits.nMaxVtPhysicalPageSets) * sizeof( t3dVTRetiredPageSet_t );
 	nOffset = t3dAlignUpOrZero<uint64_t>( nOffset, 64u );
-	m_pLastEvictedFrame = ( uint32_t * )( pBase + nOffset );
-	nOffset += ( uint64_t )m_Limits.nMaxVtVirtualPages * sizeof( uint32_t );
+	m_pLastEvictedFrame = static_cast<uint32_t *>( pBase + nOffset );
+	nOffset += static_cast<uint64_t>(m_Limits.nMaxVtVirtualPages) * sizeof( uint32_t );
 	nOffset = t3dAlignUpOrZero<uint64_t>( nOffset, 64u );
-	m_pStagedByPage = ( uint32_t * )( pBase + nOffset );
-	nOffset += ( uint64_t )m_Limits.nMaxVtVirtualPages * sizeof( uint32_t );
-	memset( m_pStagedByPage, 0xff, ( size_t )m_Limits.nMaxVtVirtualPages * sizeof( uint32_t ) );
+	m_pStagedByPage = static_cast<uint32_t *>( pBase + nOffset );
+	nOffset += static_cast<uint64_t>(m_Limits.nMaxVtVirtualPages) * sizeof( uint32_t );
+	memset( m_pStagedByPage, 0xff, static_cast<size_t>(m_Limits.nMaxVtVirtualPages) * sizeof( uint32_t ) );
 	nOffset = t3dAlignUpOrZero<uint64_t>( nOffset, 64u );
-	m_pStagedRequests = ( t3dVTStagedRequest_t * )( pBase + nOffset );
-	nOffset += ( uint64_t )m_Limits.nMaxVtRequests * sizeof( t3dVTStagedRequest_t );
+	m_pStagedRequests = static_cast<t3dVTStagedRequest_t *>( pBase + nOffset );
+	nOffset += static_cast<uint64_t>(m_Limits.nMaxVtRequests) * sizeof( t3dVTStagedRequest_t );
 	m_nStagedRequestCount = 0u;
 	m_nStagedRequestFrame = UINT32_MAX;
 	uint32_t **const feedbackArrays[4] = { &m_pFeedbackEpochs, &m_pFeedbackDirect, &m_pFeedbackAggregate, &m_pFeedbackTouched };
 	for ( uint32_t i = 0u; i < 4u; ++i ) {
 		nOffset = t3dAlignUpOrZero<uint64_t>( nOffset, 64u );
-		*feedbackArrays[i] = ( uint32_t * )( pBase + nOffset );
-		nOffset += ( uint64_t )m_Limits.nMaxVtVirtualPages * sizeof( uint32_t );
+		*feedbackArrays[i] = static_cast<uint32_t *>( pBase + nOffset );
+		nOffset += static_cast<uint64_t>(m_Limits.nMaxVtVirtualPages) * sizeof( uint32_t );
 	}
 	nOffset = t3dAlignUpOrZero<uint64_t>( nOffset, 64u );
-	m_pFeedbackCandidates = ( t3dVTFeedbackCandidate_t * )( pBase + nOffset );
-	nOffset += ( uint64_t )m_Limits.nMaxVtRequests * sizeof( t3dVTFeedbackCandidate_t );
+	m_pFeedbackCandidates = static_cast<t3dVTFeedbackCandidate_t *>( pBase + nOffset );
+	nOffset += static_cast<uint64_t>(m_Limits.nMaxVtRequests) * sizeof( t3dVTFeedbackCandidate_t );
 	m_feedbackReducer.bindCold( m_Limits.nMaxVtVirtualPages, m_Limits.nMaxVtRequests, m_pFeedbackEpochs, m_pFeedbackDirect,
 	                            m_pFeedbackAggregate, m_pFeedbackTouched, m_pFeedbackCandidates );
 	if ( m_bMultiFeedbackParityRequested ) {
 		nOffset = t3dAlignUpOrZero<uint64_t>( nOffset, 64u );
-		m_multiFeedbackParity.bindCold( ( uint32_t * )( pBase + nOffset ), T3D_VT_MULTI_PARITY_TOTAL_WORDS );
-		nOffset += ( uint64_t )T3D_VT_MULTI_PARITY_TOTAL_WORDS * sizeof( uint32_t );
+		m_multiFeedbackParity.bindCold( static_cast<uint32_t *>( pBase + nOffset ), T3D_VT_MULTI_PARITY_TOTAL_WORDS );
+		nOffset += static_cast<uint64_t>(T3D_VT_MULTI_PARITY_TOTAL_WORDS * sizeof(  uint32_t  ));
 	} else {
 		m_multiFeedbackParity.bindCold( NULL, 0u );
 	}
 	nOffset = t3dAlignUpOrZero<uint64_t>( nOffset, 64u );
 	m_pStreamScratch = pBase + nOffset;
-	nOffset += ( uint64_t )m_Limits.nStreamScratchLaneCount * m_Limits.nStreamScratchBytesPerLane;
+	nOffset += static_cast<uint64_t>(m_Limits.nStreamScratchLaneCount) * m_Limits.nStreamScratchBytesPerLane;
 	nOffset = t3dAlignUpOrZero<uint64_t>( nOffset, 64u );
-	m_pScratchLaneOwner = ( uint32_t * )( pBase + nOffset );
-	return nOffset + ( uint64_t )m_Limits.nStreamScratchLaneCount * sizeof( uint32_t ) <= nBytes;
+	m_pScratchLaneOwner = static_cast<uint32_t *>( pBase + nOffset );
+	return nOffset + static_cast<uint64_t>(m_Limits.nStreamScratchLaneCount) * sizeof( uint32_t ) <= nBytes;
 }
 
 void Terrain3DVirtualTexture::release_cpu_image_cold()
@@ -902,7 +902,7 @@ bool Terrain3DVirtualTexture::prepare_neutral_legacy_cpu_cold()
 		allocation.nMip0WidthPages = 1u;
 		allocation.nMip0HeightPages = 1u;
 		allocation.nMipCount = 1u;
-		allocation.nChannel = ( uint16_t )c;
+		allocation.nChannel = static_cast<uint16_t>(c);
 		allocation.nFlags = T3D_VT_PAGE_NEUTRAL | T3D_VT_PAGE_ROOT;
 		allocation.nRootPage = c;
 		t3dVTPageFileRecord_t& page = m_NeutralPages[c];
@@ -912,7 +912,7 @@ bool Terrain3DVirtualTexture::prepare_neutral_legacy_cpu_cold()
 		page.nAllocationId = c;
 		page.nPayloadId = c;
 		page.nMip = 0u;
-		page.nChannel = ( uint16_t )c;
+		page.nChannel = static_cast<uint16_t>(c);
 		page.nFlags = T3D_VT_PAGE_NEUTRAL | T3D_VT_PAGE_ROOT;
 		page.nGeneration = 1u;
 		memset( &m_NeutralPayloads[c], 0, sizeof( m_NeutralPayloads[c] ) );
@@ -933,7 +933,7 @@ bool Terrain3DVirtualTexture::prepare_neutral_legacy_cpu_cold()
 
 bool Terrain3DVirtualTexture::initialize_runtime_state_cold( const t3dVTDatabaseView_t& rDatabase, const uint32_t nDatabaseGeneration )
 {
-	t3dVTResidencyBuffers_t ResidencyBuffers = {};
+	t3dVTResidencyBuffers_t ResidencyBuffers {};
 	ResidencyBuffers.pAllocations = m_pAllocations;
 	ResidencyBuffers.nAllocationCapacity = t3d_vt_allocation_capacity( m_Limits.nMaxMaterials );
 	ResidencyBuffers.pPageTable = m_pPageTable;
@@ -952,12 +952,12 @@ bool Terrain3DVirtualTexture::initialize_runtime_state_cold( const t3dVTDatabase
 	m_Residency.Policy = m_ResidencyPolicy;
 	m_Residency.nRetirementDelayFrames = m_ResidencyPolicy.nRetireDelayFrames;
 
-	t3dVTStreamingBuffers_t StreamBuffers = {};
+	t3dVTStreamingBuffers_t StreamBuffers {};
 	StreamBuffers.pJobs = m_pStreamJobs;
 	StreamBuffers.nJobCapacity = m_Limits.nMaxStreamJobs;
 	StreamBuffers.pScratchBytes = m_pStreamScratch;
 	StreamBuffers.nScratchLaneCount = m_Limits.nStreamScratchLaneCount;
-	StreamBuffers.nScratchLaneBytes = ( uint32_t )m_Limits.nStreamScratchBytesPerLane;
+	StreamBuffers.nScratchLaneBytes = static_cast<uint32_t>(m_Limits.nStreamScratchBytesPerLane);
 	StreamBuffers.pScratchLaneOwner = m_pScratchLaneOwner;
 	StreamBuffers.pScratchLaneCompletion = m_ScratchLaneCompletion;
 	StreamBuffers.pPageToJob = m_pStreamPageToJob;
@@ -1046,7 +1046,7 @@ bool Terrain3DVirtualTexture::prepare_runtime_package_cpu_cold()
 			keys.push_back( view.m_pAllocationKeys[i].m_nStableKey );
 			ids.push_back( t3d_vt_runtime_allocation_base( view.m_pAllocationKeys[i].m_nAllocationId ) );
 		}
-		( void )m_spatialDemand.bindStableKeysCold( keys.data(), ids.data(), nKeys );
+		static_cast<void>(m_spatialDemand.bindStableKeysCold( keys.data(), ids.data(), nKeys ));
 	}
 
 	// T04: on-demand v1 loading is cold and optional; an unreadable or stale
@@ -1098,7 +1098,7 @@ uint32_t Terrain3DVirtualTexture::count_physical_banks() const
 	}
 	uint32_t nCount = 0u;
 	for ( uint32_t c = 0u; c < T3D_VT_CHANNEL_COUNT; ++c ) {
-		nCount += m_pResources->get_vt_bank_count( ( t3dVTResourceChannel_t )c );
+		nCount += m_pResources->get_vt_bank_countstatic_cast<t3dVTResourceChannel_t>(c);
 	}
 	return nCount;
 }
@@ -1125,7 +1125,7 @@ bool Terrain3DVirtualTexture::stageDemandIndexCold( const uint8_t *const pBytes,
 	}
 	if ( m_spatialDemand.getVersion() == T3D_VT_DEMAND_STABLE_MATERIAL_FORMAT_VERSION ) {
 		const godot::CharString bytes = rSourceIdentity.utf8();
-		const uint64_t expected = t3d_vt_demand_hash( ( const uint8_t * )bytes.get_data(), bytes.length() );
+		const uint64_t expected = t3d_vt_demand_hash( static_cast<const uint8_t *>(bytes.get_data(), bytes.length() ));
 		if ( m_spatialDemand.getAssetIdentityHash() != expected ) {
 			m_spatialDemand.resetCold();
 			return false;
@@ -1146,7 +1146,7 @@ bool Terrain3DVirtualTexture::stageDemandV1Cold( const godot::String& path, cons
 	if ( path.is_empty() || sourceIdentity.is_empty() )
 		return true;
 	const godot::CharString utf8 = sourceIdentity.utf8();
-	m_nV1AssetIdentityHash = t3d_vt_demand_hash( ( const uint8_t * )utf8.get_data(), utf8.length() );
+	m_nV1AssetIdentityHash = t3d_vt_demand_hash( static_cast<const uint8_t *>(utf8.get_data(), utf8.length() ));
 	return m_nV1AssetIdentityHash != 0u;
 }
 
@@ -1171,13 +1171,13 @@ uint32_t Terrain3DVirtualTexture::stage_v1_demand_hot( const float cameraX, cons
 	     !m_v1Demand.validFor( db->nPackageContentSignature ) || m_v1MaterialKeys.empty() || !viewHeight || m_nV1LastStageFrame == frame )
 		return 0u;
 	m_nV1LastStageFrame = frame;
-	const float cell = ( float )T3D_VT_DEMAND_BAKED_VISIBILITY_CELL_METERS;
-	const int32_t x = ( int32_t )floorf( cameraX / cell );
-	const int32_t z = ( int32_t )floorf( cameraZ / cell );
-	const int32_t lx = ( int32_t )floorf( ( cameraX + forwardX * cell ) / cell );
-	const int32_t lz = ( int32_t )floorf( ( cameraZ + forwardZ * cell ) / cell );
+	const float cell = static_cast<float>(T3D_VT_DEMAND_BAKED_VISIBILITY_CELL_METERS);
+	const int32_t x = static_cast<int32_t>(floorf( cameraX / cell ));
+	const int32_t z = static_cast<int32_t>(floorf( cameraZ / cell ));
+	const int32_t lx = static_cast<int32_t>(floorf( ( cameraX + forwardX * cell ) / cell ));
+	const int32_t lz = static_cast<int32_t>(floorf( ( cameraZ + forwardZ * cell ) / cell ));
 	const uint8_t view =
-	    ( uint8_t )( ( ( int32_t )floorf( atan2f( forwardZ, forwardX ) * ( 4.0f / 3.14159265358979323846f ) + 0.5f ) ) & 7 );
+	    ( uint8_t )( ( static_cast<int32_t>(floorf( atan2f( forwardZ, forwardX ) * ( 4.0f / 3.14159265358979323846f ) + 0.5f ) ) & 7 ));
 	// Request current and look-ahead bundles first; cache miss is always a
 	// nonblocking no-op in this render frame.
 	m_v1Demand.requestCellHot( x, z, 255u );
@@ -1208,9 +1208,9 @@ uint32_t Terrain3DVirtualTexture::stage_v1_demand_hot( const float cameraX, cons
 		const uint32_t scanCount = MIN( count, 128u );
 		for ( uint32_t i = 0u; i < scanCount; ++i ) {
 			const auto& r = entries[i];
-			if ( r.m_nViewBin != view || ( r.m_nFlags & T3D_VT_VISIBILITY_NO_VISIBLE ) != 0u )
+			if ( r.m_nViewBin != view || ( r.m_nFlags & SIRVTVisibilityRecordFlag::T3D_VT_VISIBILITY_NO_VISIBLE ) != 0u )
 				continue;
-			uint32_t low = 0u, high = ( uint32_t )m_v1MaterialKeys.size();
+			uint32_t low = 0u, high = static_cast<uint32_t>(m_v1MaterialKeys.size());
 			while ( low < high ) {
 				const uint32_t mid = low + ( high - low ) / 2u;
 				if ( m_v1MaterialKeys[mid] < r.m_nStableMaterialKey )
@@ -1226,13 +1226,13 @@ uint32_t Terrain3DVirtualTexture::stage_v1_demand_hot( const float cameraX, cons
 			const t3dVTAllocation_t& a = m_Residency.Buffers.pAllocations[allocationId];
 			if ( !a.m_nPageCount || !a.m_nMipCount )
 				continue;
-			const uint32_t sourceWidth = MAX( 1u, ( uint32_t )a.m_nMip0WidthPages ) * T3D_VT_PAGE_INTERIOR;
+			const uint32_t sourceWidth = MAX( 1u, static_cast<uint32_t>(a.m_nMip0WidthPages) ) * T3D_VT_PAGE_INTERIOR;
 			const uint16_t wanted = t3d_vt_demand_select_mip( r, m_v1Demand.configCold(), sourceWidth, viewHeight, fov, a.m_nMipCount );
 			if ( wanted == UINT16_MAX )
 				continue;
 			// Ignore single-bin outliers and use confidence as the principal
 			// score. Current-cell demand wins ties over speculative lookahead.
-			const uint32_t score = ( uint32_t )r.m_nCoverageConfidence + MIN( 16383u, r.m_nSampleCount / 4u );
+			const uint32_t score = static_cast<uint32_t>(r.m_nCoverageConfidence) + MIN( 16383u, r.m_nSampleCount / 4u );
 			Candidate candidate = { i, score, allocationId, wanted };
 			uint32_t pos = 0u;
 			while ( pos < selected && top[pos].score >= score )
@@ -1256,11 +1256,11 @@ uint32_t Terrain3DVirtualTexture::stage_v1_demand_hot( const float cameraX, cons
 				width = ( width + 1u ) >> 1u;
 				++coarse;
 			}
-			const uint32_t actualMip = MAX( ( uint32_t )top[i].mip, coarse );
+			const uint32_t actualMip = MAX( static_cast<uint32_t>(top[i].mip), coarse );
 			const uint32_t qualityBase = t3d_vt_allocation_quality_base_mip( a.m_nFlags );
-			const uint16_t relativeMip = ( uint16_t )( actualMip > qualityBase ? actualMip - qualityBase : 0u );
+			const uint16_t relativeMip = static_cast<uint16_t>( actualMip > qualityBase ? actualMip - qualityBase : 0u );
 			const uint16_t priority =
-			    ( uint16_t )MIN( 65535u, ( sector ? T3D_VT_PRIORITY_NORMAL_MIN : T3D_VT_PRIORITY_NEAR_MIN ) + top[i].score / 8u );
+			    static_cast<uint16_t>(MIN( 65535u, ( sector ? T3D_VT_PRIORITY_NORMAL_MIN : T3D_VT_PRIORITY_NEAR_MIN ) + top[i].score / 8u ));
 			staged += stage_material_footprint_hot( top[i].allocation, frame, fullMin, fullMax, relativeMip, MIN( 2u, limit - staged ),
 			                                        priority, T3D_VT_REQUEST_PRODUCER_TERRAIN, frame / 3u + sector, NULL );
 		}
@@ -1290,7 +1290,7 @@ void Terrain3DVirtualTexture::rebuildFarRegionAllocationTableCold()
 		const bool composed = t3d_vt_is_composed_region_stable_key( key );
 		if ( !composed && !t3d_vt_is_terrain_region_stable_key( key ) )
 			continue;
-		const uint32_t region = ( uint32_t )( key & 0xffffu );
+		const uint32_t region = static_cast<uint32_t>( key & 0xffffu );
 		if ( region >= T3D_TERRAIN_MEGAVT_ALLOCATION_CAPACITY )
 			continue;
 		const uint32_t source = view.m_pAllocationKeys[i].m_nAllocationId;
@@ -1316,7 +1316,7 @@ uint32_t Terrain3DVirtualTexture::stage_region_surface_demand_hot( const float c
 	if ( !m_bInitialized || !m_Streaming.bInitialized || !m_Residency.pDatabase || m_bWarmPackagePending || !viewHeight ||
 	     m_nFarRegionLastStageFrame == frame )
 		return 0u;
-	const float cell = ( float )T3D_REGION_WORLD_SIZE_METERS;
+	const float cell = static_cast<float>(T3D_REGION_WORLD_SIZE_METERS);
 	// A teleport must not wait for the next quarter-frame prediction tick.
 	// All state is fixed-size and updated on the render lane; page admission
 	// and physical uploads remain governed by the existing VT budgets.
@@ -1333,10 +1333,10 @@ uint32_t Terrain3DVirtualTexture::stage_region_surface_demand_hot( const float c
 		memset( m_szFarLastMipFrame, 0, sizeof( m_szFarLastMipFrame ) );
 	}
 	m_nFarRegionLastStageFrame = frame;
-	const int32_t regionsX[2] = { ( int32_t )floorf( cameraX / cell ), ( int32_t )floorf( ( cameraX + forwardX * cell ) / cell ) };
-	const int32_t regionsZ[2] = { ( int32_t )floorf( cameraZ / cell ), ( int32_t )floorf( ( cameraZ + forwardZ * cell ) / cell ) };
+	const int32_t regionsX[2] = { static_cast<int32_t>(floorf( cameraX / cell ), static_cast<int32_t>(floorf( ( cameraX + forwardX * cell ) / cell ))) };
+	const int32_t regionsZ[2] = { static_cast<int32_t>(floorf( cameraZ / cell ), static_cast<int32_t>(floorf( ( cameraZ + forwardZ * cell ) / cell ))) };
 	const float radians = CLAMP( fov, 30.0f, 140.0f ) * 0.00872664625997f;
-	const float focal = ( float )viewHeight / ( 2.0f * tanf( radians ) );
+	const float focal = static_cast<float>(viewHeight) / ( 2.0f * tanf( radians ) );
 	const float uvMin[2] = { 0.0f, 0.0f };
 	const float uvMax[2] = { 1.0f, 1.0f };
 	const uint32_t limit = MIN( 12u, MAX( 1u, m_nFrameRequestBudget / 6u ) );
@@ -1351,11 +1351,11 @@ uint32_t Terrain3DVirtualTexture::stage_region_surface_demand_hot( const float c
 				if ( rx < -T3D_REGION_MAP_HALF || rz < -T3D_REGION_MAP_HALF || rx >= T3D_REGION_MAP_HALF || rz >= T3D_REGION_MAP_HALF )
 					continue;
 				const uint32_t region =
-				    ( uint32_t )( rz + T3D_REGION_MAP_HALF ) * T3D_REGION_MAP_SIZE + ( uint32_t )( rx + T3D_REGION_MAP_HALF );
+				    static_cast<uint32_t>( rz + T3D_REGION_MAP_HALF ) * T3D_REGION_MAP_SIZE + static_cast<uint32_t>( rx + T3D_REGION_MAP_HALF );
 				if ( !m_szComposedRegionAllocations[region] && ( m_bComposedOnlyRegionalDemand || !m_szFarRegionAllocations[region] ) )
 					continue;
-				const float dx = ( ( float )rx + 0.5f ) * cell - cameraX;
-				const float dz = ( ( float )rz + 0.5f ) * cell - cameraZ;
+				const float dx = ( static_cast<float>(rx) + 0.5f ) * cell - cameraX;
+				const float dz = ( static_cast<float>(rz) + 0.5f ) * cell - cameraZ;
 				const float distance = MAX( 16.0f, sqrtf( dx * dx + dz * dz ) - cell * 0.5f );
 				const uint32_t priority = ( sector == 0u && x == 0 && z == 0 ) ? T3D_VT_PRIORITY_NEAR_MIN : T3D_VT_PRIORITY_PREFETCH_MIN;
 				// One V1 admission queue and LRU. Prefer already-authored
@@ -1372,7 +1372,7 @@ uint32_t Terrain3DVirtualTexture::stage_region_surface_demand_hot( const float c
 						const t3dVTAllocation_t& alloc = m_Residency.Buffers.pAllocations[id];
 						if ( !alloc.m_nPageCount || !alloc.m_nMipCount )
 							continue;
-						const float texels = ( float )alloc.m_nMip0WidthPages * T3D_VT_PAGE_INTERIOR;
+						const float texels = static_cast<float>(alloc.m_nMip0WidthPages) * T3D_VT_PAGE_INTERIOR;
 						const float projected = MAX( 1.0f, cell * focal / distance );
 						uint16_t wanted = 0u;
 						for ( float ratio = texels / projected; ratio > 2.0f && wanted + 1u < alloc.m_nMipCount; ratio *= 0.5f )
@@ -1383,11 +1383,11 @@ uint32_t Terrain3DVirtualTexture::stage_region_surface_demand_hot( const float c
 							wanted = old;
 						if ( wanted != old )
 							m_szFarLastMipFrame[historySlot] = frame;
-						m_szFarLastMip[historySlot] = ( uint8_t )wanted;
+						m_szFarLastMip[historySlot] = static_cast<uint8_t>(wanted);
 						const uint32_t qualityBase = t3d_vt_allocation_quality_base_mip( alloc.m_nFlags );
-						const uint16_t relative = wanted > qualityBase ? ( uint16_t )( wanted - qualityBase ) : 0u;
+						const uint16_t relative = wanted > qualityBase ? static_cast<uint16_t>( wanted - qualityBase ) : 0u;
 						attempted += stage_material_footprint_hot( id, frame, uvMin, uvMax, relative, MIN( 2u, limit - attempted ),
-						                                           ( uint16_t )priority, T3D_VT_REQUEST_PRODUCER_TERRAIN, frame >> 2u );
+						                                           static_cast<uint16_t>(priority), T3D_VT_REQUEST_PRODUCER_TERRAIN, frame >> 2u );
 					}
 				}
 			}
@@ -1415,11 +1415,11 @@ uint32_t Terrain3DVirtualTexture::stage_spatial_demand_hot( const float fCameraX
 	if ( m_spatialDemand.getVersion() == T3D_VT_DEMAND_STABLE_MATERIAL_FORMAT_VERSION && !m_spatialDemand.hasBoundPredictor() ) {
 		return v1Requests + farRequests;
 	}
-	const float cell = ( float )m_spatialDemand.getCellMeters();
-	const int32_t x = ( int32_t )floorf( fCameraX / cell );
-	const int32_t z = ( int32_t )floorf( fCameraZ / cell );
+	const float cell = static_cast<float>(m_spatialDemand.getCellMeters());
+	const int32_t x = static_cast<int32_t>(floorf( fCameraX / cell ));
+	const int32_t z = static_cast<int32_t>(floorf( fCameraZ / cell ));
 	const float octants = atan2f( fForwardZ, fForwardX ) * ( 4.0f / 3.14159265358979323846f );
-	const uint8_t mask = ( uint8_t )( 1u << ( ( ( int32_t )floorf( octants + 0.5f ) ) & 7 ) );
+	const uint8_t mask = ( uint8_t )( 1u << ( ( static_cast<int32_t>(floorf( octants + 0.5f ) ) & 7 ) ));
 	// Reuse the last predictive window while the camera stays in the same
 	// coverage cell/octant. Refresh every fourth frame for residency touches.
 	if ( m_nSpatialDemandLastCellX == x && m_nSpatialDemandLastCellZ == z && m_nSpatialDemandLastOctant == mask &&
@@ -1430,8 +1430,8 @@ uint32_t Terrain3DVirtualTexture::stage_spatial_demand_hot( const float fCameraX
 	m_nSpatialDemandLastCellZ = z;
 	m_nSpatialDemandLastOctant = mask;
 	m_nSpatialDemandLastStageFrame = nFrameId;
-	const int32_t lookX = ( int32_t )floorf( ( fCameraX + fForwardX * cell ) / cell );
-	const int32_t lookZ = ( int32_t )floorf( ( fCameraZ + fForwardZ * cell ) / cell );
+	const int32_t lookX = static_cast<int32_t>(floorf( ( fCameraX + fForwardX * cell ) / cell ));
+	const int32_t lookZ = static_cast<int32_t>(floorf( ( fCameraZ + fForwardZ * cell ) / cell ));
 	const int32_t cx[2] = { x, lookX };
 	const int32_t cz[2] = { z, lookZ };
 	const uint32_t cap = MIN( 48u, MAX( 1u, m_nFrameRequestBudget / 2u ) );
@@ -1490,10 +1490,10 @@ uint32_t Terrain3DVirtualTexture::stage_spatial_demand_hot( const float fCameraX
 				}
 				continue;
 			}
-			const float uvMin[2] = { ( float )item.nUvMinX / 65535.0f, ( float )item.nUvMinY / 65535.0f };
-			const float uvMax[2] = { ( float )item.nUvMaxX / 65535.0f, ( float )item.nUvMaxY / 65535.0f };
-			const uint16_t priority = sector == 0u ? ( uint16_t )MIN( 65535u, T3D_VT_PRIORITY_NEAR_MIN + ( uint32_t )item.nCoverage / 8u )
-			                                       : ( uint16_t )( T3D_VT_PRIORITY_NORMAL_MIN + ( uint32_t )item.nCoverage / 32u );
+			const float uvMin[2] = { static_cast<float>(item.nUvMinX) / 65535.0f, static_cast<float>(item.nUvMinY) / 65535.0f };
+			const float uvMax[2] = { static_cast<float>(item.nUvMaxX) / 65535.0f, static_cast<float>(item.nUvMaxY) / 65535.0f };
+			const uint16_t priority = sector == 0u ? static_cast<uint16_t>(MIN( 65535u, T3D_VT_PRIORITY_NEAR_MIN + static_cast<uint32_t>(item.nCoverage) / 8u ))
+			                                       : ( uint16_t )( T3D_VT_PRIORITY_NORMAL_MIN + static_cast<uint32_t>(item.nCoverage) / 32u );
 			bool fullyStaged = false;
 			// A baked record does not prove that its requests fit this frame's
 			// admission budget. Only a complete current-cell sweep may suppress
@@ -1531,13 +1531,13 @@ bool Terrain3DVirtualTexture::shouldScanTerrainAllocationHot( const float x, con
 		return true;
 	if ( !m_spatialDemand.hasBoundPredictor() || m_nSpatialDemandCoveredAllocationCount == 0u || m_Residency.pDatabase == NULL ||
 	     !m_spatialDemand.isValidFor( m_Residency.pDatabase->nPackageContentSignature ) ||
-	     ( m_nSpatialDemandLastStageFrame == UINT32_MAX || ( uint32_t )( nFrameId - m_nSpatialDemandLastStageFrame ) > 3u ) ||
+	     ( m_nSpatialDemandLastStageFrame == UINT32_MAX || static_cast<uint32_t>( nFrameId - m_nSpatialDemandLastStageFrame ) > 3u ) ||
 	     ( nFrameId & 3u ) == 0u ) {
 		return true;
 	}
-	const float cell = ( float )m_spatialDemand.getCellMeters();
-	const int32_t cellX = ( int32_t )floorf( x / cell );
-	const int32_t cellZ = ( int32_t )floorf( z / cell );
+	const float cell = static_cast<float>(m_spatialDemand.getCellMeters());
+	const int32_t cellX = static_cast<int32_t>(floorf( x / cell ));
+	const int32_t cellZ = static_cast<int32_t>(floorf( z / cell ));
 	if ( cellX != m_nSpatialDemandLastCellX || cellZ != m_nSpatialDemandLastCellZ ) {
 		return true;
 	}
@@ -2069,13 +2069,13 @@ bool Terrain3DVirtualTexture::set_quality_profile( const uint32_t nProfile )
 
 	if ( m_bInitialized ) {
 		memcpy( m_Residency.Buffers.pAllocations, m_RuntimePack.pRuntimeAllocations,
-		        ( size_t )nAllocationCount * sizeof( t3dVTAllocation_t ) );
+		        static_cast<size_t>(nAllocationCount * sizeof(  t3dVTAllocation_t  )) );
 		if ( !m_Gpu.update_allocation_quality_hot( m_Residency ) ) {
 			m_nRequestedQualityProfile = nOldRequestedProfile;
 			m_QualityStats = OldStats;
 			if ( apply_quality_profile_state_v1( m_RuntimePack.pRuntimeAllocations, nAllocationCount ) ) {
 				memcpy( m_Residency.Buffers.pAllocations, m_RuntimePack.pRuntimeAllocations,
-				        ( size_t )nAllocationCount * sizeof( t3dVTAllocation_t ) );
+				        static_cast<size_t>(nAllocationCount * sizeof(  t3dVTAllocation_t  )) );
 				m_Gpu.update_allocation_quality_hot( m_Residency );
 			}
 			m_QualityStats = OldStats;
@@ -2153,7 +2153,7 @@ const t3dVirtualTextureStats_t& Terrain3DVirtualTexture::get_stats() const
 
 t3dVTFinalTelemetry_t Terrain3DVirtualTexture::get_final_telemetry_reference_debug() const
 {
-	t3dVTFinalTelemetry_t Result = {};
+	t3dVTFinalTelemetry_t Result {};
 	if ( !m_bInitialized || m_Residency.pDatabase == NULL || m_Residency.pDatabase->pHeader == NULL ) {
 		return Result;
 	}
@@ -2253,7 +2253,7 @@ bool Terrain3DVirtualTexture::shouldRefreshMaterialDemandHot( const uint32_t nLa
 	signature = t3dHashFnv1a64( &rContext.m_renderSize, sizeof( rContext.m_renderSize ), signature );
 	// Exclude temporal projection jitter; a periodic sweep also covers FOV and
 	// demand that was displaced by admission limits, without forgetting evictions.
-	const uint32_t frame = ( uint32_t )rContext.m_nRenderFrame;
+	const uint32_t frame = static_cast<uint32_t>(rContext.m_nRenderFrame);
 	const uint32_t period = nLane == 1u ? 4u : 8u;
 	if ( m_szDemandRefreshFrame[nLane] != UINT32_MAX && m_szDemandSignature[nLane] == signature &&
 	     frame - m_szDemandRefreshFrame[nLane] < period ) {
@@ -2323,7 +2323,7 @@ uint32_t Terrain3DVirtualTexture::stage_material_footprint_hot( const uint32_t n
 	}
 	const uint32_t nBaseMip = t3d_vt_allocation_quality_base_mip( allocation.m_nFlags );
 	const uint16_t nAdjustedMip =
-	    ( uint16_t )( nBaseMip + nWantedMip < allocation.m_nMipCount ? nBaseMip + nWantedMip : allocation.m_nMipCount - 1u );
+	    static_cast<uint16_t>( nBaseMip + nWantedMip < allocation.m_nMipCount ? nBaseMip + nWantedMip : allocation.m_nMipCount - 1u );
 	t3dVTPredictedPageRect_t rect;
 	const bool bInstance = eProducer == T3D_VT_REQUEST_PRODUCER_INSTANCE;
 	if ( !t3d_vt_predict_page_rect_reference_debug( allocation, pUvMin, pUvMax, nAdjustedMip, bInstance ? UINT32_MAX : nMaxRequests,
@@ -2341,7 +2341,7 @@ uint32_t Terrain3DVirtualTexture::stage_material_footprint_hot( const uint32_t n
 	// This avoids repeating the same page window when the scan period divides the rectangle size.
 	const uint32_t nWindow = nFootprintWindow == UINT32_MAX ? nFrameId : nFootprintWindow;
 	const uint32_t nStartPage = ( bInstance || nFootprintWindow != UINT32_MAX ) && nRectPages > nWindowPages
-	                                ? ( uint32_t )( ( uint64_t )nWindow * nWindowPages % nRectPages )
+	                                ? ( uint32_t )( static_cast<uint64_t>(nWindow) * nWindowPages % nRectPages )
 	                                : 0u;
 	for ( uint32_t iPage = 0u; iPage < nWindowPages; ++iPage ) {
 		const uint32_t nRectPage = ( nStartPage + iPage ) % nRectPages;
@@ -2360,8 +2360,8 @@ uint32_t Terrain3DVirtualTexture::stage_material_footprint_hot( const uint32_t n
 			}
 			if ( m_nResolverTelemetrySamplesThisFrame < 32u ) {
 				++m_nResolverTelemetrySamplesThisFrame;
-				t3dVTResolveResult_t Resolve = {};
-				if ( t3d_vt_resolve_allocation_page_reference_debug( m_Residency, nAllocationId, nVirtualPage, ( uint16_t )rect.nMip,
+				t3dVTResolveResult_t Resolve {};
+				if ( t3d_vt_resolve_allocation_page_reference_debug( m_Residency, nAllocationId, nVirtualPage, static_cast<uint16_t>(rect.nMip),
 				                                                     Resolve ) ) {
 					if ( ( Resolve.m_nFlags & T3D_VT_RESOLVE_TAIL ) != 0u ) {
 						++m_nResolverTailSamples;
@@ -2394,10 +2394,10 @@ uint32_t Terrain3DVirtualTexture::stage_material_footprint_hot( const uint32_t n
 		if ( existing_index < m_nStagedRequestCount && m_pStagedRequests[existing_index].Request.nVirtualPage == nVirtualPage ) {
 			t3dVTStagedRequest_t& existing = m_pStagedRequests[existing_index];
 			if ( nPriority > existing.Request.nPriority ) {
-				existing.nProducer = ( uint16_t )eProducer;
+				existing.nProducer = static_cast<uint16_t>(eProducer);
 			}
 			existing.Request.nPriority = MAX( existing.Request.nPriority, nPriority );
-			existing.Request.nWantedMip = MIN( existing.Request.nWantedMip, ( uint16_t )rect.nMip );
+			existing.Request.nWantedMip = MIN( existing.Request.nWantedMip, static_cast<uint16_t>(rect.nMip) );
 			t3dVtRestoreStagedPriorityHeap( m_pStagedRequests, m_pStagedByPage, m_nStagedRequestCount, existing_index );
 			continue;
 		}
@@ -2424,9 +2424,9 @@ uint32_t Terrain3DVirtualTexture::stage_material_footprint_hot( const uint32_t n
 		m_pStagedByPage[nVirtualPage] = nStagedIndex;
 		t3dVTStagedRequest_t& staged = m_pStagedRequests[nStagedIndex];
 		staged.Request.nVirtualPage = nVirtualPage;
-		staged.Request.nWantedMip = ( uint16_t )rect.nMip;
+		staged.Request.nWantedMip = static_cast<uint16_t>(rect.nMip);
 		staged.Request.nPriority = nPriority;
-		staged.nProducer = ( uint16_t )eProducer;
+		staged.nProducer = static_cast<uint16_t>(eProducer);
 		staged.nReserved = 0u;
 		t3dVtRestoreStagedPriorityHeap( m_pStagedRequests, m_pStagedByPage, m_nStagedRequestCount, nStagedIndex );
 	}
@@ -2438,7 +2438,7 @@ uint32_t Terrain3DVirtualTexture::stage_material_footprint_hot( const uint32_t n
 
 static bool t3dVtFeedbackPageLookup( void *const pUser, const uint32_t nPage, uint32_t& rParent, uint16_t& rMip )
 {
-	const t3dVTResidencyState_t& residency = *( const t3dVTResidencyState_t * )pUser;
+	const t3dVTResidencyState_t& residency = *static_cast<const t3dVTResidencyState_t *>(pUser);
 	if ( !residency.pDatabase || !residency.pDatabase->pHeader || !residency.Buffers.pPageTable ||
 	     nPage >= residency.pDatabase->pHeader->nPageCount )
 		return false;
@@ -2465,7 +2465,7 @@ void Terrain3DVirtualTexture::update_feedback_view_hot( const float fCameraX, co
 	uint32_t motion = 0u;
 	if ( m_nFeedbackViewFrame != UINT32_MAX && nFrameId > m_nFeedbackViewFrame ) {
 		const float dx = fCameraX - m_fFeedbackX, dz = fCameraZ - m_fFeedbackZ;
-		const float frameDelta = ( float )MAX( 1u, nFrameId - m_nFeedbackViewFrame );
+		const float frameDelta = static_cast<float>(MAX( 1u, nFrameId - m_nFeedbackViewFrame ));
 		const float motionSquared = ( dx * dx + dz * dz ) / ( frameDelta * frameDelta );
 		const float dot = fForwardX * m_fFeedbackForwardX + fForwardZ * m_fFeedbackForwardZ;
 		motion = motionSquared > 64.0f || dot < 0.25f ? 2u : motionSquared > 4.0f || dot < 0.8f ? 1u : 0u;
@@ -2534,7 +2534,7 @@ bool Terrain3DVirtualTexture::service_feedback_grid_hot( const uint32_t nFrameId
 			continue;
 		if ( header.m_nDatabaseGeneration != m_Residency.nDatabaseGeneration || header.m_nDeviceGeneration != nDeviceGeneration ||
 		     header.m_nViewportKey != nViewportKey || header.m_nFrame > nFrameId ) {
-			( void )m_Gpu.retire_feedback_grid_ready_hot( slot );
+			static_cast<void>(m_Gpu.retire_feedback_grid_ready_hot( slot ));
 			continue;
 		}
 		t3dVTFeedbackReductionStats_t stats{};
@@ -2544,7 +2544,7 @@ bool Terrain3DVirtualTexture::service_feedback_grid_hot( const uint32_t nFrameId
 		    m_nFeedbackPhysicalCapDivisor ? MAX( 1u, physical / m_nFeedbackPhysicalCapDivisor ) : m_Limits.nMaxVtRequests;
 		policy.m_nMaxCandidates = MIN( policy.m_nMaxCandidates, MIN( physicalCap, MIN( m_nFrameRequestBudget, m_Limits.nMaxVtRequests ) ) );
 		if ( m_feedbackReducer.reduce( words, header.m_nWordCount, pageCount, t3dVtFeedbackPageLookup, &m_Residency, policy, stats ) ) {
-			( void )m_multiFeedbackParity.capture( header, words );
+			static_cast<void>(m_multiFeedbackParity.capture( header, words ));
 			m_nFeedbackRejectedNoise += stats.m_nRejectedNoise;
 			m_nFeedbackGridDirectUniquePages += stats.m_nDirectUniquePages;
 			m_nFeedbackGridSelectedCandidates += stats.m_nCandidates;
@@ -2564,13 +2564,13 @@ bool Terrain3DVirtualTexture::service_feedback_grid_hot( const uint32_t nFrameId
 				const uint32_t page = candidate.m_nPage;
 				if ( page >= pageCount || ( m_Residency.Buffers.pPageTable[page].nFlags & T3D_VT_PAGE_RESIDENT ) != 0u )
 					continue;
-				const uint16_t priority = ( uint16_t )MIN( 65535u, T3D_VT_PRIORITY_NORMAL_MIN + candidate.m_nScore );
+				const uint16_t priority = static_cast<uint16_t>(MIN( 65535u, T3D_VT_PRIORITY_NORMAL_MIN + candidate.m_nScore ));
 				if ( stage_feedback_page_hot( page, candidate.m_nMip, priority, nFrameId ) )
 					++m_nFeedbackStagedRequests;
 			}
 			m_Gpu.record_feedback_grid_consumed_hot( stats.m_nValidSamples );
 		}
-		( void )m_Gpu.retire_feedback_grid_ready_hot( slot );
+		static_cast<void>(m_Gpu.retire_feedback_grid_ready_hot( slot ));
 	}
 	return true;
 }
@@ -2592,7 +2592,7 @@ void Terrain3DVirtualTexture::service_multi_feedback_shadow_hot( const uint32_t 
 		     !t3d_vt_feedback_multi_shadow_frame_valid( header, params, nFrameId, m_Gpu.get_feedback_epoch_hot(),
 		                                                m_Residency.nDatabaseGeneration, nDeviceGeneration, nViewportKey ) ) {
 			++m_multiFeedbackShadowStats.m_nStale;
-			( void )m_Gpu.retire_multi_feedback_ready_hot( slot );
+			static_cast<void>(m_Gpu.retire_multi_feedback_ready_hot( slot ));
 			continue;
 		}
 		t3dVTFeedbackReductionStats_t stats{};
@@ -2601,7 +2601,7 @@ void Terrain3DVirtualTexture::service_multi_feedback_shadow_hot( const uint32_t 
 		const uint32_t physicalCap =
 		    m_nFeedbackPhysicalCapDivisor ? MAX( 1u, physical / m_nFeedbackPhysicalCapDivisor ) : m_Limits.nMaxVtRequests;
 		policy.m_nMaxCandidates = MIN( policy.m_nMaxCandidates, MIN( physicalCap, MIN( m_nFrameRequestBudget, m_Limits.nMaxVtRequests ) ) );
-		if ( t3d_vt_feedback_multi_reduce_capture( data, ( size_t )params.m_nSlotWords * sizeof( uint32_t ), params, header.m_nFrame,
+		if ( t3d_vt_feedback_multi_reduce_capture( data, static_cast<size_t>(params.m_nSlotWords) * sizeof( uint32_t ), params, header.m_nFrame,
 		                                           header.m_nFeedbackEpoch, header.m_nDatabaseGeneration, header.m_nDeviceGeneration,
 		                                           header.m_nViewportKey, m_feedbackReducer, t3dVtFeedbackPageLookup, &m_Residency, policy,
 		                                           stats ) ) {
@@ -2621,7 +2621,7 @@ void Terrain3DVirtualTexture::service_multi_feedback_shadow_hot( const uint32_t 
 		}
 		// V1 never stages requests, touches resident pages or changes eviction.
 		m_feedbackReducer.discardCapture();
-		( void )m_Gpu.retire_multi_feedback_ready_hot( slot );
+		static_cast<void>(m_Gpu.retire_multi_feedback_ready_hot( slot ));
 	}
 }
 
@@ -2640,8 +2640,10 @@ bool Terrain3DVirtualTexture::flush_staged_material_requests_hot( const uint32_t
 	// Admit both native producers through one owner-controlled phase. Interleave
 	// them so a terrain-heavy frame cannot consume the whole admission budget
 	// before visible instance materials get a chance to enter the same queue.
-	uint32_t cursor[T3D_VT_REQUEST_PRODUCER_COUNT] = {};
-	uint32_t remaining[T3D_VT_REQUEST_PRODUCER_COUNT] = {};
+	uint32_t cursor[T3D_VT_REQUEST_PRODUCER_COUNT];
+	memset( cursor, 0, sizeof( cursor ) );
+	uint32_t remaining[T3D_VT_REQUEST_PRODUCER_COUNT];
+	memset( remaining, 0, sizeof( remaining ) );
 	for ( uint32_t i = 0u; i < m_nStagedRequestCount; ++i ) {
 		const uint16_t nProducer = m_pStagedRequests[i].nProducer;
 		if ( nProducer < T3D_VT_REQUEST_PRODUCER_COUNT ) {
@@ -2709,7 +2711,7 @@ uint64_t Terrain3DVirtualTexture::service_uploads_hot( const uint32_t pFrameId )
 	const uint32_t nResident = m_Residency.Stats.nResidentCount;
 	const bool bQuiet = nPageMisses == m_nUploadCadenceLastPageMisses && nEvictionsBefore == m_nUploadCadenceLastEvictions &&
 	                    nThrash == m_nUploadCadenceLastThrash;
-	const bool bCacheWarm = nCapacity != 0u && ( uint64_t )nResident * 4u >= ( uint64_t )nCapacity * 3u;
+	const bool bCacheWarm = nCapacity != 0u && static_cast<uint64_t>(nResident) * 4u >= static_cast<uint64_t>(nCapacity) * 3u;
 	const bool bSmallBacklog = m_Streaming.nReadyJobCount <= nConfiguredPageSets;
 	if ( bQuiet && bCacheWarm && bSmallBacklog ) {
 		if ( m_nUploadCadenceStableFrames != UINT32_MAX ) {
@@ -2823,7 +2825,7 @@ void Terrain3DVirtualTexture::streamWorkerMain( void )
 		}
 		// Only this claimed record and its fixed scratch lane are mutable here.
 		// The streaming executor release-publishes completion as its last access.
-		( void )t3d_vt_streaming_execute_job_async( m_Streaming, job, t3dVtCopyResidentPackagePayloadHot, NULL );
+		static_cast<void>(t3d_vt_streaming_execute_job_async( m_Streaming, job, t3dVtCopyResidentPackagePayloadHot, NULL ));
 	}
 }
 
@@ -2864,10 +2866,10 @@ void Terrain3DVirtualTexture::service_streaming_hot( const uint32_t nFrameId )
 		return;
 	}
 	m_nStreamingServiceFrame = nFrameId;
-	( void )service_retired_slots_hot( nFrameId );
+	static_cast<void>(service_retired_slots_hot( nFrameId ));
 	// Release completed scratch lanes before admitting replacement work.
-	( void )service_uploads_hot( nFrameId );
-	( void )m_Gpu.service_ancestor_hints_hot( m_Residency );
+	static_cast<void>(service_uploads_hot( nFrameId ));
+	static_cast<void>(m_Gpu.service_ancestor_hints_hot( m_Residency ));
 	uint64_t remaining = m_Streaming.Limits.nMaxUploadBytesPerFrame;
 	const uint32_t work_limit = MIN( m_Streaming.Limits.nMaxPageSetsPerFrame, m_Streaming.Limits.nMaxInFlightIoJobs );
 	for ( uint32_t i = 0u; i < work_limit; ++i ) {
@@ -2877,12 +2879,12 @@ void Terrain3DVirtualTexture::service_streaming_hot( const uint32_t nFrameId )
 		}
 		const uint32_t bytes = m_Streaming.Buffers.pJobs[job].nReadBytes;
 		if ( bytes > remaining ) {
-			( void )cancel_stream_job_owner_hot( job );
+			static_cast<void>(cancel_stream_job_owner_hot( job ));
 			break;
 		}
 		remaining -= bytes;
 		if ( !dispatchStreamJobHot( job ) ) {
-			( void )cancel_stream_job_owner_hot( job );
+			static_cast<void>(cancel_stream_job_owner_hot( job ));
 			break;
 		}
 	}

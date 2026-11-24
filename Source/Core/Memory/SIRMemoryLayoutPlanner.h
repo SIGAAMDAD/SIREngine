@@ -15,8 +15,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRMEMORYLAYOUTPLANNER_H__
-#define __SIRENGINE_SIRMEMORYLAYOUTPLANNER_H__
+#ifndef __SIR_MEMORYLAYOUTPLANNER_H__
+#define __SIR_MEMORYLAYOUTPLANNER_H__
 
 #include <Core/SIRPCH.h>
 
@@ -57,4 +57,4 @@ public:
 	                       uint32_t nEntryCount, sirMemoryLayoutResult_t *pResult );
 };
 
-#endif // __SIRENGINE_SIRMEMORYLAYOUTPLANNER_H__
+#endif // __SIR_MEMORYLAYOUTPLANNER_H__

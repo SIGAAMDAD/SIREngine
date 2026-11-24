@@ -18,11 +18,11 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 static bool sirRegistrationModuleNameAllowed( const char *pszName, size_t nLength ) noexcept
 {
-	const char *pszDot = ( const char * )memchr( pszName, '.', nLength );
+	const char *pszDot = static_cast<const char *>(memchr( pszName, '.', nLength ));
 	if ( pszDot == nullptr ) {
 		return false;
 	}
-	const size_t nPrefixBytes = ( size_t )( pszDot - pszName );
+	const size_t nPrefixBytes = static_cast<size_t>( pszDot - pszName );
 	if ( nPrefixBytes == 3 && memcmp( pszName, "sir", 3 ) == 0 ) {
 		return false;
 	}
@@ -32,90 +32,93 @@ static bool sirRegistrationModuleNameAllowed( const char *pszName, size_t nLengt
 	return true;
 }
 
-sirRegistrationResult_t sirRegistrationInternName( SIRStringPool& pool, const sirRegistrationNameRequest_t& request,
+SIRRegistrationResult sirRegistrationInternName( SIRStringPool& pool, const sirRegistrationNameRequest_t& request,
                                                    SIRStringAtom *pAtom ) noexcept
 {
 	if ( pAtom == nullptr ) {
-		return SIR_REGISTRATION_INVALID_ARGUMENT;
+		return SIRRegistrationResult::SIR_REGISTRATION_INVALID_ARGUMENT;
 	}
 	pAtom->reset();
 	if ( !pool.isInitialized() ) {
-		return SIR_REGISTRATION_NOT_INITIALIZED;
+		return SIRRegistrationResult::SIR_REGISTRATION_NOT_INITIALIZED;
 	}
-	char szCanonical[SIR_REGISTRATION_MAX_NAME_BYTES + 1] = {};
+	char szCanonical[SIR_REGISTRATION_MAX_NAME_BYTES + 1];
+	memset( szCanonical, 0, sizeof( szCanonical ) );
 	if ( !sirNormalizeConsoleName( request.pszName, request.nNameBytes, szCanonical, sizeof( szCanonical ) ) ) {
-		return SIR_REGISTRATION_INVALID_NAME;
+		return SIRRegistrationResult::SIR_REGISTRATION_INVALID_NAME;
 	}
 	if ( request.nOwnerId != 0 && !sirRegistrationModuleNameAllowed( szCanonical, request.nNameBytes ) ) {
-		return SIR_REGISTRATION_DENIED;
+		return SIRRegistrationResult::SIR_REGISTRATION_DENIED;
 	}
 	SIRStringAtom atom = pool.find( szCanonical, request.nNameBytes );
 	if ( !atom ) {
 		atom = pool.intern( szCanonical, request.nNameBytes );
 	}
 	if ( !atom ) {
-		return SIR_REGISTRATION_CAPACITY_EXCEEDED;
+		return SIRRegistrationResult::SIR_REGISTRATION_CAPACITY_EXCEEDED;
 	}
 	*pAtom = atom;
-	return SIR_REGISTRATION_OK;
+	return SIRRegistrationResult::SIR_REGISTRATION_OK;
 }
 
-sirRegistrationResult_t sirRegistrationFindName( const SIRStringPool& pool, const char *pszName, size_t nLength,
+SIRRegistrationResult sirRegistrationFindName( const SIRStringPool& pool, const char *pszName, size_t nLength,
                                                  SIRStringAtom *pAtom ) noexcept
 {
 	if ( pAtom == nullptr ) {
-		return SIR_REGISTRATION_INVALID_ARGUMENT;
+		return SIRRegistrationResult::SIR_REGISTRATION_INVALID_ARGUMENT;
 	}
 	pAtom->reset();
 	if ( !pool.isInitialized() ) {
-		return SIR_REGISTRATION_NOT_INITIALIZED;
+		return SIRRegistrationResult::SIR_REGISTRATION_NOT_INITIALIZED;
 	}
-	char szCanonical[SIR_REGISTRATION_MAX_NAME_BYTES + 1] = {};
+	char szCanonical[SIR_REGISTRATION_MAX_NAME_BYTES + 1];
+	memset( szCanonical, 0, sizeof( szCanonical ) );
 	if ( !sirNormalizeConsoleName( pszName, nLength, szCanonical, sizeof( szCanonical ) ) ) {
-		return SIR_REGISTRATION_INVALID_NAME;
+		return SIRRegistrationResult::SIR_REGISTRATION_INVALID_NAME;
 	}
 	const SIRStringAtom atom = pool.find( szCanonical, nLength );
 	if ( !atom ) {
-		return SIR_REGISTRATION_NOT_FOUND;
+		return SIRRegistrationResult::SIR_REGISTRATION_NOT_FOUND;
 	}
 	*pAtom = atom;
-	return SIR_REGISTRATION_OK;
+	return SIRRegistrationResult::SIR_REGISTRATION_OK;
 }
 
-sirRegistrationResult_t sirRegistrationCookedName( const SIRStringPool& pool, uint32_t nOrdinal, uint64_t nCatalogHash,
+SIRRegistrationResult sirRegistrationCookedName( const SIRStringPool& pool, uint32_t nOrdinal, uint64_t nCatalogHash,
                                                    SIRStringAtom *pAtom ) noexcept
 {
 	if ( pAtom == nullptr ) {
-		return SIR_REGISTRATION_INVALID_ARGUMENT;
+		return SIRRegistrationResult::SIR_REGISTRATION_INVALID_ARGUMENT;
 	}
 	pAtom->reset();
 	if ( !pool.isInitialized() ) {
-		return SIR_REGISTRATION_NOT_INITIALIZED;
+		return SIRRegistrationResult::SIR_REGISTRATION_NOT_INITIALIZED;
 	}
 	if ( nCatalogHash == 0 ) {
-		return SIR_REGISTRATION_BAD_SCHEMA;
+		return SIRRegistrationResult::SIR_REGISTRATION_BAD_SCHEMA;
 	}
 	const SIRStringAtom atom = pool.atomFromCookedOrdinal( nOrdinal, nCatalogHash );
 	if ( !atom ) {
-		return SIR_REGISTRATION_BAD_SCHEMA;
+		return SIRRegistrationResult::SIR_REGISTRATION_BAD_SCHEMA;
 	}
 	const uint32_t nLength = pool.getDecodedByteLength( atom );
 	if ( nLength == 0 || nLength > SIR_REGISTRATION_MAX_NAME_BYTES ) {
-		return SIR_REGISTRATION_INVALID_NAME;
+		return SIRRegistrationResult::SIR_REGISTRATION_INVALID_NAME;
 	}
-	char szCanonical[SIR_REGISTRATION_MAX_NAME_BYTES + 1] = {};
+	char szCanonical[SIR_REGISTRATION_MAX_NAME_BYTES + 1];
+	memset( szCanonical, 0, sizeof( szCanonical ) );
 	uint32_t nWritten = 0;
-	if ( pool.decodeInto( atom, szCanonical, sizeof( szCanonical ), nWritten ) != SIR_STRING_OK || nWritten != nLength ) {
-		return SIR_REGISTRATION_BAD_SCHEMA;
+	if ( pool.decodeInto( atom, szCanonical, sizeof( szCanonical ), nWritten ) != SIRStringStatus::SIR_STRING_OK || nWritten != nLength ) {
+		return SIRRegistrationResult::SIR_REGISTRATION_BAD_SCHEMA;
 	}
 	if ( !sirValidateConsoleName( szCanonical, nWritten ) ) {
-		return SIR_REGISTRATION_INVALID_NAME;
+		return SIRRegistrationResult::SIR_REGISTRATION_INVALID_NAME;
 	}
 	for ( uint32_t iByte = 0; iByte < nWritten; ++iByte ) {
 		if ( szCanonical[iByte] >= 'A' && szCanonical[iByte] <= 'Z' ) {
-			return SIR_REGISTRATION_INVALID_NAME;
+			return SIRRegistrationResult::SIR_REGISTRATION_INVALID_NAME;
 		}
 	}
 	*pAtom = atom;
-	return SIR_REGISTRATION_OK;
+	return SIRRegistrationResult::SIR_REGISTRATION_OK;
 }

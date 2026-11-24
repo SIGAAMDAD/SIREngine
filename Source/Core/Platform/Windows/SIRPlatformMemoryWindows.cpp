@@ -27,30 +27,30 @@ bool SIRPlatformMemory::querySystem( sirSystemMemoryStats_t *pStats ) noexcept
 	if ( pStats == nullptr ) {
 		return false;
 	}
-	MEMORYSTATUSEX memory = {};
+	MEMORYSTATUSEX memory {};
 	memory.dwLength = sizeof( memory );
 	if ( !GlobalMemoryStatusEx( &memory ) ) {
 		return false;
 	}
-	sirSystemMemoryStats_t stats = {};
+	sirSystemMemoryStats_t stats {};
 	stats.nTotalPhysicalBytes = memory.ullTotalPhys;
 	stats.nAvailablePhysicalBytes = memory.ullAvailPhys;
-	PERFORMANCE_INFORMATION perf = {};
+	PERFORMANCE_INFORMATION perf {};
 	perf.cb = sizeof( perf );
 	if ( GetPerformanceInfo( &perf, sizeof( perf ) ) ) {
-		const uint64_t nPage = ( uint64_t )perf.PageSize;
-		stats.nCommitLimitBytes = ( uint64_t )perf.CommitLimit * nPage;
-		stats.nCommittedBytes = ( uint64_t )perf.CommitTotal * nPage;
-		stats.nValidFields |= SIR_SYSTEM_MEMORY_COMMIT;
+		const uint64_t nPage = static_cast<uint64_t>(perf.PageSize);
+		stats.nCommitLimitBytes = static_cast<uint64_t>(perf.CommitLimit) * nPage;
+		stats.nCommittedBytes = static_cast<uint64_t>(perf.CommitTotal) * nPage;
+		stats.nValidFields |= SIRSystemMemoryField::SIR_SYSTEM_MEMORY_COMMIT;
 	}
 	BOOL bInJob = FALSE;
 	if ( IsProcessInJob( GetCurrentProcess(), nullptr, &bInJob ) && bInJob ) {
-		JOBOBJECT_EXTENDED_LIMIT_INFORMATION job = {};
+		JOBOBJECT_EXTENDED_LIMIT_INFORMATION job {};
 		if ( QueryInformationJobObject( nullptr, JobObjectExtendedLimitInformation, &job, sizeof( job ), nullptr ) ) {
 			const DWORD nFlags = job.BasicLimitInformation.LimitFlags;
 			if ( nFlags & JOB_OBJECT_LIMIT_JOB_MEMORY ) {
-				stats.nGroupMemoryLimitBytes = ( uint64_t )job.JobMemoryLimit;
-				stats.nValidFields |= SIR_SYSTEM_MEMORY_GROUP_LIMIT;
+				stats.nGroupMemoryLimitBytes = static_cast<uint64_t>(job.JobMemoryLimit);
+				stats.nValidFields |= SIRSystemMemoryField::SIR_SYSTEM_MEMORY_GROUP_LIMIT;
 			}
 		}
 	}
@@ -63,17 +63,17 @@ bool SIRPlatformMemory::queryProcess( sirProcessMemoryStats_t *pStats ) noexcept
 	if ( pStats == nullptr ) {
 		return false;
 	}
-	PROCESS_MEMORY_COUNTERS_EX counters = {};
-	if ( !GetProcessMemoryInfo( GetCurrentProcess(), ( PROCESS_MEMORY_COUNTERS * )&counters, sizeof( counters ) ) ) {
+	PROCESS_MEMORY_COUNTERS_EX counters {};
+	if ( !GetProcessMemoryInfo( GetCurrentProcess(), static_cast<PROCESS_MEMORY_COUNTERS *>(&counters), sizeof( counters ) ) ) {
 		return false;
 	}
-	sirProcessMemoryStats_t stats = {};
-	stats.nResidentBytes = ( uint64_t )counters.WorkingSetSize;
-	stats.nPeakResidentBytes = ( uint64_t )counters.PeakWorkingSetSize;
-	stats.nPrivateCommittedBytes = ( uint64_t )counters.PrivateUsage;
-	stats.nPageFaultCount = ( uint64_t )counters.PageFaultCount;
-	stats.nValidFields = SIR_PROCESS_MEMORY_RESIDENT | SIR_PROCESS_MEMORY_PEAK_RESIDENT | SIR_PROCESS_MEMORY_PRIVATE_COMMITTED |
-	                     SIR_PROCESS_MEMORY_PAGE_FAULTS;
+	sirProcessMemoryStats_t stats {};
+	stats.nResidentBytes = static_cast<uint64_t>(counters.WorkingSetSize);
+	stats.nPeakResidentBytes = static_cast<uint64_t>(counters.PeakWorkingSetSize);
+	stats.nPrivateCommittedBytes = static_cast<uint64_t>(counters.PrivateUsage);
+	stats.nPageFaultCount = static_cast<uint64_t>(counters.PageFaultCount);
+	stats.nValidFields = SIRProcessMemoryField::SIR_PROCESS_MEMORY_RESIDENT | SIRProcessMemoryField::SIR_PROCESS_MEMORY_PEAK_RESIDENT | SIRProcessMemoryField::SIR_PROCESS_MEMORY_PRIVATE_COMMITTED |
+	                     SIRProcessMemoryField::SIR_PROCESS_MEMORY_PAGE_FAULTS;
 	*pStats = stats;
 	return true;
 }

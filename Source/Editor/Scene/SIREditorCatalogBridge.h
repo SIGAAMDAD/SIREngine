@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIREDITORCATALOGBRIDGE_H__
-#define __SIRENGINE_SIREDITORCATALOGBRIDGE_H__
+#ifndef __SIR_EDITORCATALOGBRIDGE_H__
+#define __SIR_EDITORCATALOGBRIDGE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -53,8 +53,7 @@ typedef struct sirEditorCatalogBuildRequest_s
 	uint32_t nDependencyCapacity;
 } sirEditorCatalogBuildRequest_t;
 
-typedef enum sirEditorCatalogBuildResult_e : uint8_t
-{
+enum class SIREditorCatalogBuildResult : uint8_t {
 	SIR_EDITOR_CATALOG_OK = 0,
 	SIR_EDITOR_CATALOG_INVALID_ARGUMENT = 1,
 	SIR_EDITOR_CATALOG_INVALID_SOURCE = 2,
@@ -62,7 +61,7 @@ typedef enum sirEditorCatalogBuildResult_e : uint8_t
 	SIR_EDITOR_CATALOG_OUT_OF_CAPACITY = 4,
 	SIR_EDITOR_CATALOG_CYCLIC = 5,
 	SIR_EDITOR_CATALOG_FAILED = 6
-} sirEditorCatalogBuildResult_t;
+};
 
 // Imports source-backed resource declarations and embedded-resource edges into
 // the existing canonical catalog. Reference records owned by scene nodes are
@@ -71,6 +70,6 @@ typedef enum sirEditorCatalogBuildResult_e : uint8_t
 // after initialization calls shutdown(), leaving it uninitialized; caller
 // storage remains owned by the caller and is not guaranteed to be unchanged.
 // The successful catalog is sealed and can produce a dependency-first order.
-sirEditorCatalogBuildResult_t sirEditorBuildResourceCatalog( const sirEditorCatalogBuildRequest_t& request ) noexcept;
+SIREditorCatalogBuildResult sirEditorBuildResourceCatalog( const sirEditorCatalogBuildRequest_t& request ) noexcept;
 
-#endif // __SIRENGINE_SIREDITORCATALOGBRIDGE_H__
+#endif // __SIR_EDITORCATALOGBRIDGE_H__

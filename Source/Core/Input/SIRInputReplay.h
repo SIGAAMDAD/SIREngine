@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRINPUTREPLAY_H__
-#define __SIRENGINE_SIRINPUTREPLAY_H__
+#ifndef __SIR_INPUTREPLAY_H__
+#define __SIR_INPUTREPLAY_H__
 
 #include <Core/SIRPCH.h>
 
@@ -45,12 +45,11 @@ typedef struct sirInputReplayFrame_s
 	sirInputActionState_t actions[SIR_INPUT_ACTION_CAPACITY];
 } sirInputReplayFrame_t;
 
-typedef enum sirInputReplayMode_e : uint8_t
-{
+enum class SIRInputReplayMode : uint8_t {
 	SIR_INPUT_REPLAY_IDLE = 0,
 	SIR_INPUT_REPLAY_RECORD = 1,
 	SIR_INPUT_REPLAY_READ = 2
-} sirInputReplayMode_t;
+};
 
 // Engine-owned action-tick tape. The caller owns the byte buffer and keeps
 // it alive while recording or reading. No allocations or native handles.
@@ -68,7 +67,7 @@ public:
 	void reset( void ) noexcept;
 	bool finished( void ) const noexcept;
 	uint32_t bytesUsed( void ) const noexcept;
-	sirInputReplayMode_t mode( void ) const noexcept;
+	SIRInputReplayMode mode( void ) const noexcept;
 	static bool validateFrame( const sirInputReplayFrame_t& frame ) noexcept;
 	static bool query( const sirInputReplayFrame_t& frame, uint32_t nActionId, uint32_t nUser, sirInputActionState_t *pOut ) noexcept;
 
@@ -87,7 +86,7 @@ private:
 	uint32_t m_nCapacity;
 	uint32_t m_nOffset;
 	uint64_t m_nLastTick;
-	sirInputReplayMode_t m_eMode;
+	SIRInputReplayMode m_eMode;
 };
 
-#endif // __SIRENGINE_SIRINPUTREPLAY_H__
+#endif // __SIR_INPUTREPLAY_H__

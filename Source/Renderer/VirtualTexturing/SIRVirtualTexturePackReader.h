@@ -14,8 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRVIRTUALTEXTUREPACKREADER_H__
-#define __SIRENGINE_SIRVIRTUALTEXTUREPACKREADER_H__
+#ifndef __SIR_VIRTUALTEXTUREPACKREADER_H__
+#define __SIR_VIRTUALTEXTUREPACKREADER_H__
 
 #include <Core/SIRPCH.h>
 
@@ -36,4 +36,4 @@ bool sirVTPackOpenValidated( const sirVirtualTexturePackInput_t& input, sirVirtu
 // already validated view, whose byte lifetime remains owned by the caller.
 bool sirVTPackGetPage( const sirVirtualTexturePackView_t& view, uint32_t nIndex, sirVirtualTexturePackPageRecord_t *pPage ) noexcept;
 
-#endif // __SIRENGINE_SIRVIRTUALTEXTUREPACKREADER_H__
+#endif // __SIR_VIRTUALTEXTUREPACKREADER_H__

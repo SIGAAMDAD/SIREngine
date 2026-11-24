@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRGLCAPABILITIES_H__
-#define __SIRENGINE_SIRGLCAPABILITIES_H__
+#ifndef __SIR_GLCAPABILITIES_H__
+#define __SIR_GLCAPABILITIES_H__
 
 #include <Core/SIRPCH.h>
 
@@ -26,9 +26,9 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Renderer/Drivers/OpenGL/SIRGLContext.h>
 
-sirGraphicsResult_t sirGLValidateCore46( const sirGLProbe_t *pProbe ) noexcept;
-sirGraphicsResult_t sirGLBuildAdapter( const sirGLProbe_t *pProbe, sirGraphicsABIAdapter_t *pAdapter ) noexcept;
-sirGraphicsResult_t sirGLBuildCapabilities( const sirGLProbe_t *pProbe, uint32_t nGeneration,
+SIRGraphicsResult sirGLValidateCore46( const sirGLProbe_t *pProbe ) noexcept;
+SIRGraphicsResult sirGLBuildAdapter( const sirGLProbe_t *pProbe, sirGraphicsABIAdapter_t *pAdapter ) noexcept;
+SIRGraphicsResult sirGLBuildCapabilities( const sirGLProbe_t *pProbe, uint32_t nGeneration,
                                             sirGraphicsABICapabilities_t *pCapabilities ) noexcept;
 
-#endif // __SIRENGINE_SIRGLCAPABILITIES_H__
+#endif // __SIR_GLCAPABILITIES_H__

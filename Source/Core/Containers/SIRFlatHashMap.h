@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRFLATHASHMAP_H__
-#define __SIRENGINE_SIRFLATHASHMAP_H__
+#ifndef __SIR_FLATHASHMAP_H__
+#define __SIR_FLATHASHMAP_H__
 
 #include <Core/SIRPCH.h>
 
@@ -64,23 +64,23 @@ private:
 		return SIRRawStorage::checkedAdd( nOffset, nEntriesBytes, pBytes );
 	}
 
-	sirContainerResult_t allocateTable( uint32_t nCapacity, void **ppBlock, uint8_t **ppControl, Pair **ppEntries ) const noexcept
+	SIRContainerResult allocateTable( uint32_t nCapacity, void **ppBlock, uint8_t **ppControl, Pair **ppEntries ) const noexcept
 	{
 		size_t nOffset = 0;
 		size_t nBytes = 0;
 		if ( !calculateLayout( nCapacity, &nOffset, &nBytes ) ) {
-			return SIR_CONTAINER_SIZE_OVERFLOW;
+			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
 		void *pBlock = nullptr;
-		sirContainerResult_t eResult = SIRRawStorage::tryAllocate( m_pAllocator, nBytes, alignof( Pair ), &pBlock );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		SIRContainerResult eResult = SIRRawStorage::tryAllocate( m_pAllocator, nBytes, alignof( Pair ), &pBlock );
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		memset( pBlock, SIRHashProbe::EMPTY, SIRHashProbe::controlBytes<bCompactControl>( nCapacity ) );
 		*ppBlock = pBlock;
-		*ppControl = ( uint8_t * )pBlock;
-		*ppEntries = ( Pair * )( ( uint8_t * )pBlock + nOffset );
-		return SIR_CONTAINER_OK;
+		*ppControl = static_cast<uint8_t *>(pBlock);
+		*ppEntries = ( Pair * )( static_cast<uint8_t *>(pBlock) + nOffset );
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
 	void freeTable( void *pBlock, uint32_t nCapacity ) const noexcept
@@ -91,7 +91,7 @@ private:
 		size_t nOffset = 0;
 		size_t nBytes = 0;
 		bool bValid = calculateLayout( nCapacity, &nOffset, &nBytes );
-		( void )bValid;
+		static_cast<void>(bValid);
 		SIRRawStorage::deallocate( m_pAllocator, pBlock, nBytes, alignof( Pair ) );
 	}
 
@@ -103,8 +103,8 @@ private:
 		size_t nOffset = 0;
 		size_t nBytes = 0;
 		calculateLayout( m_nCapacity, &nOffset, &nBytes );
-		uintptr_t nAddress = ( uintptr_t )pAddress;
-		uintptr_t nStart = ( uintptr_t )m_pControl;
+		uintptr_t nAddress = reinterpret_cast<uintptr_t>(pAddress);
+		uintptr_t nStart = reinterpret_cast<uintptr_t>(m_pControl);
 		return nAddress >= nStart && nAddress - nStart < nBytes;
 	}
 
@@ -127,13 +127,13 @@ private:
 		return UINT32_MAX;
 	}
 
-	sirContainerResult_t rehash( uint32_t nNewCapacity )
+	SIRContainerResult rehash( uint32_t nNewCapacity )
 	{
 		void *pNewBlock = nullptr;
 		uint8_t *pNewControl = nullptr;
 		Pair *pNewEntries = nullptr;
-		sirContainerResult_t eResult = allocateTable( nNewCapacity, &pNewBlock, &pNewControl, &pNewEntries );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		SIRContainerResult eResult = allocateTable( nNewCapacity, &pNewBlock, &pNewControl, &pNewEntries );
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		try {
@@ -165,25 +165,25 @@ private:
 		m_pEntries = pNewEntries;
 		m_nCapacity = nNewCapacity;
 		m_nSize = nOldSize;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
 	template <typename KeyArg, typename ValueArg>
-	sirContainerResult_t insertInternal( KeyArg&& key, ValueArg&& value, bool *pInserted )
+	SIRContainerResult insertInternal( KeyArg&& key, ValueArg&& value, bool *pInserted )
 	{
 		if ( pInserted != nullptr ) {
 			*pInserted = false;
 		}
 		if ( locate( key ) != UINT32_MAX ) {
-			return SIR_CONTAINER_OK;
+			return SIRContainerResult::SIR_CONTAINER_OK;
 		}
 		if ( m_nSize == UINT32_MAX ) {
-			return SIR_CONTAINER_SIZE_OVERFLOW;
+			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
-		if ( m_nCapacity == 0 || ( ( uint64_t )m_nSize + m_nDeleted + 1 ) * 8 > ( uint64_t )m_nCapacity * 7 ) {
+		if ( m_nCapacity == 0 || ( static_cast<uint64_t>(m_nSize) + m_nDeleted + 1 ) * 8 > static_cast<uint64_t>(m_nCapacity) * 7 ) {
 			uint32_t nNeeded = 0;
-			sirContainerResult_t eResult = SIRHashProbe::capacityForCount( m_nSize + 1, &nNeeded );
-			if ( eResult != SIR_CONTAINER_OK ) {
+			SIRContainerResult eResult = SIRHashProbe::capacityForCount( m_nSize + 1, &nNeeded );
+			if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 				return eResult;
 			}
 			// Rebuild tombstones at the current capacity, unless the live load requires growth.
@@ -192,15 +192,15 @@ private:
 				if constexpr ( std::is_copy_constructible<K>::value && std::is_copy_constructible<V>::value ) {
 					Pair staged( key, value );
 					eResult = rehash( nCapacity );
-					if ( eResult != SIR_CONTAINER_OK ) {
+					if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 						return eResult;
 					}
 					return insertInternal( std::move( staged.first ), std::move( staged.second ), pInserted );
 				}
-				return SIR_CONTAINER_INVALID_ARGUMENT;
+				return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 			}
 			eResult = rehash( nCapacity );
-			if ( eResult != SIR_CONTAINER_OK ) {
+			if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 				return eResult;
 			}
 		}
@@ -224,7 +224,7 @@ private:
 		if ( pInserted != nullptr ) {
 			*pInserted = true;
 		}
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
 public:
@@ -264,25 +264,25 @@ public:
 		if ( m_nCapacity != 0 ) {
 			calculateLayout( m_nCapacity, &nOffset, &nBytes );
 		}
-		return { 0, nBytes, 0, 0, ( uint64_t )m_nSize * sizeof( Pair ) };
+		return { 0, nBytes, 0, 0, static_cast<uint64_t>(m_nSize * sizeof(  Pair  )) };
 	}
 
-	sirContainerResult_t tryReserve( uint32_t nElements )
+	SIRContainerResult tryReserve( uint32_t nElements )
 	{
 		if ( nElements == 0 || ( nElements <= m_nSize && m_nCapacity != 0 ) ) {
-			return SIR_CONTAINER_OK;
+			return SIRContainerResult::SIR_CONTAINER_OK;
 		}
 		uint32_t nRequired = 0;
-		sirContainerResult_t eResult = SIRHashProbe::capacityForCount( nElements, &nRequired );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		SIRContainerResult eResult = SIRHashProbe::capacityForCount( nElements, &nRequired );
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
-		return nRequired <= m_nCapacity ? SIR_CONTAINER_OK : rehash( nRequired );
+		return nRequired <= m_nCapacity ? SIRContainerResult::SIR_CONTAINER_OK : rehash( nRequired );
 	}
 
 	// Explicitly reclaim oversized tables after removals. A failed rehash
 	// preserves the original table and all live values.
-	sirContainerResult_t tryShrinkToFit( void )
+	SIRContainerResult tryShrinkToFit( void )
 	{
 		if ( m_nSize == 0 ) {
 			clear();
@@ -290,31 +290,31 @@ public:
 			m_pControl = nullptr;
 			m_pEntries = nullptr;
 			m_nCapacity = 0;
-			return SIR_CONTAINER_OK;
+			return SIRContainerResult::SIR_CONTAINER_OK;
 		}
 		uint32_t nRequired = 0;
-		sirContainerResult_t eResult = SIRHashProbe::capacityForCount( m_nSize, &nRequired );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		SIRContainerResult eResult = SIRHashProbe::capacityForCount( m_nSize, &nRequired );
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		if ( nRequired == m_nCapacity && m_nDeleted == 0 ) {
-			return SIR_CONTAINER_OK;
+			return SIRContainerResult::SIR_CONTAINER_OK;
 		}
 		return rehash( nRequired );
 	}
 
-	sirContainerResult_t tryInsert( const K& key, const V& value, bool *pInserted = nullptr )
+	SIRContainerResult tryInsert( const K& key, const V& value, bool *pInserted = nullptr )
 	{
 		return insertInternal( key, value, pInserted );
 	}
 
-	sirContainerResult_t tryInsert( K&& key, V&& value, bool *pInserted = nullptr )
+	SIRContainerResult tryInsert( K&& key, V&& value, bool *pInserted = nullptr )
 	{
 		return insertInternal( std::move( key ), std::move( value ), pInserted );
 	}
 
 	template <typename KeyArg, typename ValueArg>
-	sirContainerResult_t tryEmplace( KeyArg&& key, ValueArg&& value, bool *pInserted = nullptr )
+	SIRContainerResult tryEmplace( KeyArg&& key, ValueArg&& value, bool *pInserted = nullptr )
 	{
 		return insertInternal( std::forward<KeyArg>( key ), std::forward<ValueArg>( value ), pInserted );
 	}
@@ -359,4 +359,4 @@ public:
 	}
 };
 
-#endif // __SIRENGINE_SIRFLATHASHMAP_H__
+#endif // __SIR_FLATHASHMAP_H__

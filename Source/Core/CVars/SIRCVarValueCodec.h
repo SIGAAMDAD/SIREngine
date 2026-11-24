@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRCVARVALUECODEC_H__
-#define __SIRENGINE_SIRCVARVALUECODEC_H__
+#ifndef __SIR_CVARVALUECODEC_H__
+#define __SIR_CVARVALUECODEC_H__
 
 #include <Core/SIRPCH.h>
 #include <Core/CVars/SIRCVarRegistry.h>
@@ -33,7 +33,7 @@ typedef struct sirCVarTextBuffer_s
 } sirCVarTextBuffer_t;
 
 // Shared strict textual value codec for console and config, no allocations.
-sirRegistrationResult_t sirCVarParseText( sirCVarType_t eType, const char *pszInput, uint32_t nLength, sirCVarValue_t *pValue ) noexcept;
-sirRegistrationResult_t sirCVarFormatText( sirCVarType_t eType, const sirCVarValue_t& value, sirCVarTextBuffer_t *pBuffer ) noexcept;
+SIRRegistrationResult sirCVarParseText( SIRCVarType eType, const char *pszInput, uint32_t nLength, sirCVarValue_t *pValue ) noexcept;
+SIRRegistrationResult sirCVarFormatText( SIRCVarType eType, const sirCVarValue_t& value, sirCVarTextBuffer_t *pBuffer ) noexcept;
 
-#endif // __SIRENGINE_SIRCVARVALUECODEC_H__
+#endif // __SIR_CVARVALUECODEC_H__

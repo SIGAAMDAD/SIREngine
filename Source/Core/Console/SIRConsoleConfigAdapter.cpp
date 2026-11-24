@@ -31,78 +31,78 @@ const sirConfigDiagnostic_t& SIRConsoleConfigAdapter::getLastDiagnostic( void ) 
 	return m_LastDiagnostic;
 }
 
-sirConfigResult_t SIRConsoleConfigAdapter::initialize( SIRCVarConfigAdapter& adapter, const sirConsoleConfigStorage_t& storage ) noexcept
+SIRConfigResult SIRConsoleConfigAdapter::initialize( SIRCVarConfigAdapter& adapter, const sirConsoleConfigStorage_t& storage ) noexcept
 {
 	if ( m_pAdapter != nullptr || !adapter.isInitialized() || storage.pFileBytes == nullptr || storage.nFileCapacity == 0 ||
 	     storage.pfnRead == nullptr ) {
-		return SIR_CONFIG_INVALID_ARGUMENT;
+		return SIRConfigResult::SIR_CONFIG_INVALID_ARGUMENT;
 	}
 	m_pAdapter = &adapter;
 	m_Storage = storage;
 	m_LastDiagnostic = {};
 	m_bExecuting = false;
-	return SIR_CONFIG_OK;
+	return SIRConfigResult::SIR_CONFIG_OK;
 }
 
-sirRegistrationResult_t SIRConsoleConfigAdapter::execute( void *pContext, const char *pszFileName, uint32_t nBytes,
+SIRRegistrationResult SIRConsoleConfigAdapter::execute( void *pContext, const char *pszFileName, uint32_t nBytes,
                                                           const sirConsoleSubmission_t& submission ) noexcept
 {
-	SIRConsoleConfigAdapter *pAdapter = ( SIRConsoleConfigAdapter * )pContext;
+	SIRConsoleConfigAdapter *pAdapter = static_cast<SIRConsoleConfigAdapter *>(pContext);
 	if ( pAdapter == nullptr || pAdapter->m_pAdapter == nullptr ) {
-		return SIR_REGISTRATION_NOT_INITIALIZED;
+		return SIRRegistrationResult::SIR_REGISTRATION_NOT_INITIALIZED;
 	}
 	if ( pAdapter->m_bExecuting ) {
-		return SIR_REGISTRATION_DENIED;
+		return SIRRegistrationResult::SIR_REGISTRATION_DENIED;
 	}
 	if ( pszFileName == nullptr || nBytes < 5 || nBytes > 128 ||
-	     ( submission.origin.nCapabilities & ( SIR_CONSOLE_CAP_EXECUTE | SIR_CONSOLE_CAP_WRITE ) ) !=
-	         ( SIR_CONSOLE_CAP_EXECUTE | SIR_CONSOLE_CAP_WRITE ) ) {
-		return SIR_REGISTRATION_DENIED;
+	     ( submission.origin.nCapabilities & ( static_cast<uint32_t>( SIRConsoleCapability::SIR_CONSOLE_CAP_EXECUTE ) | static_cast<uint32_t>( SIRConsoleCapability::SIR_CONSOLE_CAP_WRITE ) ) ) !=
+	         ( static_cast<uint32_t>( SIRConsoleCapability::SIR_CONSOLE_CAP_EXECUTE ) | static_cast<uint32_t>( SIRConsoleCapability::SIR_CONSOLE_CAP_WRITE ) ) ) {
+		return SIRRegistrationResult::SIR_REGISTRATION_DENIED;
 	}
 	for ( uint32_t iByte = 0; iByte < nBytes; ++iByte ) {
 		const char nByte = pszFileName[iByte];
 		const bool bLetter = ( nByte >= 'a' && nByte <= 'z' ) || ( nByte >= 'A' && nByte <= 'Z' );
 		const bool bNumber = nByte >= '0' && nByte <= '9';
 		if ( !bLetter && !bNumber && nByte != '_' && nByte != '-' && nByte != '.' && nByte != '/' ) {
-			return SIR_REGISTRATION_INVALID_NAME;
+			return SIRRegistrationResult::SIR_REGISTRATION_INVALID_NAME;
 		}
 		if ( nByte == '.' && iByte + 1 < nBytes && pszFileName[iByte + 1] == '.' ) {
-			return SIR_REGISTRATION_INVALID_NAME;
+			return SIRRegistrationResult::SIR_REGISTRATION_INVALID_NAME;
 		}
 	}
 	if ( pszFileName[0] == '/' || memcmp( pszFileName + nBytes - 4, ".ini", 4 ) != 0 ) {
-		return SIR_REGISTRATION_INVALID_NAME;
+		return SIRRegistrationResult::SIR_REGISTRATION_INVALID_NAME;
 	}
 	pAdapter->m_bExecuting = true;
 	pAdapter->m_LastDiagnostic = {};
 	sirConsoleConfigReadRequest_t request = { pszFileName, nBytes, pAdapter->m_Storage.pFileBytes, pAdapter->m_Storage.nFileCapacity, 0 };
-	const sirConfigResult_t eRead = pAdapter->m_Storage.pfnRead( pAdapter->m_Storage.pContext, &request );
-	sirConfigResult_t eResult = eRead;
-	if ( eRead == SIR_CONFIG_OK ) {
+	const SIRConfigResult eRead = pAdapter->m_Storage.pfnRead( pAdapter->m_Storage.pContext, &request );
+	SIRConfigResult eResult = eRead;
+	if ( eRead == SIRConfigResult::SIR_CONFIG_OK ) {
 		if ( request.pszName != pszFileName || request.nNameBytes != nBytes || request.pBytes != pAdapter->m_Storage.pFileBytes ||
 		     request.nCapacity != pAdapter->m_Storage.nFileCapacity ) {
-			eResult = SIR_CONFIG_INVALID_ARGUMENT;
+			eResult = SIRConfigResult::SIR_CONFIG_INVALID_ARGUMENT;
 		} else if ( request.nRead > request.nCapacity ) {
-			eResult = SIR_CONFIG_LIMIT_EXCEEDED;
+			eResult = SIRConfigResult::SIR_CONFIG_LIMIT_EXCEEDED;
 		} else {
 			const sirConfigInput_t input = { request.pBytes, request.nRead, {} };
 			eResult = pAdapter->m_pAdapter->applyIni( input, submission.origin, &pAdapter->m_LastDiagnostic );
 		}
 	}
 	pAdapter->m_bExecuting = false;
-	if ( eResult == SIR_CONFIG_OK ) {
-		return SIR_REGISTRATION_OK;
+	if ( eResult == SIRConfigResult::SIR_CONFIG_OK ) {
+		return SIRRegistrationResult::SIR_REGISTRATION_OK;
 	}
-	if ( eResult == SIR_CONFIG_NOT_FOUND ) {
-		return SIR_REGISTRATION_NOT_FOUND;
+	if ( eResult == SIRConfigResult::SIR_CONFIG_NOT_FOUND ) {
+		return SIRRegistrationResult::SIR_REGISTRATION_NOT_FOUND;
 	}
-	if ( eResult == SIR_CONFIG_TYPE_MISMATCH ) {
-		return SIR_REGISTRATION_TYPE_MISMATCH;
+	if ( eResult == SIRConfigResult::SIR_CONFIG_TYPE_MISMATCH ) {
+		return SIRRegistrationResult::SIR_REGISTRATION_TYPE_MISMATCH;
 	}
-	if ( eResult == SIR_CONFIG_LIMIT_EXCEEDED ) {
-		return SIR_REGISTRATION_CAPACITY_EXCEEDED;
+	if ( eResult == SIRConfigResult::SIR_CONFIG_LIMIT_EXCEEDED ) {
+		return SIRRegistrationResult::SIR_REGISTRATION_CAPACITY_EXCEEDED;
 	}
-	return SIR_REGISTRATION_BAD_SCHEMA;
+	return SIRRegistrationResult::SIR_REGISTRATION_BAD_SCHEMA;
 }
 
 void SIRConsoleConfigAdapter::shutdown( void ) noexcept

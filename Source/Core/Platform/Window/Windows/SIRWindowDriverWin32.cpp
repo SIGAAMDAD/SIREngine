@@ -10,7 +10,7 @@ static UINT sirCurrentWindowDpi( HWND hWindow ) noexcept
 	const HMODULE hUser32 = GetModuleHandleW( L"user32.dll" );
 	if ( hUser32 != nullptr ) {
 		typedef UINT( WINAPI * sirGetDpiFn_t )( HWND );
-		const sirGetDpiFn_t pGetDpi = ( sirGetDpiFn_t )GetProcAddress( hUser32, "GetDpiForWindow" );
+		const sirGetDpiFn_t pGetDpi = static_cast<sirGetDpiFn_t>(GetProcAddress( hUser32, "GetDpiForWindow" ));
 		if ( pGetDpi != nullptr ) {
 			const UINT nDpi = pGetDpi( hWindow );
 			if ( nDpi != 0 ) {
@@ -29,9 +29,9 @@ static BOOL sirAdjustWindowFrame( RECT *pFrame, DWORD nStyle, DWORD nExStyle, HW
 	typedef UINT( WINAPI * sirGetSystemDpiFn_t )( void );
 	typedef BOOL( WINAPI * sirAdjustForDpiFn_t )( LPRECT, DWORD, BOOL, DWORD, UINT );
 	if ( hUser32 != nullptr ) {
-		const sirGetDpiFn_t pGetDpi = ( sirGetDpiFn_t )GetProcAddress( hUser32, "GetDpiForWindow" );
-		const sirGetSystemDpiFn_t pGetSystemDpi = ( sirGetSystemDpiFn_t )GetProcAddress( hUser32, "GetDpiForSystem" );
-		const sirAdjustForDpiFn_t pAdjust = ( sirAdjustForDpiFn_t )GetProcAddress( hUser32, "AdjustWindowRectExForDpi" );
+		const sirGetDpiFn_t pGetDpi = static_cast<sirGetDpiFn_t>(GetProcAddress( hUser32, "GetDpiForWindow" ));
+		const sirGetSystemDpiFn_t pGetSystemDpi = static_cast<sirGetSystemDpiFn_t>(GetProcAddress( hUser32, "GetDpiForSystem" ));
+		const sirAdjustForDpiFn_t pAdjust = static_cast<sirAdjustForDpiFn_t>(GetProcAddress( hUser32, "AdjustWindowRectExForDpi" ));
 		const UINT nDpi = hWindow != nullptr && pGetDpi != nullptr ? pGetDpi( hWindow ) : pGetSystemDpi != nullptr ? pGetSystemDpi() : 96;
 		if ( pAdjust != nullptr && nDpi != 0 ) {
 			return pAdjust( pFrame, nStyle, FALSE, nExStyle, nDpi );
@@ -55,18 +55,18 @@ SIRWindowDriverWin32::~SIRWindowDriverWin32( void ) noexcept
 	shutdown();
 }
 
-sirWindowResult_t SIRWindowDriverWin32::initialize( void ) noexcept
+SIRWindowResult SIRWindowDriverWin32::initialize( void ) noexcept
 {
 	if ( m_bRegistered ) {
-		return SIR_WINDOW_BUSY;
+		return SIRWindowResult::SIR_WINDOW_BUSY;
 	}
 	AcquireSRWLockExclusive( &s_WindowClassLock );
 	if ( s_nWindowClassUsers == UINT32_MAX ) {
 		ReleaseSRWLockExclusive( &s_WindowClassLock );
-		return SIR_WINDOW_OUT_OF_CAPACITY;
+		return SIRWindowResult::SIR_WINDOW_OUT_OF_CAPACITY;
 	}
 	if ( s_nWindowClassUsers == 0 ) {
-		WNDCLASSW definition = {};
+		WNDCLASSW definition {};
 		definition.lpfnWndProc = windowProc;
 		definition.hInstance = GetModuleHandleW( nullptr );
 		definition.hCursor = LoadCursorW( nullptr, MAKEINTRESOURCEW( 32512 ) );
@@ -75,12 +75,12 @@ sirWindowResult_t SIRWindowDriverWin32::initialize( void ) noexcept
 		if ( nClass == 0 ) {
 			if ( GetLastError() != ERROR_CLASS_ALREADY_EXISTS ) {
 				ReleaseSRWLockExclusive( &s_WindowClassLock );
-				return SIR_WINDOW_NATIVE_FAILURE;
+				return SIRWindowResult::SIR_WINDOW_NATIVE_FAILURE;
 			}
-			WNDCLASSW existing = {};
+			WNDCLASSW existing {};
 			if ( !GetClassInfoW( definition.hInstance, s_szWindowClass, &existing ) || existing.lpfnWndProc != windowProc ) {
 				ReleaseSRWLockExclusive( &s_WindowClassLock );
-				return SIR_WINDOW_NATIVE_FAILURE;
+				return SIRWindowResult::SIR_WINDOW_NATIVE_FAILURE;
 			}
 		} else {
 			s_bWindowClassOwned = true;
@@ -89,27 +89,28 @@ sirWindowResult_t SIRWindowDriverWin32::initialize( void ) noexcept
 	++s_nWindowClassUsers;
 	m_bRegistered = true;
 	ReleaseSRWLockExclusive( &s_WindowClassLock );
-	return SIR_WINDOW_OK;
+	return SIRWindowResult::SIR_WINDOW_OK;
 }
 
-sirWindowResult_t SIRWindowDriverWin32::createWindow( const sirWindowCreateDesc_t& desc, uint32_t nSlot,
+SIRWindowResult SIRWindowDriverWin32::createWindow( const sirWindowCreateDesc_t& desc, uint32_t nSlot,
                                                       sirWindowNativeView_t *pView ) noexcept
 {
 	if ( nSlot >= SIR_WINDOW_MAX_WINDOWS || pView == nullptr || desc.pszTitle == nullptr || desc.nWidth == 0 || desc.nHeight == 0 ||
 	     desc.nWidth > 0x7fffffffU || desc.nHeight > 0x7fffffffU ) {
-		return SIR_WINDOW_INVALID_ARGUMENT;
+		return SIRWindowResult::SIR_WINDOW_INVALID_ARGUMENT;
 	}
 	if ( !m_bRegistered ) {
-		return SIR_WINDOW_STOPPED;
+		return SIRWindowResult::SIR_WINDOW_STOPPED;
 	}
 	sirWin32Slot_t& slot = m_Slots[nSlot];
 	if ( slot.hWindow != nullptr ) {
-		return SIR_WINDOW_BUSY;
+		return SIRWindowResult::SIR_WINDOW_BUSY;
 	}
-	wchar_t szTitle[128] = {};
+	wchar_t szTitle[128];
+	memset( szTitle, 0, sizeof( szTitle ) );
 	const int nCount = MultiByteToWideChar( CP_UTF8, MB_ERR_INVALID_CHARS, desc.pszTitle, -1, szTitle, 128 );
 	if ( nCount == 0 ) {
-		return SIR_WINDOW_INVALID_ARGUMENT;
+		return SIRWindowResult::SIR_WINDOW_INVALID_ARGUMENT;
 	}
 	slot.pDriver = this;
 	slot.nIndex = nSlot;
@@ -118,131 +119,132 @@ sirWindowResult_t SIRWindowDriverWin32::createWindow( const sirWindowCreateDesc_
 	m_bClosePending[nSlot] = false;
 	m_bLostPending[nSlot] = false;
 	m_nLostNativeWindow[nSlot] = 0;
-	RECT frame = { 0, 0, ( LONG )desc.nWidth, ( LONG )desc.nHeight };
+	RECT frame = { 0, 0, static_cast<LONG>(desc.nWidth), static_cast<LONG>(desc.nHeight) };
 	if ( !sirAdjustWindowFrame( &frame, WS_OVERLAPPEDWINDOW, 0, nullptr ) ) {
 		slot = {};
-		return SIR_WINDOW_NATIVE_FAILURE;
+		return SIRWindowResult::SIR_WINDOW_NATIVE_FAILURE;
 	}
 	const HWND hWindow =
 	    CreateWindowExW( 0, s_szWindowClass, szTitle, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, frame.right - frame.left,
 		                 frame.bottom - frame.top, nullptr, nullptr, GetModuleHandleW( nullptr ), &slot );
 	if ( hWindow == nullptr ) {
 		slot = {};
-		return SIR_WINDOW_NATIVE_FAILURE;
+		return SIRWindowResult::SIR_WINDOW_NATIVE_FAILURE;
 	}
 	slot.hWindow = hWindow;
-	*pView = { SIR_WINDOW_PLATFORM_WIN32, ( uintptr_t )hWindow, ( uintptr_t )GetModuleHandleW( nullptr ), 0 };
+	*pView = { SIRWindowPlatform::SIR_WINDOW_PLATFORM_WIN32, static_cast<uintptr_t>(hWindow), static_cast<uintptr_t>(GetModuleHandleW( nullptr )), 0 };
 	ShowWindow( hWindow, SW_SHOWNORMAL );
-	return SIR_WINDOW_OK;
+	return SIRWindowResult::SIR_WINDOW_OK;
 }
 
-sirWindowResult_t SIRWindowDriverWin32::destroyWindow( uint32_t nSlot ) noexcept
+SIRWindowResult SIRWindowDriverWin32::destroyWindow( uint32_t nSlot ) noexcept
 {
 	if ( !m_bRegistered ) {
-		return SIR_WINDOW_STOPPED;
+		return SIRWindowResult::SIR_WINDOW_STOPPED;
 	}
 	if ( nSlot >= SIR_WINDOW_MAX_WINDOWS ) {
-		return SIR_WINDOW_INVALID_HANDLE;
+		return SIRWindowResult::SIR_WINDOW_INVALID_HANDLE;
 	}
 	sirWin32Slot_t& slot = m_Slots[nSlot];
 	if ( slot.hWindow == nullptr && !slot.bLost ) {
-		return SIR_WINDOW_INVALID_HANDLE;
+		return SIRWindowResult::SIR_WINDOW_INVALID_HANDLE;
 	}
 	if ( slot.hWindow != nullptr ) {
 		slot.bDestroying = true;
 		if ( !DestroyWindow( slot.hWindow ) ) {
 			slot.bDestroying = false;
-			return SIR_WINDOW_NATIVE_FAILURE;
+			return SIRWindowResult::SIR_WINDOW_NATIVE_FAILURE;
 		}
 	}
 	slot = {};
 	m_bClosePending[nSlot] = false;
 	m_bLostPending[nSlot] = false;
 	m_nLostNativeWindow[nSlot] = 0;
-	return SIR_WINDOW_OK;
+	return SIRWindowResult::SIR_WINDOW_OK;
 }
 
-sirWindowResult_t SIRWindowDriverWin32::mutateWindow( uint32_t nSlot, const sirWindowMutation_t& mutation ) noexcept
+SIRWindowResult SIRWindowDriverWin32::mutateWindow( uint32_t nSlot, const sirWindowMutation_t& mutation ) noexcept
 {
 	if ( !m_bRegistered ) {
-		return SIR_WINDOW_STOPPED;
+		return SIRWindowResult::SIR_WINDOW_STOPPED;
 	}
 	if ( nSlot >= SIR_WINDOW_MAX_WINDOWS || m_Slots[nSlot].hWindow == nullptr ) {
-		return SIR_WINDOW_INVALID_HANDLE;
+		return SIRWindowResult::SIR_WINDOW_INVALID_HANDLE;
 	}
 	const HWND hWindow = m_Slots[nSlot].hWindow;
 	switch ( mutation.eKind ) {
-	case SIR_WINDOW_MUTATION_TITLE: {
+	case SIRWindowMutationKind::SIR_WINDOW_MUTATION_TITLE: {
 		if ( mutation.pszTitle == nullptr ) {
-			return SIR_WINDOW_INVALID_ARGUMENT;
+			return SIRWindowResult::SIR_WINDOW_INVALID_ARGUMENT;
 		}
-		wchar_t szTitle[128] = {};
+		wchar_t szTitle[128];
+		memset( szTitle, 0, sizeof( szTitle ) );
 		if ( MultiByteToWideChar( CP_UTF8, MB_ERR_INVALID_CHARS, mutation.pszTitle, -1, szTitle, 128 ) == 0 ) {
-			return SIR_WINDOW_INVALID_ARGUMENT;
+			return SIRWindowResult::SIR_WINDOW_INVALID_ARGUMENT;
 		}
 		if ( !SetWindowTextW( hWindow, szTitle ) ) {
-			return SIR_WINDOW_NATIVE_FAILURE;
+			return SIRWindowResult::SIR_WINDOW_NATIVE_FAILURE;
 		}
 		break;
 	}
-	case SIR_WINDOW_MUTATION_RESIZE: {
+	case SIRWindowMutationKind::SIR_WINDOW_MUTATION_RESIZE: {
 		if ( mutation.nWidth == 0 || mutation.nHeight == 0 || mutation.nWidth > 0x7fffffffU || mutation.nHeight > 0x7fffffffU ) {
-			return SIR_WINDOW_INVALID_ARGUMENT;
+			return SIRWindowResult::SIR_WINDOW_INVALID_ARGUMENT;
 		}
-		RECT frame = { 0, 0, ( LONG )mutation.nWidth, ( LONG )mutation.nHeight };
-		const DWORD nStyle = ( DWORD )GetWindowLongPtrW( hWindow, GWL_STYLE );
-		const DWORD nExStyle = ( DWORD )GetWindowLongPtrW( hWindow, GWL_EXSTYLE );
+		RECT frame = { 0, 0, static_cast<LONG>(mutation.nWidth), static_cast<LONG>(mutation.nHeight) };
+		const DWORD nStyle = static_cast<DWORD>(GetWindowLongPtrW( hWindow, GWL_STYLE ));
+		const DWORD nExStyle = static_cast<DWORD>(GetWindowLongPtrW( hWindow, GWL_EXSTYLE ));
 		if ( !sirAdjustWindowFrame( &frame, nStyle, nExStyle, hWindow ) ) {
-			return SIR_WINDOW_NATIVE_FAILURE;
+			return SIRWindowResult::SIR_WINDOW_NATIVE_FAILURE;
 		}
 		if ( !SetWindowPos( hWindow, nullptr, 0, 0, frame.right - frame.left, frame.bottom - frame.top,
 		                    SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE ) ) {
-			return SIR_WINDOW_NATIVE_FAILURE;
+			return SIRWindowResult::SIR_WINDOW_NATIVE_FAILURE;
 		}
 		break;
 	}
-	case SIR_WINDOW_MUTATION_SHOW:
+	case SIRWindowMutationKind::SIR_WINDOW_MUTATION_SHOW:
 		ShowWindow( hWindow, SW_SHOW );
 		break;
-	case SIR_WINDOW_MUTATION_HIDE:
+	case SIRWindowMutationKind::SIR_WINDOW_MUTATION_HIDE:
 		ShowWindow( hWindow, SW_HIDE );
 		break;
-	case SIR_WINDOW_MUTATION_MINIMIZE:
+	case SIRWindowMutationKind::SIR_WINDOW_MUTATION_MINIMIZE:
 		ShowWindow( hWindow, SW_MINIMIZE );
 		break;
-	case SIR_WINDOW_MUTATION_RESTORE:
+	case SIRWindowMutationKind::SIR_WINDOW_MUTATION_RESTORE:
 		ShowWindow( hWindow, SW_RESTORE );
 		break;
-	case SIR_WINDOW_MUTATION_MAXIMIZE:
+	case SIRWindowMutationKind::SIR_WINDOW_MUTATION_MAXIMIZE:
 		ShowWindow( hWindow, SW_MAXIMIZE );
 		break;
-	case SIR_WINDOW_MUTATION_FULLSCREEN_ENTER: {
+	case SIRWindowMutationKind::SIR_WINDOW_MUTATION_FULLSCREEN_ENTER: {
 		sirWin32Slot_t& slot = m_Slots[nSlot];
 		if ( slot.bFullscreen ) {
 			break;
 		}
-		MONITORINFO info = {};
+		MONITORINFO info {};
 		info.cbSize = sizeof( info );
 		if ( !GetMonitorInfoW( MonitorFromWindow( hWindow, MONITOR_DEFAULTTONEAREST ), &info ) ) {
-			return SIR_WINDOW_NATIVE_FAILURE;
+			return SIRWindowResult::SIR_WINDOW_NATIVE_FAILURE;
 		}
-		WINDOWPLACEMENT placement = {};
+		WINDOWPLACEMENT placement {};
 		placement.length = sizeof( placement );
 		if ( !GetWindowPlacement( hWindow, &placement ) ) {
-			return SIR_WINDOW_NATIVE_FAILURE;
+			return SIRWindowResult::SIR_WINDOW_NATIVE_FAILURE;
 		}
-		const DWORD nStyle = ( DWORD )GetWindowLongPtrW( hWindow, GWL_STYLE );
-		const DWORD nExStyle = ( DWORD )GetWindowLongPtrW( hWindow, GWL_EXSTYLE );
+		const DWORD nStyle = static_cast<DWORD>(GetWindowLongPtrW( hWindow, GWL_STYLE ));
+		const DWORD nExStyle = static_cast<DWORD>(GetWindowLongPtrW( hWindow, GWL_EXSTYLE ));
 		SetLastError( 0 );
-		if ( SetWindowLongPtrW( hWindow, GWL_STYLE, ( LONG_PTR )( nStyle & ~WS_OVERLAPPEDWINDOW ) ) == 0 && GetLastError() != 0 ) {
-			return SIR_WINDOW_NATIVE_FAILURE;
+		if ( SetWindowLongPtrW( hWindow, GWL_STYLE, static_cast<LONG_PTR>( nStyle & ~WS_OVERLAPPEDWINDOW ) ) == 0 && GetLastError() != 0 ) {
+			return SIRWindowResult::SIR_WINDOW_NATIVE_FAILURE;
 		}
 		if ( !SetWindowPos( hWindow, HWND_TOP, info.rcMonitor.left, info.rcMonitor.top, info.rcMonitor.right - info.rcMonitor.left,
 		                    info.rcMonitor.bottom - info.rcMonitor.top, SWP_FRAMECHANGED | SWP_NOOWNERZORDER ) ) {
-			( void )SetWindowLongPtrW( hWindow, GWL_STYLE, ( LONG_PTR )nStyle );
-			( void )SetWindowPos( hWindow, nullptr, 0, 0, 0, 0,
+			static_cast<void>(SetWindowLongPtrW( hWindow, GWL_STYLE, static_cast<LONG_PTR>(nStyle) ));
+			static_cast<void>(SetWindowPos)( hWindow, nullptr, 0, 0, 0, 0,
 			                      SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE );
-			return SIR_WINDOW_NATIVE_FAILURE;
+			return SIRWindowResult::SIR_WINDOW_NATIVE_FAILURE;
 		}
 		slot.nWindowedStyle = nStyle;
 		slot.nWindowedExStyle = nExStyle;
@@ -250,29 +252,29 @@ sirWindowResult_t SIRWindowDriverWin32::mutateWindow( uint32_t nSlot, const sirW
 		slot.bFullscreen = true;
 		break;
 	}
-	case SIR_WINDOW_MUTATION_FULLSCREEN_EXIT: {
+	case SIRWindowMutationKind::SIR_WINDOW_MUTATION_FULLSCREEN_EXIT: {
 		sirWin32Slot_t& slot = m_Slots[nSlot];
 		if ( !slot.bFullscreen ) {
 			break;
 		}
-		( void )SetWindowLongPtrW( hWindow, GWL_STYLE, ( LONG_PTR )slot.nWindowedStyle );
-		( void )SetWindowLongPtrW( hWindow, GWL_EXSTYLE, ( LONG_PTR )slot.nWindowedExStyle );
+		static_cast<void>(SetWindowLongPtrW( hWindow, GWL_STYLE, static_cast<LONG_PTR>(slot.nWindowedStyle) ));
+		static_cast<void>(SetWindowLongPtrW( hWindow, GWL_EXSTYLE, static_cast<LONG_PTR>(slot.nWindowedExStyle) ));
 		if ( !SetWindowPlacement( hWindow, &slot.windowedPlacement ) ||
 		     !SetWindowPos( hWindow, nullptr, 0, 0, 0, 0, SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE ) ) {
-			return SIR_WINDOW_NATIVE_FAILURE;
+			return SIRWindowResult::SIR_WINDOW_NATIVE_FAILURE;
 		}
 		slot.bFullscreen = false;
 		break;
 	}
 	default:
-		return SIR_WINDOW_UNSUPPORTED;
+		return SIRWindowResult::SIR_WINDOW_UNSUPPORTED;
 	}
-	return SIR_WINDOW_OK;
+	return SIRWindowResult::SIR_WINDOW_OK;
 }
 
-void SIRWindowDriverWin32::queueEvent( uint32_t nSlot, sirWindowEventKind_t eKind, uint32_t nWidth, uint32_t nHeight ) noexcept
+void SIRWindowDriverWin32::queueEvent( uint32_t nSlot, SIRWindowEventKind eKind, uint32_t nWidth, uint32_t nHeight ) noexcept
 {
-	if ( m_nEventCount != 0 && ( eKind == SIR_WINDOW_EVENT_RESIZED || eKind == SIR_WINDOW_EVENT_DPI_CHANGED ) ) {
+	if ( m_nEventCount != 0 && ( eKind == SIRWindowEventKind::SIR_WINDOW_EVENT_RESIZED || eKind == SIRWindowEventKind::SIR_WINDOW_EVENT_DPI_CHANGED ) ) {
 		const uint32_t nPrevious = ( m_nEventWrite + SIR_WINDOW_EVENT_CAPACITY - 1 ) % SIR_WINDOW_EVENT_CAPACITY;
 		sirWindowBackendEvent_t& previous = m_Events[nPrevious];
 		if ( previous.nSlot == nSlot && previous.eKind == eKind ) {
@@ -285,7 +287,7 @@ void SIRWindowDriverWin32::queueEvent( uint32_t nSlot, sirWindowEventKind_t eKin
 		m_bOverflow = true;
 		return;
 	}
-	m_Events[m_nEventWrite] = { nSlot, ( uintptr_t )m_Slots[nSlot].hWindow, eKind, nWidth, nHeight };
+	m_Events[m_nEventWrite] = { nSlot, static_cast<uintptr_t>(m_Slots)[nSlot].hWindow, eKind, nWidth, nHeight };
 	m_nEventWrite = ( m_nEventWrite + 1 ) % SIR_WINDOW_EVENT_CAPACITY;
 	++m_nEventCount;
 }
@@ -293,12 +295,12 @@ void SIRWindowDriverWin32::queueEvent( uint32_t nSlot, sirWindowEventKind_t eKin
 LRESULT CALLBACK SIRWindowDriverWin32::windowProc( HWND hWindow, UINT nMessage, WPARAM nWParam, LPARAM nLParam )
 {
 	if ( nMessage == WM_NCCREATE ) {
-		const CREATESTRUCTW *pCreate = ( const CREATESTRUCTW * )nLParam;
-		sirWin32Slot_t *pSlot = ( sirWin32Slot_t * )pCreate->lpCreateParams;
+		const CREATESTRUCTW *pCreate = static_cast<const CREATESTRUCTW *>(nLParam);
+		sirWin32Slot_t *pSlot = static_cast<sirWin32Slot_t *>(pCreate->lpCreateParams);
 		pSlot->hWindow = hWindow;
-		SetWindowLongPtrW( hWindow, GWLP_USERDATA, ( LONG_PTR )pSlot );
+		SetWindowLongPtrW( hWindow, GWLP_USERDATA, static_cast<LONG_PTR>(pSlot) );
 	}
-	sirWin32Slot_t *pSlot = ( sirWin32Slot_t * )GetWindowLongPtrW( hWindow, GWLP_USERDATA );
+	sirWin32Slot_t *pSlot = static_cast<sirWin32Slot_t *>(GetWindowLongPtrW( hWindow, GWLP_USERDATA ));
 	if ( pSlot != nullptr && pSlot->pDriver != nullptr ) {
 		SIRWindowDriverWin32 *pDriver = pSlot->pDriver;
 		// Native lifecycle always precedes the optional input message sink.
@@ -307,7 +309,7 @@ LRESULT CALLBACK SIRWindowDriverWin32::windowProc( HWND hWindow, UINT nMessage, 
 			return nMessage == WM_QUERYENDSESSION ? TRUE : 0;
 		}
 		if ( nMessage == WM_DESTROY && !pSlot->bDestroying ) {
-			pDriver->m_nLostNativeWindow[pSlot->nIndex] = ( uintptr_t )hWindow;
+			pDriver->m_nLostNativeWindow[pSlot->nIndex] = static_cast<uintptr_t>(hWindow);
 			pDriver->m_bLostPending[pSlot->nIndex] = true;
 			pSlot->bLost = true;
 			pSlot->hWindow = nullptr;
@@ -316,58 +318,58 @@ LRESULT CALLBACK SIRWindowDriverWin32::windowProc( HWND hWindow, UINT nMessage, 
 			SetWindowLongPtrW( hWindow, GWLP_USERDATA, 0 );
 		}
 		if ( nMessage == WM_SHOWWINDOW ) {
-			pDriver->queueEvent( pSlot->nIndex, nWParam ? SIR_WINDOW_EVENT_SHOWN : SIR_WINDOW_EVENT_HIDDEN, 0, 0 );
+			pDriver->queueEvent( pSlot->nIndex, nWParam ? SIRWindowEventKind::SIR_WINDOW_EVENT_SHOWN : SIRWindowEventKind::SIR_WINDOW_EVENT_HIDDEN, 0, 0 );
 		} else if ( nMessage == WM_SIZE ) {
 			if ( nWParam == SIZE_MINIMIZED ) {
-				pDriver->queueEvent( pSlot->nIndex, SIR_WINDOW_EVENT_MINIMIZED, 0, 0 );
+				pDriver->queueEvent( pSlot->nIndex, SIRWindowEventKind::SIR_WINDOW_EVENT_MINIMIZED, 0, 0 );
 			} else {
-				pDriver->queueEvent( pSlot->nIndex, SIR_WINDOW_EVENT_RESIZED, LOWORD( nLParam ), HIWORD( nLParam ) );
-				pDriver->queueEvent( pSlot->nIndex, SIR_WINDOW_EVENT_RESTORED, 0, 0 );
+				pDriver->queueEvent( pSlot->nIndex, SIRWindowEventKind::SIR_WINDOW_EVENT_RESIZED, LOWORD( nLParam ), HIWORD( nLParam ) );
+				pDriver->queueEvent( pSlot->nIndex, SIRWindowEventKind::SIR_WINDOW_EVENT_RESTORED, 0, 0 );
 			}
 		} else if ( nMessage == WM_MOVE ) {
-			pDriver->queueEvent( pSlot->nIndex, SIR_WINDOW_EVENT_DPI_CHANGED, sirCurrentWindowDpi( hWindow ), 0 );
+			pDriver->queueEvent( pSlot->nIndex, SIRWindowEventKind::SIR_WINDOW_EVENT_DPI_CHANGED, sirCurrentWindowDpi( hWindow ), 0 );
 		} else if ( nMessage == WM_DISPLAYCHANGE ) {
-			RECT client = {};
+			RECT client {};
 			if ( GetClientRect( hWindow, &client ) ) {
-				pDriver->queueEvent( pSlot->nIndex, SIR_WINDOW_EVENT_DISPLAY_CHANGED, ( uint32_t )( client.right - client.left ),
-				                     ( uint32_t )( client.bottom - client.top ) );
+				pDriver->queueEvent( pSlot->nIndex, SIRWindowEventKind::SIR_WINDOW_EVENT_DISPLAY_CHANGED, static_cast<uint32_t>( client.right - client.left ),
+				                     static_cast<uint32_t>( client.bottom - client.top ) );
 			}
 		} else if ( nMessage == WM_DPICHANGED ) {
-			const RECT *pSuggested = ( const RECT * )nLParam;
+			const RECT *pSuggested = static_cast<const RECT *>(nLParam);
 			if ( pSuggested != nullptr ) {
-				( void )SetWindowPos( hWindow, nullptr, pSuggested->left, pSuggested->top, pSuggested->right - pSuggested->left,
+				static_cast<void>(SetWindowPos)( hWindow, nullptr, pSuggested->left, pSuggested->top, pSuggested->right - pSuggested->left,
 				                      pSuggested->bottom - pSuggested->top, SWP_NOZORDER | SWP_NOACTIVATE );
 			}
-			pDriver->queueEvent( pSlot->nIndex, SIR_WINDOW_EVENT_DPI_CHANGED, LOWORD( nWParam ), 0 );
+			pDriver->queueEvent( pSlot->nIndex, SIRWindowEventKind::SIR_WINDOW_EVENT_DPI_CHANGED, LOWORD( nWParam ), 0 );
 		} else if ( nMessage == WM_SETFOCUS ) {
-			pDriver->queueEvent( pSlot->nIndex, SIR_WINDOW_EVENT_FOCUS_GAINED, 0, 0 );
+			pDriver->queueEvent( pSlot->nIndex, SIRWindowEventKind::SIR_WINDOW_EVENT_FOCUS_GAINED, 0, 0 );
 		} else if ( nMessage == WM_KILLFOCUS ) {
-			pDriver->queueEvent( pSlot->nIndex, SIR_WINDOW_EVENT_FOCUS_LOST, 0, 0 );
+			pDriver->queueEvent( pSlot->nIndex, SIRWindowEventKind::SIR_WINDOW_EVENT_FOCUS_LOST, 0, 0 );
 		}
 		if ( pDriver->m_pSink != nullptr ) {
-			const sirWindowWin32Message_t message = { ( uintptr_t )hWindow, nMessage, ( uintptr_t )nWParam, ( intptr_t )nLParam };
+			const sirWindowWin32Message_t message = { static_cast<uintptr_t>(hWindow), nMessage, static_cast<uintptr_t>(nWParam), static_cast<intptr_t>(nLParam) };
 			const sirWindowWin32Dispatch_t result = pDriver->m_pSink( message, pDriver->m_pSinkContext );
 			// Input may consume text and pointer decisions, never the native
 			// window state above. Foreground raw input and native teardown
 			// must still reach DefWindowProcW for OS-owned cleanup.
 			if ( result.bHandled && nMessage != WM_NCDESTROY &&
 			     !( nMessage == WM_INPUT && GET_RAWINPUT_CODE_WPARAM( nWParam ) == RIM_INPUT ) ) {
-				return ( LRESULT )result.nResult;
+				return static_cast<LRESULT>(result.nResult);
 			}
 		}
 	}
 	return DefWindowProcW( hWindow, nMessage, nWParam, nLParam );
 }
 
-sirWindowResult_t SIRWindowDriverWin32::pumpEvents( uint32_t nBudget, sirWindowDriverEventFn_t pCallback, void *pContext ) noexcept
+SIRWindowResult SIRWindowDriverWin32::pumpEvents( uint32_t nBudget, sirWindowDriverEventFn_t pCallback, void *pContext ) noexcept
 {
 	if ( !m_bRegistered ) {
-		return SIR_WINDOW_STOPPED;
+		return SIRWindowResult::SIR_WINDOW_STOPPED;
 	}
 	if ( nBudget == 0 || pCallback == nullptr ) {
-		return SIR_WINDOW_INVALID_ARGUMENT;
+		return SIRWindowResult::SIR_WINDOW_INVALID_ARGUMENT;
 	}
-	MSG message = {};
+	MSG message {};
 	uint32_t nProcessed = 0;
 	while ( nProcessed < nBudget && PeekMessageW( &message, nullptr, 0, 0, PM_REMOVE ) ) {
 		if ( message.message == WM_QUIT ) {
@@ -388,13 +390,13 @@ sirWindowResult_t SIRWindowDriverWin32::pumpEvents( uint32_t nBudget, sirWindowD
 	for ( uint32_t i = 0; i < SIR_WINDOW_MAX_WINDOWS && nDelivered < nBudget; ++i ) {
 		if ( m_bLostPending[i] ) {
 			m_bLostPending[i] = false;
-			const sirWindowBackendEvent_t event = { i, m_nLostNativeWindow[i], SIR_WINDOW_EVENT_LOST, 0, 0 };
+			const sirWindowBackendEvent_t event = { i, m_nLostNativeWindow[i], SIRWindowEventKind::SIR_WINDOW_EVENT_LOST, 0, 0 };
 			pCallback( pContext, event );
 			++nDelivered;
 		}
 		if ( m_bClosePending[i] && nDelivered < nBudget ) {
 			m_bClosePending[i] = false;
-			const sirWindowBackendEvent_t event = { i, ( uintptr_t )m_Slots[i].hWindow, SIR_WINDOW_EVENT_CLOSE_REQUESTED, 0, 0 };
+			const sirWindowBackendEvent_t event = { i, static_cast<uintptr_t>(m_Slots)[i].hWindow, SIRWindowEventKind::SIR_WINDOW_EVENT_CLOSE_REQUESTED, 0, 0 };
 			pCallback( pContext, event );
 			++nDelivered;
 		}
@@ -407,7 +409,7 @@ sirWindowResult_t SIRWindowDriverWin32::pumpEvents( uint32_t nBudget, sirWindowD
 	}
 	const bool bLost = m_bOverflow;
 	m_bOverflow = false;
-	return bLost ? SIR_WINDOW_EVENTS_LOST : SIR_WINDOW_OK;
+	return bLost ? SIRWindowResult::SIR_WINDOW_EVENTS_LOST : SIRWindowResult::SIR_WINDOW_OK;
 }
 
 void SIRWindowDriverWin32::shutdown( void ) noexcept

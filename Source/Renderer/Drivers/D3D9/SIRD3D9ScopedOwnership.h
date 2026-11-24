@@ -12,8 +12,8 @@ express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIRD3D9SCOPEDOWNERSHIP_H__
-#define __SIRENGINE_SIRD3D9SCOPEDOWNERSHIP_H__
+#ifndef __SIR_D3_D9_SCOPEDOWNERSHIP_H__
+#define __SIR_D3_D9_SCOPEDOWNERSHIP_H__
 #ifdef _WIN32
 #include <windows.h>
 #include <stdlib.h>
@@ -116,4 +116,4 @@ private:
 	void *m_pData = nullptr;
 };
 #endif
-#endif // __SIRENGINE_SIRD3D9SCOPEDOWNERSHIP_H__
+#endif // __SIR_D3_D9_SCOPEDOWNERSHIP_H__

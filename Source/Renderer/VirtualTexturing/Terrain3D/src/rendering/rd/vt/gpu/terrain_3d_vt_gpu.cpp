@@ -27,19 +27,19 @@ using namespace godot;
 static t3dVTUploadReservation_t t3dVtReadReservation( const PackedByteArray& rBytes, uint32_t nIndex )
 {
 	t3dVTUploadReservation_t Record{};
-	memcpy( &Record, rBytes.ptr() + ( size_t )nIndex * sizeof( Record ), sizeof( Record ) );
+	memcpy( &Record, rBytes.ptr() + static_cast<size_t>(nIndex * sizeof(  Record  )), sizeof( Record ) );
 	return Record;
 }
 
 static void t3dVtWriteReservation( PackedByteArray& rBytes, uint32_t nIndex, const t3dVTUploadReservation_t& rRecord )
 {
-	memcpy( rBytes.ptrw() + ( size_t )nIndex * sizeof( rRecord ), &rRecord, sizeof( rRecord ) );
+	memcpy( rBytes.ptrw() + static_cast<size_t>(nIndex * sizeof(  rRecord  )), &rRecord, sizeof( rRecord ) );
 }
 
 static t3dVTRequestHashEntry_t t3dVtReadFeedback( const PackedByteArray& rBytes, uint32_t nIndex )
 {
 	t3dVTRequestHashEntry_t Record{};
-	memcpy( &Record, rBytes.ptr() + ( size_t )nIndex * sizeof( Record ), sizeof( Record ) );
+	memcpy( &Record, rBytes.ptr() + static_cast<size_t>(nIndex * sizeof(  Record  )), sizeof( Record ) );
 	return Record;
 }
 
@@ -103,7 +103,7 @@ bool Terrain3DVTGpu::prepare_cpu_cold( const t3dVTGpuResourcePlan_t& pPlan, cons
 	if ( nHintCapacity64 == 0u || nHintCapacity64 > INT32_MAX ||
 	     ( nHintCapacity64 + 1u ) * sizeof( t3dVTAncestorHint_t ) > pPlan.nBufferBytes[T3D_VT_GPU_BUFFER_ANCESTOR_HINTS] )
 		return false;
-	const int64_t nCapacity = ( int64_t )nHintCapacity64;
+	const int64_t nCapacity = static_cast<int64_t>(nHintCapacity64);
 	m_HintFirstChild.resize( nCapacity );
 	m_HintNextSibling.resize( nCapacity );
 	m_HintAllocationIndex.resize( nCapacity );
@@ -120,7 +120,7 @@ bool Terrain3DVTGpu::prepare_cpu_cold( const t3dVTGpuResourcePlan_t& pPlan, cons
 		shutdown_cold();
 		return false;
 	}
-	memset( m_HintQueued.ptrw(), 0, ( size_t )nCapacity );
+	memset( m_HintQueued.ptrw(), 0, static_cast<size_t>(nCapacity) );
 #endif
 	// Reserve Godot-owned staging arrays before resizing any of them. Zone
 	// allocations are charged separately by their backing allocation.
@@ -148,8 +148,8 @@ bool Terrain3DVTGpu::prepare_cpu_cold( const t3dVTGpuResourcePlan_t& pPlan, cons
 		shutdown_cold();
 		return false;
 	}
-	m_AllocationUpload.resize( ( int64_t )nAllocationScratchBytes64 );
-	if ( m_AllocationUpload.size() != ( int64_t )nAllocationScratchBytes64 ) {
+	m_AllocationUpload.resizestatic_cast<int64_t>(nAllocationScratchBytes64);
+	if ( m_AllocationUpload.size() != static_cast<int64_t>(nAllocationScratchBytes64) ) {
 		shutdown_cold();
 		return false;
 	}
@@ -160,26 +160,26 @@ bool Terrain3DVTGpu::prepare_cpu_cold( const t3dVTGpuResourcePlan_t& pPlan, cons
 		shutdown_cold();
 		return false;
 	}
-	m_DatabaseUpload.resize( ( int64_t )nDatabaseScratchBytes );
-	if ( m_DatabaseUpload.size() != ( int64_t )nDatabaseScratchBytes ) {
+	m_DatabaseUpload.resizestatic_cast<int64_t>(nDatabaseScratchBytes);
+	if ( m_DatabaseUpload.size() != static_cast<int64_t>(nDatabaseScratchBytes) ) {
 		shutdown_cold();
 		return false;
 	}
 	const uint32_t nRetiredScratchCapacity = pLimits.nMaxVtPhysicalPageSets != 0u ? pLimits.nMaxVtPhysicalPageSets : 1u;
-	const uint64_t nPageScratchBytes64 = ( uint64_t )nRetiredScratchCapacity * sizeof( t3dVTPageTableEntry_t );
+	const uint64_t nPageScratchBytes64 = static_cast<uint64_t>(nRetiredScratchCapacity * sizeof(  t3dVTPageTableEntry_t  ));
 	if ( nPageScratchBytes64 > INT32_MAX ) {
 		shutdown_cold();
 		return false;
 	}
-	m_PageEntryUpload.resize( ( int64_t )nPageScratchBytes64 );
-	m_RetiredPageScratch.resize( ( int64_t )nRetiredScratchCapacity );
-	m_RetiredSlotScratch.resize( ( int64_t )nRetiredScratchCapacity );
-	m_UploadBatchOrder.resize( ( int64_t )nRetiredScratchCapacity );
-	m_UploadBatchReservations.resize( ( int64_t )( ( uint64_t )nRetiredScratchCapacity * sizeof( t3dVTUploadReservation_t ) ) );
-	if ( m_PageEntryUpload.size() != ( int64_t )nPageScratchBytes64 || m_RetiredPageScratch.size() != ( int64_t )nRetiredScratchCapacity ||
-	     m_RetiredSlotScratch.size() != ( int64_t )nRetiredScratchCapacity ||
-	     m_UploadBatchOrder.size() != ( int64_t )nRetiredScratchCapacity ||
-	     m_UploadBatchReservations.size() != ( int64_t )( ( uint64_t )nRetiredScratchCapacity * sizeof( t3dVTUploadReservation_t ) ) ) {
+	m_PageEntryUpload.resizestatic_cast<int64_t>(nPageScratchBytes64);
+	m_RetiredPageScratch.resizestatic_cast<int64_t>(nRetiredScratchCapacity);
+	m_RetiredSlotScratch.resizestatic_cast<int64_t>(nRetiredScratchCapacity);
+	m_UploadBatchOrder.resizestatic_cast<int64_t>(nRetiredScratchCapacity);
+	m_UploadBatchReservations.resize( ( int64_t )( static_cast<uint64_t>(nRetiredScratchCapacity * sizeof(  t3dVTUploadReservation_t  )) ) );
+	if ( m_PageEntryUpload.size() != static_cast<int64_t>(nPageScratchBytes64) || m_RetiredPageScratch.size() != static_cast<int64_t>(nRetiredScratchCapacity) ||
+	     m_RetiredSlotScratch.size() != static_cast<int64_t>(nRetiredScratchCapacity) ||
+	     m_UploadBatchOrder.size() != static_cast<int64_t>(nRetiredScratchCapacity) ||
+	     m_UploadBatchReservations.size() != ( int64_t )( static_cast<uint64_t>(nRetiredScratchCapacity * sizeof(  t3dVTUploadReservation_t  )) ) ) {
 		shutdown_cold();
 		return false;
 	}
@@ -190,14 +190,14 @@ bool Terrain3DVTGpu::prepare_cpu_cold( const t3dVTGpuResourcePlan_t& pPlan, cons
 			return false;
 		}
 		m_PhysicalUpload[c].resize( nBytes );
-		if ( m_PhysicalUpload[c].size() != ( int64_t )nBytes ) {
+		if ( m_PhysicalUpload[c].size() != static_cast<int64_t>(nBytes) ) {
 			shutdown_cold();
 			return false;
 		}
 	}
 	uint64_t nReusedTailBytes = 0u;
 	for ( uint32_t c = 0u; c < T3D_VT_CHANNEL_COUNT; ++c ) {
-		if ( m_NeutralTailUpload[c].size() == ( int64_t )m_Plan.nVtTailBytes[c] ) {
+		if ( m_NeutralTailUpload[c].size() == static_cast<int64_t>(m_Plan.nVtTailBytes[c]) ) {
 			nReusedTailBytes += m_Plan.nVtTailBytes[c];
 		}
 	}
@@ -227,7 +227,7 @@ bool Terrain3DVTGpu::prepare_cpu_cold( const t3dVTGpuResourcePlan_t& pPlan, cons
 			return false;
 		}
 	}
-	if ( !m_stagingMemory.resize( m_stagingMemory.bytes() + ( uint64_t )m_feedbackGridLayout.m_nTotalBytes +
+	if ( !m_stagingMemory.resize( m_stagingMemory.bytes() + static_cast<uint64_t>(m_feedbackGridLayout.m_nTotalBytes) +
 	                              m_feedbackGridLayout.m_nSlotBytes ) ) {
 		shutdown_cold();
 		return false;
@@ -241,11 +241,11 @@ bool Terrain3DVTGpu::prepare_cpu_cold( const t3dVTGpuResourcePlan_t& pPlan, cons
 	m_feedbackReset.resize( feedback_bytes );
 	m_feedbackCounterReset.resize( sizeof( t3dVTRequestGpuCounters_t ) );
 	m_feedbackParams.resize( sizeof( t3dVTFragmentFeedbackParams_t ) );
-	memset( m_feedbackCounterReset.ptrw(), 0, ( size_t )m_feedbackCounterReset.size() );
-	const uint32_t nHashCapacity = ( uint32_t )( m_feedbackReset.size() / sizeof( t3dVTRequestHashEntry_t ) );
+	memset( m_feedbackCounterReset.ptrw(), 0, static_cast<size_t>(m_feedbackCounterReset.size() ));
+	const uint32_t nHashCapacity = static_cast<uint32_t>(  m_feedbackReset.size() / sizeof( t3dVTRequestHashEntry_t )  );
 	for ( uint32_t i = 0u; i < nHashCapacity; ++i ) {
 		const t3dVTRequestHashEntry_t Entry{ UINT32_MAX, UINT32_MAX, 0u, 0u };
-		memcpy( m_feedbackReset.ptrw() + ( size_t )i * sizeof( Entry ), &Entry, sizeof( Entry ) );
+		memcpy( m_feedbackReset.ptrw() + static_cast<size_t>(i * sizeof(  Entry  )), &Entry, sizeof( Entry ) );
 	}
 	m_bCpuPrepared = true;
 	return true;
@@ -260,7 +260,7 @@ bool Terrain3DVTGpu::prepare_storage_cold( const Terrain3DVTResourceImage *pReso
 	     memcmp( &pResources->get_plan(), &m_Plan, sizeof( m_Plan ) ) != 0 ) {
 		return false;
 	}
-	const uint64_t nReadbackBytes = sizeof( t3dVTGpuCounters_t ) + ( uint64_t )pLimits.nMaxVtRequests * sizeof( t3dVTRuntimeRequest_t );
+	const uint64_t nReadbackBytes = sizeof( t3dVTGpuCounters_t ) + static_cast<uint64_t>(pLimits.nMaxVtRequests) * sizeof( t3dVTRuntimeRequest_t );
 	if ( nReadbackBytes > pLimits.nMaxReadbackBytesPerFrame || nReadbackBytes > UINT32_MAX )
 		return false;
 	m_pRenderingDevice = pRenderingDevice;
@@ -392,7 +392,7 @@ void Terrain3DVTGpu::shutdown_cold( const bool bPreserveTailStaging )
 void Terrain3DVTGpu::seal_hot_runtime()
 {
 	if ( m_feedbackCallback.is_valid() && !m_bFeedbackGridEnabled ) {
-		( void )enable_feedback_grid_cold( true );
+		static_cast<void>(enable_feedback_grid_cold( true ));
 	}
 	if ( !m_bInitialized ) {
 		return;
@@ -407,8 +407,8 @@ bool Terrain3DVTGpu::update_allocation_quality_hot( const t3dVTResidencyState_t&
 	if ( !m_bInitialized || !m_bDatabaseUploadedWarm || m_pRenderingDevice == NULL || m_pResources == NULL ||
 	     rResidency.Buffers.pAllocations == NULL )
 		return false;
-	const uint64_t nBytes = ( uint64_t )rResidency.nAllocationCount * sizeof( t3dVTAllocation_t );
-	if ( nBytes == 0u || nBytes > UINT32_MAX || m_AllocationUpload.size() < ( int64_t )nBytes )
+	const uint64_t nBytes = static_cast<uint64_t>(rResidency.nAllocationCount) * sizeof( t3dVTAllocation_t );
+	if ( nBytes == 0u || nBytes > UINT32_MAX || m_AllocationUpload.size() < static_cast<int64_t>(nBytes) )
 		return false;
 #if defined( T3D_ENABLE_VT_RESIDENT_ANCESTOR_HINTS ) && T3D_ENABLE_VT_RESIDENT_ANCESTOR_HINTS
 	if ( !invalidate_ancestor_header_hot() )
@@ -418,8 +418,8 @@ bool Terrain3DVTGpu::update_allocation_quality_hot( const t3dVTResidencyState_t&
 			return false;
 	}
 #endif
-	memcpy( m_AllocationUpload.ptrw(), rResidency.Buffers.pAllocations, ( size_t )nBytes );
-	if ( !t3dVtUpload( m_pResources, T3D_VT_GPU_BUFFER_ALLOCATION_TABLE, 0u, ( uint32_t )nBytes, m_AllocationUpload ) )
+	memcpy( m_AllocationUpload.ptrw(), rResidency.Buffers.pAllocations, static_cast<size_t>(nBytes) );
+	if ( !t3dVtUpload( m_pResources, T3D_VT_GPU_BUFFER_ALLOCATION_TABLE, 0u, static_cast<uint32_t>(nBytes), m_AllocationUpload ) )
 		return false;
 	return !m_bHotSealed || hot_epoch_unchanged();
 }
@@ -446,8 +446,8 @@ bool Terrain3DVTGpu::prepare_file_tails_cold( const t3dVTDatabaseView_t& rDataba
 	const t3dVTGpuResourcePlan_t& plan = m_Plan;
 	for ( uint32_t iTail = 0u; iTail < rDatabase.nRuntimeTailCount; ++iTail ) {
 		for ( uint32_t iChannel = 0u; iChannel < T3D_VT_CHANNEL_COUNT; ++iChannel ) {
-			const uint32_t c = t3d_vt_physical_family_legacy_resource_channel( ( t3dVTPhysicalFormatFamily_t )iChannel );
-			if ( c >= T3D_VT_CHANNEL_COUNT || m_NeutralTailUpload[c].size() != ( int64_t )plan.nVtTailBytes[c] ||
+			const uint32_t c = t3d_vt_physical_family_legacy_resource_channelstatic_cast<t3dVTPhysicalFormatFamily_t>(iChannel);
+			if ( c >= T3D_VT_CHANNEL_COUNT || m_NeutralTailUpload[c].size() != static_cast<int64_t>(plan.nVtTailBytes[c]) ||
 			     !t3d_vt_pack_runtime_copy_tail_mip_chain( rDatabase, iTail, iChannel, m_NeutralTailUpload[c].ptrw(), plan.nVtTailBytes[c],
 			                                               plan.nVtTailAtlasWidth, plan.nVtTailAtlasHeight ) ) {
 				return false;
@@ -469,16 +469,16 @@ bool Terrain3DVTGpu::stage_file_tails_warm( const t3dVTDatabaseView_t& rDatabase
 		if ( bytes > INT32_MAX ) {
 			return false;
 		}
-		m_CandidateTailUpload[c].resize( ( int64_t )bytes );
-		if ( m_CandidateTailUpload[c].size() != ( int64_t )bytes || m_NeutralPhysicalUpload[c].is_empty() ) {
+		m_CandidateTailUpload[c].resizestatic_cast<int64_t>(bytes);
+		if ( m_CandidateTailUpload[c].size() != static_cast<int64_t>(bytes) || m_NeutralPhysicalUpload[c].is_empty() ) {
 			return false;
 		}
-		t3d_vt_repeat_neutral_payload_cold( m_CandidateTailUpload[c].ptrw(), ( size_t )bytes, m_NeutralPhysicalUpload[c].ptr(),
-		                                    ( size_t )m_NeutralPhysicalUpload[c].size() );
+		t3d_vt_repeat_neutral_payload_cold( m_CandidateTailUpload[c].ptrw(), static_cast<size_t>(bytes), m_NeutralPhysicalUpload[c].ptr(),
+		                                    static_cast<size_t>(m_NeutralPhysicalUpload[c].size)() );
 	}
 	for ( uint32_t iTail = 0u; iTail < rDatabase.nRuntimeTailCount; ++iTail ) {
 		for ( uint32_t iChannel = 0u; iChannel < T3D_VT_CHANNEL_COUNT; ++iChannel ) {
-			const uint32_t c = t3d_vt_physical_family_legacy_resource_channel( ( t3dVTPhysicalFormatFamily_t )iChannel );
+			const uint32_t c = t3d_vt_physical_family_legacy_resource_channelstatic_cast<t3dVTPhysicalFormatFamily_t>(iChannel);
 			if ( c >= T3D_VT_CHANNEL_COUNT ||
 			     !t3d_vt_pack_runtime_copy_tail_mip_chain( rDatabase, iTail, iChannel, m_CandidateTailUpload[c].ptrw(),
 			                                               m_Plan.nVtTailBytes[c], m_Plan.nVtTailAtlasWidth, m_Plan.nVtTailAtlasHeight ) ) {
@@ -539,22 +539,22 @@ bool Terrain3DVTGpu::service_database_upload_warm( const t3dVTDatabaseView_t& pD
 			return false;
 		if ( !prepare_ancestor_graph_warm( pResidency ) )
 			return false;
-		const uint64_t nAllocationBytes = ( uint64_t )pResidency.nAllocationCount * sizeof( t3dVTAllocation_t );
-		const uint64_t nMipLayoutCount = ( uint64_t )pResidency.nAllocationCount * T3D_VT_MAX_MIPS;
+		const uint64_t nAllocationBytes = static_cast<uint64_t>(pResidency.nAllocationCount) * sizeof( t3dVTAllocation_t );
+		const uint64_t nMipLayoutCount = static_cast<uint64_t>(pResidency.nAllocationCount) * T3D_VT_MAX_MIPS;
 		const uint64_t nMipLayoutBytes = nMipLayoutCount * sizeof( t3dVTMipLayout_t );
-		const uint64_t nPageBytes = ( uint64_t )pDatabase.pHeader->nPageCount * sizeof( t3dVTPageTableEntry_t );
-		const uint64_t nTailMetadataBytes = ( uint64_t )pResidency.nTailCount * sizeof( t3dVTTailMetadata_t );
+		const uint64_t nPageBytes = static_cast<uint64_t>(pDatabase.pHeader->nPageCount) * sizeof( t3dVTPageTableEntry_t );
+		const uint64_t nTailMetadataBytes = static_cast<uint64_t>(pResidency.nTailCount) * sizeof( t3dVTTailMetadata_t );
 		if ( nAllocationBytes == 0u || nAllocationBytes > m_pResources->get_plan().nBufferBytes[T3D_VT_GPU_BUFFER_ALLOCATION_TABLE] ||
 		     nAllocationBytes > UINT32_MAX || nMipLayoutBytes == 0u || nMipLayoutBytes > UINT32_MAX ||
 		     nMipLayoutBytes > m_pResources->get_plan().nBufferBytes[T3D_VT_GPU_BUFFER_MIP_LAYOUT_TABLE] || nTailMetadataBytes == 0u ||
 		     nTailMetadataBytes > m_pResources->get_plan().nBufferBytes[T3D_VT_GPU_BUFFER_TAIL_METADATA] ||
 		     nTailMetadataBytes > UINT32_MAX || nPageBytes > m_pResources->get_plan().nBufferBytes[T3D_VT_GPU_BUFFER_PAGE_TABLE] ||
-		     nPageBytes > UINT32_MAX || m_AllocationUpload.size() < ( int64_t )nAllocationBytes ) {
+		     nPageBytes > UINT32_MAX || m_AllocationUpload.size() < static_cast<int64_t>(nAllocationBytes) ) {
 			return false;
 		}
 		// Validate every source table and packed tail before the first live-RD write.
 		// Publication rollback remains a separate safety net for device errors.
-		if ( pResidency.Buffers.pPageTable == NULL || m_DatabaseUpload.size() < ( int64_t )MAX( nMipLayoutBytes, nPageBytes ) ) {
+		if ( pResidency.Buffers.pPageTable == NULL || m_DatabaseUpload.size() < static_cast<int64_t>(MAX( nMipLayoutBytes, nPageBytes ) )) {
 			return false;
 		}
 		for ( uint32_t iAllocation = 0u; iAllocation < pResidency.nAllocationCount; ++iAllocation ) {
@@ -563,7 +563,7 @@ bool Terrain3DVTGpu::service_database_upload_warm( const t3dVTDatabaseView_t& pD
 				continue;
 			}
 			if ( a.m_nMipCount == 0u || a.m_nMipCount > T3D_VT_MAX_MIPS || a.m_nMip0WidthPages == 0u || a.m_nMip0HeightPages == 0u ||
-			     ( uint64_t )a.m_nBaseVirtualPage + a.m_nPageCount > pDatabase.pHeader->nPageCount ) {
+			     static_cast<uint64_t>(a.m_nBaseVirtualPage) + a.m_nPageCount > pDatabase.pHeader->nPageCount ) {
 				return false;
 			}
 		}
@@ -587,15 +587,15 @@ bool Terrain3DVTGpu::service_database_upload_warm( const t3dVTDatabaseView_t& pD
 				if ( source[c].size() != m_NeutralTailUpload[c].size() ) {
 					return false;
 				}
-				memcpy( m_NeutralTailUpload[c].ptrw(), source[c].ptr(), ( size_t )source[c].size() );
+				memcpy( m_NeutralTailUpload[c].ptrw(), source[c].ptr(), static_cast<size_t>(source[c].size)() );
 			}
 		}
 		if ( pDatabase.nRuntimeKind == T3D_VT_RUNTIME_DATABASE_PACK && pDatabase.pFileSource == NULL ) {
 			const t3dVTGpuResourcePlan_t& plan = m_pResources->get_plan();
 			for ( uint32_t iTail = 0u; iTail < pDatabase.nRuntimeTailCount; ++iTail ) {
 				for ( uint32_t iChannel = 0u; iChannel < T3D_VT_CHANNEL_COUNT; ++iChannel ) {
-					const uint32_t c = t3d_vt_physical_family_legacy_resource_channel( ( t3dVTPhysicalFormatFamily_t )iChannel );
-					if ( c >= T3D_VT_CHANNEL_COUNT || m_NeutralTailUpload[c].size() != ( int64_t )plan.nVtTailBytes[c] ||
+					const uint32_t c = t3d_vt_physical_family_legacy_resource_channelstatic_cast<t3dVTPhysicalFormatFamily_t>(iChannel);
+					if ( c >= T3D_VT_CHANNEL_COUNT || m_NeutralTailUpload[c].size() != static_cast<int64_t>(plan.nVtTailBytes[c]) ||
 					     !t3d_vt_pack_runtime_copy_tail_mip_chain( pDatabase, iTail, iChannel, m_NeutralTailUpload[c].ptrw(),
 					                                               plan.nVtTailBytes[c], plan.nVtTailAtlasWidth,
 					                                               plan.nVtTailAtlasHeight ) ) {
@@ -604,22 +604,22 @@ bool Terrain3DVTGpu::service_database_upload_warm( const t3dVTDatabaseView_t& pD
 				}
 			}
 		}
-		memcpy( m_AllocationUpload.ptrw(), pResidency.Buffers.pAllocations, ( size_t )nAllocationBytes );
-		if ( !t3dVtUpload( m_pResources, T3D_VT_GPU_BUFFER_ALLOCATION_TABLE, 0u, ( uint32_t )nAllocationBytes, m_AllocationUpload,
+		memcpy( m_AllocationUpload.ptrw(), pResidency.Buffers.pAllocations, static_cast<size_t>(nAllocationBytes) );
+		if ( !t3dVtUpload( m_pResources, T3D_VT_GPU_BUFFER_ALLOCATION_TABLE, 0u, static_cast<uint32_t>(nAllocationBytes), m_AllocationUpload,
 		                   T3D_GPU_PUBLICATION ) )
 			return false;
 
 		PackedByteArray& Upload = m_DatabaseUpload;
-		if ( Upload.size() < ( int64_t )nMipLayoutBytes )
+		if ( Upload.size() < static_cast<int64_t>(nMipLayoutBytes) )
 			return false;
-		memset( Upload.ptrw(), 0, ( size_t )nMipLayoutBytes );
+		memset( Upload.ptrw(), 0, static_cast<size_t>(nMipLayoutBytes) );
 		uint8_t *const pMipLayouts = Upload.ptrw();
 		for ( uint32_t iAllocation = 0u; iAllocation < pResidency.nAllocationCount; ++iAllocation ) {
 			const t3dVTAllocation_t& Allocation = pResidency.Buffers.pAllocations[iAllocation];
 			uint64_t nBasePage = Allocation.m_nBaseVirtualPage;
 			uint32_t nWidth = Allocation.m_nMip0WidthPages;
 			uint32_t nHeight = Allocation.m_nMip0HeightPages;
-			const uint64_t nAllocationEnd = ( uint64_t )Allocation.m_nBaseVirtualPage + Allocation.m_nPageCount;
+			const uint64_t nAllocationEnd = static_cast<uint64_t>(Allocation.m_nBaseVirtualPage) + Allocation.m_nPageCount;
 			if ( pDatabase.nRuntimeKind == T3D_VT_RUNTIME_DATABASE_PACK && Allocation.m_nPageCount == 0u )
 				continue;
 			if ( Allocation.m_nMipCount == 0u || Allocation.m_nMipCount > T3D_VT_MAX_MIPS || nWidth == 0u || nHeight == 0u ||
@@ -627,45 +627,45 @@ bool Terrain3DVTGpu::service_database_upload_warm( const t3dVTDatabaseView_t& pD
 				return false;
 			for ( uint32_t iMip = 0u; iMip < Allocation.m_nMipCount; ++iMip ) {
 				t3dVTMipLayout_t Layout{};
-				const uint64_t nMipPages = ( uint64_t )nWidth * nHeight;
+				const uint64_t nMipPages = static_cast<uint64_t>(nWidth) * nHeight;
 				if ( nBasePage >= nAllocationEnd || nMipPages == 0u || nBasePage + nMipPages > nAllocationEnd ) {
 					if ( pDatabase.nRuntimeKind != T3D_VT_RUNTIME_DATABASE_PACK || Allocation.m_nPageCount == 0u )
 						return false;
-					Layout.m_nBaseVirtualPage = ( uint32_t )( nAllocationEnd - 1u );
+					Layout.m_nBaseVirtualPage = static_cast<uint32_t>( nAllocationEnd - 1u );
 					Layout.m_nWidthPages = 1u;
 					Layout.m_nHeightPages = 1u;
 				} else {
 					if ( nBasePage > UINT32_MAX || nWidth > 0xffffu || nHeight > 0xffffu )
 						return false;
-					Layout.m_nBaseVirtualPage = ( uint32_t )nBasePage;
-					Layout.m_nWidthPages = ( uint16_t )nWidth;
-					Layout.m_nHeightPages = ( uint16_t )nHeight;
+					Layout.m_nBaseVirtualPage = static_cast<uint32_t>(nBasePage);
+					Layout.m_nWidthPages = static_cast<uint16_t>(nWidth);
+					Layout.m_nHeightPages = static_cast<uint16_t>(nHeight);
 					nBasePage += nMipPages;
 				}
-				memcpy( pMipLayouts + ( ( uint64_t )iAllocation * T3D_VT_MAX_MIPS + iMip ) * sizeof( Layout ), &Layout, sizeof( Layout ) );
+				memcpy( pMipLayouts + ( static_cast<uint64_t>(iAllocation) * T3D_VT_MAX_MIPS + iMip ) * sizeof( Layout ), &Layout, sizeof( Layout ) );
 				nWidth = nWidth > 1u ? ( nWidth + 1u ) >> 1u : 1u;
 				nHeight = nHeight > 1u ? ( nHeight + 1u ) >> 1u : 1u;
 			}
 		}
-		if ( !t3dVtUpload( m_pResources, T3D_VT_GPU_BUFFER_MIP_LAYOUT_TABLE, 0u, ( uint32_t )nMipLayoutBytes, Upload,
+		if ( !t3dVtUpload( m_pResources, T3D_VT_GPU_BUFFER_MIP_LAYOUT_TABLE, 0u, static_cast<uint32_t>(nMipLayoutBytes), Upload,
 		                   T3D_GPU_PUBLICATION ) )
 			return false;
 
-		if ( Upload.size() < ( int64_t )nPageBytes )
+		if ( Upload.size() < static_cast<int64_t>(nPageBytes) )
 			return false;
 		for ( uint32_t i = 0u; i < pDatabase.pHeader->nPageCount; ++i ) {
 			t3dVTPageTableEntry_t GpuEntry{};
 			if ( !make_gpu_page_entry( i, pResidency.Buffers.pPageTable[i], GpuEntry ) )
 				return false;
-			memcpy( Upload.ptrw() + ( size_t )i * sizeof( GpuEntry ), &GpuEntry, sizeof( GpuEntry ) );
+			memcpy( Upload.ptrw() + static_cast<size_t>(i * sizeof(  GpuEntry  )), &GpuEntry, sizeof( GpuEntry ) );
 		}
-		if ( !t3dVtUpload( m_pResources, T3D_VT_GPU_BUFFER_PAGE_TABLE, 0u, ( uint32_t )nPageBytes, Upload, T3D_GPU_PUBLICATION ) )
+		if ( !t3dVtUpload( m_pResources, T3D_VT_GPU_BUFFER_PAGE_TABLE, 0u, static_cast<uint32_t>(nPageBytes), Upload, T3D_GPU_PUBLICATION ) )
 			return false;
 
-		if ( Upload.size() < ( int64_t )nTailMetadataBytes )
+		if ( Upload.size() < static_cast<int64_t>(nTailMetadataBytes) )
 			return false;
-		memcpy( Upload.ptrw(), pResidency.Buffers.pTailMetadata, ( size_t )nTailMetadataBytes );
-		if ( !t3dVtUpload( m_pResources, T3D_VT_GPU_BUFFER_TAIL_METADATA, 0u, ( uint32_t )nTailMetadataBytes, Upload,
+		memcpy( Upload.ptrw(), pResidency.Buffers.pTailMetadata, static_cast<size_t>(nTailMetadataBytes) );
+		if ( !t3dVtUpload( m_pResources, T3D_VT_GPU_BUFFER_TAIL_METADATA, 0u, static_cast<uint32_t>(nTailMetadataBytes), Upload,
 		                   T3D_GPU_PUBLICATION ) )
 			return false;
 
@@ -674,9 +674,9 @@ bool Terrain3DVTGpu::service_database_upload_warm( const t3dVTDatabaseView_t& pD
 			for ( uint32_t iTail = 0u; iTail < pDatabase.nRuntimeTailCount; ++iTail ) {
 				for ( uint32_t iChannel = 0u; iChannel < T3D_VT_CHANNEL_COUNT; ++iChannel ) {
 					const uint32_t nResourceChannel =
-					    t3d_vt_physical_family_legacy_resource_channel( ( t3dVTPhysicalFormatFamily_t )iChannel );
+					    t3d_vt_physical_family_legacy_resource_channelstatic_cast<t3dVTPhysicalFormatFamily_t>(iChannel);
 					if ( nResourceChannel >= T3D_VT_CHANNEL_COUNT ||
-					     m_NeutralTailUpload[nResourceChannel].size() != ( int64_t )Plan.nVtTailBytes[nResourceChannel] ||
+					     m_NeutralTailUpload[nResourceChannel].size() != static_cast<int64_t>(Plan.nVtTailBytes[nResourceChannel]) ||
 					     !t3d_vt_pack_runtime_copy_tail_mip_chain( pDatabase, iTail, iChannel, m_NeutralTailUpload[nResourceChannel].ptrw(),
 					                                               Plan.nVtTailBytes[nResourceChannel], Plan.nVtTailAtlasWidth,
 					                                               Plan.nVtTailAtlasHeight ) )
@@ -692,12 +692,12 @@ bool Terrain3DVTGpu::service_database_upload_warm( const t3dVTDatabaseView_t& pD
 	while ( m_nDatabaseUploadStage == 1u && m_nDatabaseTailChannel < T3D_VT_CHANNEL_COUNT && nUnits < nMaxWorkUnits ) {
 		const uint32_t c = m_nDatabaseTailChannel;
 		const uint64_t nTailBytes = m_Plan.nVtTailBytes[c];
-		if ( nTailBytes == 0u || nTailBytes > UINT32_MAX || m_NeutralTailUpload[c].size() != ( int64_t )nTailBytes ||
-		     !m_pResources->get_vt_tail_rid( ( t3dVTResourceChannel_t )c ).is_valid() )
+		if ( nTailBytes == 0u || nTailBytes > UINT32_MAX || m_NeutralTailUpload[c].size() != static_cast<int64_t>(nTailBytes) ||
+		     !m_pResources->get_vt_tail_ridstatic_cast<t3dVTResourceChannel_t>(c).is_valid() )
 			return false;
 		if ( nBytesUsed != 0u && nBytesUsed + nTailBytes > nMaxBytes )
 			break;
-		if ( !m_pResources->update_vt_tail_layer( ( t3dVTResourceChannel_t )c, 0u, m_NeutralTailUpload[c] ) )
+		if ( !m_pResources->update_vt_tail_layer( static_cast<t3dVTResourceChannel_t>(c), 0u, m_NeutralTailUpload[c] ) )
 			return false;
 		m_Stats.nUploadBytes += nTailBytes;
 		nBytesUsed += nTailBytes;
@@ -720,7 +720,7 @@ bool Terrain3DVTGpu::begin_package_publication_warm()
 		return false;
 	}
 	for ( uint32_t c = 0u; c < T3D_VT_CHANNEL_COUNT; ++c ) {
-		if ( m_NeutralTailUpload[c].size() != ( int64_t )m_Plan.nVtTailBytes[c] || m_NeutralPhysicalUpload[c].is_empty() ) {
+		if ( m_NeutralTailUpload[c].size() != static_cast<int64_t>(m_Plan.nVtTailBytes[c]) || m_NeutralPhysicalUpload[c].is_empty() ) {
 			return false;
 		}
 	}
@@ -741,8 +741,8 @@ bool Terrain3DVTGpu::begin_package_publication_warm()
 	m_nDatabaseTailChannel = 0u;
 	// Previous publications wrote package tails into these retained buffers.
 	for ( uint32_t c = 0u; c < T3D_VT_CHANNEL_COUNT; ++c ) {
-		t3d_vt_repeat_neutral_payload_cold( m_NeutralTailUpload[c].ptrw(), ( size_t )m_NeutralTailUpload[c].size(),
-		                                    m_NeutralPhysicalUpload[c].ptr(), ( size_t )m_NeutralPhysicalUpload[c].size() );
+		t3d_vt_repeat_neutral_payload_cold( m_NeutralTailUpload[c].ptrw(), static_cast<size_t>(m_NeutralTailUpload[c].size)(),
+		                                    m_NeutralPhysicalUpload[c].ptr(), static_cast<size_t>(m_NeutralPhysicalUpload[c].size)() );
 	}
 	return true;
 }
@@ -764,17 +764,18 @@ bool Terrain3DVTGpu::upload_neutral_page_set_warm( t3dVTResidencyState_t& rResid
 	}
 	for ( uint32_t c = 0u; c < T3D_VT_CHANNEL_COUNT; ++c ) {
 		const uint32_t nExpected = physical_layer_bytes( c );
-		if ( nExpected == 0u || m_NeutralPhysicalUpload[c].size() != ( int64_t )nExpected ) {
+		if ( nExpected == 0u || m_NeutralPhysicalUpload[c].size() != static_cast<int64_t>(nExpected) ) {
 			return false;
 		}
-		if ( !m_pResources->update_vt_bank_layer( ( t3dVTResourceChannel_t )c, nBank, nLayer, m_NeutralPhysicalUpload[c] ) ) {
+		if ( !m_pResources->update_vt_bank_layer( static_cast<t3dVTResourceChannel_t>(c), nBank, nLayer, m_NeutralPhysicalUpload[c] ) ) {
 			return false;
 		}
 		m_Stats.nUploadBytes += nExpected;
 	}
 
 	// Texture uploads are ordered before page-table publication by Godot 4.7.2 automatic RD barriers.
-	t3dVTPageTableEntry_t Previous[T3D_VT_CHANNEL_COUNT] = {};
+	t3dVTPageTableEntry_t Previous[T3D_VT_CHANNEL_COUNT];
+	memset( Previous, 0, sizeof( Previous ) );
 	for ( uint32_t c = 0u; c < T3D_VT_CHANNEL_COUNT; ++c ) {
 		const uint32_t nRootPage = rResidency.nNeutralRootPage[c];
 		if ( nRootPage == T3D_VT_INVALID_PAGE || nRootPage >= rResidency.pDatabase->pHeader->nPageCount ) {
@@ -810,7 +811,7 @@ bool Terrain3DVTGpu::service_retired_slots_hot( t3dVTResidencyState_t& rResidenc
 	if ( nRetiredCount == 0u ) {
 		return true;
 	}
-	if ( nRetiredCount > ( uint32_t )m_RetiredPageScratch.size() || nRetiredCount > ( uint32_t )m_RetiredSlotScratch.size() ) {
+	if ( nRetiredCount > static_cast<uint32_t>(m_RetiredPageScratch.size() || nRetiredCount > static_cast<uint32_t>(m_RetiredSlotScratch.size() ))) {
 		return false;
 	}
 
@@ -836,13 +837,13 @@ bool Terrain3DVTGpu::service_retired_slots_hot( t3dVTResidencyState_t& rResidenc
 			return false;
 		}
 		uint32_t nInsert = nReadyCount;
-		while ( nInsert > 0u && ( uint32_t )pPages[nInsert - 1u] > Retired.nVirtualPage ) {
+		while ( nInsert > 0u && static_cast<uint32_t>(pPages[nInsert - 1u]) > Retired.nVirtualPage ) {
 			pPages[nInsert] = pPages[nInsert - 1u];
 			pSlots[nInsert] = pSlots[nInsert - 1u];
 			--nInsert;
 		}
-		pPages[nInsert] = ( int32_t )Retired.nVirtualPage;
-		pSlots[nInsert] = ( int32_t )Retired.nPhysicalSlot;
+		pPages[nInsert] = static_cast<int32_t>(Retired.nVirtualPage);
+		pSlots[nInsert] = static_cast<int32_t>(Retired.nPhysicalSlot);
 		++nReadyCount;
 	}
 	if ( nReadyCount == 0u ) {
@@ -850,34 +851,34 @@ bool Terrain3DVTGpu::service_retired_slots_hot( t3dVTResidencyState_t& rResidenc
 	}
 
 	for ( uint32_t i = 0u; i < nReadyCount; ++i ) {
-		if ( !invalidate_ancestor_page_hot( ( uint32_t )pPages[i] ) )
+		if ( !invalidate_ancestor_page_hot( static_cast<uint32_t>(pPages[i]) ) )
 			return false;
 	}
 	uint32_t nFirst = 0u;
 	while ( nFirst < nReadyCount ) {
 		uint32_t nLast = nFirst + 1u;
-		while ( nLast < nReadyCount && ( uint32_t )pPages[nLast] == ( uint32_t )pPages[nLast - 1u] + 1u ) {
+		while ( nLast < nReadyCount && static_cast<uint32_t>(pPages[nLast]) == static_cast<uint32_t>(pPages[nLast - 1u]) + 1u ) {
 			++nLast;
 		}
 		const uint32_t nRunCount = nLast - nFirst;
 		const uint32_t nRunBytes = nRunCount * sizeof( t3dVTPageTableEntry_t );
-		if ( nRunBytes > ( uint32_t )m_PageEntryUpload.size() ) {
+		if ( nRunBytes > static_cast<uint32_t>(m_PageEntryUpload.size() )) {
 			return false;
 		}
 		for ( uint32_t i = 0u; i < nRunCount; ++i ) {
-			const uint32_t nPage = ( uint32_t )pPages[nFirst + i];
+			const uint32_t nPage = static_cast<uint32_t>(pPages[nFirst + i]);
 			t3dVTPageTableEntry_t Invalid = rResidency.Buffers.pPageTable[nPage];
 			Invalid.nPhysicalSlot = T3D_VT_INVALID_SLOT;
 			Invalid.nFlags &= ( uint16_t )~T3D_VT_PAGE_RESIDENT;
-			t3dVTPageTableEntry_t GpuEntry = {};
+			t3dVTPageTableEntry_t GpuEntry {};
 			if ( !make_gpu_page_entry( nPage, Invalid, GpuEntry ) ) {
 				return false;
 			}
 			memcpy( m_PageEntryUpload.ptrw() + i * sizeof( t3dVTPageTableEntry_t ), &GpuEntry, sizeof( GpuEntry ) );
 		}
-		const uint64_t nOffset64 = ( uint64_t )( uint32_t )pPages[nFirst] * sizeof( t3dVTPageTableEntry_t );
+		const uint64_t nOffset64 = static_cast<uint64_t>static_cast<uint32_t>( pPages )[nFirst] * sizeof( t3dVTPageTableEntry_t );
 		if ( nOffset64 > UINT32_MAX ||
-		     !t3dVtUpload( m_pResources, T3D_VT_GPU_BUFFER_PAGE_TABLE, ( uint32_t )nOffset64, nRunBytes, m_PageEntryUpload ) ) {
+		     !t3dVtUpload( m_pResources, T3D_VT_GPU_BUFFER_PAGE_TABLE, static_cast<uint32_t>(nOffset64), nRunBytes, m_PageEntryUpload ) ) {
 			++m_Stats.nRetireRetryCount;
 			++rResidency.Stats.nRetireDeferredCount;
 			return false;
@@ -890,7 +891,7 @@ bool Terrain3DVTGpu::service_retired_slots_hot( t3dVTResidencyState_t& rResidenc
 	// Buffer updates become visible to later RD consumers through Godot 4.7.2 automatic barriers.
 	const uint32_t nOldHead = rResidency.nRetireHead;
 	for ( uint32_t i = 0u; i < nReadyCount; ++i ) {
-		if ( !t3d_vt_finalize_eviction_hot( rResidency, ( uint32_t )pSlots[i], ( uint32_t )pPages[i], pFrameId ) ) {
+		if ( !t3d_vt_finalize_eviction_hot( rResidency, static_cast<uint32_t>(pSlots[i]), static_cast<uint32_t>(pPages[i]), pFrameId ) ) {
 			return false;
 		}
 	}
@@ -917,7 +918,7 @@ bool Terrain3DVTGpu::begin_upload_batch_hot()
 
 void Terrain3DVTGpu::abort_upload_batch_hot( t3dVTResidencyState_t& rResidency )
 {
-	if ( m_UploadBatchReservations.size() >= ( int64_t )( m_nUploadBatchCount * sizeof( t3dVTUploadReservation_t ) ) ) {
+	if ( m_UploadBatchReservations.size() >= static_cast<int64_t>(  m_nUploadBatchCount * sizeof( t3dVTUploadReservation_t )  ) ) {
 		for ( uint32_t i = 0u; i < m_nUploadBatchCount; ++i ) {
 			t3d_vt_abort_upload_hot( rResidency, t3dVtReadReservation( m_UploadBatchReservations, i ) );
 		}
@@ -932,28 +933,28 @@ bool Terrain3DVTGpu::publish_upload_batch_page_table_hot( const t3dVTResidencySt
 	if ( m_nUploadBatchCount == 0u ) {
 		return true;
 	}
-	if ( m_nUploadBatchCount > ( uint32_t )m_UploadBatchOrder.size() ||
-	     m_UploadBatchReservations.size() < ( int64_t )( m_nUploadBatchCount * sizeof( t3dVTUploadReservation_t ) ) ) {
+	if ( m_nUploadBatchCount > static_cast<uint32_t>(m_UploadBatchOrder.size()) ||
+	     m_UploadBatchReservations.size() < static_cast<int64_t>(  m_nUploadBatchCount * sizeof( t3dVTUploadReservation_t )  ) ) {
 		return false;
 	}
 
 	int32_t *const pOrder = m_UploadBatchOrder.ptrw();
 	for ( uint32_t i = 0u; i < m_nUploadBatchCount; ++i ) {
-		pOrder[i] = ( int32_t )i;
+		pOrder[i] = static_cast<int32_t>(i);
 		uint32_t nInsert = i;
-		while ( nInsert > 0u && t3dVtReadReservation( m_UploadBatchReservations, ( uint32_t )pOrder[nInsert - 1u] ).nVirtualPage >
+		while ( nInsert > 0u && t3dVtReadReservation( m_UploadBatchReservations, static_cast<uint32_t>(pOrder[nInsert - 1u]) ).nVirtualPage >
 		                            t3dVtReadReservation( m_UploadBatchReservations, i ).nVirtualPage ) {
 			pOrder[nInsert] = pOrder[nInsert - 1u];
 			--nInsert;
 		}
-		pOrder[nInsert] = ( int32_t )i;
+		pOrder[nInsert] = static_cast<int32_t>(i);
 	}
 	uint32_t nFirst = 0u;
 	while ( nFirst < m_nUploadBatchCount ) {
 		uint32_t nLast = nFirst + 1u;
 		while ( nLast < m_nUploadBatchCount ) {
-			const uint32_t nPrev = t3dVtReadReservation( m_UploadBatchReservations, ( uint32_t )pOrder[nLast - 1u] ).nVirtualPage;
-			const uint32_t nNext = t3dVtReadReservation( m_UploadBatchReservations, ( uint32_t )pOrder[nLast] ).nVirtualPage;
+			const uint32_t nPrev = t3dVtReadReservation( m_UploadBatchReservations, static_cast<uint32_t>(pOrder[nLast - 1u]) ).nVirtualPage;
+			const uint32_t nNext = t3dVtReadReservation( m_UploadBatchReservations, static_cast<uint32_t>(pOrder[nLast]) ).nVirtualPage;
 			if ( nNext != nPrev + 1u ) {
 				break;
 			}
@@ -961,11 +962,11 @@ bool Terrain3DVTGpu::publish_upload_batch_page_table_hot( const t3dVTResidencySt
 		}
 		const uint32_t nRunCount = nLast - nFirst;
 		const uint32_t nRunBytes = nRunCount * sizeof( t3dVTPageTableEntry_t );
-		if ( nRunBytes > ( uint32_t )m_PageEntryUpload.size() ) {
+		if ( nRunBytes > static_cast<uint32_t>(m_PageEntryUpload.size() )) {
 			return false;
 		}
 		for ( uint32_t i = 0u; i < nRunCount; ++i ) {
-			const t3dVTUploadReservation_t& Reservation = t3dVtReadReservation( m_UploadBatchReservations, ( uint32_t )pOrder[nFirst + i] );
+			const t3dVTUploadReservation_t& Reservation = t3dVtReadReservation( m_UploadBatchReservations, static_cast<uint32_t>(pOrder[nFirst + i]) );
 			if ( Reservation.nVirtualPage >= rResidency.pDatabase->pHeader->nPageCount ) {
 				return false;
 			}
@@ -973,16 +974,16 @@ bool Terrain3DVTGpu::publish_upload_batch_page_table_hot( const t3dVTResidencySt
 			Preview.nPhysicalSlot = Reservation.nPhysicalSlot;
 			Preview.nResolvedMip = Reservation.nWantedMip;
 			Preview.nFlags |= T3D_VT_PAGE_RESIDENT;
-			t3dVTPageTableEntry_t GpuEntry = {};
+			t3dVTPageTableEntry_t GpuEntry {};
 			if ( !make_gpu_page_entry( Reservation.nVirtualPage, Preview, GpuEntry ) ) {
 				return false;
 			}
 			memcpy( m_PageEntryUpload.ptrw() + i * sizeof( t3dVTPageTableEntry_t ), &GpuEntry, sizeof( GpuEntry ) );
 		}
-		const uint32_t nFirstPage = t3dVtReadReservation( m_UploadBatchReservations, ( uint32_t )pOrder[nFirst] ).nVirtualPage;
-		const uint64_t nOffset64 = ( uint64_t )nFirstPage * sizeof( t3dVTPageTableEntry_t );
+		const uint32_t nFirstPage = t3dVtReadReservation( m_UploadBatchReservations, static_cast<uint32_t>(pOrder[nFirst]) ).nVirtualPage;
+		const uint64_t nOffset64 = static_cast<uint64_t>(nFirstPage * sizeof(  t3dVTPageTableEntry_t  ));
 		if ( nOffset64 > UINT32_MAX ||
-		     !t3dVtUpload( m_pResources, T3D_VT_GPU_BUFFER_PAGE_TABLE, ( uint32_t )nOffset64, nRunBytes, m_PageEntryUpload ) ) {
+		     !t3dVtUpload( m_pResources, T3D_VT_GPU_BUFFER_PAGE_TABLE, static_cast<uint32_t>(nOffset64), nRunBytes, m_PageEntryUpload ) ) {
 			return false;
 		}
 		m_Stats.nPageTableUpdateBytes += nRunBytes;
@@ -1070,13 +1071,13 @@ bool Terrain3DVTGpu::end_upload_batch_hot( t3dVTResidencyState_t& rResidency, co
 
 bool Terrain3DVTGpu::upload_batch_begin_callback( void *pUser )
 {
-	Terrain3DVTGpu *const pSelf = ( Terrain3DVTGpu * )pUser;
+	Terrain3DVTGpu *const pSelf = static_cast<Terrain3DVTGpu *>(pUser);
 	return pSelf != NULL && pSelf->begin_upload_batch_hot();
 }
 
 bool Terrain3DVTGpu::upload_batch_end_callback( t3dVTResidencyState_t& rResidency, const uint32_t pFrameId, void *pUser )
 {
-	Terrain3DVTGpu *const pSelf = ( Terrain3DVTGpu * )pUser;
+	Terrain3DVTGpu *const pSelf = static_cast<Terrain3DVTGpu *>(pUser);
 	return pSelf != NULL && pSelf->end_upload_batch_hot( rResidency, pFrameId );
 }
 
@@ -1093,7 +1094,7 @@ bool Terrain3DVTGpu::upload_page_set_commit_hot( t3dVTResidencyState_t& rResiden
 	// texture is mutated. The previous post-upload rejection could leave
 	// freshly decoded bytes in a slot belonging to another queued page.
 	if ( m_bUploadBatchActive ) {
-		const uint32_t nCapacity = ( uint32_t )( m_UploadBatchReservations.size() / sizeof( t3dVTUploadReservation_t ) );
+		const uint32_t nCapacity = static_cast<uint32_t>(  m_UploadBatchReservations.size() / sizeof( t3dVTUploadReservation_t )  );
 		if ( m_nUploadBatchCount >= nCapacity ) {
 			++m_Stats.nUploadPreflightRejected;
 			return false;
@@ -1129,14 +1130,14 @@ bool Terrain3DVTGpu::upload_page_set_commit_hot( t3dVTResidencyState_t& rResiden
 	// Preflight all participating channels together. This prevents a failure
 	// in a later channel from exposing a partially overwritten page-set.
 	for ( uint32_t c = nFirstChannel; c < nLastChannel; ++c ) {
-		const uint32_t nResourceChannel = bV1 ? t3d_vt_physical_family_legacy_resource_channel( ( t3dVTPhysicalFormatFamily_t )c ) : c;
+		const uint32_t nResourceChannel = bV1 ? t3d_vt_physical_family_legacy_resource_channelstatic_cast<t3dVTPhysicalFormatFamily_t>(c) : c;
 		if ( nResourceChannel >= T3D_VT_CHANNEL_COUNT ) {
 			++m_Stats.nUploadPreflightRejected;
 			return false;
 		}
 		const bool bPresent = ( pPayloads.nPresentMask & ( 1u << c ) ) != 0u;
 		const uint8_t *const pBytes = bPresent ? pPayloads.pChannelBytes[c] : m_NeutralPhysicalUpload[nResourceChannel].ptr();
-		const uint32_t nBytes = bPresent ? pPayloads.nChannelBytes[c] : ( uint32_t )m_NeutralPhysicalUpload[nResourceChannel].size();
+		const uint32_t nBytes = bPresent ? pPayloads.nChannelBytes[c] : static_cast<uint32_t>(m_NeutralPhysicalUpload[nResourceChannel].size)();
 		const uint32_t nExpected = physical_layer_bytes( nResourceChannel );
 		if ( !t3dVtUploadChannelViewValid( nResourceChannel, T3D_VT_CHANNEL_COUNT, pBytes, nBytes, nExpected,
 		                                   m_PhysicalUpload[nResourceChannel].size() ) ) {
@@ -1145,7 +1146,7 @@ bool Terrain3DVTGpu::upload_page_set_commit_hot( t3dVTResidencyState_t& rResiden
 		}
 	}
 	for ( uint32_t c = nFirstChannel; c < nLastChannel; ++c ) {
-		const uint32_t nResourceChannel = bV1 ? t3d_vt_physical_family_legacy_resource_channel( ( t3dVTPhysicalFormatFamily_t )c ) : c;
+		const uint32_t nResourceChannel = bV1 ? t3d_vt_physical_family_legacy_resource_channelstatic_cast<t3dVTPhysicalFormatFamily_t>(c) : c;
 		if ( nResourceChannel >= T3D_VT_CHANNEL_COUNT ) {
 			return false;
 		}
@@ -1160,7 +1161,7 @@ bool Terrain3DVTGpu::upload_page_set_commit_hot( t3dVTResidencyState_t& rResiden
 			m_Stats.nNeutralStageCopyBytesSaved += nExpected;
 		}
 		const PackedByteArray& rPhysicalBytes = bPresent ? m_PhysicalUpload[nResourceChannel] : m_NeutralPhysicalUpload[nResourceChannel];
-		if ( !m_pResources->update_vt_bank_layer( ( t3dVTResourceChannel_t )nResourceChannel, nBank, nLayer, rPhysicalBytes ) ) {
+		if ( !m_pResources->update_vt_bank_layer( static_cast<t3dVTResourceChannel_t>(nResourceChannel), nBank, nLayer, rPhysicalBytes ) ) {
 			return false;
 		}
 		nUploadedBytes += nExpected;
@@ -1203,12 +1204,12 @@ bool Terrain3DVTGpu::upload_commit_hot( t3dVTResidencyState_t& rResidency, const
 		return false;
 	}
 	const t3dVTPageFileRecord_t& Page = rResidency.pDatabase->pPages[pReservation.nVirtualPage];
-	const uint32_t nResourceChannel = t3d_vt_physical_family_legacy_resource_channel( ( t3dVTPhysicalFormatFamily_t )Page.nChannel );
+	const uint32_t nResourceChannel = t3d_vt_physical_family_legacy_resource_channelstatic_cast<t3dVTPhysicalFormatFamily_t>(Page.nChannel);
 	if ( Page.nChannel >= T3D_VT_CHANNEL_COUNT || nResourceChannel >= T3D_VT_CHANNEL_COUNT ||
 	     pDecodedByteCount != physical_layer_bytes( nResourceChannel ) ) {
 		return false;
 	}
-	t3dVTPageSetPayloadView_t Payloads = {};
+	t3dVTPageSetPayloadView_t Payloads {};
 	Payloads.pChannelBytes[Page.nChannel] = pDecodedBytes;
 	Payloads.nChannelBytes[Page.nChannel] = pDecodedByteCount;
 	Payloads.nPresentMask = 1u << Page.nChannel;
@@ -1218,7 +1219,7 @@ bool Terrain3DVTGpu::upload_commit_hot( t3dVTResidencyState_t& rResidency, const
 bool Terrain3DVTGpu::upload_commit_callback( t3dVTResidencyState_t& rResidency, const t3dVTUploadReservation_t& pReservation,
                                              const uint8_t *pDecodedBytes, uint32_t pDecodedByteCount, uint32_t pFrameId, void *pUser )
 {
-	Terrain3DVTGpu *pSelf = ( Terrain3DVTGpu * )pUser;
+	Terrain3DVTGpu *pSelf = static_cast<Terrain3DVTGpu *>(pUser);
 	return pSelf != NULL && pSelf->upload_commit_hot( rResidency, pReservation, pDecodedBytes, pDecodedByteCount, pFrameId );
 }
 
@@ -1257,8 +1258,8 @@ bool Terrain3DVTGpu::is_readback_enabled() const
 		return m_feedbackGridLayout.m_nSlotBytes >= sizeof( t3dVTFeedbackGridHeader_t ) + sizeof( uint32_t ) &&
 		       m_feedbackGridLayout.m_nSlotBytes <= m_Limits.nMaxReadbackBytesPerFrame;
 	}
-	return ( uint64_t )m_feedbackReset.size() + sizeof( t3dVTRequestGpuCounters_t ) <= m_Limits.nMaxReadbackBytesPerFrame &&
-	       m_feedbackReset.size() >= 2 * ( int64_t )sizeof( t3dVTRequestHashEntry_t );
+	return static_cast<uint64_t>(m_feedbackReset.size() + sizeof( t3dVTRequestGpuCounters_t )) <= m_Limits.nMaxReadbackBytesPerFrame &&
+	       m_feedbackReset.size() >= 2 * static_cast<int64_t>(sizeof( t3dVTRequestHashEntry_t ));
 }
 
 bool Terrain3DVTGpu::is_initialized() const
@@ -1315,7 +1316,7 @@ bool Terrain3DVTGpu::make_gpu_page_entry( const uint32_t nVirtualPage, const t3d
 		if ( nFamily >= T3D_VT_PHYSICAL_FORMAT_COUNT ) {
 			return false;
 		}
-		rGpuEntry.nPhysicalSlot = t3d_vt_pack_physical_address( ( t3dVTPhysicalFormatFamily_t )nFamily, nLayer );
+		rGpuEntry.nPhysicalSlot = t3d_vt_pack_physical_address( static_cast<t3dVTPhysicalFormatFamily_t>(nFamily), nLayer );
 		return rGpuEntry.nPhysicalSlot != T3D_VT_INVALID_SLOT;
 	}
 	if ( nBank > 0xffffu || nLayer > 0xffffu ) {
@@ -1327,19 +1328,19 @@ bool Terrain3DVTGpu::make_gpu_page_entry( const uint32_t nVirtualPage, const t3d
 
 bool Terrain3DVTGpu::update_page_entry_hot( uint32_t pVirtualPage, const t3dVTPageTableEntry_t& pEntry )
 {
-	const uint64_t nOffset = ( uint64_t )pVirtualPage * sizeof( t3dVTPageTableEntry_t );
+	const uint64_t nOffset = static_cast<uint64_t>(pVirtualPage * sizeof(  t3dVTPageTableEntry_t  ));
 	if ( nOffset + sizeof( t3dVTPageTableEntry_t ) > m_pResources->get_plan().nBufferBytes[T3D_VT_GPU_BUFFER_PAGE_TABLE] ||
-	     nOffset > UINT32_MAX || m_PageEntryUpload.size() < ( int64_t )sizeof( t3dVTPageTableEntry_t ) ) {
+	     nOffset > UINT32_MAX || m_PageEntryUpload.size() < static_cast<int64_t>(sizeof( t3dVTPageTableEntry_t ) )) {
 		return false;
 	}
 	if ( !invalidate_ancestor_page_hot( pVirtualPage ) )
 		return false;
-	t3dVTPageTableEntry_t GpuEntry = {};
+	t3dVTPageTableEntry_t GpuEntry {};
 	if ( !make_gpu_page_entry( pVirtualPage, pEntry, GpuEntry ) ) {
 		return false;
 	}
 	memcpy( m_PageEntryUpload.ptrw(), &GpuEntry, sizeof( GpuEntry ) );
-	if ( !t3dVtUpload( m_pResources, T3D_VT_GPU_BUFFER_PAGE_TABLE, ( uint32_t )nOffset, sizeof( t3dVTPageTableEntry_t ),
+	if ( !t3dVtUpload( m_pResources, T3D_VT_GPU_BUFFER_PAGE_TABLE, static_cast<uint32_t>(nOffset), sizeof( t3dVTPageTableEntry_t ),
 	                   m_PageEntryUpload ) ) {
 		return false;
 	}
@@ -1376,12 +1377,12 @@ bool Terrain3DVTGpu::get_physical_family_binding_v1( const uint32_t pFamily, RID
 	if ( m_pResources == NULL || pFamily >= T3D_VT_PHYSICAL_FORMAT_COUNT ) {
 		return false;
 	}
-	const uint32_t nResourceChannel = t3d_vt_physical_family_legacy_resource_channel( ( t3dVTPhysicalFormatFamily_t )pFamily );
-	if ( nResourceChannel >= T3D_VT_CHANNEL_COUNT || m_pResources->get_vt_bank_count( ( t3dVTResourceChannel_t )nResourceChannel ) != 1u ) {
+	const uint32_t nResourceChannel = t3d_vt_physical_family_legacy_resource_channelstatic_cast<t3dVTPhysicalFormatFamily_t>(pFamily);
+	if ( nResourceChannel >= T3D_VT_CHANNEL_COUNT || m_pResources->get_vt_bank_countstatic_cast<t3dVTResourceChannel_t>(nResourceChannel) != 1u ) {
 		return false;
 	}
-	rRid = m_pResources->get_vt_bank_rid( ( t3dVTResourceChannel_t )nResourceChannel, 0u );
-	rLayerCount = m_pResources->get_vt_bank_layer_count( ( t3dVTResourceChannel_t )nResourceChannel, 0u );
+	rRid = m_pResources->get_vt_bank_rid( static_cast<t3dVTResourceChannel_t>(nResourceChannel), 0u );
+	rLayerCount = m_pResources->get_vt_bank_layer_count( static_cast<t3dVTResourceChannel_t>(nResourceChannel), 0u );
 	return rRid.is_valid() && rLayerCount > 0u;
 }
 
@@ -1418,7 +1419,7 @@ bool Terrain3DVTGpu::validate_physical_bank_layout_cold() const
 		return false;
 	}
 	for ( uint32_t c = 0u; c < T3D_VT_CHANNEL_COUNT; ++c ) {
-		const t3dVTResourceChannel_t eChannel = ( t3dVTResourceChannel_t )c;
+		const t3dVTResourceChannel_t eChannel = static_cast<t3dVTResourceChannel_t>(c);
 		if ( m_pResources->get_vt_bank_count( eChannel ) != 1u ||
 		     m_pResources->get_vt_bank_layer_count( eChannel, 0u ) != m_Limits.nMaxVtPhysicalPageSets ) {
 			return false;
@@ -1430,7 +1431,7 @@ bool Terrain3DVTGpu::validate_physical_bank_layout_cold() const
 static void t3d_vt_set_bit_cold( uint8_t *pBytes, uint32_t& rBit, uint32_t pValue )
 {
 	if ( pValue != 0u ) {
-		pBytes[rBit >> 3u] |= ( uint8_t )( 1u << ( rBit & 7u ) );
+		pBytes[rBit >> 3u] |= static_cast<uint8_t>(  1u << ( rBit & 7u )  );
 	}
 	++rBit;
 }
@@ -1448,11 +1449,11 @@ bool Terrain3DVTGpu::initialize_neutral_payloads_cold()
 		const uint32_t nBytes = physical_layer_bytes( c );
 		const uint64_t nTailBytes = m_Plan.nVtTailBytes[c];
 		m_NeutralPhysicalUpload[c].resize( nBytes );
-		if ( nBytes == 0u || m_NeutralPhysicalUpload[c].size() != ( int64_t )nBytes || nTailBytes == 0u || nTailBytes > INT64_MAX ) {
+		if ( nBytes == 0u || m_NeutralPhysicalUpload[c].size() != static_cast<int64_t>(nBytes) || nTailBytes == 0u || nTailBytes > INT64_MAX ) {
 			return false;
 		}
-		m_NeutralTailUpload[c].resize( ( int64_t )nTailBytes );
-		if ( m_NeutralTailUpload[c].size() != ( int64_t )nTailBytes ) {
+		m_NeutralTailUpload[c].resizestatic_cast<int64_t>(nTailBytes);
+		if ( m_NeutralTailUpload[c].size() != static_cast<int64_t>(nTailBytes) ) {
 			return false;
 		}
 		memset( m_NeutralPhysicalUpload[c].ptrw(), 0, nBytes );
@@ -1460,14 +1461,14 @@ bool Terrain3DVTGpu::initialize_neutral_payloads_cold()
 
 	// BC1: endpoint 0 is exact white and every texel selects endpoint 0.
 	uint8_t *const pAlbedo = m_NeutralPhysicalUpload[T3D_VT_CHANNEL_ALBEDO].ptrw();
-	for ( uint32_t i = 0u; i < ( uint32_t )m_NeutralPhysicalUpload[T3D_VT_CHANNEL_ALBEDO].size(); i += 8u ) {
+	for ( uint32_t i = 0u; i < static_cast<uint32_t>(m_NeutralPhysicalUpload[T3D_VT_CHANNEL_ALBEDO].size)(); i += 8u ) {
 		pAlbedo[i + 0u] = 0xffu;
 		pAlbedo[i + 1u] = 0xffu;
 	}
 
 	// BC5: two constant BC4 blocks at 128 encode the neutral tangent-space normal.
 	uint8_t *const pNormal = m_NeutralPhysicalUpload[T3D_VT_CHANNEL_NORMAL].ptrw();
-	for ( uint32_t i = 0u; i < ( uint32_t )m_NeutralPhysicalUpload[T3D_VT_CHANNEL_NORMAL].size(); i += 16u ) {
+	for ( uint32_t i = 0u; i < static_cast<uint32_t>(m_NeutralPhysicalUpload[T3D_VT_CHANNEL_NORMAL].size)(); i += 16u ) {
 		pNormal[i + 0u] = T3D_VT_NEUTRAL_NORMAL_X8;
 		pNormal[i + 1u] = T3D_VT_NEUTRAL_NORMAL_X8;
 		pNormal[i + 8u] = T3D_VT_NEUTRAL_NORMAL_Y8;
@@ -1475,7 +1476,8 @@ bool Terrain3DVTGpu::initialize_neutral_payloads_cold()
 	}
 
 	// BC7 mode 6 constant RGBA=(255,255,255,255), all indices zero.
-	uint8_t bc7[16] = {};
+	uint8_t bc7[16];
+	memset( bc7, 0, sizeof( bc7 ) );
 	uint32_t nBit = 0u;
 	for ( uint32_t i = 0u; i < 6u; ++i ) {
 		t3d_vt_set_bit_cold( bc7, nBit, 0u );
@@ -1487,19 +1489,19 @@ bool Terrain3DVTGpu::initialize_neutral_payloads_cold()
 	t3d_vt_set_bit_cold( bc7, nBit, 1u );
 	t3d_vt_set_bit_cold( bc7, nBit, 1u );
 	uint8_t *const pSurface = m_NeutralPhysicalUpload[T3D_VT_CHANNEL_SURFACE].ptrw();
-	for ( uint32_t i = 0u; i < ( uint32_t )m_NeutralPhysicalUpload[T3D_VT_CHANNEL_SURFACE].size(); i += 16u ) {
+	for ( uint32_t i = 0u; i < static_cast<uint32_t>(m_NeutralPhysicalUpload[T3D_VT_CHANNEL_SURFACE].size)(); i += 16u ) {
 		memcpy( pSurface + i, bc7, sizeof( bc7 ) );
 	}
 
 	memset( m_NeutralPhysicalUpload[T3D_VT_CHANNEL_HEIGHT].ptrw(), T3D_VT_NEUTRAL_HEIGHT8,
-	        ( size_t )m_NeutralPhysicalUpload[T3D_VT_CHANNEL_HEIGHT].size() );
+	        static_cast<size_t>(m_NeutralPhysicalUpload[T3D_VT_CHANNEL_HEIGHT].size)() );
 
 	// Each physical tile already contains the channel's neutral block pattern.
 	// Fill the large tail buffers once with bulk copies instead of clearing them
 	// first and then visiting every compressed block again.
 	for ( uint32_t c = 0u; c < T3D_VT_CHANNEL_COUNT; ++c ) {
-		t3d_vt_repeat_neutral_payload_cold( m_NeutralTailUpload[c].ptrw(), ( size_t )m_NeutralTailUpload[c].size(),
-		                                    m_NeutralPhysicalUpload[c].ptr(), ( size_t )m_NeutralPhysicalUpload[c].size() );
+		t3d_vt_repeat_neutral_payload_cold( m_NeutralTailUpload[c].ptrw(), static_cast<size_t>(m_NeutralTailUpload[c].size)(),
+		                                    m_NeutralPhysicalUpload[c].ptr(), static_cast<size_t>(m_NeutralPhysicalUpload[c].size)() );
 	}
 	return true;
 }
@@ -1510,7 +1512,7 @@ uint32_t Terrain3DVTGpu::physical_layer_bytes( uint32_t pChannel ) const
 		return 0u;
 	}
 	const uint64_t nBytes = m_Plan.nVtPhysicalBytes[pChannel] / m_Limits.nMaxVtPhysicalPageSets;
-	return nBytes != 0u && nBytes <= UINT32_MAX ? ( uint32_t )nBytes : 0u;
+	return nBytes != 0u && nBytes <= UINT32_MAX ? static_cast<uint32_t>(nBytes) : 0u;
 }
 
 bool Terrain3DVTGpu::hot_epoch_unchanged() const
@@ -1627,7 +1629,7 @@ bool Terrain3DVTGpu::begin_feedback_grid_capture_hot( const uint32_t nFrame, con
 	uint32_t nSlot = UINT32_MAX;
 	for ( uint32_t i = 0u; i < T3D_VT_FEEDBACK_GRID_SLOT_COUNT; ++i ) {
 		const uint32_t candidate = ( m_nFeedbackGridNextSlot + i ) % T3D_VT_FEEDBACK_GRID_SLOT_COUNT;
-		if ( m_feedbackGridSlots[candidate].m_eStatus == T3D_VT_FEEDBACK_SLOT_FREE ) {
+		if ( m_feedbackGridSlots[candidate].m_eStatus == SIRVTFeedbackGridSlotStatus::T3D_VT_FEEDBACK_SLOT_FREE ) {
 			nSlot = candidate;
 			break;
 		}
@@ -1647,7 +1649,7 @@ bool Terrain3DVTGpu::begin_feedback_grid_capture_hot( const uint32_t nFrame, con
 	                                        nWords,
 	                                        nViewport };
 	// The reset buffer is cold-allocated. No per-frame heap or resource creation.
-	memset( m_feedbackGridReset.ptrw(), 0xff, ( size_t )m_feedbackGridLayout.m_nSlotBytes );
+	memset( m_feedbackGridReset.ptrw(), 0xff, static_cast<size_t>(m_feedbackGridLayout.m_nSlotBytes) );
 	memcpy( m_feedbackGridReset.ptrw(), &header, sizeof( header ) );
 	t3dVTFeedbackGridParams_t params{};
 	if ( !t3d_vt_feedback_grid_make_params( m_feedbackGridLayout, nAllocationCount, nPageCount, nViewportWidth, nViewportHeight, nSlot,
@@ -1655,7 +1657,7 @@ bool Terrain3DVTGpu::begin_feedback_grid_capture_hot( const uint32_t nFrame, con
 		return false;
 	t3dGpuTransferTicket_t ticket;
 	if ( !Terrain3DGpuTransferBudget::get().reserve( T3D_GPU_TRANSFER_FEEDBACK,
-	                                                 ( uint64_t )m_feedbackGridLayout.m_nSlotBytes + sizeof( params ), 2u, ticket ) ) {
+	                                                 static_cast<uint64_t>(m_feedbackGridLayout.m_nSlotBytes) + sizeof( params ), 2u, ticket ) ) {
 		++m_nFeedbackGridSkipped;
 		return false;
 	}
@@ -1693,12 +1695,12 @@ bool Terrain3DVTGpu::service_feedback_grid_capture_hot( const uint32_t nFrame, c
 	// SUBMIT commands were recorded and before the next capture is cleared.
 	for ( uint32_t i = 0u; i < T3D_VT_FEEDBACK_GRID_SLOT_COUNT; ++i ) {
 		t3dVTFeedbackGridSlot_t& slot = m_feedbackGridSlots[i];
-		if ( slot.m_eStatus == T3D_VT_FEEDBACK_SLOT_PREPARED &&
+		if ( slot.m_eStatus == SIRVTFeedbackGridSlotStatus::T3D_VT_FEEDBACK_SLOT_PREPARED &&
 		     ( slot.m_Header.m_nFrame != nFrame || slot.m_Header.m_nViewportKey != nViewport ) )
-			( void )slot.markDrawn();
-		if ( slot.m_eStatus == T3D_VT_FEEDBACK_SLOT_DRAWN &&
+			static_cast<void>(slot.markDrawn());
+		if ( slot.m_eStatus == SIRVTFeedbackGridSlotStatus::T3D_VT_FEEDBACK_SLOT_DRAWN &&
 		     ( slot.m_Header.m_nFrame != nFrame || slot.m_Header.m_nViewportKey != nViewport ) )
-			( void )submit_feedback_grid_readback_hot( i );
+			static_cast<void>(submit_feedback_grid_readback_hot( i ));
 	}
 	uint32_t slot = UINT32_MAX;
 	if ( !begin_feedback_grid_capture_hot( nFrame, nDatabase, nDevice, nViewport, nPageCount, nAllocationCount, nViewportWidth,
@@ -1711,7 +1713,7 @@ bool Terrain3DVTGpu::service_feedback_grid_capture_hot( const uint32_t nFrame, c
 		if ( m_feedbackParams.size() == sizeof( t3dVTFeedbackGridParams_t ) ) {
 			t3dVTFeedbackGridParams_t disabled{};
 			memcpy( m_feedbackParams.ptrw(), &disabled, sizeof( disabled ) );
-			( void )t3dVtUpload( m_pResources, T3D_VT_GPU_BUFFER_FRAGMENT_PARAMS, 0u, sizeof( disabled ), m_feedbackParams );
+			static_cast<void>(t3dVtUpload( m_pResources, T3D_VT_GPU_BUFFER_FRAGMENT_PARAMS, 0u, sizeof( disabled ), m_feedbackParams ));
 		}
 		return false;
 	}
@@ -1728,7 +1730,7 @@ bool Terrain3DVTGpu::mark_feedback_grid_drawn_hot( const uint32_t nSlot )
 bool Terrain3DVTGpu::submit_feedback_grid_readback_hot( const uint32_t nSlot )
 {
 	if ( nSlot >= T3D_VT_FEEDBACK_GRID_SLOT_COUNT || !m_bFeedbackGridEnabled || m_pResources == NULL || m_pRenderingDevice == NULL ||
-	     !m_feedbackCallback.is_valid() || m_feedbackGridSlots[nSlot].m_eStatus != T3D_VT_FEEDBACK_SLOT_DRAWN )
+	     !m_feedbackCallback.is_valid() || m_feedbackGridSlots[nSlot].m_eStatus != SIRVTFeedbackGridSlotStatus::T3D_VT_FEEDBACK_SLOT_DRAWN )
 		return false;
 	t3dGpuTransferTicket_t ticket;
 	if ( !Terrain3DGpuTransferBudget::get().reserve( T3D_GPU_TRANSFER_FEEDBACK, m_feedbackGridLayout.m_nSlotBytes, 1u, ticket ) ) {
@@ -1749,7 +1751,7 @@ bool Terrain3DVTGpu::submit_feedback_grid_readback_hot( const uint32_t nSlot )
 
 bool Terrain3DVTGpu::consume_feedback_grid_callback_hot( const PackedByteArray& rBytes )
 {
-	if ( rBytes.size() < ( int64_t )sizeof( t3dVTFeedbackGridHeader_t ) )
+	if ( rBytes.size() < static_cast<int64_t>(sizeof( t3dVTFeedbackGridHeader_t ) ))
 		return false;
 	t3dVTFeedbackGridHeader_t header{};
 	memcpy( &header, rBytes.ptr(), sizeof( header ) );
@@ -1763,13 +1765,13 @@ bool Terrain3DVTGpu::consume_feedback_grid_callback_hot( const PackedByteArray& 
 	t3dVTFeedbackGridSlot_t& slot = m_feedbackGridSlots[header.m_nSlot];
 	if ( !slot.complete( header ) )
 		return true;
-	memcpy( m_feedbackGridReadbacks[header.m_nSlot].ptrw(), rBytes.ptr(), ( size_t )rBytes.size() );
+	memcpy( m_feedbackGridReadbacks[header.m_nSlot].ptrw(), rBytes.ptr(), static_cast<size_t>(rBytes.size() ));
 	return true;
 }
 
 const uint8_t *Terrain3DVTGpu::peek_feedback_grid_ready_hot( const uint32_t nSlot, t3dVTFeedbackGridHeader_t& rHeader ) const
 {
-	if ( nSlot >= T3D_VT_FEEDBACK_GRID_SLOT_COUNT || m_feedbackGridSlots[nSlot].m_eStatus != T3D_VT_FEEDBACK_SLOT_READY )
+	if ( nSlot >= T3D_VT_FEEDBACK_GRID_SLOT_COUNT || m_feedbackGridSlots[nSlot].m_eStatus != SIRVTFeedbackGridSlotStatus::T3D_VT_FEEDBACK_SLOT_READY )
 		return NULL;
 	rHeader = m_feedbackGridSlots[nSlot].m_Header;
 	return m_feedbackGridReadbacks[nSlot].ptr() + sizeof( t3dVTFeedbackGridHeader_t );
@@ -1783,7 +1785,7 @@ void Terrain3DVTGpu::record_feedback_grid_consumed_hot( const uint32_t nValidSam
 
 bool Terrain3DVTGpu::retire_feedback_grid_ready_hot( const uint32_t nSlot )
 {
-	if ( nSlot >= T3D_VT_FEEDBACK_GRID_SLOT_COUNT || m_feedbackGridSlots[nSlot].m_eStatus != T3D_VT_FEEDBACK_SLOT_READY )
+	if ( nSlot >= T3D_VT_FEEDBACK_GRID_SLOT_COUNT || m_feedbackGridSlots[nSlot].m_eStatus != SIRVTFeedbackGridSlotStatus::T3D_VT_FEEDBACK_SLOT_READY )
 		return false;
 	m_feedbackGridSlots[nSlot].reset();
 	return true;
@@ -1812,7 +1814,7 @@ void Terrain3DVTGpu::consume_fragment_feedback_readback_hot( const PackedByteArr
 		}
 		return;
 	}
-	if ( !m_bInitialized || rBytes.size() != m_feedbackReset.size() || rBytes.size() < ( int64_t )sizeof( t3dVTRequestHashEntry_t ) ) {
+	if ( !m_bInitialized || rBytes.size() != m_feedbackReset.size() || rBytes.size() < static_cast<int64_t>(sizeof( t3dVTRequestHashEntry_t ) )) {
 		return;
 	}
 	const t3dVTRequestHashEntry_t tag = t3dVtReadFeedback( rBytes, 0u );
@@ -1904,7 +1906,7 @@ bool Terrain3DVTGpu::publish_predicted_terrain_mask_hot()
 {
 	if ( m_bFeedbackGridEnabled )
 		return true; // The grid UBO is published per capture.
-	if ( !m_bFeedbackWritten || !is_readback_enabled() || m_feedbackParams.size() != ( int64_t )sizeof( t3dVTFragmentFeedbackParams_t ) ) {
+	if ( !m_bFeedbackWritten || !is_readback_enabled() || m_feedbackParams.size() != static_cast<int64_t>(sizeof( t3dVTFragmentFeedbackParams_t ) )) {
 		return false;
 	}
 	t3dVTFragmentFeedbackParams_t params{};
@@ -1943,12 +1945,12 @@ uint32_t Terrain3DVTGpu::service_fragment_feedback_hot( t3dVTResidencyState_t& r
 	// Do not ingest one member of a readback pair while its partner is pending.
 	// Rejected pairs retain their GPU contents for the next full submission.
 	if ( !m_feedbackEpoch.canSubmit() || ( m_feedbackEpoch.m_bPairAccepted && !m_feedbackEpoch.canConsume() ) ) {
-		( void )publish_predicted_terrain_mask_hot();
+		static_cast<void>(publish_predicted_terrain_mask_hot());
 		return attempts;
 	}
 	if ( !m_feedbackReadback.is_empty() ) {
 		if ( t3dVtReadFeedback( m_feedbackReadback, 0u ).m_nWantedMip == rResidency.nDatabaseGeneration ) {
-			for ( uint32_t i = 1u; i < m_feedbackReadback.size() / ( int64_t )sizeof( t3dVTRequestHashEntry_t ); ++i ) {
+			for ( uint32_t i = 1u; i < m_feedbackReadback.size() / static_cast<int64_t>(sizeof( t3dVTRequestHashEntry_t ); ++i )) {
 				const t3dVTRequestHashEntry_t entry = t3dVtReadFeedback( m_feedbackReadback, i );
 				if ( entry.m_nVirtualPage == UINT32_MAX || entry.m_nVirtualPage >= rResidency.pDatabase->pHeader->nPageCount ) {
 					continue;
@@ -1963,8 +1965,8 @@ uint32_t Terrain3DVTGpu::service_fragment_feedback_hot( t3dVTResidencyState_t& r
 				++attempts;
 				t3dVTRuntimeRequest_t request{};
 				request.nVirtualPage = entry.m_nVirtualPage;
-				request.nWantedMip = ( uint16_t )entry.m_nWantedMip;
-				request.nPriority = ( uint16_t )entry.m_nPriority;
+				request.nWantedMip = static_cast<uint16_t>(entry.m_nWantedMip);
+				request.nPriority = static_cast<uint16_t>(entry.m_nPriority);
 				const t3dVTAdmissionStatus_t status = t3d_vt_streaming_admit_request_hot( rStreaming, request, nFrameId );
 				if ( status == T3D_VT_ADMISSION_ACCEPTED_NEW || status == T3D_VT_ADMISSION_MERGED_EXISTING ) {
 					++m_nFeedbackConsumed;
@@ -1982,12 +1984,12 @@ uint32_t Terrain3DVTGpu::service_fragment_feedback_hot( t3dVTResidencyState_t& r
 	// same transfer budget as physical tiles and region/world publications.
 	// Failure leaves the existing hash intact for a later readback/reset.
 	t3dGpuTransferTicket_t feedback_ticket;
-	const uint64_t feedback_bytes = ( uint64_t )m_feedbackReset.size() * ( m_bFeedbackWritten ? 2u : 1u ) +
-	                                ( uint64_t )m_feedbackCounterReset.size() * ( m_bFeedbackWritten ? 2u : 1u ) +
-	                                ( uint64_t )m_feedbackParams.size();
+	const uint64_t feedback_bytes = static_cast<uint64_t>(m_feedbackReset.size() * ( m_bFeedbackWritten ? 2u : 1u )) +
+	                                static_cast<uint64_t>(m_feedbackCounterReset.size() * ( m_bFeedbackWritten ? 2u : 1u )) +
+	                                static_cast<uint64_t>(m_feedbackParams.size());
 	const uint32_t feedback_calls = m_bFeedbackWritten ? 5u : 3u;
 	if ( !Terrain3DGpuTransferBudget::get().reserve( T3D_GPU_TRANSFER_FEEDBACK, feedback_bytes, feedback_calls, feedback_ticket ) ) {
-		( void )publish_predicted_terrain_mask_hot();
+		static_cast<void>(publish_predicted_terrain_mask_hot());
 		return attempts;
 	}
 	// Capture the previous raster's writes asynchronously. RenderingDevice's
@@ -1996,15 +1998,15 @@ uint32_t Terrain3DVTGpu::service_fragment_feedback_hot( t3dVTResidencyState_t& r
 		T3D_STREAM_PROFILE_SCOPE( T3D_SP_VT_FEEDBACK_READBACK_SUBMIT );
 		const bool hashAccepted =
 		    m_pRenderingDevice->buffer_get_data_async( m_pResources->get_buffer_rid( T3D_VT_GPU_BUFFER_FRAGMENT_HASH ), m_feedbackCallback,
-			                                           0u, ( uint32_t )m_feedbackReset.size() ) == OK;
+			                                           0u, static_cast<uint32_t>(m_feedbackReset.size() )) == OK;
 		const bool countersAccepted =
 		    m_pRenderingDevice->buffer_get_data_async( m_pResources->get_buffer_rid( T3D_VT_GPU_BUFFER_FRAGMENT_COUNTERS ),
-			                                           m_feedbackCallback, 0u, ( uint32_t )sizeof( t3dVTRequestGpuCounters_t ) ) == OK;
+			                                           m_feedbackCallback, 0u, static_cast<uint32_t>(sizeof( t3dVTRequestGpuCounters_t ) )) == OK;
 		if ( !m_feedbackEpoch.acceptSubmissions( hashAccepted, countersAccepted ) ) {
 			// Even if one request succeeded, wait for its callback and retry
 			// both buffers; no GPU feedback reset is permitted on this path.
-			const uint64_t submittedBytes = ( hashAccepted ? ( uint64_t )m_feedbackReset.size() : 0u ) +
-			                                ( countersAccepted ? ( uint64_t )sizeof( t3dVTRequestGpuCounters_t ) : 0u );
+			const uint64_t submittedBytes = ( hashAccepted ? static_cast<uint64_t>(m_feedbackReset.size() : 0u )) +
+			                                ( countersAccepted ? static_cast<uint64_t>(sizeof( t3dVTRequestGpuCounters_t ) : 0u ));
 			const uint32_t submittedCalls = ( hashAccepted ? 1u : 0u ) + ( countersAccepted ? 1u : 0u );
 			Terrain3DGpuTransferBudget::get().refund( feedback_ticket, feedback_bytes - submittedBytes, feedback_calls - submittedCalls );
 			return attempts;
@@ -2013,12 +2015,12 @@ uint32_t Terrain3DVTGpu::service_fragment_feedback_hot( t3dVTResidencyState_t& r
 	t3dVTRequestGpuCounters_t counters{};
 	counters.m_nFrameId = nFrameId;
 	counters.m_nGeneration = rResidency.nDatabaseGeneration;
-	counters.m_nHashCapacity = ( uint32_t )( m_feedbackReset.size() / sizeof( t3dVTRequestHashEntry_t ) );
+	counters.m_nHashCapacity = static_cast<uint32_t>(  m_feedbackReset.size() / sizeof( t3dVTRequestHashEntry_t )  );
 	counters.m_nRequestCapacity = m_nFeedbackEpoch;
 	memcpy( m_feedbackCounterReset.ptrw(), &counters, sizeof( counters ) );
 	const t3dVTRequestHashEntry_t reset = { UINT32_MAX - 1u, rResidency.nDatabaseGeneration, m_nFeedbackEpoch, nFrameId };
 	memcpy( m_feedbackReset.ptrw(), &reset, sizeof( reset ) );
-	t3dVTFragmentFeedbackParams_t params{ ( uint32_t )( m_feedbackReset.size() / sizeof( reset ) ),
+	t3dVTFragmentFeedbackParams_t params{ static_cast<uint32_t>(  m_feedbackReset.size() / sizeof( reset )  ),
 	                                      rResidency.nAllocationCount,
 	                                      rResidency.pDatabase->pHeader->nPageCount,
 	                                      T3D_VT_FRAGMENT_FEEDBACK_ENABLED,
@@ -2031,10 +2033,10 @@ uint32_t Terrain3DVTGpu::service_fragment_feedback_hot( t3dVTResidencyState_t& r
 	{
 		T3D_STREAM_PROFILE_SCOPE( T3D_SP_VT_FEEDBACK_RESET_SUBMIT );
 		reset_ok =
-		    t3dVtUpload( m_pResources, T3D_VT_GPU_BUFFER_FRAGMENT_HASH, 0u, ( uint32_t )m_feedbackReset.size(), m_feedbackReset ) &&
-		    t3dVtUpload( m_pResources, T3D_VT_GPU_BUFFER_FRAGMENT_COUNTERS, 0u, ( uint32_t )m_feedbackCounterReset.size(),
+		    t3dVtUpload( m_pResources, T3D_VT_GPU_BUFFER_FRAGMENT_HASH, 0u, static_cast<uint32_t>(m_feedbackReset.size(), m_feedbackReset )) &&
+		    t3dVtUpload( m_pResources, T3D_VT_GPU_BUFFER_FRAGMENT_COUNTERS, 0u, static_cast<uint32_t>(m_feedbackCounterReset.size()),
 			             m_feedbackCounterReset ) &&
-		    t3dVtUpload( m_pResources, T3D_VT_GPU_BUFFER_FRAGMENT_PARAMS, 0u, ( uint32_t )m_feedbackParams.size(), m_feedbackParams );
+		    t3dVtUpload( m_pResources, T3D_VT_GPU_BUFFER_FRAGMENT_PARAMS, 0u, static_cast<uint32_t>(m_feedbackParams.size(), m_feedbackParams ));
 	}
 	m_bFeedbackWritten = reset_ok;
 	return attempts;
@@ -2067,7 +2069,7 @@ bool Terrain3DVTGpu::invalidate_ancestor_header_hot()
 {
 #if defined( T3D_ENABLE_VT_RESIDENT_ANCESTOR_HINTS ) && T3D_ENABLE_VT_RESIDENT_ANCESTOR_HINTS
 	if ( !m_pResources || !m_pResources->get_buffer_rid( T3D_VT_GPU_BUFFER_ANCESTOR_HINTS ).is_valid() ||
-	     m_HintUploadScratch.size() < ( int64_t )sizeof( t3dVTAncestorHint_t ) )
+	     m_HintUploadScratch.size() < static_cast<int64_t>(sizeof( t3dVTAncestorHint_t ) ))
 		return false;
 	if ( !m_bHintHeaderInitialized || m_bHintHeaderEnabled ) {
 		const t3dVTAncestorHint_t invalid = t3d_vt_invalid_ancestor_hint();
@@ -2091,12 +2093,12 @@ bool Terrain3DVTGpu::enqueue_ancestor_root_hot( const uint32_t nPage )
 		return true;
 	if ( m_nHintQueueCount >= m_nHintPageCount )
 		return false;
-	m_HintQueue.ptrw()[m_nHintQueueTail] = ( int32_t )nPage;
+	m_HintQueue.ptrw()[m_nHintQueueTail] = static_cast<int32_t>(nPage);
 	m_nHintQueueTail = ( m_nHintQueueTail + 1u ) % m_nHintPageCount;
 	++m_nHintQueueCount;
 	queued[nPage] = 1u;
 #else
-	( void )nPage;
+	static_cast<void>(nPage);
 #endif
 	return true;
 }
@@ -2115,7 +2117,7 @@ bool Terrain3DVTGpu::prepare_ancestor_graph_warm( const t3dVTResidencyState_t& r
 	     !rResidency.pDatabase->pPages || rResidency.pDatabase->nRuntimeKind != T3D_VT_RUNTIME_DATABASE_PACK )
 		return true;
 	const uint32_t count = rResidency.pDatabase->pHeader->nPageCount;
-	if ( count == 0u || count > ( uint32_t )m_HintFirstChild.size() || count > ( uint32_t )m_HintAllocationIndex.size() )
+	if ( count == 0u || count > static_cast<uint32_t>(m_HintFirstChild.size() || count > static_cast<uint32_t>(m_HintAllocationIndex.size() )))
 		return true;
 	m_nHintPageCount = count;
 	int32_t *const first = m_HintFirstChild.ptrw();
@@ -2134,7 +2136,7 @@ bool Terrain3DVTGpu::prepare_ancestor_graph_warm( const t3dVTResidencyState_t& r
 			const uint32_t page = alloc.m_nBaseVirtualPage + i;
 			if ( owners[page] != -1 )
 				return true;
-			owners[page] = ( int32_t )a;
+			owners[page] = static_cast<int32_t>(a);
 		}
 	}
 	for ( uint32_t i = 0u; i < count; ++i ) {
@@ -2147,10 +2149,10 @@ bool Terrain3DVTGpu::prepare_ancestor_graph_warm( const t3dVTResidencyState_t& r
 		if ( rResidency.pDatabase->pPages[parent].nMip <= rResidency.pDatabase->pPages[i].nMip )
 			return true;
 		next[i] = first[parent];
-		first[parent] = ( int32_t )i;
+		first[parent] = static_cast<int32_t>(i);
 	}
 	m_bHintGraphReady = true;
-	memset( m_HintQueued.ptrw(), 0, ( size_t )count );
+	memset( m_HintQueued.ptrw(), 0, static_cast<size_t>(count) );
 	for ( uint32_t i = 0u; i < count; ++i )
 		if ( !enqueue_ancestor_root_hot( i ) )
 			return false;
@@ -2190,16 +2192,16 @@ bool Terrain3DVTGpu::service_ancestor_hints_hot( const t3dVTResidencyState_t& rR
 	int32_t *const work = m_HintWorkIndices.ptrw();
 	uint32_t completed = 0u;
 	while ( completed < limit && m_nHintQueueCount != 0u ) {
-		const uint32_t page = ( uint32_t )m_HintQueue.ptr()[m_nHintQueueHead];
+		const uint32_t page = static_cast<uint32_t>(m_HintQueue.ptr())[m_nHintQueueHead];
 		m_nHintQueueHead = ( m_nHintQueueHead + 1u ) % m_nHintPageCount;
 		--m_nHintQueueCount;
 		m_HintQueued.ptrw()[page] = 0u;
 		for ( int32_t child = m_HintFirstChild.ptr()[page]; child >= 0; child = m_HintNextSibling.ptr()[child] )
-			if ( !enqueue_ancestor_root_hot( ( uint32_t )child ) )
+			if ( !enqueue_ancestor_root_hotstatic_cast<uint32_t>(child) )
 				return false;
 		t3dVTAncestorHint_t hint = t3d_vt_invalid_ancestor_hint();
 		const int32_t allocationId = m_HintAllocationIndex.ptr()[page];
-		if ( allocationId >= 0 && ( uint32_t )allocationId < rResidency.nAllocationCount &&
+		if ( allocationId >= 0 && static_cast<uint32_t>(allocationId) < rResidency.nAllocationCount &&
 		     rResidency.pDatabase->pPages[page].nMip < T3D_VT_MAX_MIPS &&
 		     t3d_vt_build_ancestor_hint_reference( rResidency.Buffers.pAllocations[allocationId], rResidency.Buffers.pPageTable,
 		                                           m_nHintPageCount, page, rResidency.pDatabase->pPages[page].nMip, hint ) ) {
@@ -2208,8 +2210,8 @@ bool Terrain3DVTGpu::service_ancestor_hints_hot( const t3dVTResidencyState_t& rR
 				return false;
 			hint.nPhysicalSlot = gpuEntry.nPhysicalSlot;
 		}
-		memcpy( m_HintCpuRecords.ptrw() + ( size_t )( page + 1u ) * sizeof( hint ), &hint, sizeof( hint ) );
-		work[completed++] = ( int32_t )page;
+		memcpy( m_HintCpuRecords.ptrw() + static_cast<size_t>( page + 1u ) * sizeof( hint ), &hint, sizeof( hint ) );
+		work[completed++] = static_cast<int32_t>(page);
 	}
 	std::sort( work, work + completed );
 	uint32_t first = 0u;
@@ -2219,19 +2221,19 @@ bool Terrain3DVTGpu::service_ancestor_hints_hot( const t3dVTResidencyState_t& rR
 			// Do not turn scattered page invalidations into hundreds of hot RD uploads.
 			// Unpublished records remain inaccessible while the header is invalid.
 			for ( uint32_t i = first; i < completed; ++i )
-				if ( !enqueue_ancestor_root_hot( ( uint32_t )work[i] ) )
+				if ( !enqueue_ancestor_root_hot( static_cast<uint32_t>(work[i]) ) )
 					return false;
 			break;
 		}
 		uint32_t last = first + 1u;
-		while ( last < completed && ( uint32_t )work[last] == ( uint32_t )work[last - 1u] + 1u )
+		while ( last < completed && static_cast<uint32_t>(work[last]) == static_cast<uint32_t>(work[last - 1u]) + 1u )
 			++last;
 		const uint32_t byteCount = ( last - first ) * sizeof( t3dVTAncestorHint_t );
-		const uint32_t offset = ( ( uint32_t )work[first] + 1u ) * sizeof( t3dVTAncestorHint_t );
+		const uint32_t offset = ( static_cast<uint32_t>(work[first]) + 1u ) * sizeof( t3dVTAncestorHint_t );
 		memcpy( m_HintUploadScratch.ptrw(), m_HintCpuRecords.ptr() + offset, byteCount );
 		if ( !t3dVtUpload( m_pResources, T3D_VT_GPU_BUFFER_ANCESTOR_HINTS, offset, byteCount, m_HintUploadScratch ) ) {
 			for ( uint32_t i = 0u; i < completed; ++i )
-				( void )enqueue_ancestor_root_hot( ( uint32_t )work[i] );
+				static_cast<void>(enqueue_ancestor_root_hot( static_cast<uint32_t>(work[i]) ));
 			return false;
 		}
 		first = last;
@@ -2240,8 +2242,8 @@ bool Terrain3DVTGpu::service_ancestor_hints_hot( const t3dVTResidencyState_t& rR
 	if ( m_nHintQueueCount == 0u )
 		return service_ancestor_hints_hot( rResidency, nBudget );
 #else
-	( void )rResidency;
-	( void )nBudget;
+	static_cast<void>(rResidency);
+	static_cast<void>(nBudget);
 #endif
 	return true;
 }

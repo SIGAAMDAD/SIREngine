@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSHADERMATERIALMANIFEST_H__
-#define __SIRENGINE_SIRSHADERMATERIALMANIFEST_H__
+#ifndef __SIR_SHADERMATERIALMANIFEST_H__
+#define __SIR_SHADERMATERIALMANIFEST_H__
 
 #include <Core/SIRPCH.h>
 
@@ -41,7 +41,7 @@ typedef struct sirShaderMaterialManifestRequest_s
 // insufficient capacity the output bytes are unchanged. A valid size query
 // reports the exact byte count through pRequiredBytes, including when the
 // destination is null or undersized.
-sirGraphicsResult_t sirShaderBuildMaterialManifest( const sirShaderMaterialManifestRequest_t& request, void *pBytes, uint32_t nCapacity,
+SIRGraphicsResult sirShaderBuildMaterialManifest( const sirShaderMaterialManifestRequest_t& request, void *pBytes, uint32_t nCapacity,
                                                     uint32_t *pRequiredBytes ) noexcept;
 
-#endif // __SIRENGINE_SIRSHADERMATERIALMANIFEST_H__
+#endif // __SIR_SHADERMATERIALMANIFEST_H__

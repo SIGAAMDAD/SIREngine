@@ -13,10 +13,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSHAREDPTR_H__
-#define __SIRENGINE_SIRSHAREDPTR_H__
+#ifndef __SIR_SHAREDPTR_H__
+#define __SIR_SHAREDPTR_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -24,7 +24,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-#include <Core/Platform/SIRAtomic.h>
+#include <atomic>
 
 #include <limits.h>
 #include <new>
@@ -43,7 +43,7 @@ typedef struct sirSharedAllocationCallbacks_s
 	void ( *pDeallocate )( void *pContext, void *pMemory ) noexcept;
 } sirSharedAllocationCallbacks_t;
 
-// SIRAtomic is the engine's only atomic implementation used by these wrappers.
+// std::atomic is the engine's only atomic implementation used by these wrappers.
 class SIRSharedAtomicCounter
 {
 public:
@@ -55,25 +55,25 @@ public:
 
 	uint32_t get( void ) const noexcept
 	{
-		return m_nCount.load( SIR_MEMORY_ORDER_ACQUIRE );
+		return m_nCount.load( std::memory_order_acquire );
 	}
 	void add( void ) noexcept
 	{
 		// An existing owner guarantees that the count cannot already be zero.
 		// Weak promotion still uses tryAdd() to reject an expired object.
-		const uint32_t nPrevious = m_nCount.fetchAdd( 1, SIR_MEMORY_ORDER_RELAXED );
+		const uint32_t nPrevious = m_nCount.fetch_add( 1, std::memory_order_relaxed );
 		if ( nPrevious == 0 || nPrevious == UINT32_MAX ) {
 			abort();
 		}
 	}
 	bool tryAdd( void ) noexcept
 	{
-		uint32_t nCurrent = m_nCount.load( SIR_MEMORY_ORDER_RELAXED );
+		uint32_t nCurrent = m_nCount.load( std::memory_order_relaxed );
 		while ( nCurrent != 0 ) {
 			if ( nCurrent == UINT32_MAX ) {
 				abort();
 			}
-			if ( m_nCount.compareExchangeWeak( nCurrent, nCurrent + 1, SIR_MEMORY_ORDER_ACQUIRE, SIR_MEMORY_ORDER_RELAXED ) ) {
+			if ( m_nCount.compare_exchange_weak( nCurrent, nCurrent + 1, std::memory_order_acquire, std::memory_order_relaxed ) ) {
 				return true;
 			}
 		}
@@ -81,7 +81,7 @@ public:
 	}
 	bool release( void ) noexcept
 	{
-		const uint32_t nOld = m_nCount.fetchSub( 1, SIR_MEMORY_ORDER_ACQUIRE_RELEASE );
+		const uint32_t nOld = m_nCount.fetch_sub( 1, std::memory_order_acq_rel );
 		if ( nOld == 0 ) {
 			abort();
 		}
@@ -89,7 +89,7 @@ public:
 	}
 
 private:
-	SIRAtomic<uint32_t> m_nCount;
+	std::atomic<uint32_t> m_nCount;
 };
 
 // Single-thread-only ownership. Copies, weak lock, and destruction must all
@@ -201,7 +201,7 @@ public:
 
 	T *get( void ) noexcept
 	{
-		return std::launder( reinterpret_cast<T *>( m_szStorage ) );
+		return std::launder( reinterpret_cast<T *>(m_szStorage) );
 	}
 
 private:
@@ -518,4 +518,4 @@ SIRLocalSharedPtr<T> SIRMakeLocalShared( const sirSharedAllocationCallbacks_t& r
 	return SIRSharedFactory::create<T, SIRSharedLocalCounter>( rCallbacks, std::forward<TArgs>( rArgs )... );
 }
 
-#endif // __SIRENGINE_SIRSHAREDPTR_H__
+#endif // __SIR_SHAREDPTR_H__

@@ -29,7 +29,12 @@ build/Source/
 /*.ilk
 /*.spv
 /.vs/
-/.vscode/
+/.vscode/*
+!/.vscode/settings.json
+!/.vscode/extensions.json
+!/.vscode/c_cpp_properties.json
+!/.vscode/launch.json
+!/.vscode/tasks.json
 /.idea/
 __pycache__/
 *.py[cod]

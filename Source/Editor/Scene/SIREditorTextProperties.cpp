@@ -28,8 +28,8 @@ static bool sirEditorPropertySpace( char c ) noexcept
 
 static bool sirEditorPropertyRangeOverlap( const void *pFirst, size_t nFirst, const void *pSecond, size_t nSecond ) noexcept
 {
-	const uintptr_t nA = ( uintptr_t )pFirst;
-	const uintptr_t nB = ( uintptr_t )pSecond;
+	const uintptr_t nA = reinterpret_cast<uintptr_t>(pFirst);
+	const uintptr_t nB = reinterpret_cast<uintptr_t>(pSecond);
 	if ( nFirst > UINTPTR_MAX - nA || nSecond > UINTPTR_MAX - nB ) {
 		return true;
 	}
@@ -38,11 +38,11 @@ static bool sirEditorPropertyRangeOverlap( const void *pFirst, size_t nFirst, co
 
 static bool sirEditorPropertyNodeTag( const char *pStart, const char *pEnd ) noexcept
 {
-	const size_t nLength = ( size_t )( pEnd - pStart );
+	const size_t nLength = static_cast<size_t>( pEnd - pStart );
 	return nLength >= 6 && memcmp( pStart, "[node", 5 ) == 0 && ( pStart[5] == ' ' || pStart[5] == '\t' || pStart[5] == ']' );
 }
 
-static sirEditorTextPropertyResult_t sirEditorPropertyConsumeValue( const char *pSource, const char *pEnd, const char **ppEnd,
+static SIREditorTextPropertyResult sirEditorPropertyConsumeValue( const char *pSource, const char *pEnd, const char **ppEnd,
                                                                     uint32_t *pLine ) noexcept
 {
 	char szNesting[SIR_EDITOR_PROPERTY_MAX_NESTING];
@@ -54,14 +54,14 @@ static sirEditorTextPropertyResult_t sirEditorPropertyConsumeValue( const char *
 	while ( pCursor < pEnd ) {
 		const char c = *pCursor;
 		if ( c == '\0' ) {
-			return SIR_EDITOR_PROPERTY_MALFORMED_VALUE;
+			return SIREditorTextPropertyResult::SIR_EDITOR_PROPERTY_MALFORMED_VALUE;
 		}
 		if ( c == '\n' ) {
 			++*pLine;
 			bComment = false;
 			if ( nDepth == 0 && !bQuoted ) {
 				*ppEnd = pCursor;
-				return SIR_EDITOR_PROPERTY_OK;
+				return SIREditorTextPropertyResult::SIR_EDITOR_PROPERTY_OK;
 			}
 			++pCursor;
 			continue;
@@ -73,7 +73,7 @@ static sirEditorTextPropertyResult_t sirEditorPropertyConsumeValue( const char *
 		if ( !bQuoted && ( c == '#' || c == ';' ) ) {
 			if ( nDepth == 0 ) {
 				*ppEnd = pCursor;
-				return SIR_EDITOR_PROPERTY_OK;
+				return SIREditorTextPropertyResult::SIR_EDITOR_PROPERTY_OK;
 			}
 			bComment = true;
 			++pCursor;
@@ -88,34 +88,34 @@ static sirEditorTextPropertyResult_t sirEditorPropertyConsumeValue( const char *
 		} else if ( !bQuoted ) {
 			if ( c == '(' || c == '[' || c == '{' ) {
 				if ( nDepth == SIR_EDITOR_PROPERTY_MAX_NESTING ) {
-					return SIR_EDITOR_PROPERTY_MALFORMED_VALUE;
+					return SIREditorTextPropertyResult::SIR_EDITOR_PROPERTY_MALFORMED_VALUE;
 				}
 				szNesting[nDepth++] = c;
 			} else if ( c == ')' || c == ']' || c == '}' ) {
 				if ( nDepth == 0 ) {
-					return SIR_EDITOR_PROPERTY_MALFORMED_VALUE;
+					return SIREditorTextPropertyResult::SIR_EDITOR_PROPERTY_MALFORMED_VALUE;
 				}
 				const char previous = szNesting[--nDepth];
 				if ( ( c == ')' && previous != '(' ) || ( c == ']' && previous != '[' ) || ( c == '}' && previous != '{' ) ) {
-					return SIR_EDITOR_PROPERTY_MALFORMED_VALUE;
+					return SIREditorTextPropertyResult::SIR_EDITOR_PROPERTY_MALFORMED_VALUE;
 				}
 			}
 		}
 		++pCursor;
 	}
 	if ( bQuoted || bEscape || nDepth != 0 ) {
-		return SIR_EDITOR_PROPERTY_MALFORMED_VALUE;
+		return SIREditorTextPropertyResult::SIR_EDITOR_PROPERTY_MALFORMED_VALUE;
 	}
 	*ppEnd = pEnd;
-	return SIR_EDITOR_PROPERTY_OK;
+	return SIREditorTextPropertyResult::SIR_EDITOR_PROPERTY_OK;
 }
 
-sirEditorTextPropertyResult_t sirEditorScanNodeTextProperties( const char *pszSource, size_t nSourceBytes,
+SIREditorTextPropertyResult sirEditorScanNodeTextProperties( const char *pszSource, size_t nSourceBytes,
                                                                const sirEditorTextSceneIndex_t& scene,
                                                                sirEditorTextPropertyIndex_t *pIndex ) noexcept
 {
 	if ( pIndex == nullptr ) {
-		return SIR_EDITOR_PROPERTY_INVALID_ARGUMENT;
+		return SIREditorTextPropertyResult::SIR_EDITOR_PROPERTY_INVALID_ARGUMENT;
 	}
 	pIndex->nCount = 0;
 	pIndex->nErrorLine = 0;
@@ -123,14 +123,14 @@ sirEditorTextPropertyResult_t sirEditorScanNodeTextProperties( const char *pszSo
 	if ( pszSource == nullptr || nSourceBytes == 0 || nSourceBytes > UINT32_MAX || scene.nNodeCount == 0 ||
 	     scene.nNodeCount > scene.storage.nNodeCapacity || scene.storage.pNodes == nullptr ||
 	     ( pIndex->nCapacity != 0 && pIndex->pProperties == nullptr ) ) {
-		return SIR_EDITOR_PROPERTY_INVALID_ARGUMENT;
+		return SIREditorTextPropertyResult::SIR_EDITOR_PROPERTY_INVALID_ARGUMENT;
 	}
 	if ( !bMeasure &&
 	     ( sirEditorPropertyRangeOverlap( pszSource, nSourceBytes, pIndex->pProperties,
-	                                      ( size_t )pIndex->nCapacity * sizeof( sirEditorTextProperty_t ) ) ||
-	       sirEditorPropertyRangeOverlap( scene.storage.pNodes, ( size_t )scene.nNodeCount * sizeof( sirEditorTextSceneNode_t ),
-	                                      pIndex->pProperties, ( size_t )pIndex->nCapacity * sizeof( sirEditorTextProperty_t ) ) ) ) {
-		return SIR_EDITOR_PROPERTY_INVALID_ARGUMENT;
+	                                      static_cast<size_t>(pIndex->nCapacity) * sizeof( sirEditorTextProperty_t ) ) ||
+	       sirEditorPropertyRangeOverlap( scene.storage.pNodes, static_cast<size_t>(scene.nNodeCount) * sizeof( sirEditorTextSceneNode_t ),
+	                                      pIndex->pProperties, static_cast<size_t>(pIndex->nCapacity) * sizeof( sirEditorTextProperty_t ) ) ) ) {
+		return SIREditorTextPropertyResult::SIR_EDITOR_PROPERTY_INVALID_ARGUMENT;
 	}
 
 	const char *pEnd = pszSource + nSourceBytes;
@@ -139,14 +139,14 @@ sirEditorTextPropertyResult_t sirEditorScanNodeTextProperties( const char *pszSo
 	uint32_t nCurrentNode = UINT32_MAX;
 	uint32_t nNextNode = 0;
 	uint32_t nProperties = 0;
-	sirEditorTextPropertyResult_t eResult = SIR_EDITOR_PROPERTY_OK;
+	SIREditorTextPropertyResult eResult = SIREditorTextPropertyResult::SIR_EDITOR_PROPERTY_OK;
 
 	while ( pCursor < pEnd ) {
 		const char *pStart = pCursor;
 		while ( pStart < pEnd && sirEditorPropertySpace( *pStart ) ) {
 			++pStart;
 		}
-		const char *pLineEnd = ( const char * )memchr( pStart, '\n', ( size_t )( pEnd - pStart ) );
+		const char *pLineEnd = static_cast<const char *>(memchr( pStart, '\n', static_cast<size_t>( pEnd - pStart ) ));
 		if ( pLineEnd == nullptr ) {
 			pLineEnd = pEnd;
 		}
@@ -155,7 +155,7 @@ sirEditorTextPropertyResult_t sirEditorScanNodeTextProperties( const char *pszSo
 		} else if ( *pStart == '[' ) {
 			if ( sirEditorPropertyNodeTag( pStart, pLineEnd ) ) {
 				if ( nNextNode >= scene.nNodeCount || scene.storage.pNodes[nNextNode].nSourceLine != nLine ) {
-					eResult = SIR_EDITOR_PROPERTY_INVALID_SOURCE;
+					eResult = SIREditorTextPropertyResult::SIR_EDITOR_PROPERTY_INVALID_SOURCE;
 					break;
 				}
 				nCurrentNode = nNextNode++;
@@ -166,9 +166,9 @@ sirEditorTextPropertyResult_t sirEditorScanNodeTextProperties( const char *pszSo
 		} else if ( nCurrentNode == UINT32_MAX ) {
 			pCursor = pLineEnd;
 		} else {
-			const char *pEquals = ( const char * )memchr( pStart, '=', ( size_t )( pLineEnd - pStart ) );
+			const char *pEquals = static_cast<const char *>(memchr( pStart, '=', static_cast<size_t>( pLineEnd - pStart ) ));
 			if ( pEquals == nullptr ) {
-				eResult = SIR_EDITOR_PROPERTY_INVALID_SOURCE;
+				eResult = SIREditorTextPropertyResult::SIR_EDITOR_PROPERTY_INVALID_SOURCE;
 				break;
 			}
 			const char *pNameEnd = pEquals;
@@ -176,16 +176,16 @@ sirEditorTextPropertyResult_t sirEditorScanNodeTextProperties( const char *pszSo
 				--pNameEnd;
 			}
 			if ( pNameEnd == pStart ) {
-				eResult = SIR_EDITOR_PROPERTY_INVALID_SOURCE;
+				eResult = SIREditorTextPropertyResult::SIR_EDITOR_PROPERTY_INVALID_SOURCE;
 				break;
 			}
 			for ( const char *pChar = pStart; pChar < pNameEnd; ++pChar ) {
 				if ( sirEditorPropertySpace( *pChar ) || *pChar == '\0' ) {
-					eResult = SIR_EDITOR_PROPERTY_INVALID_SOURCE;
+					eResult = SIREditorTextPropertyResult::SIR_EDITOR_PROPERTY_INVALID_SOURCE;
 					break;
 				}
 			}
-			if ( eResult != SIR_EDITOR_PROPERTY_OK ) {
+			if ( eResult != SIREditorTextPropertyResult::SIR_EDITOR_PROPERTY_OK ) {
 				break;
 			}
 			const char *pValue = pEquals + 1;
@@ -193,13 +193,13 @@ sirEditorTextPropertyResult_t sirEditorScanNodeTextProperties( const char *pszSo
 				++pValue;
 			}
 			if ( pValue == pLineEnd ) {
-				eResult = SIR_EDITOR_PROPERTY_MALFORMED_VALUE;
+				eResult = SIREditorTextPropertyResult::SIR_EDITOR_PROPERTY_MALFORMED_VALUE;
 				break;
 			}
 			const uint32_t nStartLine = nLine;
 			const char *pValueEnd = nullptr;
 			eResult = sirEditorPropertyConsumeValue( pValue, pEnd, &pValueEnd, &nLine );
-			if ( eResult != SIR_EDITOR_PROPERTY_OK ) {
+			if ( eResult != SIREditorTextPropertyResult::SIR_EDITOR_PROPERTY_OK ) {
 				break;
 			}
 			const char *pConsumedEnd = pValueEnd;
@@ -207,25 +207,25 @@ sirEditorTextPropertyResult_t sirEditorScanNodeTextProperties( const char *pszSo
 				--pValueEnd;
 			}
 			if ( pValueEnd == pValue ) {
-				eResult = SIR_EDITOR_PROPERTY_MALFORMED_VALUE;
+				eResult = SIREditorTextPropertyResult::SIR_EDITOR_PROPERTY_MALFORMED_VALUE;
 				break;
 			}
 			if ( nProperties == SIR_EDITOR_PROPERTY_MAX_COUNT ) {
-				eResult = SIR_EDITOR_PROPERTY_TOO_MANY;
+				eResult = SIREditorTextPropertyResult::SIR_EDITOR_PROPERTY_TOO_MANY;
 				break;
 			}
 			if ( !bMeasure && nProperties >= pIndex->nCapacity ) {
-				eResult = SIR_EDITOR_PROPERTY_OUT_OF_CAPACITY;
+				eResult = SIREditorTextPropertyResult::SIR_EDITOR_PROPERTY_OUT_OF_CAPACITY;
 				break;
 			}
 			if ( !bMeasure ) {
 				sirEditorTextProperty_t& property = pIndex->pProperties[nProperties];
 				property.nNodeId = scene.storage.pNodes[nCurrentNode].node.nId;
 				property.nSourceLine = nStartLine;
-				property.nNameOffset = ( uint32_t )( pStart - pszSource );
-				property.nNameLength = ( uint32_t )( pNameEnd - pStart );
-				property.nValueOffset = ( uint32_t )( pValue - pszSource );
-				property.nValueLength = ( uint32_t )( pValueEnd - pValue );
+				property.nNameOffset = static_cast<uint32_t>( pStart - pszSource );
+				property.nNameLength = static_cast<uint32_t>( pNameEnd - pStart );
+				property.nValueOffset = static_cast<uint32_t>( pValue - pszSource );
+				property.nValueLength = static_cast<uint32_t>( pValueEnd - pValue );
 			}
 			++nProperties;
 			pCursor = pConsumedEnd;
@@ -242,13 +242,13 @@ sirEditorTextPropertyResult_t sirEditorScanNodeTextProperties( const char *pszSo
 			break;
 		}
 	}
-	if ( eResult == SIR_EDITOR_PROPERTY_OK && nNextNode != scene.nNodeCount ) {
-		eResult = SIR_EDITOR_PROPERTY_INVALID_SOURCE;
+	if ( eResult == SIREditorTextPropertyResult::SIR_EDITOR_PROPERTY_OK && nNextNode != scene.nNodeCount ) {
+		eResult = SIREditorTextPropertyResult::SIR_EDITOR_PROPERTY_INVALID_SOURCE;
 	}
-	if ( eResult != SIR_EDITOR_PROPERTY_OK ) {
+	if ( eResult != SIREditorTextPropertyResult::SIR_EDITOR_PROPERTY_OK ) {
 		pIndex->nErrorLine = nLine;
 		return eResult;
 	}
 	pIndex->nCount = nProperties;
-	return SIR_EDITOR_PROPERTY_OK;
+	return SIREditorTextPropertyResult::SIR_EDITOR_PROPERTY_OK;
 }

@@ -33,21 +33,21 @@ static constexpr int32_t SIR_GL_MIRRORED_REPEAT = 0x8370;
 static constexpr int32_t SIR_GL_CLAMP_TO_EDGE = 0x812F;
 static constexpr int32_t SIR_GL_CLAMP_TO_BORDER = 0x812D;
 
-static sirGraphicsResult_t sirGLSamplerError( uint32_t nError ) noexcept
+static SIRGraphicsResult sirGLSamplerError( uint32_t nError ) noexcept
 {
-	return nError == SIR_GL_SAMPLER_OUT_OF_MEMORY ? SIR_GRAPHICS_OUT_OF_MEMORY : SIR_GRAPHICS_DRIVER_ERROR;
+	return nError == SIR_GL_SAMPLER_OUT_OF_MEMORY ? SIRGraphicsResult::SIR_GRAPHICS_OUT_OF_MEMORY : SIRGraphicsResult::SIR_GRAPHICS_DRIVER_ERROR;
 }
 
-static int32_t sirGLSamplerAddress( sirGraphicsAddressMode_t eAddress ) noexcept
+static int32_t sirGLSamplerAddress( SIRGraphicsAddressMode eAddress ) noexcept
 {
 	static constexpr int32_t SIR_GL_ADDRESS[] = { SIR_GL_REPEAT, SIR_GL_MIRRORED_REPEAT, SIR_GL_CLAMP_TO_EDGE, SIR_GL_CLAMP_TO_BORDER };
-	return SIR_GL_ADDRESS[( uint32_t )eAddress];
+	return SIR_GL_ADDRESS[static_cast<uint32_t>(eAddress)];
 }
 
-sirGraphicsResult_t sirGLLoadSamplerDispatch( sirGLProcedureLookup_t pLookup, void *pContext, sirGLSamplerDispatch_t *pAPI ) noexcept
+SIRGraphicsResult sirGLLoadSamplerDispatch( sirGLProcedureLookup_t pLookup, void *pContext, sirGLSamplerDispatch_t *pAPI ) noexcept
 {
 	if ( pLookup == nullptr || pContext == nullptr || pAPI == nullptr ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	void *pCreate = pLookup( pContext, "glCreateSamplers" );
 	void *pDelete = pLookup( pContext, "glDeleteSamplers" );
@@ -56,35 +56,35 @@ sirGraphicsResult_t sirGLLoadSamplerDispatch( sirGLProcedureLookup_t pLookup, vo
 	void *pError = pLookup( pContext, "glGetError" );
 	if ( !sirGLIsUsableProcedure( pCreate ) || !sirGLIsUsableProcedure( pDelete ) || !sirGLIsUsableProcedure( pSetInt ) ||
 	     !sirGLIsUsableProcedure( pSetFloat ) || !sirGLIsUsableProcedure( pError ) ) {
-		return SIR_GRAPHICS_UNSUPPORTED;
+		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
-	sirGLSamplerDispatch_t result = {};
-	result.pCreateSamplers = ( decltype( result.pCreateSamplers ) )pCreate;
-	result.pDeleteSamplers = ( decltype( result.pDeleteSamplers ) )pDelete;
-	result.pSamplerParameteri = ( decltype( result.pSamplerParameteri ) )pSetInt;
-	result.pSamplerParameterf = ( decltype( result.pSamplerParameterf ) )pSetFloat;
-	result.pGetError = ( decltype( result.pGetError ) )pError;
+	sirGLSamplerDispatch_t result {};
+	result.pCreateSamplers = reinterpret_cast<void ( * )( int32_t, uint32_t * )>( pCreate );
+	result.pDeleteSamplers = reinterpret_cast<void ( * )( int32_t, const uint32_t * )>( pDelete );
+	result.pSamplerParameteri = reinterpret_cast<void ( * )( uint32_t, uint32_t, int32_t )>( pSetInt );
+	result.pSamplerParameterf = reinterpret_cast<void ( * )( uint32_t, uint32_t, float )>( pSetFloat );
+	result.pGetError = reinterpret_cast<uint32_t ( * )( void )>( pError );
 	*pAPI = result;
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t sirGLCreateNativeSampler( const sirGLSamplerDispatch_t *pAPI, const sirGraphicsSamplerDesc_t *pDesc,
+SIRGraphicsResult sirGLCreateNativeSampler( const sirGLSamplerDispatch_t *pAPI, const sirGraphicsSamplerDesc_t *pDesc,
                                               uint32_t *pName ) noexcept
 {
 	if ( pAPI == nullptr || pDesc == nullptr || pName == nullptr || pAPI->pCreateSamplers == nullptr || pAPI->pDeleteSamplers == nullptr ||
 	     pAPI->pSamplerParameteri == nullptr || pAPI->pSamplerParameterf == nullptr || pAPI->pGetError == nullptr ||
-	     pDesc->eFilter > SIR_GRAPHICS_FILTER_ANISOTROPIC || pDesc->eAddressU > SIR_GRAPHICS_ADDRESS_BORDER ||
-	     pDesc->eAddressV > SIR_GRAPHICS_ADDRESS_BORDER || pDesc->eAddressW > SIR_GRAPHICS_ADDRESS_BORDER ||
+	     pDesc->eFilter > SIRGraphicsSamplerFilter::SIR_GRAPHICS_FILTER_ANISOTROPIC || pDesc->eAddressU > SIRGraphicsAddressMode::SIR_GRAPHICS_ADDRESS_BORDER ||
+	     pDesc->eAddressV > SIRGraphicsAddressMode::SIR_GRAPHICS_ADDRESS_BORDER || pDesc->eAddressW > SIRGraphicsAddressMode::SIR_GRAPHICS_ADDRESS_BORDER ||
 	     !( pDesc->fMaximumAnisotropy >= 1.0f ) || !( pDesc->fMaximumAnisotropy <= 16.0f ) || !std::isfinite( pDesc->fMinimumLod ) ||
 	     !std::isfinite( pDesc->fMaximumLod ) || pDesc->fMinimumLod > pDesc->fMaximumLod ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	// GL_EXT_texture_filter_anisotropic is not part of mandatory OpenGL 4.6 core.
-	if ( pDesc->eFilter == SIR_GRAPHICS_FILTER_ANISOTROPIC || pDesc->fMaximumAnisotropy != 1.0f ) {
-		return SIR_GRAPHICS_UNSUPPORTED;
+	if ( pDesc->eFilter == SIRGraphicsSamplerFilter::SIR_GRAPHICS_FILTER_ANISOTROPIC || pDesc->fMaximumAnisotropy != 1.0f ) {
+		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
 	if ( pAPI->pGetError() != SIR_GL_SAMPLER_NO_ERROR ) {
-		return SIR_GRAPHICS_DRIVER_ERROR;
+		return SIRGraphicsResult::SIR_GRAPHICS_DRIVER_ERROR;
 	}
 	uint32_t nName = 0;
 	pAPI->pCreateSamplers( 1, &nName );
@@ -95,10 +95,10 @@ sirGraphicsResult_t sirGLCreateNativeSampler( const sirGLSamplerDispatch_t *pAPI
 		}
 		return sirGLSamplerError( nCreateError );
 	}
-	const int32_t nMinFilter = pDesc->eFilter == SIR_GRAPHICS_FILTER_TRILINEAR ? SIR_GL_LINEAR_MIPMAP_LINEAR
-	                           : pDesc->eFilter == SIR_GRAPHICS_FILTER_NEAREST ? SIR_GL_NEAREST
+	const int32_t nMinFilter = pDesc->eFilter == SIRGraphicsSamplerFilter::SIR_GRAPHICS_FILTER_TRILINEAR ? SIR_GL_LINEAR_MIPMAP_LINEAR
+	                           : pDesc->eFilter == SIRGraphicsSamplerFilter::SIR_GRAPHICS_FILTER_NEAREST ? SIR_GL_NEAREST
 	                                                                           : SIR_GL_LINEAR;
-	const int32_t nMagFilter = pDesc->eFilter == SIR_GRAPHICS_FILTER_NEAREST ? SIR_GL_NEAREST : SIR_GL_LINEAR;
+	const int32_t nMagFilter = pDesc->eFilter == SIRGraphicsSamplerFilter::SIR_GRAPHICS_FILTER_NEAREST ? SIR_GL_NEAREST : SIR_GL_LINEAR;
 	pAPI->pSamplerParameteri( nName, SIR_GL_TEXTURE_MIN_FILTER, nMinFilter );
 	pAPI->pSamplerParameteri( nName, SIR_GL_TEXTURE_MAG_FILTER, nMagFilter );
 	pAPI->pSamplerParameteri( nName, SIR_GL_TEXTURE_WRAP_S, sirGLSamplerAddress( pDesc->eAddressU ) );
@@ -112,18 +112,18 @@ sirGraphicsResult_t sirGLCreateNativeSampler( const sirGLSamplerDispatch_t *pAPI
 		return sirGLSamplerError( nConfigError );
 	}
 	*pName = nName;
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t sirGLDeleteNativeSampler( const sirGLSamplerDispatch_t *pAPI, uint32_t nName ) noexcept
+SIRGraphicsResult sirGLDeleteNativeSampler( const sirGLSamplerDispatch_t *pAPI, uint32_t nName ) noexcept
 {
 	if ( pAPI == nullptr || pAPI->pDeleteSamplers == nullptr || pAPI->pGetError == nullptr || nName == 0 ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( pAPI->pGetError() != SIR_GL_SAMPLER_NO_ERROR ) {
-		return SIR_GRAPHICS_DRIVER_ERROR;
+		return SIRGraphicsResult::SIR_GRAPHICS_DRIVER_ERROR;
 	}
 	pAPI->pDeleteSamplers( 1, &nName );
 	const uint32_t nError = pAPI->pGetError();
-	return nError == SIR_GL_SAMPLER_NO_ERROR ? SIR_GRAPHICS_SUCCESS : sirGLSamplerError( nError );
+	return nError == SIR_GL_SAMPLER_NO_ERROR ? SIRGraphicsResult::SIR_GRAPHICS_SUCCESS : sirGLSamplerError( nError );
 }

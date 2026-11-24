@@ -22,7 +22,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 SIRPlatformFileMapping::SIRPlatformFileMapping( void ) noexcept
     : m_pBase( nullptr ), m_pData( nullptr ), m_nMappedBytes( 0 ), m_nViewOffset( 0 ), m_nViewBytes( 0 ), m_nNativeMapping( 0 ),
-      m_eMode( SIR_FILE_MAP_READ_ONLY )
+      m_eMode( SIRFileMapMode::SIR_FILE_MAP_READ_ONLY )
 {
 }
 
@@ -31,92 +31,92 @@ SIRPlatformFileMapping::~SIRPlatformFileMapping( void ) noexcept
 	unmap();
 }
 
-sirFileResult_t SIRPlatformFileMapping::map( const SIRPlatformFile& rFile, uint64_t nOffset, uint64_t nBytes,
-                                             sirFileMapMode_t eMode ) noexcept
+SIRFileResult SIRPlatformFileMapping::map( const SIRPlatformFile& rFile, uint64_t nOffset, uint64_t nBytes,
+                                             SIRFileMapMode eMode ) noexcept
 {
-	if ( isMapped() || !rFile.isOpen() || eMode > SIR_FILE_MAP_COPY_ON_WRITE || ( rFile.m_nFlags & SIR_FILE_OPEN_READ ) == 0 ||
-	     ( eMode == SIR_FILE_MAP_READ_WRITE && ( rFile.m_nFlags & SIR_FILE_OPEN_WRITE ) == 0 ) ) {
-		return SIR_FILE_INVALID_ARGUMENT;
+	if ( isMapped() || !rFile.isOpen() || eMode > SIRFileMapMode::SIR_FILE_MAP_COPY_ON_WRITE || ( rFile.m_nFlags & SIRFileOpenFlag::SIR_FILE_OPEN_READ ) == 0 ||
+	     ( eMode == SIRFileMapMode::SIR_FILE_MAP_READ_WRITE && ( rFile.m_nFlags & SIRFileOpenFlag::SIR_FILE_OPEN_WRITE ) == 0 ) ) {
+		return SIRFileResult::SIR_FILE_INVALID_ARGUMENT;
 	}
 	uint64_t nFileBytes = 0;
-	sirFileResult_t eResult = rFile.getSize( &nFileBytes );
-	if ( eResult != SIR_FILE_OK ) {
+	SIRFileResult eResult = rFile.getSize( &nFileBytes );
+	if ( eResult != SIRFileResult::SIR_FILE_OK ) {
 		return eResult;
 	}
-	if ( nOffset >= nFileBytes || nOffset > ( uint64_t )INT64_MAX ) {
-		return SIR_FILE_OUT_OF_RANGE;
+	if ( nOffset >= nFileBytes || nOffset > static_cast<uint64_t>(INT64_MAX) ) {
+		return SIRFileResult::SIR_FILE_OUT_OF_RANGE;
 	}
 	if ( nBytes == 0 ) {
 		nBytes = nFileBytes - nOffset;
 	}
 	if ( nBytes > nFileBytes - nOffset ) {
-		return SIR_FILE_OUT_OF_RANGE;
+		return SIRFileResult::SIR_FILE_OUT_OF_RANGE;
 	}
 
-	SYSTEM_INFO info = {};
+	SYSTEM_INFO info {};
 	GetSystemInfo( &info );
 	if ( info.dwAllocationGranularity == 0 ) {
-		return SIR_FILE_IO_ERROR;
+		return SIRFileResult::SIR_FILE_IO_ERROR;
 	}
-	const uint64_t nAlignment = ( uint64_t )info.dwAllocationGranularity;
+	const uint64_t nAlignment = static_cast<uint64_t>(info.dwAllocationGranularity);
 	const uint64_t nAlignedOffset = nOffset - nOffset % nAlignment;
 	const uint64_t nDelta = nOffset - nAlignedOffset;
-	if ( nBytes > SIZE_MAX - nDelta || nAlignedOffset > ( uint64_t )INT64_MAX ) {
-		return SIR_FILE_OUT_OF_RANGE;
+	if ( nBytes > SIZE_MAX - nDelta || nAlignedOffset > static_cast<uint64_t>(INT64_MAX) ) {
+		return SIRFileResult::SIR_FILE_OUT_OF_RANGE;
 	}
 	const uint64_t nMappedBytes = nDelta + nBytes;
 	const DWORD nProtection =
-	    eMode == SIR_FILE_MAP_READ_ONLY ? PAGE_READONLY : ( eMode == SIR_FILE_MAP_COPY_ON_WRITE ? PAGE_WRITECOPY : PAGE_READWRITE );
+	    eMode == SIRFileMapMode::SIR_FILE_MAP_READ_ONLY ? PAGE_READONLY : ( eMode == SIRFileMapMode::SIR_FILE_MAP_COPY_ON_WRITE ? PAGE_WRITECOPY : PAGE_READWRITE );
 	const DWORD nAccess =
-	    eMode == SIR_FILE_MAP_READ_ONLY ? FILE_MAP_READ : ( eMode == SIR_FILE_MAP_COPY_ON_WRITE ? FILE_MAP_COPY : FILE_MAP_WRITE );
-	HANDLE hMapping = CreateFileMappingW( ( HANDLE )rFile.m_nNativeHandle, nullptr, nProtection, 0, 0, nullptr );
+	    eMode == SIRFileMapMode::SIR_FILE_MAP_READ_ONLY ? FILE_MAP_READ : ( eMode == SIRFileMapMode::SIR_FILE_MAP_COPY_ON_WRITE ? FILE_MAP_COPY : FILE_MAP_WRITE );
+	HANDLE hMapping = CreateFileMappingW( static_cast<HANDLE>(rFile.m_nNativeHandle), nullptr, nProtection, 0, 0, nullptr );
 	if ( hMapping == nullptr ) {
-		return GetLastError() == ERROR_ACCESS_DENIED ? SIR_FILE_ACCESS_DENIED : SIR_FILE_IO_ERROR;
+		return GetLastError() == ERROR_ACCESS_DENIED ? SIRFileResult::SIR_FILE_ACCESS_DENIED : SIRFileResult::SIR_FILE_IO_ERROR;
 	}
-	void *pBase = MapViewOfFile( hMapping, nAccess, ( DWORD )( nAlignedOffset >> 32 ), ( DWORD )nAlignedOffset, ( SIZE_T )nMappedBytes );
+	void *pBase = MapViewOfFile( hMapping, nAccess, static_cast<DWORD>( nAlignedOffset >> 32 ), static_cast<DWORD>(nAlignedOffset), static_cast<SIZE_T>(nMappedBytes) );
 	if ( pBase == nullptr ) {
 		const DWORD nError = GetLastError();
 		CloseHandle( hMapping );
-		return nError == ERROR_ACCESS_DENIED ? SIR_FILE_ACCESS_DENIED : SIR_FILE_IO_ERROR;
+		return nError == ERROR_ACCESS_DENIED ? SIRFileResult::SIR_FILE_ACCESS_DENIED : SIRFileResult::SIR_FILE_IO_ERROR;
 	}
 	m_pBase = pBase;
-	m_pData = ( uint8_t * )pBase + nDelta;
+	m_pData = static_cast<uint8_t *>(pBase) + nDelta;
 	m_nMappedBytes = nMappedBytes;
 	m_nViewOffset = nOffset;
 	m_nViewBytes = nBytes;
-	m_nNativeMapping = ( uintptr_t )hMapping;
+	m_nNativeMapping = static_cast<uintptr_t>(hMapping);
 	m_eMode = eMode;
-	return SIR_FILE_OK;
+	return SIRFileResult::SIR_FILE_OK;
 }
 
-sirFileResult_t SIRPlatformFileMapping::unmap( void ) noexcept
+SIRFileResult SIRPlatformFileMapping::unmap( void ) noexcept
 {
 	if ( !isMapped() ) {
-		return SIR_FILE_OK;
+		return SIRFileResult::SIR_FILE_OK;
 	}
 	if ( !UnmapViewOfFile( m_pBase ) ) {
-		return SIR_FILE_IO_ERROR;
+		return SIRFileResult::SIR_FILE_IO_ERROR;
 	}
-	const BOOL bClosed = CloseHandle( ( HANDLE )m_nNativeMapping );
+	const BOOL bClosed = CloseHandle( static_cast<HANDLE>(m_nNativeMapping) );
 	m_pBase = nullptr;
 	m_pData = nullptr;
 	m_nMappedBytes = 0;
 	m_nViewBytes = 0;
 	m_nViewOffset = 0;
 	m_nNativeMapping = 0;
-	m_eMode = SIR_FILE_MAP_READ_ONLY;
-	return bClosed ? SIR_FILE_OK : SIR_FILE_IO_ERROR;
+	m_eMode = SIRFileMapMode::SIR_FILE_MAP_READ_ONLY;
+	return bClosed ? SIRFileResult::SIR_FILE_OK : SIRFileResult::SIR_FILE_IO_ERROR;
 }
 
-sirFileResult_t SIRPlatformFileMapping::flush( void ) const noexcept
+SIRFileResult SIRPlatformFileMapping::flush( void ) const noexcept
 {
 	if ( !isMapped() ) {
-		return SIR_FILE_CLOSED;
+		return SIRFileResult::SIR_FILE_CLOSED;
 	}
-	if ( m_eMode != SIR_FILE_MAP_READ_WRITE ) {
-		return SIR_FILE_INVALID_ARGUMENT;
+	if ( m_eMode != SIRFileMapMode::SIR_FILE_MAP_READ_WRITE ) {
+		return SIRFileResult::SIR_FILE_INVALID_ARGUMENT;
 	}
-	return FlushViewOfFile( m_pBase, ( SIZE_T )m_nMappedBytes ) ? SIR_FILE_OK : SIR_FILE_IO_ERROR;
+	return FlushViewOfFile( m_pBase, static_cast<SIZE_T>(m_nMappedBytes) ) ? SIRFileResult::SIR_FILE_OK : SIRFileResult::SIR_FILE_IO_ERROR;
 }
 
 bool SIRPlatformFileMapping::isMapped( void ) const noexcept
@@ -131,7 +131,7 @@ const uint8_t *SIRPlatformFileMapping::getData( void ) const noexcept
 
 uint8_t *SIRPlatformFileMapping::getWritableData( void ) noexcept
 {
-	return m_eMode == SIR_FILE_MAP_READ_ONLY ? nullptr : m_pData;
+	return m_eMode == SIRFileMapMode::SIR_FILE_MAP_READ_ONLY ? nullptr : m_pData;
 }
 
 uint64_t SIRPlatformFileMapping::getSize( void ) const noexcept

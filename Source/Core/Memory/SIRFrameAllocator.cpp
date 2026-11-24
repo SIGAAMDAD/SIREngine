@@ -19,7 +19,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Memory/SIRMemoryManager.h>
 #include <Core/Memory/SIRMemorySegment.h>
 
-#include <Core/Memory/SIRMemoryUtils.h>
+#include <Core/SIRMath.h>
 sirFrameSlot_s::sirFrameSlot_s( void ) : nEpoch( 0 ), bInFlight( false )
 {
 }
@@ -36,7 +36,7 @@ uint64_t SIRFrameAllocator::getRequiredMetadataBytes( uint32_t nSlotCount )
 		return 0;
 	}
 
-	return ( ( uint64_t )( nSlotCount ) ) * sizeof( sirFrameSlot_t );
+	return static_cast<uint64_t>( nSlotCount ) * sizeof( sirFrameSlot_t );
 }
 
 bool SIRFrameAllocator::init( SIRMemorySegment *const *ppSegments, uint32_t nSlotCount, uint64_t nCommitIncrementBytes )
@@ -59,9 +59,9 @@ bool SIRFrameAllocator::init( SIRMemorySegment *const *ppSegments, uint32_t nSlo
 			return false;
 		}
 
-		if ( !SIR_IS_POWER_OF_TWO( pSegment->getPageSize() ) || ( uint64_t )( pSegment->getPageSize() ) > UINTPTR_MAX ||
-		     ( uint64_t )( nCommitIncrementBytes != 0 ? nCommitIncrementBytes : pSegment->getPageSize() ) >
-		         UINTPTR_MAX - ( ( uint64_t )( pSegment->getPageSize() ) - 1 ) ) {
+		if ( !SIR_IS_POWER_OF_TWO( pSegment->getPageSize() ) || static_cast<uint64_t>(  pSegment->getPageSize()  ) > UINTPTR_MAX ||
+		     static_cast<uint64_t>(  nCommitIncrementBytes != 0 ? nCommitIncrementBytes : pSegment->getPageSize()  ) >
+		         UINTPTR_MAX - ( static_cast<uint64_t>(  pSegment->getPageSize()  ) - 1 ) ) {
 			return false;
 		}
 
@@ -79,14 +79,14 @@ bool SIRFrameAllocator::init( SIRMemorySegment *const *ppSegments, uint32_t nSlo
 		return false;
 	}
 
-	sirFrameSlot_t *pSlots = ( ( sirFrameSlot_t * )( pStorage ) );
+	sirFrameSlot_t *pSlots = static_cast<sirFrameSlot_t *>( pStorage );
 	for ( uint32_t i = 0; i < nSlotCount; ++i ) {
 		new ( pSlots + i ) sirFrameSlot_t();
 		// The segment and granularity were validated above, so Init cannot
 		// fail unless the caller violates exclusive segment ownership.
 		if ( !pSlots[i].Linear.init( ppSegments[i], nCommitIncrementBytes ) ) {
 			for ( uint32_t j = 0; j < i; ++j ) {
-				( void )pSlots[j].Linear.shutdown();
+				static_cast<void>(pSlots[j].Linear.shutdown());
 				pSlots[j].~sirFrameSlot_t();
 			}
 			pSlots[i].~sirFrameSlot_t();
@@ -110,7 +110,7 @@ bool SIRFrameAllocator::beginEpoch( uint64_t nEpoch, uint64_t nCompletedEpoch )
 		return false;
 	}
 
-	const uint32_t nSlot = ( ( uint32_t )( nEpoch % m_nSlotCount ) );
+	const uint32_t nSlot = static_cast<uint32_t>( nEpoch % m_nSlotCount );
 	sirFrameSlot_t& slot = m_pSlots[nSlot];
 	if ( slot.bInFlight && slot.nEpoch > nCompletedEpoch ) {
 		return false;

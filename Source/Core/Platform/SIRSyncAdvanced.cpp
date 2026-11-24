@@ -24,10 +24,10 @@ SIRTicketLock::SIRTicketLock( void ) noexcept : m_nNextTicket( 0 ), m_nServing( 
 
 void SIRTicketLock::lock( void ) noexcept
 {
-	const uint32_t nTicket = m_nNextTicket.fetchAdd( 1, SIR_MEMORY_ORDER_RELAXED );
+	const uint32_t nTicket = m_nNextTicket.fetch_add( 1, std::memory_order_relaxed );
 	uint32_t nSpins = 0;
 
-	while ( m_nServing.load( SIR_MEMORY_ORDER_ACQUIRE ) != nTicket ) {
+	while ( m_nServing.load( std::memory_order_acquire ) != nTicket ) {
 		SIRPlatformUtils::cpuRelax();
 		++nSpins;
 		if ( nSpins == 1024 ) {
@@ -39,14 +39,14 @@ void SIRTicketLock::lock( void ) noexcept
 
 bool SIRTicketLock::tryLock( void ) noexcept
 {
-	const uint32_t nServing = m_nServing.load( SIR_MEMORY_ORDER_ACQUIRE );
+	const uint32_t nServing = m_nServing.load( std::memory_order_acquire );
 	uint32_t nExpected = nServing;
-	return m_nNextTicket.compareExchangeStrong( nExpected, nServing + 1, SIR_MEMORY_ORDER_ACQUIRE, SIR_MEMORY_ORDER_RELAXED );
+	return m_nNextTicket.compare_exchange_strong( nExpected, nServing + 1, std::memory_order_acquire, std::memory_order_relaxed );
 }
 
 void SIRTicketLock::unlock( void ) noexcept
 {
-	m_nServing.fetchAdd( 1, SIR_MEMORY_ORDER_RELEASE );
+	m_nServing.fetch_add( 1, std::memory_order_release );
 }
 
 SIRMCSLock::SIRMCSLock( void ) noexcept : m_pTail( nullptr )
@@ -55,17 +55,17 @@ SIRMCSLock::SIRMCSLock( void ) noexcept : m_pTail( nullptr )
 
 void SIRMCSLock::lock( sirMCSNode_t& node ) noexcept
 {
-	node.pNext.store( nullptr, SIR_MEMORY_ORDER_RELAXED );
-	node.bWaiting.store( true, SIR_MEMORY_ORDER_RELAXED );
+	node.pNext.store( nullptr, std::memory_order_relaxed );
+	node.bWaiting.store( true, std::memory_order_relaxed );
 
-	sirMCSNode_t *pPredecessor = m_pTail.exchange( &node, SIR_MEMORY_ORDER_ACQUIRE_RELEASE );
+	sirMCSNode_t *pPredecessor = m_pTail.exchange( &node, std::memory_order_acq_rel );
 	if ( pPredecessor == nullptr ) {
 		return;
 	}
 
-	pPredecessor->pNext.store( &node, SIR_MEMORY_ORDER_RELEASE );
+	pPredecessor->pNext.store( &node, std::memory_order_release );
 	uint32_t nSpins = 0;
-	while ( node.bWaiting.load( SIR_MEMORY_ORDER_ACQUIRE ) ) {
+	while ( node.bWaiting.load( std::memory_order_acquire ) ) {
 		SIRPlatformUtils::cpuRelax();
 		++nSpins;
 		if ( nSpins == 1024 ) {
@@ -77,28 +77,28 @@ void SIRMCSLock::lock( sirMCSNode_t& node ) noexcept
 
 bool SIRMCSLock::tryLock( sirMCSNode_t& node ) noexcept
 {
-	node.pNext.store( nullptr, SIR_MEMORY_ORDER_RELAXED );
-	node.bWaiting.store( false, SIR_MEMORY_ORDER_RELAXED );
+	node.pNext.store( nullptr, std::memory_order_relaxed );
+	node.bWaiting.store( false, std::memory_order_relaxed );
 
 	sirMCSNode_t *pExpected = nullptr;
-	return m_pTail.compareExchangeStrong( pExpected, &node, SIR_MEMORY_ORDER_ACQUIRE, SIR_MEMORY_ORDER_RELAXED );
+	return m_pTail.compare_exchange_strong( pExpected, &node, std::memory_order_acquire, std::memory_order_relaxed );
 }
 
 void SIRMCSLock::unlock( sirMCSNode_t& node ) noexcept
 {
-	sirMCSNode_t *pSuccessor = node.pNext.load( SIR_MEMORY_ORDER_ACQUIRE );
+	sirMCSNode_t *pSuccessor = node.pNext.load( std::memory_order_acquire );
 	if ( pSuccessor == nullptr ) {
 		sirMCSNode_t *pExpected = &node;
-		if ( m_pTail.compareExchangeStrong( pExpected, nullptr, SIR_MEMORY_ORDER_RELEASE, SIR_MEMORY_ORDER_RELAXED ) ) {
+		if ( m_pTail.compare_exchange_strong( pExpected, nullptr, std::memory_order_release, std::memory_order_relaxed ) ) {
 			return;
 		}
 
-		while ( ( pSuccessor = node.pNext.load( SIR_MEMORY_ORDER_ACQUIRE ) ) == nullptr ) {
+		while ( ( pSuccessor = node.pNext.load( std::memory_order_acquire ) ) == nullptr ) {
 			SIRPlatformUtils::cpuRelax();
 		}
 	}
 
-	pSuccessor->bWaiting.store( false, SIR_MEMORY_ORDER_RELEASE );
+	pSuccessor->bWaiting.store( false, std::memory_order_release );
 }
 
 SIRAdaptiveMutex::SIRAdaptiveMutex( void ) noexcept : m_nLocked( 0 ), m_nWaiters( 0 )
@@ -108,7 +108,7 @@ SIRAdaptiveMutex::SIRAdaptiveMutex( void ) noexcept : m_nLocked( 0 ), m_nWaiters
 bool SIRAdaptiveMutex::tryLock( void ) noexcept
 {
 	uint32_t nExpected = 0;
-	return m_nLocked.compareExchangeStrong( nExpected, 1, SIR_MEMORY_ORDER_SEQUENTIAL, SIR_MEMORY_ORDER_SEQUENTIAL );
+	return m_nLocked.compare_exchange_strong( nExpected, 1, std::memory_order_seq_cst, std::memory_order_seq_cst );
 }
 
 void SIRAdaptiveMutex::lock( void ) noexcept
@@ -120,26 +120,26 @@ void SIRAdaptiveMutex::lock( void ) noexcept
 	constexpr uint32_t SPIN_LIMIT = 128;
 	for ( uint32_t iSpin = 0; iSpin < SPIN_LIMIT; ++iSpin ) {
 		SIRPlatformUtils::cpuRelax();
-		if ( m_nLocked.load( SIR_MEMORY_ORDER_RELAXED ) == 0 && tryLock() ) {
+		if ( m_nLocked.load( std::memory_order_relaxed ) == 0 && tryLock() ) {
 			return;
 		}
 	}
 
 	// Announce the waiter before checking again under the wait mutex.
 	// This closes the unlock/park lost-wakeup window.
-	m_nWaiters.fetchAdd( 1, SIR_MEMORY_ORDER_SEQUENTIAL );
+	m_nWaiters.fetch_add( 1, std::memory_order_seq_cst );
 	m_WaitMutex.lock();
 	while ( !tryLock() ) {
 		m_WaitCondition.wait( m_WaitMutex );
 	}
 	m_WaitMutex.unlock();
-	m_nWaiters.fetchSub( 1, SIR_MEMORY_ORDER_SEQUENTIAL );
+	m_nWaiters.fetch_sub( 1, std::memory_order_seq_cst );
 }
 
 void SIRAdaptiveMutex::unlock( void ) noexcept
 {
-	m_nLocked.store( 0, SIR_MEMORY_ORDER_SEQUENTIAL );
-	if ( m_nWaiters.load( SIR_MEMORY_ORDER_SEQUENTIAL ) == 0 ) {
+	m_nLocked.store( 0, std::memory_order_seq_cst );
+	if ( m_nWaiters.load( std::memory_order_seq_cst ) == 0 ) {
 		return;
 	}
 
@@ -187,12 +187,12 @@ SIRSingleWriterReadMostlyMutex::SIRSingleWriterReadMostlyMutex( void ) noexcept 
 
 bool SIRSingleWriterReadMostlyMutex::tryLockRead( void ) noexcept
 {
-	uint32_t nState = m_nState.load( SIR_MEMORY_ORDER_RELAXED );
+	uint32_t nState = m_nState.load( std::memory_order_relaxed );
 	while ( ( nState & WRITER_PENDING ) == 0 ) {
 		if ( ( nState & READER_MASK ) == READER_MASK ) {
 			return false;
 		}
-		if ( m_nState.compareExchangeWeak( nState, nState + 1, SIR_MEMORY_ORDER_ACQUIRE, SIR_MEMORY_ORDER_RELAXED ) ) {
+		if ( m_nState.compare_exchange_weak( nState, nState + 1, std::memory_order_acquire, std::memory_order_relaxed ) ) {
 			return true;
 		}
 	}
@@ -213,13 +213,13 @@ void SIRSingleWriterReadMostlyMutex::lockRead( void ) noexcept
 
 void SIRSingleWriterReadMostlyMutex::unlockRead( void ) noexcept
 {
-	const uint32_t nPrevious = m_nState.fetchSub( 1, SIR_MEMORY_ORDER_RELEASE );
+	const uint32_t nPrevious = m_nState.fetch_sub( 1, std::memory_order_release );
 	assert( ( nPrevious & READER_MASK ) != 0 );
 	if ( ( nPrevious & READER_MASK ) != 1 || ( nPrevious & WRITER_PENDING ) == 0 ) {
 		return;
 	}
 	m_WaitMutex.lock();
-	if ( m_nState.load( SIR_MEMORY_ORDER_ACQUIRE ) == WRITER_PENDING ) {
+	if ( m_nState.load( std::memory_order_acquire ) == WRITER_PENDING ) {
 		m_WritersReady.notifyOne();
 	}
 	m_WaitMutex.unlock();
@@ -228,7 +228,7 @@ void SIRSingleWriterReadMostlyMutex::unlockRead( void ) noexcept
 bool SIRSingleWriterReadMostlyMutex::tryLock( void ) noexcept
 {
 	uint32_t nExpected = 0;
-	return m_nState.compareExchangeStrong( nExpected, WRITER_PENDING, SIR_MEMORY_ORDER_ACQUIRE, SIR_MEMORY_ORDER_RELAXED );
+	return m_nState.compare_exchange_strong( nExpected, WRITER_PENDING, std::memory_order_acquire, std::memory_order_relaxed );
 }
 
 void SIRSingleWriterReadMostlyMutex::lock( void ) noexcept
@@ -237,8 +237,8 @@ void SIRSingleWriterReadMostlyMutex::lock( void ) noexcept
 		return;
 	}
 	m_WaitMutex.lock();
-	m_nState.fetchOr( WRITER_PENDING, SIR_MEMORY_ORDER_ACQUIRE_RELEASE );
-	while ( m_nState.load( SIR_MEMORY_ORDER_ACQUIRE ) != WRITER_PENDING ) {
+	m_nState.fetch_or( WRITER_PENDING, std::memory_order_acq_rel );
+	while ( m_nState.load( std::memory_order_acquire ) != WRITER_PENDING ) {
 		m_WritersReady.wait( m_WaitMutex );
 	}
 	m_WaitMutex.unlock();
@@ -247,8 +247,8 @@ void SIRSingleWriterReadMostlyMutex::lock( void ) noexcept
 void SIRSingleWriterReadMostlyMutex::unlock( void ) noexcept
 {
 	m_WaitMutex.lock();
-	assert( m_nState.load( SIR_MEMORY_ORDER_RELAXED ) == WRITER_PENDING );
-	m_nState.store( 0, SIR_MEMORY_ORDER_RELEASE );
+	assert( m_nState.load( std::memory_order_relaxed ) == WRITER_PENDING );
+	m_nState.store( 0, std::memory_order_release );
 	m_ReadersReady.notifyAll();
 	m_WaitMutex.unlock();
 }
@@ -331,10 +331,10 @@ SIRReadMostlyMutex::SIRReadMostlyMutex( void ) noexcept : m_nState( 0 ), m_nWait
 
 bool SIRReadMostlyMutex::tryLockRead( void ) noexcept
 {
-	uint32_t nState = m_nState.load( SIR_MEMORY_ORDER_RELAXED );
+	uint32_t nState = m_nState.load( std::memory_order_relaxed );
 	while ( ( nState & ( WRITER_ACTIVE | WRITER_PENDING ) ) == 0 ) {
 		assert( ( nState & READER_MASK ) != READER_MASK );
-		if ( m_nState.compareExchangeWeak( nState, nState + 1, SIR_MEMORY_ORDER_ACQUIRE, SIR_MEMORY_ORDER_RELAXED ) ) {
+		if ( m_nState.compare_exchange_weak( nState, nState + 1, std::memory_order_acquire, std::memory_order_relaxed ) ) {
 			return true;
 		}
 	}
@@ -356,7 +356,7 @@ void SIRReadMostlyMutex::lockRead( void ) noexcept
 
 void SIRReadMostlyMutex::unlockRead( void ) noexcept
 {
-	const uint32_t nPrevious = m_nState.fetchSub( 1, SIR_MEMORY_ORDER_RELEASE );
+	const uint32_t nPrevious = m_nState.fetch_sub( 1, std::memory_order_release );
 	assert( ( nPrevious & READER_MASK ) != 0 );
 	if ( ( nPrevious & READER_MASK ) != 1 || ( nPrevious & WRITER_PENDING ) == 0 ) {
 		return;
@@ -364,7 +364,7 @@ void SIRReadMostlyMutex::unlockRead( void ) noexcept
 
 	// A queued writer must observe the last reader's release before waking.
 	m_Mutex.lock();
-	if ( m_nWaitingWriters != 0 && ( m_nState.load( SIR_MEMORY_ORDER_ACQUIRE ) & READER_MASK ) == 0 ) {
+	if ( m_nWaitingWriters != 0 && ( m_nState.load( std::memory_order_acquire ) & READER_MASK ) == 0 ) {
 		m_WritersReady.notifyOne();
 	}
 	m_Mutex.unlock();
@@ -373,7 +373,7 @@ void SIRReadMostlyMutex::unlockRead( void ) noexcept
 bool SIRReadMostlyMutex::tryLock( void ) noexcept
 {
 	uint32_t nExpected = 0;
-	return m_nState.compareExchangeStrong( nExpected, WRITER_ACTIVE, SIR_MEMORY_ORDER_ACQUIRE, SIR_MEMORY_ORDER_RELAXED );
+	return m_nState.compare_exchange_strong( nExpected, WRITER_ACTIVE, std::memory_order_acquire, std::memory_order_relaxed );
 }
 
 void SIRReadMostlyMutex::lock( void ) noexcept
@@ -384,26 +384,26 @@ void SIRReadMostlyMutex::lock( void ) noexcept
 
 	m_Mutex.lock();
 	++m_nWaitingWriters;
-	m_nState.fetchOr( WRITER_PENDING, SIR_MEMORY_ORDER_ACQUIRE_RELEASE );
+	m_nState.fetch_or( WRITER_PENDING, std::memory_order_acq_rel );
 
-	while ( ( m_nState.load( SIR_MEMORY_ORDER_ACQUIRE ) & ( READER_MASK | WRITER_ACTIVE ) ) != 0 ) {
+	while ( ( m_nState.load( std::memory_order_acquire ) & ( READER_MASK | WRITER_ACTIVE ) ) != 0 ) {
 		m_WritersReady.wait( m_Mutex );
 	}
 
 	--m_nWaitingWriters;
-	m_nState.store( WRITER_ACTIVE | WRITER_PENDING, SIR_MEMORY_ORDER_RELEASE );
+	m_nState.store( WRITER_ACTIVE | WRITER_PENDING, std::memory_order_release );
 	m_Mutex.unlock();
 }
 
 void SIRReadMostlyMutex::unlock( void ) noexcept
 {
 	m_Mutex.lock();
-	assert( ( m_nState.load( SIR_MEMORY_ORDER_RELAXED ) & WRITER_ACTIVE ) != 0 );
+	assert( ( m_nState.load( std::memory_order_relaxed ) & WRITER_ACTIVE ) != 0 );
 	if ( m_nWaitingWriters != 0 ) {
-		m_nState.store( WRITER_PENDING, SIR_MEMORY_ORDER_RELEASE );
+		m_nState.store( WRITER_PENDING, std::memory_order_release );
 		m_WritersReady.notifyOne();
 	} else {
-		m_nState.store( 0, SIR_MEMORY_ORDER_RELEASE );
+		m_nState.store( 0, std::memory_order_release );
 		m_ReadersReady.notifyAll();
 	}
 	m_Mutex.unlock();
@@ -441,10 +441,10 @@ void SIRCountDownEvent::countDown( uint32_t nCount ) noexcept
 
 	// The acquire-release CAS chain publishes every producer's writes to
 	// waiters observing completion with an acquire load.
-	uint32_t nRemaining = m_nRemaining.load( SIR_MEMORY_ORDER_RELAXED );
+	uint32_t nRemaining = m_nRemaining.load( std::memory_order_relaxed );
 	while ( nRemaining != 0 ) {
 		const uint32_t nNext = nCount >= nRemaining ? 0 : nRemaining - nCount;
-		if ( m_nRemaining.compareExchangeWeak( nRemaining, nNext, SIR_MEMORY_ORDER_ACQUIRE_RELEASE, SIR_MEMORY_ORDER_RELAXED ) ) {
+		if ( m_nRemaining.compare_exchange_weak( nRemaining, nNext, std::memory_order_acq_rel, std::memory_order_relaxed ) ) {
 			if ( nNext == 0 ) {
 				// Serialize with the waiter's predicate check and sleep.
 				m_Mutex.lock();
@@ -458,12 +458,12 @@ void SIRCountDownEvent::countDown( uint32_t nCount ) noexcept
 
 void SIRCountDownEvent::wait( void ) noexcept
 {
-	if ( m_nRemaining.load( SIR_MEMORY_ORDER_ACQUIRE ) == 0 ) {
+	if ( m_nRemaining.load( std::memory_order_acquire ) == 0 ) {
 		return;
 	}
 
 	m_Mutex.lock();
-	while ( m_nRemaining.load( SIR_MEMORY_ORDER_ACQUIRE ) != 0 ) {
+	while ( m_nRemaining.load( std::memory_order_acquire ) != 0 ) {
 		m_Completed.wait( m_Mutex );
 	}
 	m_Mutex.unlock();
@@ -471,7 +471,7 @@ void SIRCountDownEvent::wait( void ) noexcept
 
 bool SIRCountDownEvent::isComplete( void ) noexcept
 {
-	return m_nRemaining.load( SIR_MEMORY_ORDER_ACQUIRE ) == 0;
+	return m_nRemaining.load( std::memory_order_acquire ) == 0;
 }
 
 SIRBarrier::SIRBarrier( uint32_t nParticipants ) noexcept

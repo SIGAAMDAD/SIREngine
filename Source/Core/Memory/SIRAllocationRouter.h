@@ -14,8 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRALLOCATIONROUTER_H__
-#define __SIRENGINE_SIRALLOCATIONROUTER_H__
+#ifndef __SIR_ALLOCATIONROUTER_H__
+#define __SIR_ALLOCATIONROUTER_H__
 
 #include <Core/SIRPCH.h>
 
@@ -26,7 +26,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <Core/Memory/Allocators/SIRJobScratchAllocator.h>
-#include <Core/Platform/SIRAtomic.h>
+#include <atomic>
 
 class SIRSizeClassAllocator;
 class SIRReclaimableSizeClassAllocator;
@@ -35,15 +35,13 @@ class SIRTLSFAllocator;
 class SIRBuddyAllocator;
 class SIRFrameAllocator;
 
-typedef enum sirAllocationLifetime_e : uint8_t
-{
+enum class SIRAllocationLifetime : uint8_t {
 	SIR_LIFETIME_ARBITRARY,
 	SIR_LIFETIME_JOB,
 	SIR_LIFETIME_FRAME
-} sirAllocationLifetime_t;
+};
 
-typedef enum sirRoutingBacking_e : uint8_t
-{
+enum class SIRRoutingBacking : uint8_t {
 	SIR_ROUTE_NONE,
 	SIR_ROUTE_POOL,
 	SIR_ROUTE_RECLAIMABLE,
@@ -52,7 +50,7 @@ typedef enum sirRoutingBacking_e : uint8_t
 	SIR_ROUTE_BUDDY,
 	SIR_ROUTE_JOB,
 	SIR_ROUTE_FRAME
-} sirRoutingBacking_t;
+};
 
 typedef struct sirRoutedAllocation_s
 {
@@ -86,15 +84,15 @@ public:
 	SIRAllocationRouter( void );
 	bool init( const sirAllocationRouterConfig_t& config );
 	bool alloc( uint32_t nBytes, uint32_t nAlignment, sirRoutedAllocation_t *pResult,
-	            sirAllocationLifetime_t nLifetime = SIR_LIFETIME_ARBITRARY, sirJobScratchToken_t job = { UINT32_MAX, 0 } );
+	            SIRAllocationLifetime nLifetime = SIRAllocationLifetime::SIR_LIFETIME_ARBITRARY, sirJobScratchToken_t job = { UINT32_MAX, 0 } );
 	bool free( sirRoutedAllocation_t *pAllocation );
-	uint64_t getRoutedCount( sirRoutingBacking_t backing ) const;
+	uint64_t getRoutedCount( SIRRoutingBacking backing ) const;
 
 private:
 	sirAllocationRouterConfig_t m_Config;
-	SIRAtomic<uint64_t> m_nCounts[SIR_ROUTE_FRAME + 1];
+	std::atomic<uint64_t> m_nCounts[static_cast<size_t>( SIRRoutingBacking::SIR_ROUTE_FRAME ) + 1];
 	uintptr_t m_nOwnerToken;
 	bool m_bInitialized;
 };
 
-#endif // __SIRENGINE_SIRALLOCATIONROUTER_H__
+#endif // __SIR_ALLOCATIONROUTER_H__

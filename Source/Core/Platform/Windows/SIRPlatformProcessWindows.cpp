@@ -23,7 +23,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 uint32_t SIRPlatformProcess::getLogicalProcessorCount( void ) noexcept
 {
 	const DWORD nCount = GetActiveProcessorCount( ALL_PROCESSOR_GROUPS );
-	return nCount > 0 ? ( uint32_t )nCount : 1;
+	return nCount > 0 ? static_cast<uint32_t>(nCount) : 1;
 }
 
 void SIRPlatformProcess::cpuRelax( void ) noexcept

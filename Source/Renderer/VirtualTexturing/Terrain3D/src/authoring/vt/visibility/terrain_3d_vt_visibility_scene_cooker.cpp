@@ -17,14 +17,14 @@ namespace
 {
 static uint64_t hashAppend( uint64_t hash, const void *const bytes, const size_t n )
 {
-	const uint8_t *const p = ( const uint8_t * )bytes;
+	const uint8_t *const p = static_cast<const uint8_t *>(bytes);
 	for ( size_t i = 0u; i < n; ++i )
 		hash = ( hash ^ p[i] ) * 1099511628211ull;
 	return hash;
 }
 static uint32_t hashRevision( const uint64_t source )
 {
-	const uint32_t value = ( uint32_t )( source ^ ( source >> 32u ) );
+	const uint32_t value = static_cast<uint32_t>(  source ^ ( source >> 32u )  );
 	return value == 0u ? 1u : value;
 }
 static bool validHeight( const Ref<Image>& img )
@@ -39,7 +39,7 @@ static bool validControl( const Ref<Image>& img )
 }
 static float sampleHeight( const uint8_t *const data, const Image::Format format, const uint32_t x, const uint32_t z )
 {
-	return t3dRegionCodecReadHeightBytes( data, ( int )( z * 128u + x ), format );
+	return t3dRegionCodecReadHeightBytes( data, static_cast<int>( z * 128u + x ), format );
 }
 }
 
@@ -87,22 +87,22 @@ bool t3d_vt_visibility_cook_cold( const Terrain3DData& data, const uint64_t *con
 		}
 		const PackedByteArray heightBytes = height->get_data();
 		const PackedByteArray controlBytes = control->get_data();
-		if ( heightBytes.size() != ( int64_t )t3dRegionCodecExpectedHeightByteCount( 128, height->get_format() ) ||
+		if ( heightBytes.size() != static_cast<int64_t>(t3dRegionCodecExpectedHeightByteCount( 128, height->get_format() )) ||
 		     controlBytes.size() != 128 * 128 * 4 )
 			return false;
 		const uint8_t *const h = heightBytes.ptr(), *const c = controlBytes.ptr();
 		const uint64_t previous = sourceSignature;
 		sourceSignature = hashAppend( sourceSignature, &coord.x, sizeof( coord.x ) );
 		sourceSignature = hashAppend( sourceSignature, &coord.y, sizeof( coord.y ) );
-		sourceSignature = hashAppend( sourceSignature, h, ( size_t )heightBytes.size() );
-		sourceSignature = hashAppend( sourceSignature, c, ( size_t )controlBytes.size() );
-		uint64_t cellHash = hashAppend( previous, h, ( size_t )heightBytes.size() );
-		cellHash = hashAppend( cellHash, c, ( size_t )controlBytes.size() );
+		sourceSignature = hashAppend( sourceSignature, h, static_cast<size_t>(heightBytes.size() ));
+		sourceSignature = hashAppend( sourceSignature, c, static_cast<size_t>(controlBytes.size() ));
+		uint64_t cellHash = hashAppend( previous, h, static_cast<size_t>(heightBytes.size() ));
+		cellHash = hashAppend( cellHash, c, static_cast<size_t>(controlBytes.size() ));
 		const uint32_t revision = hashRevision( cellHash );
 		// A 16x16 quad proxy bounds offline GPU work. It is deliberately
 		// PARTIAL because control overlays, 128x128 displacement and material
 		// UV transforms are not represented exactly in this first histogram.
-		const uint32_t firstVertex = ( uint32_t )vertices.size();
+		const uint32_t firstVertex = static_cast<uint32_t>(vertices.size());
 		for ( uint32_t iz = 0u; iz <= 16u; ++iz ) {
 			for ( uint32_t ix = 0u; ix <= 16u; ++ix ) {
 				const uint32_t sx = std::min( 127u, ix * 8u );
@@ -111,27 +111,27 @@ bool t3d_vt_visibility_cook_cold( const Terrain3DData& data, const uint64_t *con
 				if ( !isfinite( y ) )
 					return false;
 				t3dVTVisibilityStaticVertex_t v{};
-				v.m_fWorldX = ( float )( coord.x * 128 + ( int )ix * 8 );
+				v.m_fWorldX = ( float )( coord.x * 128 + static_cast<int>(ix) * 8 );
 				v.m_fWorldY = y;
-				v.m_fWorldZ = ( float )( coord.y * 128 + ( int )iz * 8 );
-				v.m_fU = ( float )ix / 16.0f;
-				v.m_fV = ( float )iz / 16.0f;
+				v.m_fWorldZ = ( float )( coord.y * 128 + static_cast<int>(iz) * 8 );
+				v.m_fU = static_cast<float>(ix) / 16.0f;
+				v.m_fV = static_cast<float>(iz) / 16.0f;
 				vertices.push_back( v );
 			}
 		}
-		const uint32_t firstTriangle = ( uint32_t )triangles.size();
+		const uint32_t firstTriangle = static_cast<uint32_t>(triangles.size());
 		for ( uint32_t iz = 0u; iz < 16u; ++iz ) {
 			for ( uint32_t ix = 0u; ix < 16u; ++ix ) {
 				uint32_t word = 0u;
 				const uint32_t sample = ( iz * 8u + 4u ) * 128u + ix * 8u + 4u;
-				memcpy( &word, c + ( size_t )sample * 4u, sizeof( word ) );
+				memcpy( &word, c + static_cast<size_t>(sample) * 4u, sizeof( word ) );
 				if ( t3dIsHole( word ) || t3dIsAuto( word ) )
 					continue;
 				const uint64_t stable = t3d_vt_terrain_material_stable_key( t3dGetBase( word ) );
 				const uint64_t *const key = std::lower_bound( keys, keys + nKeys, stable );
 				if ( key == keys + nKeys || *key != stable )
 					continue;
-				const uint32_t m = ( uint32_t )( key - keys );
+				const uint32_t m = static_cast<uint32_t>( key - keys );
 				const uint32_t a = firstVertex + iz * 17u + ix;
 				const uint32_t b = a + 1u, d = a + 17u, e = d + 1u;
 				t3dVTVisibilityStaticTriangle_t one{};
@@ -146,11 +146,11 @@ bool t3d_vt_visibility_cook_cold( const Terrain3DData& data, const uint64_t *con
 				triangles.push_back( one );
 			}
 		}
-		const uint32_t nTriangles = ( uint32_t )triangles.size() - firstTriangle;
+		const uint32_t nTriangles = static_cast<uint32_t>(triangles.size()) - firstTriangle;
 		if ( !nTriangles )
 			continue; // an entirely unknown cell stays v2/reactive
 		std::vector<t3dVTVisibilityProbeInput_t> candidates;
-		if ( !Terrain3DVTVisibilityBaker::selectCellProbes( vertices.data(), ( uint32_t )vertices.size(), triangles.data(), firstTriangle,
+		if ( !Terrain3DVTVisibilityBaker::selectCellProbes( vertices.data(), static_cast<uint32_t>(vertices.size(), triangles.data()), firstTriangle,
 		                                                    nTriangles, coord.x, coord.y, revision, 128u, candidates ) ||
 		     candidates.empty() )
 			continue;
@@ -178,13 +178,13 @@ bool t3d_vt_visibility_cook_cold( const Terrain3DData& data, const uint64_t *con
 	for ( size_t first = 0u; first < probes.size(); first += 32u ) {
 		t3dVTVisibilityStaticSceneView_t scene;
 		scene.m_pVertices = vertices.data();
-		scene.m_nVertexCount = ( uint32_t )vertices.size();
+		scene.m_nVertexCount = static_cast<uint32_t>(vertices.size());
 		scene.m_pTriangles = triangles.data();
-		scene.m_nTriangleCount = ( uint32_t )triangles.size();
+		scene.m_nTriangleCount = static_cast<uint32_t>(triangles.size());
 		scene.m_pMaterialKeys = keys;
 		scene.m_nMaterialCount = nKeys;
 		scene.m_pProbes = probes.data() + first;
-		scene.m_nProbeCount = ( uint32_t )std::min( ( size_t )32u, probes.size() - first );
+		scene.m_nProbeCount = static_cast<uint32_t>(std)::min( ( size_t )32u, probes.size() - first );
 		scene.m_nSourceSignature = sourceSignature;
 		std::vector<t3dVTVisibilityProbeResult_t> batch;
 		t3dVTVisibilityBakeStats_t gpuStats;
@@ -196,18 +196,18 @@ bool t3d_vt_visibility_cook_cold( const Terrain3DData& data, const uint64_t *con
 	}
 	std::vector<t3dVTDemandVisibilityCell_t> cells;
 	std::vector<t3dVTDemandBakedVisibilityRecord_t> records;
-	if ( !Terrain3DVTVisibilityAggregator::reduce( raw.data(), ( uint32_t )raw.size(), keys, nKeys, 64u, true, cells, records,
+	if ( !Terrain3DVTVisibilityAggregator::reduce( raw.data(), static_cast<uint32_t>(raw.size()), keys, nKeys, 64u, true, cells, records,
 	                                               outStats ) ) {
 		error = "Visibility histogram aggregation produced no safe cell coverage";
 		return false;
 	}
 	std::vector<uint8_t> bytes;
-	if ( !t3d_vt_demand_write_baked_visibility( cells.data(), ( uint32_t )cells.size(), records.data(), ( uint32_t )records.size(), config,
+	if ( !t3d_vt_demand_write_baked_visibility( cells.data(), static_cast<uint32_t>(cells.size(), records.data(), static_cast<uint32_t>(records.size())), config,
 	                                            bytes ) ) {
 		error = "T3VD v1 byte-bounded bundle encoding failed";
 		return false;
 	}
-	if ( output.resize( ( int64_t )bytes.size() ) != OK )
+	if ( output.resize( static_cast<int64_t>(bytes.size() ) != OK ))
 		return false;
 	memcpy( output.ptrw(), bytes.data(), bytes.size() );
 	return true;

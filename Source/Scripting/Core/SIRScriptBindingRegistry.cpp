@@ -32,7 +32,7 @@ bool SIRScriptBindingRegistry::checkReadFrame( sirScriptReadFrame_t frame, uint3
 	if ( frame.nBytes != nBytes || frame.nAlignment != nAlignment ) {
 		return false;
 	}
-	return nBytes == 0 ? frame.pData == nullptr : frame.pData != nullptr && ( ( uintptr_t )frame.pData % nAlignment ) == 0;
+	return nBytes == 0 ? frame.pData == nullptr : frame.pData != nullptr && ( reinterpret_cast<uintptr_t>(frame.pData) % nAlignment ) == 0;
 }
 
 bool SIRScriptBindingRegistry::checkWriteFrame( sirScriptWriteFrame_t frame, uint32_t nBytes, uint32_t nAlignment ) noexcept
@@ -40,7 +40,7 @@ bool SIRScriptBindingRegistry::checkWriteFrame( sirScriptWriteFrame_t frame, uin
 	if ( frame.nBytes != nBytes || frame.nAlignment != nAlignment ) {
 		return false;
 	}
-	return nBytes == 0 ? frame.pData == nullptr : frame.pData != nullptr && ( ( uintptr_t )frame.pData % nAlignment ) == 0;
+	return nBytes == 0 ? frame.pData == nullptr : frame.pData != nullptr && ( reinterpret_cast<uintptr_t>(frame.pData) % nAlignment ) == 0;
 }
 
 const sirScriptTypeDescriptor_t *SIRScriptBindingRegistry::findType( uint64_t nTypeId ) const noexcept
@@ -53,75 +53,75 @@ const sirScriptTypeDescriptor_t *SIRScriptBindingRegistry::findType( uint64_t nT
 	return nullptr;
 }
 
-sirScriptResult_t SIRScriptBindingRegistry::registerType( const sirScriptTypeDescriptor_t& descriptor ) noexcept
+SIRScriptResult SIRScriptBindingRegistry::registerType( const sirScriptTypeDescriptor_t& descriptor ) noexcept
 {
 	if ( m_bPublished ) {
-		return SIR_SCRIPT_WRONG_STATE;
+		return SIRScriptResult::SIR_SCRIPT_WRONG_STATE;
 	}
 	if ( descriptor.nTypeId == 0 || !isValidAlignment( descriptor.nAlignment ) || descriptor.nBytes == 0 ||
 	     descriptor.nBytes % descriptor.nAlignment != 0 ||
-	     ( descriptor.nFlags & ~( SIR_SCRIPT_TYPE_PLAIN_BYTES | SIR_SCRIPT_TYPE_NO_POINTERS ) ) != 0 ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+	     ( descriptor.nFlags & ~( SIRScriptTypeFlags::SIR_SCRIPT_TYPE_PLAIN_BYTES | SIRScriptTypeFlags::SIR_SCRIPT_TYPE_NO_POINTERS ) ) != 0 ) {
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 	if ( findType( descriptor.nTypeId ) != nullptr ) {
-		return SIR_SCRIPT_DUPLICATE;
+		return SIRScriptResult::SIR_SCRIPT_DUPLICATE;
 	}
 	if ( m_nTypes == MAX_TYPES ) {
-		return SIR_SCRIPT_CAPACITY_EXCEEDED;
+		return SIRScriptResult::SIR_SCRIPT_CAPACITY_EXCEEDED;
 	}
 	m_szTypes[m_nTypes++] = descriptor;
-	return SIR_SCRIPT_OK;
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
-sirScriptResult_t SIRScriptBindingRegistry::registerFunction( const sirScriptFunctionDescriptor_t& descriptor,
+SIRScriptResult SIRScriptBindingRegistry::registerFunction( const sirScriptFunctionDescriptor_t& descriptor,
                                                               sirScriptNativeThunk_t pInvoke, void *pUser ) noexcept
 {
 	if ( m_bPublished ) {
-		return SIR_SCRIPT_WRONG_STATE;
+		return SIRScriptResult::SIR_SCRIPT_WRONG_STATE;
 	}
 	if ( descriptor.nFunctionId == 0 || descriptor.nSignatureId == 0 || descriptor.nBindingRevision == 0 || pInvoke == nullptr ||
 	     ( descriptor.nEffects & ~UINT32_C( 127 ) ) != 0 ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 	if ( descriptor.nArgumentsTypeId != 0 && findType( descriptor.nArgumentsTypeId ) == nullptr ) {
-		return SIR_SCRIPT_NOT_FOUND;
+		return SIRScriptResult::SIR_SCRIPT_NOT_FOUND;
 	}
 	if ( descriptor.nReturnTypeId != 0 && findType( descriptor.nReturnTypeId ) == nullptr ) {
-		return SIR_SCRIPT_NOT_FOUND;
+		return SIRScriptResult::SIR_SCRIPT_NOT_FOUND;
 	}
 	for ( uint32_t iFunction = 0; iFunction < m_nFunctions; ++iFunction ) {
 		if ( m_szFunctions[iFunction].descriptor.nFunctionId == descriptor.nFunctionId ) {
-			return SIR_SCRIPT_DUPLICATE;
+			return SIRScriptResult::SIR_SCRIPT_DUPLICATE;
 		}
 	}
 	if ( m_nFunctions == MAX_FUNCTIONS ) {
-		return SIR_SCRIPT_CAPACITY_EXCEEDED;
+		return SIRScriptResult::SIR_SCRIPT_CAPACITY_EXCEEDED;
 	}
 	m_szFunctions[m_nFunctions++] = { descriptor, pInvoke, pUser };
-	return SIR_SCRIPT_OK;
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
-sirScriptResult_t SIRScriptBindingRegistry::registerEvent( const sirScriptEventDescriptor_t& descriptor ) noexcept
+SIRScriptResult SIRScriptBindingRegistry::registerEvent( const sirScriptEventDescriptor_t& descriptor ) noexcept
 {
 	if ( m_bPublished ) {
-		return SIR_SCRIPT_WRONG_STATE;
+		return SIRScriptResult::SIR_SCRIPT_WRONG_STATE;
 	}
 	if ( descriptor.nEventTypeId == 0 ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 	if ( descriptor.nPayloadTypeId != 0 && findType( descriptor.nPayloadTypeId ) == nullptr ) {
-		return SIR_SCRIPT_NOT_FOUND;
+		return SIRScriptResult::SIR_SCRIPT_NOT_FOUND;
 	}
 	for ( uint32_t iEvent = 0; iEvent < m_nEvents; ++iEvent ) {
 		if ( m_szEvents[iEvent].nEventTypeId == descriptor.nEventTypeId ) {
-			return SIR_SCRIPT_DUPLICATE;
+			return SIRScriptResult::SIR_SCRIPT_DUPLICATE;
 		}
 	}
 	if ( m_nEvents == MAX_EVENTS ) {
-		return SIR_SCRIPT_CAPACITY_EXCEEDED;
+		return SIRScriptResult::SIR_SCRIPT_CAPACITY_EXCEEDED;
 	}
 	m_szEvents[m_nEvents++] = descriptor;
-	return SIR_SCRIPT_OK;
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
 // Hash the named ABI fields in canonical little-endian byte order. Do not
@@ -136,10 +136,10 @@ static uint64_t hashSchemaWord( uint64_t nHash, uint64_t nValue ) noexcept
 	return nHash;
 }
 
-sirScriptResult_t SIRScriptBindingRegistry::publish( void ) noexcept
+SIRScriptResult SIRScriptBindingRegistry::publish( void ) noexcept
 {
 	if ( m_bPublished ) {
-		return SIR_SCRIPT_WRONG_STATE;
+		return SIRScriptResult::SIR_SCRIPT_WRONG_STATE;
 	}
 
 	// Canonical ordering makes equivalent schemas hash identically even if
@@ -208,7 +208,7 @@ sirScriptResult_t SIRScriptBindingRegistry::publish( void ) noexcept
 	}
 	m_nSchemaFingerprint = nHash == 0 ? 1 : nHash;
 	m_bPublished = true;
-	return SIR_SCRIPT_OK;
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
 bool SIRScriptBindingRegistry::describeFunction( uint64_t nFunctionId, sirScriptFunctionDescriptor_t *pDescriptor ) const noexcept
@@ -249,10 +249,10 @@ bool SIRScriptBindingRegistry::hasEvent( uint64_t nEventTypeId ) const noexcept
 	return false;
 }
 
-sirScriptResult_t SIRScriptBindingRegistry::validateEvent( uint64_t nEventTypeId, sirScriptReadFrame_t payload ) const noexcept
+SIRScriptResult SIRScriptBindingRegistry::validateEvent( uint64_t nEventTypeId, sirScriptReadFrame_t payload ) const noexcept
 {
 	if ( !m_bPublished ) {
-		return SIR_SCRIPT_WRONG_STATE;
+		return SIRScriptResult::SIR_SCRIPT_WRONG_STATE;
 	}
 	for ( uint32_t iEvent = 0; iEvent < m_nEvents; ++iEvent ) {
 		const sirScriptEventDescriptor_t& descriptor = m_szEvents[iEvent];
@@ -262,36 +262,36 @@ sirScriptResult_t SIRScriptBindingRegistry::validateEvent( uint64_t nEventTypeId
 		const sirScriptTypeDescriptor_t *pType = findType( descriptor.nPayloadTypeId );
 		const uint32_t nBytes = pType != nullptr ? pType->nBytes : 0;
 		const uint32_t nAlignment = pType != nullptr ? pType->nAlignment : 1;
-		return checkReadFrame( payload, nBytes, nAlignment ) ? SIR_SCRIPT_OK : SIR_SCRIPT_TYPE_MISMATCH;
+		return checkReadFrame( payload, nBytes, nAlignment ) ? SIRScriptResult::SIR_SCRIPT_OK : SIRScriptResult::SIR_SCRIPT_TYPE_MISMATCH;
 	}
-	return SIR_SCRIPT_NOT_FOUND;
+	return SIRScriptResult::SIR_SCRIPT_NOT_FOUND;
 }
 
-sirScriptResult_t SIRScriptBindingRegistry::validateQueuedFrame( uint64_t nTypeId, sirScriptReadFrame_t frame ) const noexcept
+SIRScriptResult SIRScriptBindingRegistry::validateQueuedFrame( uint64_t nTypeId, sirScriptReadFrame_t frame ) const noexcept
 {
 	if ( !m_bPublished ) {
-		return SIR_SCRIPT_WRONG_STATE;
+		return SIRScriptResult::SIR_SCRIPT_WRONG_STATE;
 	}
 	const sirScriptTypeDescriptor_t *pType = findType( nTypeId );
 	if ( nTypeId != 0 && pType == nullptr ) {
-		return SIR_SCRIPT_NOT_FOUND;
+		return SIRScriptResult::SIR_SCRIPT_NOT_FOUND;
 	}
 	const uint32_t nBytes = pType != nullptr ? pType->nBytes : 0;
 	const uint32_t nAlignment = pType != nullptr ? pType->nAlignment : 1;
 	if ( !checkReadFrame( frame, nBytes, nAlignment ) ) {
-		return SIR_SCRIPT_TYPE_MISMATCH;
+		return SIRScriptResult::SIR_SCRIPT_TYPE_MISMATCH;
 	}
-	if ( pType != nullptr && ( pType->nFlags & ( SIR_SCRIPT_TYPE_PLAIN_BYTES | SIR_SCRIPT_TYPE_NO_POINTERS ) ) !=
-	                             ( SIR_SCRIPT_TYPE_PLAIN_BYTES | SIR_SCRIPT_TYPE_NO_POINTERS ) ) {
-		return SIR_SCRIPT_TYPE_MISMATCH;
+	if ( pType != nullptr && ( pType->nFlags & ( SIRScriptTypeFlags::SIR_SCRIPT_TYPE_PLAIN_BYTES | SIRScriptTypeFlags::SIR_SCRIPT_TYPE_NO_POINTERS ) ) !=
+	                             ( SIRScriptTypeFlags::SIR_SCRIPT_TYPE_PLAIN_BYTES | SIRScriptTypeFlags::SIR_SCRIPT_TYPE_NO_POINTERS ) ) {
+		return SIRScriptResult::SIR_SCRIPT_TYPE_MISMATCH;
 	}
-	return SIR_SCRIPT_OK;
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
-sirScriptResult_t SIRScriptBindingRegistry::validateQueuedEvent( uint64_t nEventTypeId, sirScriptReadFrame_t payload ) const noexcept
+SIRScriptResult SIRScriptBindingRegistry::validateQueuedEvent( uint64_t nEventTypeId, sirScriptReadFrame_t payload ) const noexcept
 {
-	const sirScriptResult_t eValidation = validateEvent( nEventTypeId, payload );
-	if ( eValidation != SIR_SCRIPT_OK ) {
+	const SIRScriptResult eValidation = validateEvent( nEventTypeId, payload );
+	if ( eValidation != SIRScriptResult::SIR_SCRIPT_OK ) {
 		return eValidation;
 	}
 	for ( uint32_t iEvent = 0; iEvent < m_nEvents; ++iEvent ) {
@@ -299,13 +299,13 @@ sirScriptResult_t SIRScriptBindingRegistry::validateQueuedEvent( uint64_t nEvent
 			return validateQueuedFrame( m_szEvents[iEvent].nPayloadTypeId, payload );
 		}
 	}
-	return SIR_SCRIPT_NOT_FOUND;
+	return SIRScriptResult::SIR_SCRIPT_NOT_FOUND;
 }
 
-sirScriptResult_t SIRScriptBindingRegistry::invokeNative( const sirScriptNativeInvocation_t& request ) const noexcept
+SIRScriptResult SIRScriptBindingRegistry::invokeNative( const sirScriptNativeInvocation_t& request ) const noexcept
 {
 	if ( !m_bPublished ) {
-		return SIR_SCRIPT_WRONG_STATE;
+		return SIRScriptResult::SIR_SCRIPT_WRONG_STATE;
 	}
 	for ( uint32_t iFunction = 0; iFunction < m_nFunctions; ++iFunction ) {
 		const sirScriptFunctionEntry_t& entry = m_szFunctions[iFunction];
@@ -313,7 +313,7 @@ sirScriptResult_t SIRScriptBindingRegistry::invokeNative( const sirScriptNativeI
 			continue;
 		}
 		if ( entry.descriptor.nSignatureId != request.nSignatureId || entry.descriptor.nBindingRevision != request.nBindingRevision ) {
-			return SIR_SCRIPT_TYPE_MISMATCH;
+			return SIRScriptResult::SIR_SCRIPT_TYPE_MISMATCH;
 		}
 		const sirScriptTypeDescriptor_t *pArguments = findType( entry.descriptor.nArgumentsTypeId );
 		const sirScriptTypeDescriptor_t *pReturn = findType( entry.descriptor.nReturnTypeId );
@@ -322,12 +322,12 @@ sirScriptResult_t SIRScriptBindingRegistry::invokeNative( const sirScriptNativeI
 		const uint32_t nReturnBytes = pReturn != nullptr ? pReturn->nBytes : 0;
 		const uint32_t nReturnAlignment = pReturn != nullptr ? pReturn->nAlignment : 1;
 		if ( !checkReadFrame( request.arguments, nArgumentBytes, nArgumentAlignment ) ) {
-			return SIR_SCRIPT_TYPE_MISMATCH;
+			return SIRScriptResult::SIR_SCRIPT_TYPE_MISMATCH;
 		}
 		if ( !checkWriteFrame( request.result, nReturnBytes, nReturnAlignment ) ) {
-			return SIR_SCRIPT_TYPE_MISMATCH;
+			return SIRScriptResult::SIR_SCRIPT_TYPE_MISMATCH;
 		}
 		return entry.pInvoke( entry.pUser, request.arguments, request.result );
 	}
-	return SIR_SCRIPT_NOT_FOUND;
+	return SIRScriptResult::SIR_SCRIPT_NOT_FOUND;
 }

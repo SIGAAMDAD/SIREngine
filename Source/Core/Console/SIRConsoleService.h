@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRCONSOLESERVICE_H__
-#define __SIRENGINE_SIRCONSOLESERVICE_H__
+#ifndef __SIR_CONSOLESERVICE_H__
+#define __SIR_CONSOLESERVICE_H__
 
 #include <Core/CVars/SIRCVarRegistry.h>
 #include <Core/SIRPCH.h>
@@ -50,7 +50,7 @@ typedef struct sirConsoleSubmission_s
 typedef struct sirConsoleOutput_s
 {
 	uint64_t nRequestId;
-	sirRegistrationResult_t eResult;
+	SIRRegistrationResult eResult;
 	const char *pszText;
 	uint32_t nBytes;
 } sirConsoleOutput_t;
@@ -58,7 +58,7 @@ typedef struct sirConsoleOutput_s
 typedef void ( *sirConsoleOutputSink_t )( void *pContext, const sirConsoleOutput_t& output ) noexcept;
 typedef bool ( *sirConsoleModuleAcquire_t )( void *pContext, uint32_t nOwnerId ) noexcept;
 typedef void ( *sirConsoleModuleRelease_t )( void *pContext, uint32_t nOwnerId ) noexcept;
-typedef sirRegistrationResult_t ( *sirConsoleExecHandler_t )( void *pContext, const char *pszFileName, uint32_t nBytes,
+typedef SIRRegistrationResult ( *sirConsoleExecHandler_t )( void *pContext, const char *pszFileName, uint32_t nBytes,
                                                               const sirConsoleSubmission_t& submission ) noexcept;
 
 class SIRConsoleService;
@@ -74,7 +74,7 @@ typedef struct sirConsoleInvocation_s
 typedef struct sirConsoleRequestSlot_s
 {
 	std::atomic<uint64_t> nSequence{ 0 };
-	sirConsoleSubmission_t submission = {};
+	sirConsoleSubmission_t submission {};
 	uint32_t nBytes = 0;
 } sirConsoleRequestSlot_t;
 
@@ -159,31 +159,31 @@ public:
 	bool isInitialized( void ) const noexcept;
 	uint32_t getHistoryCount( void ) const noexcept;
 
-	sirRegistrationResult_t initialize( SIRRegistrationCatalog& registration, SIRCVarRegistry& cvars, SIRStringPool& pool,
+	SIRRegistrationResult initialize( SIRRegistrationCatalog& registration, SIRCVarRegistry& cvars, SIRStringPool& pool,
 	                                    const sirConsoleStorage_t& storage ) noexcept;
-	sirRegistrationResult_t submit( const char *pszInput, uint32_t nBytes, const sirConsoleSubmission_t& submission ) noexcept;
-	sirRegistrationResult_t pump( uint32_t nBudget, sirConsolePumpReport_t *pReport ) noexcept;
-	sirRegistrationResult_t complete( const char *pszPrefix, uint32_t nBytes, sirConsoleCompletionResult_t *pResult ) noexcept;
-	sirRegistrationResult_t readHistory( uint32_t iNewest, sirConsoleHistoryView_t *pResult ) const noexcept;
-	sirRegistrationResult_t registerDynamicCommand( const sirRegistrationDynamicDesc_t& descriptor,
+	SIRRegistrationResult submit( const char *pszInput, uint32_t nBytes, const sirConsoleSubmission_t& submission ) noexcept;
+	SIRRegistrationResult pump( uint32_t nBudget, sirConsolePumpReport_t *pReport ) noexcept;
+	SIRRegistrationResult complete( const char *pszPrefix, uint32_t nBytes, sirConsoleCompletionResult_t *pResult ) noexcept;
+	SIRRegistrationResult readHistory( uint32_t iNewest, sirConsoleHistoryView_t *pResult ) const noexcept;
+	SIRRegistrationResult registerDynamicCommand( const sirRegistrationDynamicDesc_t& descriptor,
 	                                                sirRegistrationHandle_t *pHandle ) noexcept;
-	sirRegistrationResult_t unregisterDynamicCommand( sirRegistrationHandle_t handle ) noexcept;
-	sirRegistrationResult_t unloadModule( uint32_t nOwnerId, uint32_t *pRemoved ) noexcept;
-	sirRegistrationResult_t writeOutput( const sirConsoleOutput_t& output ) noexcept;
+	SIRRegistrationResult unregisterDynamicCommand( sirRegistrationHandle_t handle ) noexcept;
+	SIRRegistrationResult unloadModule( uint32_t nOwnerId, uint32_t *pRemoved ) noexcept;
+	SIRRegistrationResult writeOutput( const sirConsoleOutput_t& output ) noexcept;
 	void shutdown( void ) noexcept;
 
 protected:
 private:
-	sirRegistrationResult_t tokenize( char *pszInput, uint32_t nBytes, sirConsoleArguments_t *pArgs ) const noexcept;
-	sirRegistrationResult_t execute( const sirConsoleSubmission_t& submission, sirConsoleArguments_t& args ) noexcept;
-	sirRegistrationResult_t executeBuiltin( const sirConsoleSubmission_t& submission, sirConsoleArguments_t& args ) noexcept;
-	sirRegistrationResult_t executeCVar( const sirConsoleSubmission_t& submission, sirConsoleArguments_t& args,
+	SIRRegistrationResult tokenize( char *pszInput, uint32_t nBytes, sirConsoleArguments_t *pArgs ) const noexcept;
+	SIRRegistrationResult execute( const sirConsoleSubmission_t& submission, sirConsoleArguments_t& args ) noexcept;
+	SIRRegistrationResult executeBuiltin( const sirConsoleSubmission_t& submission, sirConsoleArguments_t& args ) noexcept;
+	SIRRegistrationResult executeCVar( const sirConsoleSubmission_t& submission, sirConsoleArguments_t& args,
 	                                     const char *pszOperation ) noexcept;
-	sirRegistrationResult_t parseValue( sirCVarType_t eType, const sirConsoleArgument_t& arg, sirCVarValue_t *pValue ) const noexcept;
-	sirRegistrationResult_t printValue( const sirConsoleSubmission_t& submission, sirCVarType_t eType,
+	SIRRegistrationResult parseValue( SIRCVarType eType, const sirConsoleArgument_t& arg, sirCVarValue_t *pValue ) const noexcept;
+	SIRRegistrationResult printValue( const sirConsoleSubmission_t& submission, SIRCVarType eType,
 	                                    const sirCVarValue_t& value ) noexcept;
-	sirRegistrationResult_t enumerate( const sirConsoleSubmission_t& submission, bool bCommandsOnly ) noexcept;
-	sirRegistrationResult_t outputText( uint64_t nRequestId, sirRegistrationResult_t eResult, const char *pszText ) noexcept;
+	SIRRegistrationResult enumerate( const sirConsoleSubmission_t& submission, bool bCommandsOnly ) noexcept;
+	SIRRegistrationResult outputText( uint64_t nRequestId, SIRRegistrationResult eResult, const char *pszText ) noexcept;
 	const sirConsoleCVarBinding_t *findBoundCVar( sirRegistrationHandle_t registration ) const noexcept;
 	bool ownerThread( void ) const noexcept;
 	void addHistory( const sirConsoleRequestSlot_t& slot, const char *pszInput ) noexcept;
@@ -204,4 +204,4 @@ private:
 	bool m_bPumping;
 };
 
-#endif // __SIRENGINE_SIRCONSOLESERVICE_H__
+#endif // __SIR_CONSOLESERVICE_H__

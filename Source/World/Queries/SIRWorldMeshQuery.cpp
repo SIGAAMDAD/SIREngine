@@ -14,7 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 #include <World/Queries/SIRWorldMeshQuery.h>
 
-#include <Core/Platform/SIRAtomic.h>
+#include <atomic>
 
 #include <assert.h>
 #include <cmath>
@@ -36,15 +36,15 @@ struct sirWorldMeshEntry_s
 	bool bActive;
 };
 
-static SIRAtomic<uint64_t> s_nNextWorldMeshOwnerId( 1ULL );
+static std::atomic<uint64_t> s_nNextWorldMeshOwnerId( 1ULL );
 
 static uint64_t nextWorldMeshOwnerId( void ) noexcept
 {
-	uint64_t nExpected = s_nNextWorldMeshOwnerId.load( SIR_MEMORY_ORDER_RELAXED );
+	uint64_t nExpected = s_nNextWorldMeshOwnerId.load( std::memory_order_relaxed );
 	for ( ;; ) {
 		if ( nExpected == UINT64_MAX )
 			return 0;
-		if ( s_nNextWorldMeshOwnerId.compareExchangeWeak( nExpected, nExpected + 1, SIR_MEMORY_ORDER_RELAXED, SIR_MEMORY_ORDER_RELAXED ) )
+		if ( s_nNextWorldMeshOwnerId.compare_exchange_weak( nExpected, nExpected + 1, std::memory_order_relaxed, std::memory_order_relaxed ) )
 			return nExpected;
 	}
 }
@@ -72,7 +72,7 @@ uint32_t SIRWorldMeshQuery::getInstanceCount( void ) const noexcept
 
 uint64_t SIRWorldMeshQuery::requiredBytes( uint32_t nCapacity ) noexcept
 {
-	return ( uint64_t )nCapacity * sizeof( sirWorldMeshEntry_s );
+	return static_cast<uint64_t>(nCapacity) * sizeof( sirWorldMeshEntry_s );
 }
 
 uint32_t SIRWorldMeshQuery::requiredAlignment( void ) noexcept
@@ -80,18 +80,18 @@ uint32_t SIRWorldMeshQuery::requiredAlignment( void ) noexcept
 	return alignof( sirWorldMeshEntry_s );
 }
 
-sirWorldMeshQueryResult_t SIRWorldMeshQuery::initialize( void *pStorage, uint64_t nBytes, uint32_t nCapacity,
+SIRWorldMeshQueryResult SIRWorldMeshQuery::initialize( void *pStorage, uint64_t nBytes, uint32_t nCapacity,
                                                          uint32_t nWorldGeneration ) noexcept
 {
 	if ( m_bReady )
-		return SIR_WORLD_MESH_BUSY;
+		return SIRWorldMeshQueryResult::SIR_WORLD_MESH_BUSY;
 	if ( pStorage == nullptr || nCapacity == 0 || nWorldGeneration == 0 || nBytes < requiredBytes( nCapacity ) ||
-	     ( ( uintptr_t )pStorage % requiredAlignment() ) != 0 )
-		return SIR_WORLD_MESH_INVALID_ARGUMENT;
+	     ( reinterpret_cast<uintptr_t>(pStorage) % requiredAlignment() ) != 0 )
+		return SIRWorldMeshQueryResult::SIR_WORLD_MESH_INVALID_ARGUMENT;
 	const uint64_t nOwner = nextWorldMeshOwnerId();
 	if ( nOwner == 0 )
-		return SIR_WORLD_MESH_OUT_OF_CAPACITY;
-	m_pEntries = ( sirWorldMeshEntry_s * )pStorage;
+		return SIRWorldMeshQueryResult::SIR_WORLD_MESH_OUT_OF_CAPACITY;
+	m_pEntries = static_cast<sirWorldMeshEntry_s *>(pStorage);
 	for ( uint32_t i = 0; i < nCapacity; ++i )
 		new ( &m_pEntries[i] ) sirWorldMeshEntry_s{};
 	m_nOwnerId = nOwner;
@@ -99,7 +99,7 @@ sirWorldMeshQueryResult_t SIRWorldMeshQuery::initialize( void *pStorage, uint64_
 	m_nCapacity = nCapacity;
 	m_nCount = 0;
 	m_bReady = true;
-	return SIR_WORLD_MESH_OK;
+	return SIRWorldMeshQueryResult::SIR_WORLD_MESH_OK;
 }
 
 bool SIRWorldMeshQuery::buildTransform( sirWorldMeshEntry_s& entry, const float *pTransform ) const noexcept
@@ -126,29 +126,29 @@ bool SIRWorldMeshQuery::buildTransform( sirWorldMeshEntry_s& entry, const float 
 		for ( uint32_t column = 0; column < 3; ++column ) {
 			if ( !finiteFloat( r[row * 3 + column] ) )
 				return false;
-			candidate.inverse[row * 4 + column] = ( float )r[row * 3 + column];
+			candidate.inverse[row * 4 + column] = static_cast<float>(r[row * 3 + column]);
 		}
 		const double translation = -r[row * 3] * pTransform[3] - r[row * 3 + 1] * pTransform[7] - r[row * 3 + 2] * pTransform[11];
 		if ( !finiteFloat( translation ) )
 			return false;
-		candidate.inverse[row * 4 + 3] = ( float )translation;
+		candidate.inverse[row * 4 + 3] = static_cast<float>(translation);
 	}
 	float localMin[3] = {}, localMax[3] = {};
-	if ( entry.pBVH->getBounds( localMin, localMax ) != SIR_MESH_OK )
+	if ( entry.pBVH->getBounds( localMin, localMax ) != SIRMeshResult::SIR_MESH_OK )
 		return false;
 	for ( uint32_t row = 0; row < 3; ++row ) {
 		double minValue = pTransform[row * 4 + 3];
 		double maxValue = minValue;
 		for ( uint32_t column = 0; column < 3; ++column ) {
-			const double low = ( double )pTransform[row * 4 + column] * localMin[column];
-			const double high = ( double )pTransform[row * 4 + column] * localMax[column];
+			const double low = static_cast<double>(pTransform[row * 4 + column]) * localMin[column];
+			const double high = static_cast<double>(pTransform[row * 4 + column]) * localMax[column];
 			minValue += low < high ? low : high;
 			maxValue += low > high ? low : high;
 		}
 		if ( !finiteFloat( minValue ) || !finiteFloat( maxValue ) )
 			return false;
-		candidate.boundsMin[row] = ( float )minValue;
-		candidate.boundsMax[row] = ( float )maxValue;
+		candidate.boundsMin[row] = static_cast<float>(minValue);
+		candidate.boundsMax[row] = static_cast<float>(maxValue);
 	}
 	for ( uint32_t i = 0; i < 12; ++i )
 		entry.inverse[i] = candidate.inverse[i];
@@ -166,62 +166,62 @@ bool SIRWorldMeshQuery::isValidHandle( sirWorldMeshHandle_t handle ) const noexc
 	       m_pEntries[handle.nSlot].nGeneration == handle.nGeneration;
 }
 
-sirWorldMeshQueryResult_t SIRWorldMeshQuery::insert( const sirWorldMeshInstance_t& instance, sirWorldMeshHandle_t *pHandle ) noexcept
+SIRWorldMeshQueryResult SIRWorldMeshQuery::insert( const sirWorldMeshInstance_t& instance, sirWorldMeshHandle_t *pHandle ) noexcept
 {
 	if ( !m_bReady )
-		return SIR_WORLD_MESH_NOT_READY;
+		return SIRWorldMeshQueryResult::SIR_WORLD_MESH_NOT_READY;
 	if ( pHandle == nullptr || instance.nInstanceId == 0 || instance.nWorldGeneration != m_nWorldGeneration || instance.nLayerMask == 0 ||
 	     instance.pSource == nullptr || instance.pBVH == nullptr || !instance.pBVH->matchesSource( *instance.pSource ) )
-		return SIR_WORLD_MESH_INVALID_ARGUMENT;
+		return SIRWorldMeshQueryResult::SIR_WORLD_MESH_INVALID_ARGUMENT;
 	uint32_t slot = m_nCapacity;
 	for ( uint32_t i = 0; i < m_nCapacity; ++i ) {
 		if ( m_pEntries[i].bActive && m_pEntries[i].nInstanceId == instance.nInstanceId )
-			return SIR_WORLD_MESH_DUPLICATE;
+			return SIRWorldMeshQueryResult::SIR_WORLD_MESH_DUPLICATE;
 		if ( slot == m_nCapacity && !m_pEntries[i].bActive )
 			slot = i;
 	}
 	if ( slot == m_nCapacity || m_nNextGeneration == UINT32_MAX )
-		return SIR_WORLD_MESH_OUT_OF_CAPACITY;
-	sirWorldMeshEntry_s candidate = {};
+		return SIRWorldMeshQueryResult::SIR_WORLD_MESH_OUT_OF_CAPACITY;
+	sirWorldMeshEntry_s candidate {};
 	candidate.pBVH = instance.pBVH;
 	candidate.pSource = instance.pSource;
 	candidate.nInstanceId = instance.nInstanceId;
 	candidate.nLayerMask = instance.nLayerMask;
 	if ( !buildTransform( candidate, instance.transform ) )
-		return SIR_WORLD_MESH_INVALID_ARGUMENT;
-	if ( instance.pBVH->acquireReader() != SIR_MESH_OK )
-		return SIR_WORLD_MESH_NOT_READY;
+		return SIRWorldMeshQueryResult::SIR_WORLD_MESH_INVALID_ARGUMENT;
+	if ( instance.pBVH->acquireReader() != SIRMeshResult::SIR_MESH_OK )
+		return SIRWorldMeshQueryResult::SIR_WORLD_MESH_NOT_READY;
 	candidate.nGeneration = ++m_nNextGeneration;
 	candidate.bActive = true;
 	m_pEntries[slot] = candidate;
 	++m_nCount;
 	*pHandle = { slot, candidate.nGeneration, m_nOwnerId };
-	return SIR_WORLD_MESH_OK;
+	return SIRWorldMeshQueryResult::SIR_WORLD_MESH_OK;
 }
 
-sirWorldMeshQueryResult_t SIRWorldMeshQuery::setTransform( sirWorldMeshHandle_t handle, const float *pTransform3x4 ) noexcept
+SIRWorldMeshQueryResult SIRWorldMeshQuery::setTransform( sirWorldMeshHandle_t handle, const float *pTransform3x4 ) noexcept
 {
 	if ( !m_bReady )
-		return SIR_WORLD_MESH_NOT_READY;
+		return SIRWorldMeshQueryResult::SIR_WORLD_MESH_NOT_READY;
 	if ( !isValidHandle( handle ) )
-		return SIR_WORLD_MESH_STALE_HANDLE;
+		return SIRWorldMeshQueryResult::SIR_WORLD_MESH_STALE_HANDLE;
 	if ( !buildTransform( m_pEntries[handle.nSlot], pTransform3x4 ) )
-		return SIR_WORLD_MESH_INVALID_ARGUMENT;
-	return SIR_WORLD_MESH_OK;
+		return SIRWorldMeshQueryResult::SIR_WORLD_MESH_INVALID_ARGUMENT;
+	return SIRWorldMeshQueryResult::SIR_WORLD_MESH_OK;
 }
 
-sirWorldMeshQueryResult_t SIRWorldMeshQuery::remove( sirWorldMeshHandle_t handle ) noexcept
+SIRWorldMeshQueryResult SIRWorldMeshQuery::remove( sirWorldMeshHandle_t handle ) noexcept
 {
 	if ( !m_bReady )
-		return SIR_WORLD_MESH_NOT_READY;
+		return SIRWorldMeshQueryResult::SIR_WORLD_MESH_NOT_READY;
 	if ( !isValidHandle( handle ) )
-		return SIR_WORLD_MESH_STALE_HANDLE;
+		return SIRWorldMeshQueryResult::SIR_WORLD_MESH_STALE_HANDLE;
 	sirWorldMeshEntry_s& entry = m_pEntries[handle.nSlot];
-	if ( entry.pBVH->releaseReader() != SIR_MESH_OK )
-		return SIR_WORLD_MESH_BUSY;
+	if ( entry.pBVH->releaseReader() != SIRMeshResult::SIR_MESH_OK )
+		return SIRWorldMeshQueryResult::SIR_WORLD_MESH_BUSY;
 	entry = {};
 	--m_nCount;
-	return SIR_WORLD_MESH_OK;
+	return SIRWorldMeshQueryResult::SIR_WORLD_MESH_OK;
 }
 
 static bool rayIntersectsWorldBounds( const sirWorldMeshEntry_s& entry, const float *pOrigin, const float *pDirection,
@@ -254,71 +254,72 @@ static bool rayIntersectsWorldBounds( const sirWorldMeshEntry_s& entry, const fl
 	return true;
 }
 
-sirWorldMeshQueryResult_t SIRWorldMeshQuery::raycast( const sirMeshCollisionRay_t& ray, uint32_t nLayerMask, uint32_t nWorldGeneration,
+SIRWorldMeshQueryResult SIRWorldMeshQuery::raycast( const sirMeshCollisionRay_t& ray, uint32_t nLayerMask, uint32_t nWorldGeneration,
                                                       sirWorldMeshHit_t *pHit ) const noexcept
 {
 	if ( !m_bReady )
-		return SIR_WORLD_MESH_NOT_READY;
+		return SIRWorldMeshQueryResult::SIR_WORLD_MESH_NOT_READY;
 	if ( nWorldGeneration != m_nWorldGeneration )
-		return SIR_WORLD_MESH_STALE_HANDLE;
+		return SIRWorldMeshQueryResult::SIR_WORLD_MESH_STALE_HANDLE;
 	if ( pHit == nullptr || nLayerMask == 0 || !std::isfinite( ray.fMaxDistance ) || ray.fMaxDistance <= 0.0f )
-		return SIR_WORLD_MESH_INVALID_ARGUMENT;
+		return SIRWorldMeshQueryResult::SIR_WORLD_MESH_INVALID_ARGUMENT;
 	double worldLength = 0.0;
 	for ( uint32_t axis = 0; axis < 3; ++axis ) {
 		if ( !std::isfinite( ray.origin[axis] ) || !std::isfinite( ray.direction[axis] ) )
-			return SIR_WORLD_MESH_INVALID_ARGUMENT;
-		worldLength += ( double )ray.direction[axis] * ray.direction[axis];
+			return SIRWorldMeshQueryResult::SIR_WORLD_MESH_INVALID_ARGUMENT;
+		worldLength += static_cast<double>(ray.direction[axis]) * ray.direction[axis];
 	}
 	if ( !std::isfinite( worldLength ) || worldLength <= 0.0 )
-		return SIR_WORLD_MESH_INVALID_ARGUMENT;
+		return SIRWorldMeshQueryResult::SIR_WORLD_MESH_INVALID_ARGUMENT;
 	const double worldInverseLength = 1.0 / std::sqrt( worldLength );
-	const float worldDirection[3] = { ( float )( ray.direction[0] * worldInverseLength ),
-	                                  ( float )( ray.direction[1] * worldInverseLength ),
-	                                  ( float )( ray.direction[2] * worldInverseLength ) };
+	const float worldDirection[3] = { static_cast<float>( ray.direction[0] * worldInverseLength ),
+	                                  static_cast<float>( ray.direction[1] * worldInverseLength ),
+	                                  static_cast<float>( ray.direction[2] * worldInverseLength ) };
 	bool found = false;
-	sirWorldMeshHit_t best = {};
+	sirWorldMeshHit_t best {};
 	best.fDistance = ray.fMaxDistance;
 	for ( uint32_t i = 0; i < m_nCapacity; ++i ) {
 		const sirWorldMeshEntry_s& entry = m_pEntries[i];
 		if ( !entry.bActive || ( entry.nLayerMask & nLayerMask ) == 0 ||
 		     !rayIntersectsWorldBounds( entry, ray.origin, worldDirection, best.fDistance ) )
 			continue;
-		sirMeshCollisionRay_t local = {};
+		sirMeshCollisionRay_t local {};
 		double magnitude = 0.0;
 		for ( uint32_t row = 0; row < 3; ++row ) {
 			const float *matrix = entry.inverse + row * 4;
 			const double origin =
-			    ( double )matrix[0] * ray.origin[0] + ( double )matrix[1] * ray.origin[1] + ( double )matrix[2] * ray.origin[2] + matrix[3];
+			    static_cast<double>(matrix[0]) * ray.origin[0] + static_cast<double>(matrix[1]) * ray.origin[1] + static_cast<double>(matrix[2]) * ray.origin[2] + matrix[3];
 			const double direction =
-			    ( double )matrix[0] * worldDirection[0] + ( double )matrix[1] * worldDirection[1] + ( double )matrix[2] * worldDirection[2];
+			    static_cast<double>(matrix[0]) * worldDirection[0] + static_cast<double>(matrix[1]) * worldDirection[1] + static_cast<double>(matrix[2]) * worldDirection[2];
 			if ( !finiteFloat( origin ) || !finiteFloat( direction ) )
-				return SIR_WORLD_MESH_INVALID_ARGUMENT;
-			local.origin[row] = ( float )origin;
-			local.direction[row] = ( float )direction;
+				return SIRWorldMeshQueryResult::SIR_WORLD_MESH_INVALID_ARGUMENT;
+			local.origin[row] = static_cast<float>(origin);
+			local.direction[row] = static_cast<float>(direction);
 			magnitude += direction * direction;
 		}
 		if ( !std::isfinite( magnitude ) || magnitude <= 0.0 )
-			return SIR_WORLD_MESH_INVALID_ARGUMENT;
+			return SIRWorldMeshQueryResult::SIR_WORLD_MESH_INVALID_ARGUMENT;
 		const double scale = std::sqrt( magnitude );
 		if ( !finiteFloat( scale * best.fDistance ) )
-			return SIR_WORLD_MESH_INVALID_ARGUMENT;
-		local.fMaxDistance = ( float )( scale * best.fDistance );
-		sirMeshCollisionHit_t localHit = {};
-		if ( entry.pBVH->raycast( local, &localHit ) != SIR_MESH_OK )
+			return SIRWorldMeshQueryResult::SIR_WORLD_MESH_INVALID_ARGUMENT;
+		local.fMaxDistance = static_cast<float>( scale * best.fDistance );
+		sirMeshCollisionHit_t localHit {};
+		if ( entry.pBVH->raycast( local, &localHit ) != SIRMeshResult::SIR_MESH_OK )
 			continue;
-		const float distance = ( float )( localHit.fDistance / scale );
+		const float distance = static_cast<float>( localHit.fDistance / scale );
 		if ( distance > best.fDistance || ( found && distance == best.fDistance && entry.nInstanceId >= best.nInstanceId ) )
 			continue;
-		float normal[3] = {};
+		float normal[3];
+		memset( normal, 0, sizeof( normal ) );
 		double lengthSquared = 0.0;
 		for ( uint32_t axis = 0; axis < 3; ++axis ) {
 			normal[axis] = entry.inverse[axis] * localHit.normal[0] + entry.inverse[4 + axis] * localHit.normal[1] +
 			               entry.inverse[8 + axis] * localHit.normal[2];
-			lengthSquared += ( double )normal[axis] * normal[axis];
+			lengthSquared += static_cast<double>(normal[axis]) * normal[axis];
 		}
 		if ( !std::isfinite( lengthSquared ) || lengthSquared <= 0.0 )
 			continue;
-		const float invNormalLength = ( float )( 1.0 / std::sqrt( lengthSquared ) );
+		const float invNormalLength = static_cast<float>(  1.0 / std::sqrt( lengthSquared )  );
 		best.nInstanceId = entry.nInstanceId;
 		best.keySource = entry.pSource->getSourceKey();
 		best.nTriangle = localHit.nTriangle;
@@ -331,17 +332,17 @@ sirWorldMeshQueryResult_t SIRWorldMeshQuery::raycast( const sirMeshCollisionRay_
 		found = true;
 	}
 	if ( !found )
-		return SIR_WORLD_MESH_NOT_FOUND;
+		return SIRWorldMeshQueryResult::SIR_WORLD_MESH_NOT_FOUND;
 	*pHit = best;
-	return SIR_WORLD_MESH_OK;
+	return SIRWorldMeshQueryResult::SIR_WORLD_MESH_OK;
 }
 
-sirWorldMeshQueryResult_t SIRWorldMeshQuery::shutdown( void ) noexcept
+SIRWorldMeshQueryResult SIRWorldMeshQuery::shutdown( void ) noexcept
 {
 	if ( !m_bReady )
-		return SIR_WORLD_MESH_NOT_READY;
+		return SIRWorldMeshQueryResult::SIR_WORLD_MESH_NOT_READY;
 	if ( m_nCount != 0 )
-		return SIR_WORLD_MESH_BUSY;
+		return SIRWorldMeshQueryResult::SIR_WORLD_MESH_BUSY;
 	m_pEntries = nullptr;
 	m_nOwnerId = 0;
 	m_nNextGeneration = 0;
@@ -349,5 +350,5 @@ sirWorldMeshQueryResult_t SIRWorldMeshQuery::shutdown( void ) noexcept
 	m_nCount = 0;
 	m_nWorldGeneration = 0;
 	m_bReady = false;
-	return SIR_WORLD_MESH_OK;
+	return SIRWorldMeshQueryResult::SIR_WORLD_MESH_OK;
 }

@@ -13,10 +13,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRLINUXEVDEVBACKEND_H__
-#define __SIRENGINE_SIRLINUXEVDEVBACKEND_H__
+#ifndef __SIR_LINUXEVDEVBACKEND_H__
+#define __SIR_LINUXEVDEVBACKEND_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -59,7 +59,7 @@ typedef struct sirInputEvdevSlot_s
 	char szPath[512];
 	sirInputControllerProfile_t profile;
 	sirInputControlChange_t pending[SIR_INPUT_EVDEV_REPORT_CAPACITY];
-	sirInputEvdevAxis_t axes[SIR_INPUT_AXIS_COUNT];
+	sirInputEvdevAxis_t axes[SIRInputAxisCode::SIR_INPUT_AXIS_COUNT];
 } sirInputEvdevSlot_t;
 
 // Linux gamepads only. Wayland/X11 own keyboard and mouse focus separately.
@@ -67,7 +67,7 @@ class SIRLinuxEvdevBackend final : public SIRInputBackend
 {
 public:
 	SIRLinuxEvdevBackend( void ) noexcept;
-	sirInputBackendId_t id( void ) const noexcept override;
+	SIRInputBackendId id( void ) const noexcept override;
 	void sample( SIRInputService& service ) noexcept override;
 	void resynchronize( SIRInputService& service ) noexcept override;
 	bool vibrate( sirInputDeviceId_t id, uint16_t nLeft, uint16_t nRight ) noexcept override;
@@ -88,7 +88,7 @@ private:
 	bool requery( SIRInputService& service, sirInputEvdevSlot_t& slot, bool bReset ) noexcept;
 	void closeDevice( SIRInputService& service, sirInputEvdevSlot_t& slot ) noexcept;
 	void pollHotplug( SIRInputService& service ) noexcept;
-	bool queueChange( sirInputEvdevSlot_t& slot, sirInputSignal_t eSignal, uint16_t nCode, int32_t nValue ) noexcept;
+	bool queueChange( sirInputEvdevSlot_t& slot, SIRInputSignal eSignal, uint16_t nCode, int32_t nValue ) noexcept;
 	static int16_t resolveButton( const sirInputEvdevSlot_t& slot, uint16_t nCode ) noexcept;
 	sirInputEvdevSlot_t m_Slots[SIR_INPUT_EVDEV_CAPACITY];
 	SIRInputControllerProfiles m_Profiles;
@@ -98,4 +98,4 @@ private:
 	int m_nWatch;
 };
 
-#endif // __SIRENGINE_SIRLINUXEVDEVBACKEND_H__
+#endif // __SIR_LINUXEVDEVBACKEND_H__

@@ -13,10 +13,11 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIREVENTMAILBOX_H__
-#define __SIRENGINE_SIREVENTMAILBOX_H__
+#ifndef __SIR_EVENTMAILBOX_H__
+#define __SIR_EVENTMAILBOX_H__
 
 #include <Core/SIRPCH.h>
+#include <atomic>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -75,10 +76,10 @@ public:
 		return true;
 	}
 
-	sirEventEnqueueStatus_t tryPublish( sirEventProducerHandle_t producer, const TPayload& payload ) noexcept
+	SIREventEnqueueStatus tryPublish( sirEventProducerHandle_t producer, const TPayload& payload ) noexcept
 	{
 		if ( !validProducer( producer ) || !m_bSealed ) {
-			return SIR_EVENT_ENQUEUE_STOPPED;
+			return SIREventEnqueueStatus::SIR_EVENT_ENQUEUE_STOPPED;
 		}
 		return m_Rings[producer.nSlot - 1].tryEnqueue( payload );
 	}
@@ -138,7 +139,7 @@ public:
 
 	void stop( void ) noexcept
 	{
-		m_bStopped.store( true, SIR_MEMORY_ORDER_RELEASE );
+		m_bStopped.store( true, std::memory_order_release );
 		for ( uint32_t i = 0; i < m_nRegistered; ++i ) {
 			m_Rings[i].stop();
 		}
@@ -157,7 +158,7 @@ private:
 	bool validProducer( sirEventProducerHandle_t handle ) const noexcept
 	{
 		return handle.pOwner == this && handle.nSlot != 0 && handle.nSlot <= m_nRegistered && handle.nGeneration == 1 &&
-		       !m_bStopped.load( SIR_MEMORY_ORDER_ACQUIRE );
+		       !m_bStopped.load( std::memory_order_acquire );
 	}
 
 	SIRSPSCEventRing<TPayload, QueueCapacity> m_Rings[ProducerCapacity];
@@ -165,7 +166,7 @@ private:
 	uint32_t m_nCursor;
 	bool m_bSealed;
 	bool m_bPumping;
-	SIRAtomic<bool> m_bStopped;
+	std::atomic<bool> m_bStopped;
 };
 
-#endif // __SIRENGINE_SIREVENTMAILBOX_H__
+#endif // __SIR_EVENTMAILBOX_H__

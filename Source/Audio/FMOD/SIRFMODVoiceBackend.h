@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRFMODVOICEBACKEND_H__
-#define __SIRENGINE_SIRFMODVOICEBACKEND_H__
+#ifndef __SIR_FMODVOICEBACKEND_H__
+#define __SIR_FMODVOICEBACKEND_H__
 
 #include <Core/SIRPCH.h>
 
@@ -42,7 +42,7 @@ typedef struct sirFMODVoiceNativeOps_s
 	int32_t ( *resolveEvent )( void *pUserData, void *pStudio, const char *szPath, void **ppDescription ) noexcept;
 	int32_t ( *createInstance )( void *pUserData, void *pDescription, void **ppInstance ) noexcept;
 	int32_t ( *startInstance )( void *pUserData, void *pInstance ) noexcept;
-	int32_t ( *stopInstance )( void *pUserData, void *pInstance, sirAudioStopMode_t eMode ) noexcept;
+	int32_t ( *stopInstance )( void *pUserData, void *pInstance, SIRAudioStopMode eMode ) noexcept;
 	int32_t ( *isStopped )( void *pUserData, void *pInstance, uint8_t *pbStopped ) noexcept;
 	int32_t ( *releaseInstance )( void *pUserData, void *pInstance ) noexcept;
 	int32_t ( *setInstanceParameter )( void *pUserData, void *pInstance, uint64_t nNativeId, float fValue ) noexcept;
@@ -68,7 +68,7 @@ typedef struct sirFMODParameterBinding_s
 {
 	uint64_t nControlId;
 	uint64_t nNativeId;
-	sirAudioControlScope_t eScope;
+	SIRAudioControlScope eScope;
 	uint8_t nReserved[7];
 } sirFMODParameterBinding_t;
 
@@ -108,7 +108,7 @@ class SIRFMODVoiceBackend
 private:
 	SIRFMODContext *m_pContext = nullptr;
 	const sirContainerAllocator_t *m_pAllocator = nullptr;
-	sirFMODVoiceNativeOps_t m_Ops = {};
+	sirFMODVoiceNativeOps_t m_Ops {};
 	SIRFMODMixerBackend *m_pMixerBackend = nullptr;
 	SIRFMODSnapshotBackend *m_pSnapshotBackend = nullptr;
 	sirFMODRegisteredEvent_t *m_pEvents = nullptr;
@@ -133,16 +133,16 @@ private:
 	uint32_t m_nCompletions = 0;
 	uint32_t m_nReservedCompletions = 0;
 	int32_t m_nLastNativeResult = 0;
-	sirPlatformContext_t m_Platform = {};
+	sirPlatformContext_t m_Platform {};
 	bool m_bInitialized = false;
 
-	static sirAudioResult_t initializeCallback( void *pContext, const sirAudioBackendConfig_t *pConfig ) noexcept;
+	static SIRAudioResult initializeCallback( void *pContext, const sirAudioBackendConfig_t *pConfig ) noexcept;
 	static void shutdownCallback( void *pContext ) noexcept;
-	static sirAudioResult_t submitCallback( void *pContext, const sirAudioCommand_t *pCommands, uint32_t nCount ) noexcept;
+	static SIRAudioResult submitCallback( void *pContext, const sirAudioCommand_t *pCommands, uint32_t nCount ) noexcept;
 	static uint32_t drainCallback( void *pContext, sirAudioCompletion_t *pOutput, uint32_t nCapacity ) noexcept;
 	static void updateCallback( void *pContext ) noexcept;
 	static uint64_t capabilitiesCallback( const void *pContext ) noexcept;
-	static sirAudioResult_t submitSpatialCallback( void *pContext, const sirAudioCommand_t *pCommand,
+	static SIRAudioResult submitSpatialCallback( void *pContext, const sirAudioCommand_t *pCommand,
 	                                               const sirAudioAttributes_t *pAttributes ) noexcept;
 
 	bool findEvent( uint64_t nEventId, uint32_t& iEvent ) const noexcept;
@@ -152,10 +152,10 @@ private:
 	void retrySpatial( void ) noexcept;
 	void retryEmitterParameters( void ) noexcept;
 	void clearEmitterParameters( sirAudioEmitterHandle_t hEmitter ) noexcept;
-	sirAudioResult_t updateEmitterParameter( const sirAudioCommand_t& command ) noexcept;
-	sirAudioResult_t applyEmitterParametersToNewInstance( void *pInstance, sirAudioEmitterHandle_t hEmitter ) noexcept;
+	SIRAudioResult updateEmitterParameter( const sirAudioCommand_t& command ) noexcept;
+	SIRAudioResult applyEmitterParametersToNewInstance( void *pInstance, sirAudioEmitterHandle_t hEmitter ) noexcept;
 	void releaseStorage( void ) noexcept;
-	sirAudioResult_t submitOne( const sirAudioCommand_t& command ) noexcept;
+	SIRAudioResult submitOne( const sirAudioCommand_t& command ) noexcept;
 
 public:
 	SIRFMODVoiceBackend( void ) noexcept = default;
@@ -163,21 +163,21 @@ public:
 	SIRFMODVoiceBackend( const SIRFMODVoiceBackend& ) = delete;
 	SIRFMODVoiceBackend& operator=( const SIRFMODVoiceBackend& ) = delete;
 
-	sirAudioResult_t configure( SIRFMODContext *pContext, const sirContainerAllocator_t *pAllocator, const sirFMODVoiceNativeOps_t& ops,
+	SIRAudioResult configure( SIRFMODContext *pContext, const sirContainerAllocator_t *pAllocator, const sirFMODVoiceNativeOps_t& ops,
 	                            uint32_t nMaxRegisteredEvents, uint32_t nMaxRegisteredParameters = 0, uint32_t nMaxEmitters = 0,
 	                            uint32_t nMaxListeners = 0, uint32_t nMaxEmitterParameters = 0 ) noexcept;
 	// Borrowed controllers must remain alive through SIRAudioSystem::shutdown().
 	// Bind them after their initialize() and before this voice backend initializes.
-	sirAudioResult_t bindControllers( SIRFMODMixerBackend *pMixer, SIRFMODSnapshotBackend *pSnapshots ) noexcept;
-	sirAudioResult_t registerEvent( uint64_t nEventId, const char *szPath ) noexcept;
-	sirAudioResult_t unregisterEvent( uint64_t nEventId ) noexcept;
-	sirAudioResult_t registerParameter( uint64_t nControlId, uint64_t nNativeId, sirAudioControlScope_t eScope ) noexcept;
-	sirAudioResult_t unregisterParameter( uint64_t nControlId ) noexcept;
+	SIRAudioResult bindControllers( SIRFMODMixerBackend *pMixer, SIRFMODSnapshotBackend *pSnapshots ) noexcept;
+	SIRAudioResult registerEvent( uint64_t nEventId, const char *szPath ) noexcept;
+	SIRAudioResult unregisterEvent( uint64_t nEventId ) noexcept;
+	SIRAudioResult registerParameter( uint64_t nControlId, uint64_t nNativeId, SIRAudioControlScope eScope ) noexcept;
+	SIRAudioResult unregisterParameter( uint64_t nControlId ) noexcept;
 	bool isInitialized( void ) const noexcept;
 	bool isEventInUse( uint64_t nEventId ) const noexcept;
 	uint32_t getActiveVoiceCount( void ) const noexcept;
 	int32_t getLastNativeResult( void ) const noexcept;
-	sirAudioResult_t getPlayingTimeline( sirAudioPlayingHandle_t hPlaying, uint32_t& nMilliseconds ) noexcept;
+	SIRAudioResult getPlayingTimeline( sirAudioPlayingHandle_t hPlaying, uint32_t& nMilliseconds ) noexcept;
 	const sirPlatformContext_t& platformContext( void ) const noexcept;
 	static sirAudioBackendOps_t getBackendOps( void ) noexcept;
 };
@@ -185,4 +185,4 @@ public:
 // Implemented by the FMOD SDK-gated provider translation unit only.
 sirFMODVoiceNativeOps_t sirGetFMODVoiceNativeOps( void ) noexcept;
 
-#endif // __SIRENGINE_SIRFMODVOICEBACKEND_H__
+#endif // __SIR_FMODVOICEBACKEND_H__

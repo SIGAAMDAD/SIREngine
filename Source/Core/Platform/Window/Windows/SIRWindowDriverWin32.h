@@ -12,15 +12,19 @@ express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIRWINDOWDRIVERWIN32_H__
-#define __SIRENGINE_SIRWINDOWDRIVERWIN32_H__
+#ifndef __SIR_WINDOWDRIVERWIN32_H__
+#define __SIR_WINDOWDRIVERWIN32_H__
+
 #include <Core/SIRPCH.h>
+
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
 	#pragma once
 #endif
 // clang-format on
+
 #include <Core/Platform/Window/SIRWindowDriver.h>
+
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
@@ -63,18 +67,18 @@ public:
 	SIRWindowDriverWin32( void ) noexcept = default;
 	~SIRWindowDriverWin32( void ) noexcept override;
 
-	sirWindowResult_t initialize( void ) noexcept override;
-	sirWindowResult_t createWindow( const sirWindowCreateDesc_t& desc, uint32_t nSlot, sirWindowNativeView_t *pView ) noexcept override;
-	sirWindowResult_t destroyWindow( uint32_t nSlot ) noexcept override;
-	sirWindowResult_t mutateWindow( uint32_t nSlot, const sirWindowMutation_t& mutation ) noexcept override;
-	sirWindowResult_t pumpEvents( uint32_t nBudget, sirWindowDriverEventFn_t pCallback, void *pContext ) noexcept override;
+	SIRWindowResult initialize( void ) noexcept override;
+	SIRWindowResult createWindow( const sirWindowCreateDesc_t& desc, uint32_t nSlot, sirWindowNativeView_t *pView ) noexcept override;
+	SIRWindowResult destroyWindow( uint32_t nSlot ) noexcept override;
+	SIRWindowResult mutateWindow( uint32_t nSlot, const sirWindowMutation_t& mutation ) noexcept override;
+	SIRWindowResult pumpEvents( uint32_t nBudget, sirWindowDriverEventFn_t pCallback, void *pContext ) noexcept override;
 	void shutdown( void ) noexcept override;
 	bool setMessageSink( sirWindowWin32MessageSink_t pSink, void *pContext ) noexcept;
 
 protected:
 private:
 	static LRESULT CALLBACK windowProc( HWND hWindow, UINT nMessage, WPARAM nWParam, LPARAM nLParam );
-	void queueEvent( uint32_t nSlot, sirWindowEventKind_t eKind, uint32_t nWidth, uint32_t nHeight ) noexcept;
+	void queueEvent( uint32_t nSlot, SIRWindowEventKind eKind, uint32_t nWidth, uint32_t nHeight ) noexcept;
 
 	sirWin32Slot_t m_Slots[SIR_WINDOW_MAX_WINDOWS] = {};
 	sirWindowBackendEvent_t m_Events[SIR_WINDOW_EVENT_CAPACITY] = {};
@@ -89,4 +93,4 @@ private:
 	bool m_bLostPending[SIR_WINDOW_MAX_WINDOWS] = {};
 	uintptr_t m_nLostNativeWindow[SIR_WINDOW_MAX_WINDOWS] = {};
 };
-#endif // __SIRENGINE_SIRWINDOWDRIVERWIN32_H__
+#endif // __SIR_WINDOWDRIVERWIN32_H__

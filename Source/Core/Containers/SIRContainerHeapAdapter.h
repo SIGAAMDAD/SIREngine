@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRCONTAINERHEAPADAPTER_H__
-#define __SIRENGINE_SIRCONTAINERHEAPADAPTER_H__
+#ifndef __SIR_CONTAINERHEAPADAPTER_H__
+#define __SIR_CONTAINERHEAPADAPTER_H__
 
 #include <Core/SIRPCH.h>
 
@@ -36,11 +36,11 @@ class SIRContainerHeapAdapter
 {
 private:
 	SIRGeneralHeap *m_pHeap = nullptr;
-	sirContainerAllocator_t m_Allocator = {};
+	sirContainerAllocator_t m_Allocator {};
 
 	static void *allocate( void *pContext, size_t nBytes, size_t nAlignment ) noexcept
 	{
-		SIRContainerHeapAdapter *pAdapter = ( SIRContainerHeapAdapter * )pContext;
+		SIRContainerHeapAdapter *pAdapter = static_cast<SIRContainerHeapAdapter *>(pContext);
 		if ( pAdapter == nullptr || pAdapter->m_pHeap == nullptr ) {
 			return nullptr;
 		}
@@ -49,12 +49,12 @@ private:
 
 	static void deallocate( void *pContext, void *pMemory, size_t, size_t ) noexcept
 	{
-		SIRContainerHeapAdapter *pAdapter = ( SIRContainerHeapAdapter * )pContext;
+		SIRContainerHeapAdapter *pAdapter = static_cast<SIRContainerHeapAdapter *>(pContext);
 		assert( pAdapter != nullptr && pAdapter->m_pHeap != nullptr );
 		if ( pAdapter != nullptr && pAdapter->m_pHeap != nullptr ) {
 			const bool bReleased = pAdapter->m_pHeap->tryFree( pMemory );
 			assert( bReleased );
-			( void )bReleased;
+			static_cast<void>(bReleased);
 		}
 	}
 
@@ -65,16 +65,16 @@ public:
 	SIRContainerHeapAdapter( SIRContainerHeapAdapter&& ) = delete;
 	SIRContainerHeapAdapter& operator=( SIRContainerHeapAdapter&& ) = delete;
 
-	bool init( SIRGeneralHeap *pHeap, sirMemoryDomain_t eDomain, uint32_t nOwnerTag ) noexcept
+	bool init( SIRGeneralHeap *pHeap, SIRMemoryDomain eDomain, uint32_t nOwnerTag ) noexcept
 	{
-		if ( m_pHeap != nullptr || pHeap == nullptr || eDomain >= SIR_MEMORY_DOMAIN_COUNT || !pHeap->isConfiguredForDomain( eDomain ) ) {
+		if ( m_pHeap != nullptr || pHeap == nullptr || eDomain >= SIRMemoryDomain::SIR_MEMORY_DOMAIN_COUNT || !pHeap->isConfiguredForDomain( eDomain ) ) {
 			return false;
 		}
 		m_pHeap = pHeap;
 		m_Allocator.pContext = this;
 		m_Allocator.pfnAllocate = allocate;
 		m_Allocator.pfnDeallocate = deallocate;
-		m_Allocator.nDomainId = ( uint32_t )eDomain;
+		m_Allocator.nDomainId = static_cast<uint32_t>(eDomain);
 		m_Allocator.nOwnerTag = nOwnerTag;
 		return true;
 	}
@@ -85,4 +85,4 @@ public:
 	}
 };
 
-#endif // __SIRENGINE_SIRCONTAINERHEAPADAPTER_H__
+#endif // __SIR_CONTAINERHEAPADAPTER_H__

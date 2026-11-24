@@ -16,7 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/Memory/Allocators/SIRHighLowAllocator.h>
 #include <Core/Memory/SIRMemorySegment.h>
-#include <Core/Memory/SIRMemoryUtils.h>
+#include <Core/SIRMath.h>
 
 #include <cstdint>
 #include <limits>
@@ -45,14 +45,14 @@ void *SIRHighLowAllocator::allocLow( uint64_t nBytes, uint64_t nAlignment )
 		return nullptr;
 	}
 
-	const uint64_t nBase = ( ( uintptr_t )( m_pSegment->getBase() ) );
+	const uint64_t nBase = reinterpret_cast<uintptr_t>(m_pSegment->getBase());
 	const uint64_t nCapacity = m_pSegment->getReservedBytes();
 	uint64_t nStart = 0;
 	if ( nBase > ( std::numeric_limits<uintptr_t>::max )() - m_nLowUsed ) {
 		return nullptr;
 	}
-	if ( !SIR_IS_POWER_OF_TWO( nAlignment ) || ( uint64_t )( nAlignment ) > UINTPTR_MAX ||
-	     ( uint64_t )( nBase + m_nLowUsed ) > UINTPTR_MAX - ( ( uint64_t )( nAlignment )-1 ) ) {
+	if ( !SIR_IS_POWER_OF_TWO( nAlignment ) || static_cast<uint64_t>( nAlignment ) > UINTPTR_MAX ||
+	     static_cast<uint64_t>( nBase + m_nLowUsed ) > UINTPTR_MAX - ( static_cast<uint64_t>( nAlignment )-1 ) ) {
 		return nullptr;
 	}
 	nStart = SIR_ALIGN_UP( nBase + m_nLowUsed, nAlignment );
@@ -68,8 +68,8 @@ void *SIRHighLowAllocator::allocLow( uint64_t nBytes, uint64_t nAlignment )
 	const uint64_t nEnd = nOffset + nBytes;
 	const uint64_t nPageSize = m_pSegment->getPageSize();
 	uint64_t nCommitEnd = 0;
-	if ( !SIR_IS_POWER_OF_TWO( nPageSize ) || ( uint64_t )( nPageSize ) > UINTPTR_MAX ||
-	     ( uint64_t )( nEnd ) > UINTPTR_MAX - ( ( uint64_t )( nPageSize )-1 ) ) {
+	if ( !SIR_IS_POWER_OF_TWO( nPageSize ) || static_cast<uint64_t>( nPageSize ) > UINTPTR_MAX ||
+	     static_cast<uint64_t>( nEnd ) > UINTPTR_MAX - ( static_cast<uint64_t>( nPageSize )-1 ) ) {
 		return nullptr;
 	}
 	nCommitEnd = SIR_ALIGN_UP( nEnd, nPageSize );
@@ -85,7 +85,7 @@ void *SIRHighLowAllocator::allocLow( uint64_t nBytes, uint64_t nAlignment )
 		m_nLowCommittedEnd = nCommitEnd;
 	}
 	m_nLowUsed = nEnd;
-	return ( ( void * )( ( ( uintptr_t )( nStart ) ) ) );
+	return ( ( void * )static_cast<uintptr_t>( nStart ) );
 }
 
 void *SIRHighLowAllocator::allocHigh( uint64_t nBytes, uint64_t nAlignment )
@@ -94,7 +94,7 @@ void *SIRHighLowAllocator::allocHigh( uint64_t nBytes, uint64_t nAlignment )
 		return nullptr;
 	}
 
-	const uint64_t nBase = ( ( uintptr_t )( m_pSegment->getBase() ) );
+	const uint64_t nBase = reinterpret_cast<uintptr_t>(m_pSegment->getBase());
 	const uint64_t nCapacity = m_pSegment->getReservedBytes();
 	const uint64_t nHighEnd = nCapacity - m_nHighUsed;
 	if ( nBytes > nHighEnd ) {
@@ -126,7 +126,7 @@ void *SIRHighLowAllocator::allocHigh( uint64_t nBytes, uint64_t nAlignment )
 		m_nHighCommittedBegin = nCommitBegin;
 	}
 	m_nHighUsed = nCapacity - nStart;
-	return ( ( void * )( ( ( uintptr_t )( nStartAddress ) ) ) );
+	return ( ( void * )static_cast<uintptr_t>( nStartAddress ) );
 }
 
 uint64_t SIRHighLowAllocator::getLowMark( void ) const
@@ -176,8 +176,8 @@ bool SIRHighLowAllocator::trimUnusedPages( void )
 	const uint64_t nPageSize = m_pSegment->getPageSize();
 	const uint64_t nCapacity = m_pSegment->getReservedBytes();
 	uint64_t nLowerEnd = 0;
-	if ( !SIR_IS_POWER_OF_TWO( nPageSize ) || ( uint64_t )( nPageSize ) > UINTPTR_MAX ||
-	     ( uint64_t )( m_nLowUsed ) > UINTPTR_MAX - ( ( uint64_t )( nPageSize )-1 ) ) {
+	if ( !SIR_IS_POWER_OF_TWO( nPageSize ) || static_cast<uint64_t>( nPageSize ) > UINTPTR_MAX ||
+	     static_cast<uint64_t>( m_nLowUsed ) > UINTPTR_MAX - ( static_cast<uint64_t>( nPageSize )-1 ) ) {
 		return false;
 	}
 	nLowerEnd = SIR_ALIGN_UP( m_nLowUsed, nPageSize );

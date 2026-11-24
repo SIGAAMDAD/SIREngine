@@ -8,7 +8,7 @@
 
 static uint16_t t3d_vt_reference_rgb565( const uint8_t r, const uint8_t g, const uint8_t b )
 {
-	return ( uint16_t )( ( ( uint16_t )( r >> 3u ) << 11u ) | ( ( uint16_t )( g >> 2u ) << 5u ) | ( b >> 3u ) );
+	return ( uint16_t )( ( static_cast<uint16_t>( r >> 3u ) << 11u ) | ( static_cast<uint16_t>( g >> 2u ) << 5u ) | ( b >> 3u ) );
 }
 
 static void t3d_vt_reference_rgb565_decode( const uint16_t nColor, uint8_t *pRgb )
@@ -16,17 +16,17 @@ static void t3d_vt_reference_rgb565_decode( const uint16_t nColor, uint8_t *pRgb
 	const uint32_t r = ( nColor >> 11u ) & 31u;
 	const uint32_t g = ( nColor >> 5u ) & 63u;
 	const uint32_t b = nColor & 31u;
-	pRgb[0] = ( uint8_t )( ( r << 3u ) | ( r >> 2u ) );
-	pRgb[1] = ( uint8_t )( ( g << 2u ) | ( g >> 4u ) );
-	pRgb[2] = ( uint8_t )( ( b << 3u ) | ( b >> 2u ) );
+	pRgb[0] = static_cast<uint8_t>(  ( r << 3u ) | ( r >> 2u )  );
+	pRgb[1] = static_cast<uint8_t>(  ( g << 2u ) | ( g >> 4u )  );
+	pRgb[2] = static_cast<uint8_t>(  ( b << 3u ) | ( b >> 2u )  );
 }
 
 static uint32_t t3d_vt_reference_rgb_distance( const uint8_t *pPixel, const uint8_t *pColor )
 {
-	const int32_t dr = ( int32_t )pPixel[0] - pColor[0];
-	const int32_t dg = ( int32_t )pPixel[1] - pColor[1];
-	const int32_t db = ( int32_t )pPixel[2] - pColor[2];
-	return ( uint32_t )( dr * dr + dg * dg + db * db );
+	const int32_t dr = static_cast<int32_t>(pPixel[0]) - pColor[0];
+	const int32_t dg = static_cast<int32_t>(pPixel[1]) - pColor[1];
+	const int32_t db = static_cast<int32_t>(pPixel[2]) - pColor[2];
+	return static_cast<uint32_t>( dr * dr + dg * dg + db * db );
 }
 
 static uint32_t t3d_vt_reference_bc1_indices( const uint8_t *pPixels, const uint32_t nStride, const uint16_t nColor0,
@@ -37,11 +37,11 @@ static uint32_t t3d_vt_reference_bc1_indices( const uint8_t *pPixels, const uint
 	t3d_vt_reference_rgb565_decode( nColor1, Palette[1] );
 	for ( uint32_t c = 0u; c < 3u; ++c ) {
 		if ( bHasAlpha ) {
-			Palette[2][c] = ( uint8_t )( ( Palette[0][c] + Palette[1][c] ) / 2u );
+			Palette[2][c] = static_cast<uint8_t>(  ( Palette[0][c] + Palette[1][c] ) / 2u  );
 			Palette[3][c] = 0u;
 		} else {
-			Palette[2][c] = ( uint8_t )( ( 2u * Palette[0][c] + Palette[1][c] ) / 3u );
-			Palette[3][c] = ( uint8_t )( ( Palette[0][c] + 2u * Palette[1][c] ) / 3u );
+			Palette[2][c] = static_cast<uint8_t>(  ( 2u * Palette[0][c] + Palette[1][c] ) / 3u  );
+			Palette[3][c] = static_cast<uint8_t>(  ( Palette[0][c] + 2u * Palette[1][c] ) / 3u  );
 		}
 	}
 	uint32_t error = 0u;
@@ -98,9 +98,9 @@ static uint16_t t3d_vt_reference_bc1_quantize( const float *pColor )
 	const uint32_t maxima[3] = { 31u, 63u, 31u };
 	for ( uint32_t c = 0u; c < 3u; ++c ) {
 		const float value = pColor[c] < 0.0f ? 0.0f : pColor[c] > 255.0f ? 255.0f : pColor[c];
-		quantized[c] = ( uint32_t )( value * maxima[c] / 255.0f + 0.5f );
+		quantized[c] = static_cast<uint32_t>( value * maxima[c] / 255.0f + 0.5f );
 	}
-	return ( uint16_t )( ( quantized[0] << 11u ) | ( quantized[1] << 5u ) | quantized[2] );
+	return static_cast<uint16_t>(  ( quantized[0] << 11u ) | ( quantized[1] << 5u ) | quantized[2]  );
 }
 
 static void t3d_vt_reference_encode_bc1_block( const uint8_t *pPixels, const uint32_t nStride, uint8_t *pBlock )
@@ -127,7 +127,7 @@ static void t3d_vt_reference_encode_bc1_block( const uint8_t *pPixels, const uin
 				max_luma = luma;
 				max_color = color;
 			}
-			const float rgb[3] = { ( float )pixel[0], ( float )pixel[1], ( float )pixel[2] };
+			const float rgb[3] = { static_cast<float>(pixel[0]), static_cast<float>(pixel[1]), static_cast<float>(pixel[2]) };
 			const uint16_t rounded = t3d_vt_reference_bc1_quantize( rgb );
 			uint32_t i = 0u;
 			while ( i < candidate_count && candidates[i] != rounded ) {
@@ -200,23 +200,23 @@ static void t3d_vt_reference_encode_bc1_block( const uint8_t *pPixels, const uin
 				for ( int32_t delta = -1; delta <= 1; delta += 2 ) {
 					uint16_t colors[2] = { best_colors[0], best_colors[1] };
 					const int32_t component = ( colors[endpoint] >> shifts[c] ) & maxima[c];
-					if ( component + delta < 0 || component + delta > ( int32_t )maxima[c] ) {
+					if ( component + delta < 0 || component + delta > static_cast<int32_t>(maxima[c]) ) {
 						continue;
 					}
 					colors[endpoint] = ( uint16_t )( ( colors[endpoint] & ~( maxima[c] << shifts[c] ) ) |
-					                                 ( ( uint32_t )( component + delta ) << shifts[c] ) );
+					                                 ( static_cast<uint32_t>( component + delta ) << shifts[c] ) );
 					t3d_vt_reference_bc1_try_endpoints( pPixels, nStride, colors[0], colors[1], has_alpha, best_error, best_colors,
 					                                    best_indices );
 				}
 			}
 		}
 	}
-	pBlock[0] = ( uint8_t )best_colors[0];
-	pBlock[1] = ( uint8_t )( best_colors[0] >> 8u );
-	pBlock[2] = ( uint8_t )best_colors[1];
-	pBlock[3] = ( uint8_t )( best_colors[1] >> 8u );
+	pBlock[0] = static_cast<uint8_t>(best_colors[0]);
+	pBlock[1] = static_cast<uint8_t>( best_colors[0] >> 8u );
+	pBlock[2] = static_cast<uint8_t>(best_colors[1]);
+	pBlock[3] = static_cast<uint8_t>( best_colors[1] >> 8u );
 	for ( uint32_t byte = 0u; byte < 4u; ++byte ) {
-		pBlock[4u + byte] = ( uint8_t )( best_indices >> ( byte * 8u ) );
+		pBlock[4u + byte] = static_cast<uint8_t>(  best_indices >> ( byte * 8u )  );
 	}
 }
 
@@ -226,11 +226,11 @@ static void t3d_vt_reference_bc4_palette( const uint8_t nEndpoint0, const uint8_
 	pPalette[1] = nEndpoint1;
 	if ( nEndpoint0 > nEndpoint1 ) {
 		for ( uint32_t i = 1u; i <= 6u; ++i ) {
-			pPalette[i + 1u] = ( uint8_t )( ( ( 7u - i ) * nEndpoint0 + i * nEndpoint1 + 3u ) / 7u );
+			pPalette[i + 1u] = static_cast<uint8_t>(  ( ( 7u - i ) * nEndpoint0 + i * nEndpoint1 + 3u ) / 7u  );
 		}
 	} else {
 		for ( uint32_t i = 1u; i <= 4u; ++i ) {
-			pPalette[i + 1u] = ( uint8_t )( ( ( 5u - i ) * nEndpoint0 + i * nEndpoint1 + 2u ) / 5u );
+			pPalette[i + 1u] = static_cast<uint8_t>(  ( ( 5u - i ) * nEndpoint0 + i * nEndpoint1 + 2u ) / 5u  );
 		}
 		pPalette[6] = 0u;
 		pPalette[7] = 255u;
@@ -260,18 +260,18 @@ static void t3d_vt_reference_encode_bc4_block( const uint8_t *pPixels, const uin
 			uint32_t nBest = 0u;
 			uint32_t nBestDistance = UINT32_MAX;
 			for ( uint32_t iPalette = 0u; iPalette < 8u; ++iPalette ) {
-				const int32_t nDelta = ( int32_t )nValue - Palette[iPalette];
-				const uint32_t nDistance = ( uint32_t )( nDelta < 0 ? -nDelta : nDelta );
+				const int32_t nDelta = static_cast<int32_t>( static_cast<nValue>( - Palette ) )[iPalette];
+				const uint32_t nDistance = static_cast<uint32_t>( nDelta < 0 ? -nDelta : nDelta );
 				if ( nDistance < nBestDistance ) {
 					nBestDistance = nDistance;
 					nBest = iPalette;
 				}
 			}
-			nIndices |= ( uint64_t )nBest << ( ( y * 4u + x ) * 3u );
+			nIndices |= static_cast<uint64_t>(nBest) << ( ( y * 4u + x ) * 3u );
 		}
 	}
 	for ( uint32_t iByte = 0u; iByte < 6u; ++iByte ) {
-		pBlock[2u + iByte] = ( uint8_t )( nIndices >> ( iByte * 8u ) );
+		pBlock[2u + iByte] = static_cast<uint8_t>(  nIndices >> ( iByte * 8u )  );
 	}
 }
 
@@ -281,7 +281,7 @@ static void t3d_vt_reference_write_bits( t3dVTReferenceBitWriter_t& rWriter, uin
 {
 	for ( uint32_t iBit = 0u; iBit < nBitCount; ++iBit ) {
 		if ( ( nValue & ( 1u << iBit ) ) != 0u ) {
-			rWriter.m_pBytes[rWriter.m_nBit >> 3u] |= ( uint8_t )( 1u << ( rWriter.m_nBit & 7u ) );
+			rWriter.m_pBytes[rWriter.m_nBit >> 3u] |= static_cast<uint8_t>(  1u << ( rWriter.m_nBit & 7u )  );
 		}
 		++rWriter.m_nBit;
 	}
@@ -300,8 +300,8 @@ static void t3d_vt_reference_encode_bc7_mode6_block( const uint8_t *pPixels, con
 		if ( pixels[i][3] > pixels[visible][3] ) {
 			visible = i;
 		}
-		min_alpha = MIN( min_alpha, ( uint32_t )pixels[i][3] );
-		max_alpha = MAX( max_alpha, ( uint32_t )pixels[i][3] );
+		min_alpha = MIN( min_alpha, static_cast<uint32_t>(pixels[i][3]) );
+		max_alpha = MAX( max_alpha, static_cast<uint32_t>(pixels[i][3]) );
 	}
 	// Transparent RGB carries no authored color; avoid a black endpoint fringe.
 	for ( uint32_t i = 0u; i < 16u; ++i ) {
@@ -314,7 +314,7 @@ static void t3d_vt_reference_encode_bc7_mode6_block( const uint8_t *pPixels, con
 		for ( uint32_t j = i + 1u; j < 16u; ++j ) {
 			uint32_t distance = 0u;
 			for ( uint32_t c = 0u; c < 4u; ++c ) {
-				const int32_t d = ( int32_t )pixels[i][c] - pixels[j][c];
+				const int32_t d = static_cast<int32_t>(pixels[i][c]) - pixels[j][c];
 				distance += d * d * ( c == 3u ? 4u : 1u );
 			}
 			if ( distance > largest ) {
@@ -343,8 +343,8 @@ static void t3d_vt_reference_encode_bc7_mode6_block( const uint8_t *pPixels, con
 				uint32_t q[4];
 				float error = 0.0f;
 				for ( uint32_t c = 0u; c < 4u; ++c ) {
-					const int32_t v = CLAMP( ( int32_t )( ( endpoints[end][c] - parity ) * 0.5f + 0.5f ), 0, 127 );
-					q[c] = ( uint32_t )v * 2u + parity;
+					const int32_t v = CLAMP( static_cast<int32_t>(  ( endpoints[end][c] - parity ) * 0.5f + 0.5f  ), 0, 127 );
+					q[c] = static_cast<uint32_t>(v) * 2u + parity;
 					if ( c == 3u && nThreshold != 0u ) {
 						if ( min_alpha >= nThreshold && q[c] < nThreshold ) {
 							q[c] = nThreshold + ( ( nThreshold & 1u ) != parity ? 1u : 0u );
@@ -373,8 +373,8 @@ static void t3d_vt_reference_encode_bc7_mode6_block( const uint8_t *pPixels, con
 				uint64_t error = 0u;
 				for ( uint32_t c = 0u; c < 4u; ++c ) {
 					const uint32_t value = ( ( 64u - weights[index] ) * quantized[0][c] + weights[index] * quantized[1][c] + 32u ) >> 6u;
-					const int32_t d = ( int32_t )value - pixels[i][c];
-					error += ( uint64_t )( d * d ) * ( c == 3u ? 4u : pixels[i][3] == 0u ? 0u : 1u );
+					const int32_t d = static_cast<int32_t>( static_cast<value>( - pixels ) )[i][c];
+					error += static_cast<uint64_t>( d * d ) * ( c == 3u ? 4u : pixels[i][3] == 0u ? 0u : 1u );
 					if ( c == 3u && nThreshold != 0u && ( value >= nThreshold ) != ( pixels[i][3] >= nThreshold ) ) {
 						error += 1ull << 40u;
 					}
@@ -439,7 +439,7 @@ static void t3d_vt_reference_encode_bc7_mode6_block( const uint8_t *pPixels, con
 
 static bool t3d_vt_reference_encode_tile( void *pUser, const t3dVTEncodeTileRequest_t& rRequest, uint32_t& rWrittenBytes )
 {
-	( void )pUser;
+	static_cast<void>(pUser);
 	rWrittenBytes = 0u;
 	const uint32_t nBlocksWide = ( rRequest.m_nWidth + 3u ) >> 2u;
 	const uint32_t nBlocksHigh = ( rRequest.m_nHeight + 3u ) >> 2u;
@@ -447,7 +447,7 @@ static bool t3d_vt_reference_encode_tile( void *pUser, const t3dVTEncodeTileRequ
 	uint8_t *pOut = rRequest.m_pDestination;
 
 	const bool bV1 = rRequest.m_nContractVersion == T3D_VT_FILE_FORMAT_VERSION;
-	const uint32_t nHeightFormat = bV1 ? ( uint32_t )T3D_VT_PHYSICAL_FORMAT_R8_UNORM : ( uint32_t )T3D_VT_FORMAT_HEIGHT_R8_UNORM;
+	const uint32_t nHeightFormat = bV1 ? static_cast<uint32_t>(T3D_VT_PHYSICAL_FORMAT_R8_UNORM) : static_cast<uint32_t>(T3D_VT_FORMAT_HEIGHT_R8_UNORM);
 	if ( rRequest.m_nFormat == nHeightFormat || ( bV1 && rRequest.m_nFormat == T3D_VT_PHYSICAL_FORMAT_R16_UNORM ) ) {
 		memcpy( pOut, rRequest.m_pSourcePixels, rRequest.m_nSourceBytes );
 		rWrittenBytes = rRequest.m_nSourceBytes;
@@ -457,10 +457,10 @@ static bool t3d_vt_reference_encode_tile( void *pUser, const t3dVTEncodeTileRequ
 	for ( uint32_t yBlock = 0u; yBlock < nBlocksHigh; ++yBlock ) {
 		for ( uint32_t xBlock = 0u; xBlock < nBlocksWide; ++xBlock ) {
 			const uint8_t *pBlockPixels =
-			    rRequest.m_pSourcePixels + ( ( uint64_t )yBlock * 4u * rRequest.m_nWidth + xBlock * 4u ) * rRequest.m_nComponents;
-			const uint32_t nBc1Format = bV1 ? ( uint32_t )T3D_VT_PHYSICAL_FORMAT_BC1_UNORM : ( uint32_t )T3D_VT_FORMAT_ALBEDO_BC1_SRGB;
-			const uint32_t nBc5Format = bV1 ? ( uint32_t )T3D_VT_PHYSICAL_FORMAT_BC5_UNORM : ( uint32_t )T3D_VT_FORMAT_NORMAL_BC5_UNORM;
-			const uint32_t nBc7Format = bV1 ? ( uint32_t )T3D_VT_PHYSICAL_FORMAT_BC7_UNORM : ( uint32_t )T3D_VT_FORMAT_SURFACE_BC7_UNORM;
+			    rRequest.m_pSourcePixels + ( static_cast<uint64_t>(yBlock) * 4u * rRequest.m_nWidth + xBlock * 4u ) * rRequest.m_nComponents;
+			const uint32_t nBc1Format = bV1 ? static_cast<uint32_t>(T3D_VT_PHYSICAL_FORMAT_BC1_UNORM) : static_cast<uint32_t>(T3D_VT_FORMAT_ALBEDO_BC1_SRGB);
+			const uint32_t nBc5Format = bV1 ? static_cast<uint32_t>(T3D_VT_PHYSICAL_FORMAT_BC5_UNORM) : static_cast<uint32_t>(T3D_VT_FORMAT_NORMAL_BC5_UNORM);
+			const uint32_t nBc7Format = bV1 ? static_cast<uint32_t>(T3D_VT_PHYSICAL_FORMAT_BC7_UNORM) : static_cast<uint32_t>(T3D_VT_FORMAT_SURFACE_BC7_UNORM);
 			if ( rRequest.m_nFormat == nBc1Format ) {
 				t3d_vt_reference_encode_bc1_block( pBlockPixels, nSourceStride, pOut );
 				pOut += 8u;
@@ -476,7 +476,7 @@ static bool t3d_vt_reference_encode_tile( void *pUser, const t3dVTEncodeTileRequ
 			}
 		}
 	}
-	rWrittenBytes = ( uint32_t )( pOut - rRequest.m_pDestination );
+	rWrittenBytes = static_cast<uint32_t>( pOut - rRequest.m_pDestination );
 	return true;
 }
 

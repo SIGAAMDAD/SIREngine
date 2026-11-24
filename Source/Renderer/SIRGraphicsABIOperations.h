@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRGRAPHICSABIOPERATIONS_H__
-#define __SIRENGINE_SIRGRAPHICSABIOPERATIONS_H__
+#ifndef __SIR_GRAPHICSABIOPERATIONS_H__
+#define __SIR_GRAPHICSABIOPERATIONS_H__
 
 #include <Core/SIRPCH.h>
 
@@ -347,4 +347,4 @@ static_assert( sizeof( sirGraphicsABIDrawIndexed_t ) == 24, "indexed draw ABI la
 static_assert( sizeof( sirGraphicsABIBufferRange_t ) == 40, "buffer range ABI layout" );
 static_assert( sizeof( sirGraphicsABIColorAttachment_t ) == 40, "attachment ABI layout" );
 
-#endif // __SIRENGINE_SIRGRAPHICSABIOPERATIONS_H__
+#endif // __SIR_GRAPHICSABIOPERATIONS_H__

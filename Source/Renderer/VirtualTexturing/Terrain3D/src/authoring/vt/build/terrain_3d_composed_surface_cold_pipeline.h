@@ -11,8 +11,7 @@
 typedef bool ( *t3dComposedSurfaceColdCookCurrentFn )( void *pUser, uint64_t nTerrainRevision, uint64_t nMaterialRevision,
                                                        uint64_t nTopologyGeneration );
 
-enum t3dComposedSurfaceColdCookStatus_t
-{
+enum class SIRComposedSurfaceColdCookStatus : int32_t {
 	T3D_COMPOSED_SURFACE_COLD_COOK_SUCCESS = 0,
 	T3D_COMPOSED_SURFACE_COLD_COOK_INVALID_INPUT,
 	T3D_COMPOSED_SURFACE_COLD_COOK_STALE_REVISION,
@@ -69,7 +68,7 @@ struct t3dComposedSurfaceColdCookRequest_t
 
 struct t3dComposedSurfaceColdCookResult_t
 {
-	t3dComposedSurfaceColdCookStatus_t m_status;
+	SIRComposedSurfaceColdCookStatus m_status;
 	uint64_t m_nSourceFingerprint;
 	uint64_t m_nWrittenBytes;
 	uint32_t m_nDecodedTiles;

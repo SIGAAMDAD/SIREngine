@@ -33,7 +33,7 @@ void Terrain3DVTDemandBundleStore::resetCold()
 		s.nBundle = UINT32_MAX;
 		s.nPriority = 0u;
 		s.nAge = s.nEpoch = 0u;
-		s.state = FREE;
+		s.state = SIRState::FREE;
 	}
 	m_bOpen = false;
 	m_bStop = false;
@@ -59,15 +59,15 @@ bool Terrain3DVTDemandBundleStore::openCold( const String& path, const uint64_t 
 	// validate every count, signature, offset and directory checksum.
 	uint64_t directoryBytes = 0u;
 	for ( uint32_t i = 0u; i < 8u; ++i )
-		directoryBytes |= ( uint64_t )head[104 + i] << ( i * 8u );
+		directoryBytes |= static_cast<uint64_t>(head[104 + i]) << ( i * 8u );
 	if ( directoryBytes < T3D_VT_DEMAND_BAKED_VISIBILITY_HEADER_BYTES || directoryBytes > size ||
 	     directoryBytes > T3D_VT_DEMAND_BAKED_VISIBILITY_HEADER_BYTES +
-	                          ( uint64_t )T3D_VT_DEMAND_BAKED_VISIBILITY_MAX_CELLS *
+	                          static_cast<uint64_t>(T3D_VT_DEMAND_BAKED_VISIBILITY_MAX_CELLS) *
 	                              ( T3D_VT_DEMAND_BAKED_VISIBILITY_CELL_BYTES + T3D_VT_DEMAND_BAKED_VISIBILITY_BUNDLE_BYTES ) )
 		return false;
 	file->seek( 0u );
-	const PackedByteArray directory = file->get_buffer( ( int64_t )directoryBytes );
-	if ( directory.size() != ( int64_t )directoryBytes ||
+	const PackedByteArray directory = file->get_bufferstatic_cast<int64_t>(directoryBytes);
+	if ( directory.size() != static_cast<int64_t>(directoryBytes) ||
 	     !m_directory.loadCold( directory.ptr(), directoryBytes, size, packageSignature, assetIdentity ) )
 		return false;
 	for ( Slot& s : m_slots )
@@ -86,8 +86,8 @@ bool Terrain3DVTDemandBundleStore::validFor( const uint64_t signature ) const
 int32_t Terrain3DVTDemandBundleStore::findSlotLocked( const uint32_t bundle ) const
 {
 	for ( uint32_t i = 0u; i < T3D_VT_BUNDLE_CACHE_SLOTS; ++i )
-		if ( m_slots[i].state != FREE && m_slots[i].nBundle == bundle && m_slots[i].nEpoch == m_nEpoch )
-			return ( int32_t )i;
+		if ( m_slots[i].state != SIRState::FREE && m_slots[i].nBundle == bundle && m_slots[i].nEpoch == m_nEpoch )
+			return static_cast<int32_t>(i);
 	return -1;
 }
 
@@ -103,7 +103,7 @@ void Terrain3DVTDemandBundleStore::requestCellHot( const int32_t x, const int32_
 	const int32_t previous = findSlotLocked( bundle );
 	if ( previous >= 0 ) {
 		Slot& s = m_slots[previous];
-		if ( s.state != FAILED ) {
+		if ( s.state != SIRState::FAILED ) {
 			s.nPriority = priority > s.nPriority ? priority : s.nPriority;
 			s.nAge = ++m_nUseClock;
 			++m_stats.nCoalesced;
@@ -112,23 +112,23 @@ void Terrain3DVTDemandBundleStore::requestCellHot( const int32_t x, const int32_
 	}
 	int32_t victim = -1;
 	for ( uint32_t i = 0u; i < T3D_VT_BUNDLE_CACHE_SLOTS; ++i ) {
-		if ( m_slots[i].state == FREE || m_slots[i].state == FAILED ) {
-			victim = ( int32_t )i;
+		if ( m_slots[i].state == SIRState::FREE || m_slots[i].state == SIRState::FAILED ) {
+			victim = static_cast<int32_t>(i);
 			break;
 		}
-		if ( m_slots[i].state == READY && ( victim < 0 || m_slots[i].nAge < m_slots[victim].nAge ) )
-			victim = ( int32_t )i;
+		if ( m_slots[i].state == SIRState::READY && ( victim < 0 || m_slots[i].nAge < m_slots[victim].nAge ) )
+			victim = static_cast<int32_t>(i);
 	}
 	if ( victim < 0 )
 		return; // all slots pinned by queued/worker jobs
 	Slot& s = m_slots[victim];
-	if ( s.state == READY )
+	if ( s.state == SIRState::READY )
 		++m_stats.nEvictions;
 	s.nBundle = bundle;
 	s.nPriority = priority;
 	s.nAge = ++m_nUseClock;
 	s.nEpoch = m_nEpoch;
-	s.state = QUEUED;
+	s.state = SIRState::QUEUED;
 	m_wake.notifyOne();
 }
 
@@ -137,11 +137,11 @@ int32_t Terrain3DVTDemandBundleStore::selectQueuedLocked() const
 	int32_t selected = -1;
 	for ( uint32_t i = 0u; i < T3D_VT_BUNDLE_CACHE_SLOTS; ++i ) {
 		const Slot& s = m_slots[i];
-		if ( s.state != QUEUED )
+		if ( s.state != SIRState::QUEUED )
 			continue;
 		if ( selected < 0 || s.nPriority > m_slots[selected].nPriority ||
 		     ( s.nPriority == m_slots[selected].nPriority && s.nAge < m_slots[selected].nAge ) )
-			selected = ( int32_t )i;
+			selected = static_cast<int32_t>(i);
 	}
 	return selected;
 }
@@ -163,7 +163,7 @@ void Terrain3DVTDemandBundleStore::workerMain()
 			if ( m_bStop )
 				return;
 			Slot& slot = m_slots[chosen];
-			slot.state = LOADING;
+			slot.state = SIRState::LOADING;
 			bundle = slot.nBundle;
 			epoch = slot.nEpoch;
 		}
@@ -175,7 +175,7 @@ void Terrain3DVTDemandBundleStore::workerMain()
 			const PackedByteArray bytes = file->get_buffer( entry.nEncodedBytes );
 			if ( bytes.size() == entry.nEncodedBytes ) {
 				memcpy( encoded.data(), bytes.ptr(), entry.nEncodedBytes );
-				ok = t3d_vt_demand_decode_bundle( encoded.data(), entry.nEncodedBytes, entry, scratch.data(), ( uint32_t )scratch.size(),
+				ok = t3d_vt_demand_decode_bundle( encoded.data(), entry.nEncodedBytes, entry, scratch.data(), static_cast<uint32_t>(scratch.size()),
 				                                  m_slots[chosen].records.data(), T3D_VT_BUNDLE_MAX_RECORDS );
 			}
 		}
@@ -210,10 +210,10 @@ void Terrain3DVTDemandBundleStore::workerMain()
 			// Slot storage is never recycled during LOADING; reset first
 			// joins this thread, and epoch prevents stale publication.
 			if ( m_bStop || slot.nEpoch != epoch ) {
-				slot.state = FREE;
+				slot.state = SIRState::FREE;
 				++m_stats.nCancelled;
 			} else
-				slot.state = ok ? READY : FAILED;
+				slot.state = ok ? SIRState::READY : SIRState::FAILED;
 		}
 	}
 }
@@ -229,7 +229,7 @@ const t3dVTDemandBakedVisibilityRecord_t *Terrain3DVTDemandBundleStore::findCell
 	const auto& c = m_directory.cells()[id];
 	Terrain3DScopedLock lock( m_mutex );
 	const int32_t slotId = findSlotLocked( c.nBundle );
-	if ( slotId < 0 || m_slots[slotId].state != READY ) {
+	if ( slotId < 0 || m_slots[slotId].state != SIRState::READY ) {
 		++m_stats.nCacheMisses;
 		return nullptr;
 	}
@@ -246,8 +246,8 @@ t3dVTDemandBundleStats_t Terrain3DVTDemandBundleStore::stats() const
 	Terrain3DScopedLock lock( m_mutex );
 	t3dVTDemandBundleStats_t stats = m_stats;
 	for ( const Slot& s : m_slots ) {
-		stats.nQueued += s.state == QUEUED || s.state == LOADING;
-		stats.nResident += s.state == READY;
+		stats.nQueued += s.state == SIRState::QUEUED || s.state == SIRState::LOADING;
+		stats.nResident += s.state == SIRState::READY;
 	}
 	return stats;
 }

@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRLANGEFFECTS_H__
-#define __SIRENGINE_SIRLANGEFFECTS_H__
+#ifndef __SIR_LANGEFFECTS_H__
+#define __SIR_LANGEFFECTS_H__
 
 #include <Core/SIRPCH.h>
 
@@ -24,8 +24,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Scripting/Language/SIRLangLowering.h>
 
-typedef enum sirLangEffectError_e : uint8_t
-{
+enum class SIRLangEffectError : uint8_t {
 	SIR_LANG_EFFECT_OK = 0,
 	SIR_LANG_EFFECT_INVALID_INPUT,
 	SIR_LANG_EFFECT_CAPACITY,
@@ -35,7 +34,7 @@ typedef enum sirLangEffectError_e : uint8_t
 	SIR_LANG_EFFECT_BORROW_ESCAPE,
 	SIR_LANG_EFFECT_INVALID_LANE,
 	SIR_LANG_EFFECT_MALFORMED_TREE
-} sirLangEffectError_t;
+};
 
 typedef struct sirLangEffectFunction_s
 {
@@ -52,7 +51,7 @@ typedef struct sirLangEffectOutput_s
 	uint32_t nCapacity;
 	uint32_t nCount;
 	uint32_t iErrorNode;
-	sirLangEffectError_t eError;
+	SIRLangEffectError eError;
 	bool bRequireDeterministic;
 } sirLangEffectOutput_t;
 
@@ -66,6 +65,6 @@ typedef struct sirLangEffectInputs_s
 
 // Performs a bounded interprocedural effects fixed-point. No mutable global
 // registry or speculative native effect classification is introduced.
-sirLangEffectError_t SIRLangAnalyzeEffects( const sirLangEffectInputs_t& inputs, sirLangEffectOutput_t *pOutput ) noexcept;
+SIRLangEffectError SIRLangAnalyzeEffects( const sirLangEffectInputs_t& inputs, sirLangEffectOutput_t *pOutput ) noexcept;
 
-#endif // __SIRENGINE_SIRLANGEFFECTS_H__
+#endif // __SIR_LANGEFFECTS_H__

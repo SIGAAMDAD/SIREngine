@@ -17,8 +17,8 @@
 using namespace godot;
 #endif
 
-#define T3D_INSTANCE_BEHAVIOR_MASK ( ( uint16_t )( FOLLOW_TERRAIN_HEIGHT | FOLLOW_TERRAIN_NORMAL | MANUAL_ORIENTATION ) )
-#define T3D_INSTANCE_LEGACY_BEHAVIOR ( ( uint16_t )( FOLLOW_TERRAIN_HEIGHT | MANUAL_ORIENTATION ) )
+#define T3D_INSTANCE_BEHAVIOR_MASK ( static_cast<uint16_t>( FOLLOW_TERRAIN_HEIGHT | FOLLOW_TERRAIN_NORMAL | MANUAL_ORIENTATION ) )
+#define T3D_INSTANCE_LEGACY_BEHAVIOR ( static_cast<uint16_t>( FOLLOW_TERRAIN_HEIGHT | MANUAL_ORIENTATION ) )
 
 // Two transforms fit exactly in one 64-byte cacheline. The 32-byte alignment
 // prevents an individual transform from straddling cachelines in EASTL storage.
@@ -41,13 +41,13 @@ typedef struct alignas( 32 ) t3dPackedTransform_s
 	void set( const Transform3D& rTransform )
 	{
 		const uint16_t nReserved = m_nReserved;
-		m_szOrigin[0] = ( float )( rTransform.origin.x );
-		m_szOrigin[1] = ( float )( rTransform.origin.y );
-		m_szOrigin[2] = ( float )( rTransform.origin.z );
+		m_szOrigin[0] = static_cast<float>( rTransform.origin.x );
+		m_szOrigin[1] = static_cast<float>( rTransform.origin.y );
+		m_szOrigin[2] = static_cast<float>( rTransform.origin.z );
 		for ( int row = 0; row < 3; ++row ) {
-			m_szBasis[row * 3 + 0] = t3dHalfEncode( ( float )( rTransform.basis[row].x ) );
-			m_szBasis[row * 3 + 1] = t3dHalfEncode( ( float )( rTransform.basis[row].y ) );
-			m_szBasis[row * 3 + 2] = t3dHalfEncode( ( float )( rTransform.basis[row].z ) );
+			m_szBasis[row * 3 + 0] = t3dHalfEncode( static_cast<float>( rTransform.basis[row].x ) );
+			m_szBasis[row * 3 + 1] = t3dHalfEncode( static_cast<float>( rTransform.basis[row].y ) );
+			m_szBasis[row * 3 + 2] = t3dHalfEncode( static_cast<float>( rTransform.basis[row].z ) );
 		}
 		m_nReserved = nReserved;
 	}
@@ -65,12 +65,12 @@ typedef struct alignas( 32 ) t3dPackedTransform_s
 
 	EA_FORCE_INLINE void setBehaviorFlags( const uint16_t nBehaviorFlags )
 	{
-		m_nReserved = ( m_nReserved & ( uint16_t )( ~T3D_INSTANCE_BEHAVIOR_MASK ) ) | ( nBehaviorFlags & T3D_INSTANCE_BEHAVIOR_MASK );
+		m_nReserved = ( m_nReserved & static_cast<uint16_t>( ~T3D_INSTANCE_BEHAVIOR_MASK ) ) | ( nBehaviorFlags & T3D_INSTANCE_BEHAVIOR_MASK );
 	}
 
 	EA_FORCE_INLINE bool hasBehaviorFlag( const t3dInstanceFollowBehavior_t eFlag ) const
 	{
-		return ( getBehaviorFlags() & ( uint16_t )( eFlag ) ) != 0u;
+		return ( getBehaviorFlags() & static_cast<uint16_t>( eFlag ) ) != 0u;
 	}
 
 	Transform3D get( void ) const
@@ -241,14 +241,14 @@ public:
 
 	EA_FORCE_INLINE void setOriginY( const size_t iIndex, const real_t fY )
 	{
-		m_storage[iIndex].m_szOrigin[1] = ( float )( fY );
+		m_storage[iIndex].m_szOrigin[1] = static_cast<float>( fY );
 	}
 
 	EA_FORCE_INLINE void rescaleOriginXz( const size_t iIndex, const real_t fOldSpacing, const real_t fNewSpacing )
 	{
 		t3dPackedTransform_s& packed = m_storage[iIndex];
-		packed.m_szOrigin[0] = ( float )( ( real_t )( packed.m_szOrigin[0] ) / fOldSpacing * fNewSpacing );
-		packed.m_szOrigin[2] = ( float )( ( real_t )( packed.m_szOrigin[2] ) / fOldSpacing * fNewSpacing );
+		packed.m_szOrigin[0] = ( float )( static_cast<real_t>( packed.m_szOrigin[0] ) / fOldSpacing * fNewSpacing );
+		packed.m_szOrigin[2] = ( float )( static_cast<real_t>( packed.m_szOrigin[2] ) / fOldSpacing * fNewSpacing );
 	}
 
 private:

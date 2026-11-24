@@ -86,9 +86,9 @@ void Terrain3DComposedSurfaceMappedFile::closeCold()
 	if ( m_pMapping )
 		UnmapViewOfFile( m_pMapping );
 	if ( m_pFileMapping )
-		CloseHandle( static_cast<HANDLE>( m_pFileMapping ) );
+		CloseHandlestatic_cast<HANDLE>( m_pFileMapping );
 	if ( m_pFile )
-		CloseHandle( static_cast<HANDLE>( m_pFile ) );
+		CloseHandlestatic_cast<HANDLE>( m_pFile );
 	m_pFile = nullptr;
 	m_pFileMapping = nullptr;
 #else

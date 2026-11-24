@@ -14,8 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIREVENT_H__
-#define __SIRENGINE_SIREVENT_H__
+#ifndef __SIR_EVENT_H__
+#define __SIR_EVENT_H__
 
 #include <Core/SIRPCH.h>
 
@@ -61,7 +61,7 @@ public:
 		const uint32_t nIndex = m_nCount++;
 		m_Callbacks[nIndex] = { pContext, pCallback };
 		m_nTokens[nIndex] = nToken;
-		m_nStates[nIndex] = m_nDepth == 0 ? SIR_EVENT_ENTRY_ACTIVE : SIR_EVENT_ENTRY_PENDING;
+		m_nStates[nIndex] = m_nDepth == 0 ? SIREventEntryState::SIR_EVENT_ENTRY_ACTIVE : SIREventEntryState::SIR_EVENT_ENTRY_PENDING;
 		if ( m_nDepth == 0 ) {
 			++m_nActive;
 		} else {
@@ -74,14 +74,14 @@ public:
 	sirSubscriptionHandle_t subscribe( TObject *pObject ) noexcept
 	{
 		return subscribe( pObject,
-		                  []( void *pContext, const TPayload& payload ) noexcept { ( ( ( TObject * )pContext )->*Method )( payload ); } );
+		                  []( void *pContext, const TPayload& payload ) noexcept { ( static_cast<TObject *>(pContext)->*Method )( payload ); } );
 	}
 
 	template <typename TObject, void ( TObject::*Method )( const TPayload& ) const noexcept>
 	sirSubscriptionHandle_t subscribe( const TObject *pObject ) noexcept
 	{
-		return subscribe( ( void * )pObject, []( void *pContext, const TPayload& payload ) noexcept {
-			( ( ( const TObject * )pContext )->*Method )( payload );
+		return subscribe( static_cast<void *>(pObject), []( void *pContext, const TPayload& payload ) noexcept {
+			( static_cast<const TObject *>(pContext)->*Method )( payload );
 		} );
 	}
 
@@ -91,11 +91,11 @@ public:
 			return false;
 		}
 		for ( uint32_t i = 0; i < m_nCount; ++i ) {
-			if ( m_nTokens[i] == handle.nToken && m_nStates[i] != SIR_EVENT_ENTRY_DEAD ) {
-				if ( m_nStates[i] == SIR_EVENT_ENTRY_ACTIVE ) {
+			if ( m_nTokens[i] == handle.nToken && m_nStates[i] != SIREventEntryState::SIR_EVENT_ENTRY_DEAD ) {
+				if ( m_nStates[i] == SIREventEntryState::SIR_EVENT_ENTRY_ACTIVE ) {
 					--m_nActive;
 				}
-				m_nStates[i] = SIR_EVENT_ENTRY_DEAD;
+				m_nStates[i] = SIREventEntryState::SIR_EVENT_ENTRY_DEAD;
 				m_bDirty = true;
 				if ( m_nDepth == 0 ) {
 					compact();
@@ -112,7 +112,7 @@ public:
 			return false;
 		}
 		for ( uint32_t i = 0; i < m_nCount; ++i ) {
-			if ( m_nTokens[i] == handle.nToken && m_nStates[i] != SIR_EVENT_ENTRY_DEAD ) {
+			if ( m_nTokens[i] == handle.nToken && m_nStates[i] != SIREventEntryState::SIR_EVENT_ENTRY_DEAD ) {
 				return true;
 			}
 		}
@@ -122,7 +122,7 @@ public:
 	void clear( void ) noexcept
 	{
 		for ( uint32_t i = 0; i < m_nCount; ++i ) {
-			m_nStates[i] = SIR_EVENT_ENTRY_DEAD;
+			m_nStates[i] = SIREventEntryState::SIR_EVENT_ENTRY_DEAD;
 		}
 		m_nActive = 0;
 		if ( m_nDepth == 0 ) {
@@ -141,7 +141,7 @@ public:
 		++m_nDepth;
 		const uint32_t nLimit = m_nCount;
 		for ( uint32_t i = 0; i < nLimit; ++i ) {
-			if ( m_nStates[i] == SIR_EVENT_ENTRY_ACTIVE ) {
+			if ( m_nStates[i] == SIREventEntryState::SIR_EVENT_ENTRY_ACTIVE ) {
 				const callback_t pCallback = m_Callbacks[i].pInvoke;
 				void *pContext = m_Callbacks[i].pContext;
 				pCallback( pContext, payload );
@@ -167,12 +167,12 @@ private:
 	{
 		uint32_t nWrite = 0;
 		for ( uint32_t i = 0; i < m_nCount; ++i ) {
-			if ( m_nStates[i] == SIR_EVENT_ENTRY_DEAD ) {
+			if ( m_nStates[i] == SIREventEntryState::SIR_EVENT_ENTRY_DEAD ) {
 				continue;
 			}
 			m_Callbacks[nWrite] = m_Callbacks[i];
 			m_nTokens[nWrite] = m_nTokens[i];
-			m_nStates[nWrite] = SIR_EVENT_ENTRY_ACTIVE;
+			m_nStates[nWrite] = SIREventEntryState::SIR_EVENT_ENTRY_ACTIVE;
 			++nWrite;
 		}
 		m_nCount = nWrite;
@@ -189,4 +189,4 @@ private:
 	bool m_bDirty;
 	inline static std::atomic<uint64_t> s_nNextToken{ 1 };
 };
-#endif // __SIRENGINE_SIREVENT_H__
+#endif // __SIR_EVENT_H__

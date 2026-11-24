@@ -17,9 +17,9 @@ class SIREliasFanoSet
 		if ( nBits == 0 ) {
 			return 0;
 		}
-		const uint64_t nPosition = ( uint64_t )iIndex * nBits;
-		const uint32_t iWord = ( uint32_t )( nPosition / 64 );
-		const uint32_t nShift = ( uint32_t )( nPosition % 64 );
+		const uint64_t nPosition = static_cast<uint64_t>(iIndex) * nBits;
+		const uint32_t iWord = static_cast<uint32_t>( nPosition / 64 );
+		const uint32_t nShift = static_cast<uint32_t>( nPosition % 64 );
 		uint64_t nResult = words[iWord] >> nShift;
 		if ( nShift + nBits > 64 ) {
 			nResult |= words[iWord + 1] << ( 64 - nShift );
@@ -32,47 +32,47 @@ public:
 	    : m_pAllocator( pAllocator ), m_high( pAllocator ), m_low( pAllocator )
 	{
 	}
-	sirContainerResult_t tryBuildSorted( const uint64_t *pValues, uint32_t nCount )
+	SIRContainerResult tryBuildSorted( const uint64_t *pValues, uint32_t nCount )
 	{
 		if ( nCount != 0 && pValues == nullptr ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		for ( uint32_t iIndex = 1; iIndex < nCount; ++iIndex ) {
 			if ( pValues[iIndex] <= pValues[iIndex - 1] ) {
-				return SIR_CONTAINER_INVALID_ARGUMENT;
+				return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 			}
 		}
 		const uint64_t nMax = nCount == 0 ? 0 : pValues[nCount - 1];
 		uint32_t nLowBits = 0;
-		while ( nLowBits < 63 && ( nMax >> nLowBits ) > ( uint64_t )nCount * 2 ) {
+		while ( nLowBits < 63 && ( nMax >> nLowBits ) > static_cast<uint64_t>(nCount) * 2 ) {
 			++nLowBits;
 		}
 		if ( nLowBits > 0 && nCount > UINT64_MAX / nLowBits ) {
-			return SIR_CONTAINER_SIZE_OVERFLOW;
+			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
-		const uint64_t nLowTotal = ( uint64_t )nCount * nLowBits;
+		const uint64_t nLowTotal = static_cast<uint64_t>(nCount) * nLowBits;
 		const uint64_t nHighBits = ( nMax >> nLowBits ) + nCount + 1;
 		if ( nHighBits > UINT32_MAX ) {
-			return SIR_CONTAINER_SIZE_OVERFLOW;
+			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
 		if ( ( nLowTotal + 63 ) / 64 > UINT32_MAX ) {
-			return SIR_CONTAINER_SIZE_OVERFLOW;
+			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
 		SIRVector<uint64_t> lows( m_pAllocator );
 		SIRVector<uint64_t> highWords( m_pAllocator );
-		sirContainerResult_t eResult = lows.tryResize( ( uint32_t )( ( nLowTotal + 63 ) / 64 ) );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		SIRContainerResult eResult = lows.tryResize( static_cast<uint32_t>(  ( nLowTotal + 63 ) / 64  ) );
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
-		eResult = highWords.tryResize( ( uint32_t )( ( nHighBits + 63 ) / 64 ) );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		eResult = highWords.tryResize( static_cast<uint32_t>(  ( nHighBits + 63 ) / 64  ) );
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		const uint64_t nMask = nLowBits == 0 ? 0 : ( uint64_t( 1 ) << nLowBits ) - 1;
 		for ( uint32_t iIndex = 0; iIndex < nCount; ++iIndex ) {
-			const uint64_t nBit = ( uint64_t )iIndex * nLowBits;
-			const uint32_t iWord = ( uint32_t )( nBit / 64 );
-			const uint32_t nShift = ( uint32_t )( nBit % 64 );
+			const uint64_t nBit = static_cast<uint64_t>(iIndex) * nLowBits;
+			const uint32_t iWord = static_cast<uint32_t>( nBit / 64 );
+			const uint32_t nShift = static_cast<uint32_t>( nBit % 64 );
 			if ( nLowBits != 0 ) {
 				lows[iWord] |= ( pValues[iIndex] & nMask ) << nShift;
 				if ( nShift + nLowBits > 64 ) {
@@ -80,11 +80,11 @@ public:
 				}
 			}
 			const uint64_t nHighBit = ( pValues[iIndex] >> nLowBits ) + iIndex;
-			highWords[( uint32_t )( nHighBit / 64 )] |= uint64_t( 1 ) << ( nHighBit % 64 );
+			highWords[static_cast<uint32_t>( nHighBit / 64 )] |= uint64_t( 1 ) << ( nHighBit % 64 );
 		}
 		SIRRankSelectBitVector high( m_pAllocator );
-		eResult = high.tryBuild( highWords.data(), ( uint32_t )nHighBits );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		eResult = high.tryBuild( highWords.data(), static_cast<uint32_t>(nHighBits) );
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		// The rank/select view has no implicit move assignment; install from staged words after successful validation.
@@ -93,14 +93,14 @@ public:
 		m_nSize = nCount;
 		m_nLowBits = nLowBits;
 		m_nLowMask = nMask;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 	uint64_t select( uint32_t iIndex ) const noexcept
 	{
 		if ( iIndex >= m_nSize ) {
 			return UINT64_MAX;
 		}
-		return ( ( uint64_t )( m_high.select1( iIndex ) - iIndex ) << m_nLowBits ) | readLow( m_low, m_nLowBits, m_nLowMask, iIndex );
+		return ( static_cast<uint64_t>(  m_high.select1( iIndex ) - iIndex  ) << m_nLowBits ) | readLow( m_low, m_nLowBits, m_nLowMask, iIndex );
 	}
 	bool contains( uint64_t nValue ) const noexcept
 	{

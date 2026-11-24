@@ -12,8 +12,8 @@ express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIRWINDOWABISURFACE_H__
-#define __SIRENGINE_SIRWINDOWABISURFACE_H__
+#ifndef __SIR_WINDOWABISURFACE_H__
+#define __SIR_WINDOWABISURFACE_H__
 #include <Core/SIRPCH.h>
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -51,13 +51,13 @@ private:
 	sirGraphicsABINativeSurface_t nativeSurface( void ) const noexcept;
 	SIRWindowSystem *m_pWindows = nullptr;
 	const sirGraphicsABIDevice_t *m_pDevice = nullptr;
-	sirWindowHandle_t m_hWindow = {};
-	sirWindowNativeLease_t m_hLease = {};
-	sirGraphicsNativeSurface_t m_Native = {};
-	sirGraphicsHandle_t m_hSurface = {};
+	sirWindowHandle_t m_hWindow {};
+	sirWindowNativeLease_t m_hLease {};
+	sirGraphicsNativeSurface_t m_Native {};
+	sirGraphicsHandle_t m_hSurface {};
 	uint64_t m_nMetricsRevision = 0;
-	sirGraphicsABIPresentDesc_t m_Present = {};
-	sirGraphicsSurfaceImage_t m_Acquired = {};
+	sirGraphicsABIPresentDesc_t m_Present {};
+	sirGraphicsSurfaceImage_t m_Acquired {};
 	bool m_bImageAcquired = false;
 };
-#endif // __SIRENGINE_SIRWINDOWABISURFACE_H__
+#endif // __SIR_WINDOWABISURFACE_H__

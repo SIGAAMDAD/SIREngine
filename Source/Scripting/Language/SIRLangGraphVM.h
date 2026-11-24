@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRLANGGRAPHVM_H__
-#define __SIRENGINE_SIRLANGGRAPHVM_H__
+#ifndef __SIR_LANGGRAPHVM_H__
+#define __SIR_LANGGRAPHVM_H__
 
 #include <Core/SIRPCH.h>
 
@@ -29,8 +29,7 @@ constexpr uint32_t SIR_LANG_VM_MAX_REGISTERS = 64;
 constexpr uint32_t SIR_LANG_VM_MAX_FRAMES = 32;
 constexpr uint32_t SIR_LANG_VM_MAX_PARAMETERS = 32;
 
-typedef enum sirLangOpcode_e : uint8_t
-{
+enum class SIRLangOpcode : uint8_t {
 	SIR_LANG_OP_CONST = 0,
 	SIR_LANG_OP_PARAMETER,
 	SIR_LANG_OP_MOVE,
@@ -50,10 +49,9 @@ typedef enum sirLangOpcode_e : uint8_t
 	SIR_LANG_OP_CALL_NATIVE,
 	SIR_LANG_OP_RETURN,
 	SIR_LANG_OP_PHI
-} sirLangOpcode_t;
+};
 
-typedef enum sirLangVMError_e : uint8_t
-{
+enum class SIRLangVMError : uint8_t {
 	SIR_LANG_VM_OK = 0,
 	SIR_LANG_VM_INVALID_ARGUMENT,
 	SIR_LANG_VM_INVALID_FORMAT,
@@ -69,10 +67,9 @@ typedef enum sirLangVMError_e : uint8_t
 	SIR_LANG_VM_STACK_OVERFLOW,
 	SIR_LANG_VM_CAPACITY,
 	SIR_LANG_VM_UNINITIALIZED
-} sirLangVMError_t;
+};
 
-typedef enum sirLangCapabilityEffect_e : uint32_t
-{
+enum class SIRLangCapabilityEffect : uint32_t {
 	SIR_LANG_EFFECT_PURE = 0,
 	SIR_LANG_EFFECT_STATE_READ = 1U,
 	SIR_LANG_EFFECT_STATE_WRITE = 2U,
@@ -81,12 +78,12 @@ typedef enum sirLangCapabilityEffect_e : uint32_t
 	SIR_LANG_EFFECT_SUSPEND = 16U,
 	SIR_LANG_EFFECT_NONDETERMINISTIC = 32U,
 	SIR_LANG_EFFECT_REENTRANT = 64U
-} sirLangCapabilityEffect_t;
+};
 
 typedef struct sirLangVMValue_s
 {
 	uint64_t nBits;
-	sirLangValueKind_t eType;
+	SIRLangValueKind eType;
 } sirLangVMValue_t;
 
 // Canonical typed IR: register assignments are single-definition; branches
@@ -94,8 +91,8 @@ typedef struct sirLangVMValue_s
 // No host pointers are serialized. nImmediate is an integer or exact FP bits.
 typedef struct sirLangCIRInstruction_s
 {
-	sirLangOpcode_t eOpcode;
-	sirLangValueKind_t eType;
+	SIRLangOpcode eOpcode;
+	SIRLangValueKind eType;
 	uint16_t nFlags;
 	uint32_t iDestination;
 	uint32_t iFirstSource;
@@ -113,7 +110,7 @@ typedef struct sirLangCIRFunction_s
 	uint32_t nRegisterCount;
 	uint32_t nParameterCount;
 	uint32_t iFirstParameterType;
-	sirLangValueKind_t eReturnType;
+	SIRLangValueKind eReturnType;
 } sirLangCIRFunction_t;
 
 typedef struct sirLangCIRCapability_s
@@ -125,7 +122,7 @@ typedef struct sirLangCIRCapability_s
 	uint32_t nEffects;
 	uint32_t iFirstParameterType;
 	uint32_t nParameterCount;
-	sirLangValueKind_t eReturnType;
+	SIRLangValueKind eReturnType;
 } sirLangCIRCapability_t;
 
 typedef struct sirLangCIRProgram_s
@@ -134,7 +131,7 @@ typedef struct sirLangCIRProgram_s
 	uint32_t nFunctionCount;
 	const sirLangCIRInstruction_t *pInstructions;
 	uint32_t nInstructionCount;
-	const sirLangValueKind_t *pParameterTypes;
+	const SIRLangValueKind *pParameterTypes;
 	uint32_t nParameterTypeCount;
 	const uint32_t *pCallArguments;
 	uint32_t nCallArgumentCount;
@@ -157,7 +154,7 @@ typedef struct sirLangVMCall_s
 	uint32_t nArgumentCount;
 } sirLangVMCall_t;
 
-typedef sirLangVMError_t ( *sirLangVMNativeCall_t )( const sirLangVMCall_t&, sirLangVMValue_t *, void * ) noexcept;
+typedef SIRLangVMError ( *sirLangVMNativeCall_t )( const sirLangVMCall_t&, sirLangVMValue_t *, void * ) noexcept;
 
 typedef struct sirLangVMInvocation_s
 {
@@ -174,7 +171,7 @@ typedef struct sirLangVMInvocation_s
 
 typedef struct sirLangVMRunResult_s
 {
-	sirLangVMError_t eError;
+	SIRLangVMError eError;
 	sirLangVMValue_t result;
 	uint64_t nFuelConsumed;
 	uint32_t nInstruction;
@@ -183,7 +180,7 @@ typedef struct sirLangVMRunResult_s
 
 // Verifies all instructions (including unreachable ones) before execution.
 // Interpreter enforces fuel, bounded call depth and typed register lifetimes.
-sirLangVMError_t SIRLangVerifyCIR( const sirLangCIRProgram_t *pProgram ) noexcept;
+SIRLangVMError SIRLangVerifyCIR( const sirLangCIRProgram_t *pProgram ) noexcept;
 sirLangVMRunResult_t SIRLangRunGraphVM( const sirLangCIRProgram_t *pProgram, const sirLangVMInvocation_t& invocation ) noexcept;
 
-#endif // __SIRENGINE_SIRLANGGRAPHVM_H__
+#endif // __SIR_LANGGRAPHVM_H__

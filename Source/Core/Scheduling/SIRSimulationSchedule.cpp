@@ -40,7 +40,7 @@ bool SIRSimulationSchedule::begin( const sirSimulationPassDesc_t *pPasses, uint3
 			return false;
 		}
 	}
-	if ( m_Graph.compile() != SIR_TASK_GRAPH_OK || !m_Graph.submit( m_pScheduler ) ) {
+	if ( m_Graph.compile() != SIRTaskGraphStatus::SIR_TASK_GRAPH_OK || !m_Graph.submit( m_pScheduler ) ) {
 		m_Graph.reset();
 		return false;
 	}

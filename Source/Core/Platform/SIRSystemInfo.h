@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSYSTEMINFO_H__
-#define __SIRENGINE_SIRSYSTEMINFO_H__
+#ifndef __SIR_SYSTEMINFO_H__
+#define __SIR_SYSTEMINFO_H__
 
 #include <Core/SIRPCH.h>
 
@@ -26,19 +26,17 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <stdint.h>
 
-typedef enum sirOperatingSystem_e : uint8_t
-{
+enum class SIROperatingSystem : uint8_t {
 	SIR_OS_UNKNOWN = 0,
 	SIR_OS_WINDOWS = 1,
 	SIR_OS_LINUX = 2
-} sirOperatingSystem_t;
+};
 
-typedef enum sirCPUArchitecture_e : uint8_t
-{
+enum class SIRCPUArchitecture : uint8_t {
 	SIR_ARCH_UNKNOWN = 0,
 	SIR_ARCH_X64 = 1,
 	SIR_ARCH_ARM64 = 2
-} sirCPUArchitecture_t;
+};
 
 typedef struct sirSystemInfo_s
 {
@@ -52,8 +50,8 @@ typedef struct sirSystemInfo_s
 	uint32_t nOSBuild;
 	uint32_t nPageSize;
 	uint32_t nAllocationGranularity;
-	sirOperatingSystem_t eOS;
-	sirCPUArchitecture_t eArchitecture;
+	SIROperatingSystem eOS;
+	SIRCPUArchitecture eArchitecture;
 } sirSystemInfo_t;
 
 // UTF-8 strings and a best-effort OS version snapshot. nOSMajor/Minor/Build
@@ -67,4 +65,4 @@ public:
 	static bool query( sirSystemInfo_t *pInfo ) noexcept;
 };
 
-#endif // __SIRENGINE_SIRSYSTEMINFO_H__
+#endif // __SIR_SYSTEMINFO_H__

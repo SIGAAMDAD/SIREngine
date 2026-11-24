@@ -16,10 +16,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/Platform/SIRScopedLock.h>
 #include <Core/Platform/SIRSync.h>
-#include <Core/Platform/SIRAtomic.h>
+#include <atomic>
 #include <Core/Memory/Allocators/SIRCompactBucketAllocator.h>
 #include <Core/Memory/SIRMemoryManager.h>
-#include <Core/Memory/SIRMemoryUtils.h>
+#include <Core/SIRMath.h>
 #include <Core/Memory/SIRMemorySegment.h>
 #include <new>
 #include <cstring>
@@ -58,7 +58,7 @@ static thread_local sirBucketRetirementGuard_t s_BucketRetirementGuard;
 
 static uintptr_t bucketThreadToken( void )
 {
-	return ( ( uintptr_t )( &s_nBucketThreadMarker ) );
+	return reinterpret_cast<uintptr_t>( &s_nBucketThreadMarker );
 }
 
 sirBucketSlab_s::sirBucketSlab_s( void )
@@ -75,7 +75,7 @@ sirBucketDirectory_s::sirBucketDirectory_s( void ) : pDescriptor( nullptr ), nRe
 
 sirBucketSlab_t *SIRCompactBucketAllocator::loadSlab( uint32_t nSlab ) const
 {
-	return m_pDirectory[nSlab].pDescriptor.load( SIR_MEMORY_ORDER_ACQUIRE );
+	return m_pDirectory[nSlab].pDescriptor.load( std::memory_order_acquire );
 }
 
 sirBucketInbox_s::sirBucketInbox_s( void ) : pDirtySlabWords( nullptr ), pDirtyGroupWords( nullptr )
@@ -145,7 +145,7 @@ uint64_t SIRCompactBucketAllocator::getRequiredMetadataBytes( uint64_t nSegmentB
 	const uint64_t nSeats = config.nWorkerSeats;
 	const uint64_t nStateWords = ( nSlots + 31 ) / 32;
 	const uint64_t nPayload =
-	    ( ( nStateWords * sizeof( SIRAtomic<uint64_t> ) + 63 ) & ~63ull ) + ( ( nStateWords + 63 ) / 64 ) * sizeof( SIRAtomic<uint64_t> );
+	    ( ( nStateWords * sizeof( std::atomic<uint64_t> ) + 63 ) & ~63ull ) + ( ( nStateWords + 63 ) / 64 ) * sizeof( std::atomic<uint64_t> );
 	const uint64_t nBlockStride = ( nPayload + sizeof( sirBucketStatePage_t * ) + 63 ) & ~63ull;
 	const uint64_t nBlocksPerPage = 4096 / nBlockStride;
 	const uint64_t nStatePages = nBlocksPerPage != 0 ? ( nSlabs + nBlocksPerPage - 1 ) / nBlocksPerPage : 0;
@@ -159,7 +159,7 @@ uint64_t SIRCompactBucketAllocator::getRequiredMetadataBytes( uint64_t nSegmentB
 	}
 	const uint64_t nDirtySlabWords = ( nSlabs + 63 ) / 64;
 	const uint64_t nDirtyGroups = ( nDirtySlabWords + 63 ) / 64;
-	const uint64_t nQueueBytes = nSeats * ( nDirtySlabWords + nDirtyGroups ) * sizeof( SIRAtomic<uint64_t> );
+	const uint64_t nQueueBytes = nSeats * ( nDirtySlabWords + nDirtyGroups ) * sizeof( std::atomic<uint64_t> );
 	if ( nQueueBytes > UINT64_MAX - nStates - nDesc - nSeatBytes - 128 ) {
 		return 0;
 	}
@@ -174,7 +174,7 @@ bool SIRCompactBucketAllocator::init( SIRMemorySegment *pSegment, const sirCompa
 		return false;
 	}
 	SIRMemoryManager *pManager = pSegment->getManager();
-	const uint32_t nSlabs = ( ( uint32_t )( pSegment->getReservedBytes() / config.nSlabBytes ) );
+	const uint32_t nSlabs = static_cast<uint32_t>(  pSegment->getReservedBytes() / config.nSlabBytes  );
 	const uint32_t nMaximumSlots = config.nSlabBytes / config.nAlignment;
 	const uint32_t nClassCount =
 	    config.nClassProfile == 0 ? 40 : ( config.nClassProfile == 1 ? 8 : ( config.nClassProfile == 2 ? 24 : 32 ) );
@@ -186,13 +186,13 @@ bool SIRCompactBucketAllocator::init( SIRMemorySegment *pSegment, const sirCompa
 	sirBucketInbox_t *pRemoteInboxes = ( ( sirBucketInbox_t * )( pManager->allocateMetadata(
 	    sizeof( sirBucketInbox_t ) * config.nWorkerSeats, alignof( sirBucketInbox_t ), pSegment->getDomain() ) ) );
 	uint32_t *pClassHeads = ( (
-	    uint32_t * )( pManager->allocateMetadata( ( ( uint64_t )( nHeadStride ) ) * config.nWorkerSeats, 64, pSegment->getDomain() ) ) );
+	    uint32_t * )( pManager->allocateMetadata( static_cast<uint64_t>( nHeadStride ) * config.nWorkerSeats, 64, pSegment->getDomain() ) ) );
 	const uint32_t nDirtySlabWords = ( nSlabs + 63 ) / 64;
 	const uint32_t nDirtyGroups = ( nDirtySlabWords + 63 ) / 64;
-	SIRAtomic<uint64_t> *pDirtySlabWords = ( ( SIRAtomic<uint64_t> * )( pManager->allocateMetadata(
-	    ( ( uint64_t )( config.nWorkerSeats ) ) * nDirtySlabWords * 8, alignof( SIRAtomic<uint64_t> ), pSegment->getDomain() ) ) );
-	SIRAtomic<uint64_t> *pDirtyGroupWords = ( ( SIRAtomic<uint64_t> * )( pManager->allocateMetadata(
-	    ( ( uint64_t )( config.nWorkerSeats ) ) * nDirtyGroups * 8, alignof( SIRAtomic<uint64_t> ), pSegment->getDomain() ) ) );
+	std::atomic<uint64_t> *pDirtySlabWords = ( ( std::atomic<uint64_t> * )( pManager->allocateMetadata(
+	    static_cast<uint64_t>( config.nWorkerSeats ) * nDirtySlabWords * 8, alignof( std::atomic<uint64_t> ), pSegment->getDomain() ) ) );
+	std::atomic<uint64_t> *pDirtyGroupWords = ( ( std::atomic<uint64_t> * )( pManager->allocateMetadata(
+	    static_cast<uint64_t>( config.nWorkerSeats ) * nDirtyGroups * 8, alignof( std::atomic<uint64_t> ), pSegment->getDomain() ) ) );
 	if ( pDirectory == nullptr || pSeats == nullptr || pRemoteInboxes == nullptr || pClassHeads == nullptr || pDirtySlabWords == nullptr ||
 	     pDirtyGroupWords == nullptr ) {
 		return false;
@@ -202,7 +202,7 @@ bool SIRCompactBucketAllocator::init( SIRMemorySegment *pSegment, const sirCompa
 	}
 	for ( uint32_t i = 0; i < config.nWorkerSeats; ++i ) {
 		new ( pSeats + i ) sirBucketSeat_t();
-		pSeats[i].pActive = ( ( uint32_t * )( ( ( uint8_t * )( pClassHeads ) ) + ( ( uint64_t )( i ) ) * nHeadStride ) );
+		pSeats[i].pActive = ( ( uint32_t * )( reinterpret_cast<uint8_t *>( pClassHeads ) + static_cast<uint64_t>( i ) * nHeadStride ) );
 		pSeats[i].pPartialHead = pSeats[i].pActive + nClassCount;
 		pSeats[i].pActiveDescriptor = ( ( sirBucketSlab_t ** )( pSeats[i].pPartialHead + nClassCount ) );
 		for ( uint32_t c = 0; c < nClassCount; ++c ) {
@@ -211,13 +211,13 @@ bool SIRCompactBucketAllocator::init( SIRMemorySegment *pSegment, const sirCompa
 			pSeats[i].pActiveDescriptor[c] = nullptr;
 		}
 		new ( pRemoteInboxes + i ) sirBucketInbox_t();
-		pRemoteInboxes[i].pDirtySlabWords = pDirtySlabWords + ( ( uint64_t )( i ) ) * nDirtySlabWords;
-		pRemoteInboxes[i].pDirtyGroupWords = pDirtyGroupWords + ( ( uint64_t )( i ) ) * nDirtyGroups;
+		pRemoteInboxes[i].pDirtySlabWords = pDirtySlabWords + static_cast<uint64_t>( i ) * nDirtySlabWords;
+		pRemoteInboxes[i].pDirtyGroupWords = pDirtyGroupWords + static_cast<uint64_t>( i ) * nDirtyGroups;
 		for ( uint32_t w = 0; w < nDirtySlabWords; ++w ) {
-			new ( pRemoteInboxes[i].pDirtySlabWords + w ) SIRAtomic<uint64_t>( 0 );
+			new ( pRemoteInboxes[i].pDirtySlabWords + w ) std::atomic<uint64_t>( 0 );
 		}
 		for ( uint32_t w = 0; w < nDirtyGroups; ++w ) {
-			new ( pRemoteInboxes[i].pDirtyGroupWords + w ) SIRAtomic<uint64_t>( 0 );
+			new ( pRemoteInboxes[i].pDirtyGroupWords + w ) std::atomic<uint64_t>( 0 );
 		}
 		pSeats[i].pRemote = pRemoteInboxes + i;
 	}
@@ -284,7 +284,7 @@ bool SIRCompactBucketAllocator::init( SIRMemorySegment *pSegment, const sirCompa
 		while ( nClass + 1 < nCount && m_nClassStride[nClass] < nBytes ) {
 			++nClass;
 		}
-		m_nClassMap[i] = ( ( uint8_t )( nClass ) );
+		m_nClassMap[i] = static_cast<uint8_t>( nClass );
 	}
 	m_pDirectory = pDirectory;
 	m_pSeats = pSeats;
@@ -293,17 +293,17 @@ bool SIRCompactBucketAllocator::init( SIRMemorySegment *pSegment, const sirCompa
 	m_pStatePages = nullptr;
 	m_nStateWordsPerSlab = ( nMaximumSlots + 31 ) / 32;
 	m_nDirtyStateWordsPerSlab = ( m_nStateWordsPerSlab + 63 ) / 64;
-	const uint64_t nStateBytes = ( ( uint64_t )( m_nStateWordsPerSlab ) ) * sizeof( SIRAtomic<uint64_t> );
-	m_nStateBlockStride = ( ( uint32_t )( ( ( nStateBytes + 63 ) & ~63ull ) + m_nDirtyStateWordsPerSlab * sizeof( SIRAtomic<uint64_t> ) +
+	const uint64_t nStateBytes = static_cast<uint64_t>( m_nStateWordsPerSlab ) * sizeof( std::atomic<uint64_t> );
+	m_nStateBlockStride = ( ( uint32_t )( ( ( nStateBytes + 63 ) & ~63ull ) + m_nDirtyStateWordsPerSlab * sizeof( std::atomic<uint64_t> ) +
 	                                      sizeof( sirBucketStatePage_t * ) + 63 ) ) &
 	                      ~63u;
-	m_nStateSlotsPerPage = ( ( uint32_t )( pManager->getPageSize() / m_nStateBlockStride ) );
+	m_nStateSlotsPerPage = static_cast<uint32_t>(  pManager->getPageSize() / m_nStateBlockStride  );
 	if ( m_nStateSlotsPerPage > 64 ) {
 		m_nStateSlotsPerPage = 64;
 	}
 	m_nDirtySlabWordsPerSeat = nDirtySlabWords;
 	m_nDirtyGroupsPerSeat = nDirtyGroups;
-	m_pBase = ( ( uint8_t * )( pSegment->getBase() ) );
+	m_pBase = static_cast<uint8_t *>(  pSegment->getBase()  );
 	m_nClassCount = nCount;
 	m_nMapCount = nMapCount;
 	m_nMaxBytes = config.nMaximumSmallBytes;
@@ -328,8 +328,8 @@ bool SIRCompactBucketAllocator::findSeat( uint32_t *pSeat ) const
 		return false;
 	}
 	const sirBucketSeat_t& seat = m_pSeats[s_BucketBinding.nSeat];
-	if ( seat.nOwnerToken.load( SIR_MEMORY_ORDER_ACQUIRE ) != bucketThreadToken() ||
-	     seat.nGeneration.load( SIR_MEMORY_ORDER_ACQUIRE ) != s_BucketBinding.nGeneration ) {
+	if ( seat.nOwnerToken.load( std::memory_order_acquire ) != bucketThreadToken() ||
+	     seat.nGeneration.load( std::memory_order_acquire ) != s_BucketBinding.nGeneration ) {
 		return false;
 	}
 	*pSeat = s_BucketBinding.nSeat;
@@ -352,14 +352,14 @@ bool SIRCompactBucketAllocator::attach( uint32_t *pSeat )
 		return false;
 	}
 	for ( uint32_t i = 0; i < m_nSeatCount; ++i ) {
-		if ( m_pSeats[i].nOrphan.load( SIR_MEMORY_ORDER_ACQUIRE ) != 0 ) {
+		if ( m_pSeats[i].nOrphan.load( std::memory_order_acquire ) != 0 ) {
 			continue;
 		}
 		uintptr_t nExpected = 0;
-		if ( !m_pSeats[i].nOwnerToken.compareExchangeStrong( nExpected, bucketThreadToken(), SIR_MEMORY_ORDER_ACQUIRE_RELEASE ) ) {
+		if ( !m_pSeats[i].nOwnerToken.compare_exchange_strong( nExpected, bucketThreadToken(), std::memory_order_acq_rel ) ) {
 			continue;
 		}
-		const uint32_t nGeneration = m_pSeats[i].nGeneration.fetchAdd( 1, SIR_MEMORY_ORDER_ACQUIRE_RELEASE ) + 1;
+		const uint32_t nGeneration = m_pSeats[i].nGeneration.fetch_add( 1, std::memory_order_acq_rel ) + 1;
 		m_pSeats[i].nLiveOwner = 0;
 		m_pSeats[i].nWarmRetained = 0;
 		for ( uint32_t c = 0; c < m_nClassCount; ++c ) {
@@ -392,47 +392,47 @@ uint32_t SIRCompactBucketAllocator::getSlotCapacity( uint32_t nClass ) const
 
 uint32_t SIRCompactBucketAllocator::loadState( uint32_t nSlab, uint32_t nSlot ) const
 {
-	const SIRAtomic<uint64_t> *pWords = ( *loadSlab( nSlab ) ).pStates;
+	const std::atomic<uint64_t> *pWords = ( *loadSlab( nSlab ) ).pStates;
 	if ( pWords == nullptr ) {
 		return 0;
 	}
 	const uint32_t nShift = ( nSlot & 31 ) * 2;
-	return ( ( uint32_t )( pWords[nSlot >> 5].load( SIR_MEMORY_ORDER_ACQUIRE ) >> nShift ) ) & 3;
+	return ( static_cast<uint32_t>(  pWords[nSlot >> 5].load( std::memory_order_acquire ) >> nShift  ) ) & 3;
 }
 
 bool SIRCompactBucketAllocator::claimState( uint32_t nSlab, uint32_t nSlot, uint32_t nExpected, uint32_t nDesired )
 {
-	SIRAtomic<uint64_t> *pWords = ( *loadSlab( nSlab ) ).pStates;
+	std::atomic<uint64_t> *pWords = ( *loadSlab( nSlab ) ).pStates;
 	if ( pWords == nullptr ) {
 		return false;
 	}
 	const uint32_t nShift = ( nSlot & 31 ) * 2;
 	const uint64_t nMask = 3ull << nShift;
-	SIRAtomic<uint64_t>& word = pWords[nSlot >> 5];
-	uint64_t nOld = word.load( SIR_MEMORY_ORDER_ACQUIRE );
+	std::atomic<uint64_t>& word = pWords[nSlot >> 5];
+	uint64_t nOld = word.load( std::memory_order_acquire );
 	for ( ;; ) {
 		if ( ( ( nOld & nMask ) >> nShift ) != nExpected ) {
 			return false;
 		}
-		const uint64_t nNew = ( nOld & ~nMask ) | ( ( ( uint64_t )( nDesired ) ) << nShift );
-		if ( word.compareExchangeWeak( nOld, nNew, SIR_MEMORY_ORDER_ACQUIRE_RELEASE, SIR_MEMORY_ORDER_ACQUIRE ) ) {
+		const uint64_t nNew = ( nOld & ~nMask ) | ( static_cast<uint64_t>( nDesired ) << nShift );
+		if ( word.compare_exchange_weak( nOld, nNew, std::memory_order_acq_rel, std::memory_order_acquire ) ) {
 			return true;
 		}
 	}
 }
 
-SIRAtomic<uint64_t> *SIRCompactBucketAllocator::allocateStateBlock( void )
+std::atomic<uint64_t> *SIRCompactBucketAllocator::allocateStateBlock( void )
 {
-	const uint64_t nStateBytes = ( ( uint64_t )( m_nStateWordsPerSlab ) ) * sizeof( SIRAtomic<uint64_t> );
+	const uint64_t nStateBytes = static_cast<uint64_t>( m_nStateWordsPerSlab ) * sizeof( std::atomic<uint64_t> );
 	const uint64_t nDirtyOffset = ( nStateBytes + 63 ) & ~63ull;
-	SIRAtomic<uint64_t> *pBlock = nullptr;
+	std::atomic<uint64_t> *pBlock = nullptr;
 	if ( m_nStateSlotsPerPage == 0 ) {
 		// Unusual large slabs use the original permanent metadata path.
 		pBlock = m_pFreeStateBlocks;
 		if ( pBlock != nullptr ) {
-			m_pFreeStateBlocks = ( ( SIRAtomic<uint64_t> * )( ( ( uintptr_t )( pBlock[0].load( SIR_MEMORY_ORDER_RELAXED ) ) ) ) );
+			m_pFreeStateBlocks = ( ( std::atomic<uint64_t> * )( ( static_cast<uintptr_t>(  pBlock[0].load( std::memory_order_relaxed )  ) ) ) );
 		} else {
-			pBlock = ( ( SIRAtomic<uint64_t> * )( m_pSegment->getManager()->allocateMetadata( nDirtyOffset + m_nDirtyStateWordsPerSlab * 8,
+			pBlock = ( ( std::atomic<uint64_t> * )( m_pSegment->getManager()->allocateMetadata( nDirtyOffset + m_nDirtyStateWordsPerSlab * 8,
 			                                                                                  64, m_pSegment->getDomain() ) ) );
 		}
 	} else {
@@ -456,7 +456,7 @@ SIRAtomic<uint64_t> *SIRCompactBucketAllocator::allocateStateBlock( void )
 				pPage->pNext = m_pStatePages;
 				m_pStatePages = pPage;
 			}
-			pPage->pBase = ( ( uint8_t * )( m_pSegment->getManager()->allocateRecyclableMetadataPage( m_pSegment->getDomain() ) ) );
+			pPage->pBase = static_cast<uint8_t *>(  m_pSegment->getManager()->allocateRecyclableMetadataPage( m_pSegment->getDomain() )  );
 			if ( pPage->pBase == nullptr ) {
 				return nullptr;
 			}
@@ -468,41 +468,41 @@ SIRAtomic<uint64_t> *SIRCompactBucketAllocator::allocateStateBlock( void )
 		unsigned long nSlot = 0;
 		_BitScanForward64( &nSlot, pPage->nFreeBits );
 #else
-		const uint32_t nSlot = ( ( uint32_t )( __builtin_ctzll( pPage->nFreeBits ) ) );
+		const uint32_t nSlot = static_cast<uint32_t>(  __builtin_ctzll( pPage->nFreeBits )  );
 #endif
 		pPage->nFreeBits &= ~( 1ull << nSlot );
 		++pPage->nUsed;
-		pBlock = ( ( SIRAtomic<uint64_t> * )( pPage->pBase + ( ( uint64_t )( nSlot ) ) * m_nStateBlockStride ) );
+		pBlock = ( ( std::atomic<uint64_t> * )( pPage->pBase + static_cast<uint64_t>( nSlot ) * m_nStateBlockStride ) );
 		sirBucketStatePage_t **ppPage =
-		    ( ( sirBucketStatePage_t ** )( ( ( uint8_t * )( pBlock ) ) + m_nStateBlockStride - sizeof( sirBucketStatePage_t * ) ) );
+		    ( ( sirBucketStatePage_t ** )( reinterpret_cast<uint8_t *>( pBlock ) + m_nStateBlockStride - sizeof( sirBucketStatePage_t * ) ) );
 		*ppPage = pPage;
 	}
 	if ( pBlock == nullptr ) {
 		return nullptr;
 	}
 	for ( uint32_t i = 0; i < m_nStateWordsPerSlab; ++i ) {
-		new ( pBlock + i ) SIRAtomic<uint64_t>( 0 );
+		new ( pBlock + i ) std::atomic<uint64_t>( 0 );
 	}
-	SIRAtomic<uint64_t> *pDirty = ( ( SIRAtomic<uint64_t> * )( ( ( uint8_t * )( pBlock ) ) + nDirtyOffset ) );
+	std::atomic<uint64_t> *pDirty = ( ( std::atomic<uint64_t> * )( reinterpret_cast<uint8_t *>( pBlock ) + nDirtyOffset ) );
 	for ( uint32_t i = 0; i < m_nDirtyStateWordsPerSlab; ++i ) {
-		new ( pDirty + i ) SIRAtomic<uint64_t>( 0 );
+		new ( pDirty + i ) std::atomic<uint64_t>( 0 );
 	}
 	return pBlock;
 }
 
-void SIRCompactBucketAllocator::releaseStateBlock( SIRAtomic<uint64_t> *pBlock )
+void SIRCompactBucketAllocator::releaseStateBlock( std::atomic<uint64_t> *pBlock )
 {
 	if ( pBlock == nullptr ) {
 		return;
 	}
 	if ( m_nStateSlotsPerPage == 0 ) {
-		pBlock[0].store( ( ( uint64_t )( ( uintptr_t )( m_pFreeStateBlocks ) ) ), SIR_MEMORY_ORDER_RELAXED );
+		pBlock[0].store( ( ( uint64_t )reinterpret_cast<uintptr_t>(m_pFreeStateBlocks) ), std::memory_order_relaxed );
 		m_pFreeStateBlocks = pBlock;
 		return;
 	}
 	sirBucketStatePage_t *pPage =
-	    *( ( sirBucketStatePage_t ** )( ( ( uint8_t * )( pBlock ) ) + m_nStateBlockStride - sizeof( sirBucketStatePage_t * ) ) );
-	const uint32_t nSlot = ( ( uint32_t )( ( ( uint8_t * )( pBlock )-pPage->pBase ) / m_nStateBlockStride ) );
+	    *( ( sirBucketStatePage_t ** )( reinterpret_cast<uint8_t *>( pBlock ) + m_nStateBlockStride - sizeof( sirBucketStatePage_t * ) ) );
+	const uint32_t nSlot = static_cast<uint32_t>( ( reinterpret_cast<uint8_t *>(pBlock) - pPage->pBase ) / m_nStateBlockStride );
 	pPage->nFreeBits |= 1ull << nSlot;
 	--pPage->nUsed;
 	if ( pPage->nUsed == 0 && m_pSegment->getManager()->releaseRecyclableMetadataPage( pPage->pBase, m_pSegment->getDomain() ) ) {
@@ -553,13 +553,13 @@ void SIRCompactBucketAllocator::unlinkPartial( uint32_t nSeat, uint32_t nClass, 
 bool SIRCompactBucketAllocator::enterProducer( uint32_t nSlab, uint32_t nEpoch )
 {
 	sirBucketSlab_t& slab = ( *loadSlab( nSlab ) );
-	uint32_t nOld = slab.nAccessGate.load( SIR_MEMORY_ORDER_ACQUIRE );
+	uint32_t nOld = slab.nAccessGate.load( std::memory_order_acquire );
 	while ( ( nOld & SIR_BUCKET_RETIRED ) == 0 ) {
 		if ( nOld == SIR_BUCKET_RETIRED - 1 ) {
 			return false;
 		}
-		if ( slab.nAccessGate.compareExchangeWeak( nOld, nOld + 1, SIR_MEMORY_ORDER_ACQUIRE_RELEASE, SIR_MEMORY_ORDER_ACQUIRE ) ) {
-			if ( slab.nEpoch.load( SIR_MEMORY_ORDER_ACQUIRE ) != nEpoch || slab.nClass.load( SIR_MEMORY_ORDER_ACQUIRE ) >= m_nClassCount ) {
+		if ( slab.nAccessGate.compare_exchange_weak( nOld, nOld + 1, std::memory_order_acq_rel, std::memory_order_acquire ) ) {
+			if ( slab.nEpoch.load( std::memory_order_acquire ) != nEpoch || slab.nClass.load( std::memory_order_acquire ) >= m_nClassCount ) {
 				exitProducer( nSlab );
 				return false;
 			}
@@ -571,7 +571,7 @@ bool SIRCompactBucketAllocator::enterProducer( uint32_t nSlab, uint32_t nEpoch )
 
 void SIRCompactBucketAllocator::exitProducer( uint32_t nSlab )
 {
-	( *loadSlab( nSlab ) ).nAccessGate.fetchSub( 1, SIR_MEMORY_ORDER_RELEASE );
+	( *loadSlab( nSlab ) ).nAccessGate.fetch_sub( 1, std::memory_order_release );
 }
 
 bool SIRCompactBucketAllocator::fillActive( uint32_t nSeat, uint32_t nClass )
@@ -582,7 +582,7 @@ bool SIRCompactBucketAllocator::fillActive( uint32_t nSeat, uint32_t nClass )
 	sirBucketInbox_t& inbox = *seat.pRemote;
 	bool bHasRemote = false;
 	for ( uint32_t i = 0; i < m_nDirtyGroupsPerSeat; ++i ) {
-		bHasRemote |= inbox.pDirtyGroupWords[i].load( SIR_MEMORY_ORDER_ACQUIRE ) != 0;
+		bHasRemote |= inbox.pDirtyGroupWords[i].load( std::memory_order_acquire ) != 0;
 	}
 	if ( bHasRemote ) {
 		drainSeat( nSeat, UINT32_MAX );
@@ -590,7 +590,7 @@ bool SIRCompactBucketAllocator::fillActive( uint32_t nSeat, uint32_t nClass )
 	const uint32_t nActive = seat.pActive[nClass];
 	if ( nActive != SIR_BUCKET_NONE ) {
 		const sirBucketSlab_t& active = *loadSlab( nActive );
-		if ( active.nFreeHead != SIR_BUCKET_NONE || active.nFresh.load( SIR_MEMORY_ORDER_RELAXED ) < getSlotCapacity( nClass ) ) {
+		if ( active.nFreeHead != SIR_BUCKET_NONE || active.nFresh.load( std::memory_order_relaxed ) < getSlotCapacity( nClass ) ) {
 			return true;
 		}
 	}
@@ -625,8 +625,8 @@ bool SIRCompactBucketAllocator::fillActive( uint32_t nSeat, uint32_t nClass )
 		} else {
 			loadSlab( nPrevious )->nNeutralNext = loadSlab( nSlab )->nNeutralNext;
 		}
-	} else if ( m_nNextDormant.load( SIR_MEMORY_ORDER_RELAXED ) < m_nSlabCount ) {
-		nSlab = m_nNextDormant.fetchAdd( 1, SIR_MEMORY_ORDER_RELEASE );
+	} else if ( m_nNextDormant.load( std::memory_order_relaxed ) < m_nSlabCount ) {
+		nSlab = m_nNextDormant.fetch_add( 1, std::memory_order_release );
 	}
 	if ( nSlab == SIR_BUCKET_NONE ) {
 		return false;
@@ -637,43 +637,43 @@ bool SIRCompactBucketAllocator::fillActive( uint32_t nSeat, uint32_t nClass )
 		    m_pSegment->getManager()->allocateMetadata( sizeof( sirBucketSlab_t ), alignof( sirBucketSlab_t ), m_pSegment->getDomain() );
 		if ( pStorage == nullptr ) {
 			// A newly selected dormant ID has not been exposed yet.
-			m_nNextDormant.fetchSub( 1, SIR_MEMORY_ORDER_RELAXED );
+			m_nNextDormant.fetch_sub( 1, std::memory_order_relaxed );
 			return false;
 		}
 		pDescriptor = new ( pStorage ) sirBucketSlab_t();
-		m_pDirectory[nSlab].pDescriptor.store( pDescriptor, SIR_MEMORY_ORDER_RELEASE );
+		m_pDirectory[nSlab].pDescriptor.store( pDescriptor, std::memory_order_release );
 	}
 	sirBucketSlab_t& slab = *pDescriptor;
-	SIRAtomic<uint64_t> *pStateBlock = allocateStateBlock();
+	std::atomic<uint64_t> *pStateBlock = allocateStateBlock();
 	if ( pStateBlock == nullptr ) {
 		slab.nNeutralNext = m_nNeutralHead;
 		m_nNeutralHead = nSlab;
 		return false;
 	}
-	if ( !slab.bCommitted && !m_pSegment->commit( ( ( uint64_t )( nSlab ) ) * m_nSlabBytes, m_nSlabBytes ) ) {
+	if ( !slab.bCommitted && !m_pSegment->commit( static_cast<uint64_t>( nSlab ) * m_nSlabBytes, m_nSlabBytes ) ) {
 		releaseStateBlock( pStateBlock );
 		slab.nNeutralNext = m_nNeutralHead;
 		m_nNeutralHead = nSlab;
 		return false;
 	}
-	slab.nAccessGate.store( SIR_BUCKET_RETIRED, SIR_MEMORY_ORDER_RELEASE );
+	slab.nAccessGate.store( SIR_BUCKET_RETIRED, std::memory_order_release );
 	slab.pStates = pStateBlock;
-	slab.pDirtyStateWords = ( ( SIRAtomic<uint64_t> * )( ( ( uint8_t * )( pStateBlock ) ) +
-	                                                     ( ( m_nStateWordsPerSlab * sizeof( SIRAtomic<uint64_t> ) + 63 ) & ~63ull ) ) );
+	slab.pDirtyStateWords = ( ( std::atomic<uint64_t> * )( reinterpret_cast<uint8_t *>( pStateBlock ) +
+	                                                     ( ( m_nStateWordsPerSlab * sizeof( std::atomic<uint64_t> ) + 63 ) & ~63ull ) ) );
 	slab.bCommitted = true;
-	slab.nSeat.store( nSeat, SIR_MEMORY_ORDER_RELAXED );
-	slab.nSeatGeneration.store( seat.nGeneration.load( SIR_MEMORY_ORDER_RELAXED ), SIR_MEMORY_ORDER_RELAXED );
+	slab.nSeat.store( nSeat, std::memory_order_relaxed );
+	slab.nSeatGeneration.store( seat.nGeneration.load( std::memory_order_relaxed ), std::memory_order_relaxed );
 	slab.nLive = 0;
 	slab.bWarmRetained = false;
-	slab.nFresh.store( 0, SIR_MEMORY_ORDER_RELAXED );
+	slab.nFresh.store( 0, std::memory_order_relaxed );
 	slab.nFreeHead = SIR_BUCKET_NONE;
 	slab.nNeutralNext = SIR_BUCKET_NONE;
 	slab.nPartialNext = SIR_BUCKET_NONE;
 	slab.nPartialPrev = SIR_BUCKET_NONE;
 	slab.bInPartial = false;
-	slab.nEpoch.fetchAdd( 1, SIR_MEMORY_ORDER_RELEASE );
-	slab.nClass.store( nClass, SIR_MEMORY_ORDER_RELEASE );
-	slab.nAccessGate.store( 0, SIR_MEMORY_ORDER_RELEASE );
+	slab.nEpoch.fetch_add( 1, std::memory_order_release );
+	slab.nClass.store( nClass, std::memory_order_release );
+	slab.nAccessGate.store( 0, std::memory_order_release );
 	seat.pActive[nClass] = nSlab;
 	seat.pActiveDescriptor[nClass] = pDescriptor;
 	return true;
@@ -693,7 +693,7 @@ void *SIRCompactBucketAllocator::alloc( uint32_t nBytes, uint32_t nAlignment )
 	// storage is stable until shutdown; neutralization invalidates this slot.
 	sirBucketSlab_t *pDescriptor = owner.pActiveDescriptor[nClass];
 	if ( pDescriptor == nullptr || ( pDescriptor->nFreeHead == SIR_BUCKET_NONE &&
-	                                 pDescriptor->nFresh.load( SIR_MEMORY_ORDER_RELAXED ) >= getSlotCapacity( nClass ) ) ) {
+	                                 pDescriptor->nFresh.load( std::memory_order_relaxed ) >= getSlotCapacity( nClass ) ) ) {
 		if ( !fillActive( nSeat, nClass ) ) {
 			return nullptr;
 		}
@@ -702,7 +702,7 @@ void *SIRCompactBucketAllocator::alloc( uint32_t nBytes, uint32_t nAlignment )
 	}
 	sirBucketSlab_t& slab = *pDescriptor;
 	uint32_t nSlot = slab.nFreeHead;
-	uint8_t *pSlab = m_pBase + ( ( uint64_t )( nSlab ) ) * m_nSlabBytes;
+	uint8_t *pSlab = m_pBase + static_cast<uint64_t>( nSlab ) * m_nSlabBytes;
 	if ( nSlot != SIR_BUCKET_NONE ) {
 		std::memcpy( &slab.nFreeHead, pSlab + nSlot * m_nClassStride[nClass], sizeof( uint32_t ) );
 		// Recycled slots can be observed by remote producers. Keep the
@@ -710,14 +710,14 @@ void *SIRCompactBucketAllocator::alloc( uint32_t nBytes, uint32_t nAlignment )
 		// Recycled slots are exclusively popped by their owning seat. A
 		// single atomic bit-set preserves neighboring remote transitions in
 		// the packed word without the extra CAS retry and load.
-		SIRAtomic<uint64_t>& word = slab.pStates[nSlot >> 5];
+		std::atomic<uint64_t>& word = slab.pStates[nSlot >> 5];
 		const uint32_t nShift = ( nSlot & 31 ) * 2;
-		const uint64_t nPrevious = word.fetchOr( 1ull << nShift, SIR_MEMORY_ORDER_ACQUIRE_RELEASE );
+		const uint64_t nPrevious = word.fetch_or( 1ull << nShift, std::memory_order_acq_rel );
 		if ( ( ( nPrevious >> nShift ) & 3ull ) != 0 ) {
 			// This indicates a corrupted freelist/state invariant. Restore
 			// the owner freelist head and undo only our newly set low bit;
 			// leave a producer-owned high bit intact for later reclamation.
-			word.fetchAnd( ~( 1ull << nShift ), SIR_MEMORY_ORDER_ACQUIRE_RELEASE );
+			word.fetch_and( ~( 1ull << nShift ), std::memory_order_acq_rel );
 			slab.nFreeHead = nSlot;
 			return nullptr;
 		}
@@ -727,17 +727,17 @@ void *SIRCompactBucketAllocator::alloc( uint32_t nBytes, uint32_t nAlignment )
 		// RMW because adjacent, older slots can be remotely freed.
 		// The fresh cursor has exactly one writer (the owning seat).
 		// Readers on other threads observe the release-store in resolve().
-		nSlot = slab.nFresh.load( SIR_MEMORY_ORDER_RELAXED );
-		slab.nFresh.store( nSlot + 1, SIR_MEMORY_ORDER_RELEASE );
-		SIRAtomic<uint64_t>& word = slab.pStates[nSlot >> 5];
+		nSlot = slab.nFresh.load( std::memory_order_relaxed );
+		slab.nFresh.store( nSlot + 1, std::memory_order_release );
+		std::atomic<uint64_t>& word = slab.pStates[nSlot >> 5];
 		const uint32_t nShift = ( nSlot & 31 ) * 2;
 		const uint64_t nMask = 1ull << nShift;
-		const uint64_t nPrevious = word.fetchOr( nMask, SIR_MEMORY_ORDER_ACQUIRE_RELEASE );
+		const uint64_t nPrevious = word.fetch_or( nMask, std::memory_order_acq_rel );
 		// Freshness is guaranteed by initialization and monotonic nFresh.
 		// Should the invariant fail, roll back the single bit without ever
 		// admitting a duplicate live allocation.
 		if ( ( ( nPrevious >> nShift ) & 3ull ) != 0 ) {
-			word.fetchAnd( ~nMask, SIR_MEMORY_ORDER_ACQUIRE_RELEASE );
+			word.fetch_and( ~nMask, std::memory_order_acq_rel );
 			return nullptr;
 		}
 	}
@@ -748,7 +748,7 @@ void *SIRCompactBucketAllocator::alloc( uint32_t nBytes, uint32_t nAlignment )
 		--seat.nWarmRetained;
 	}
 	++slab.nLive;
-	seat.nLive.store( ++seat.nLiveOwner, SIR_MEMORY_ORDER_RELAXED );
+	seat.nLive.store( ++seat.nLiveOwner, std::memory_order_relaxed );
 	return pSlab + nSlot * m_nClassStride[nClass];
 }
 
@@ -757,8 +757,8 @@ bool SIRCompactBucketAllocator::owns( const void *pMemory ) const
 	if ( m_pSegment == nullptr || pMemory == nullptr ) {
 		return false;
 	}
-	const uintptr_t nPointer = ( ( uintptr_t )( pMemory ) );
-	const uintptr_t nBase = ( ( uintptr_t )( m_pBase ) );
+	const uintptr_t nPointer = reinterpret_cast<uintptr_t>(pMemory);
+	const uintptr_t nBase = reinterpret_cast<uintptr_t>(m_pBase);
 	return nPointer >= nBase && nPointer - nBase < m_pSegment->getReservedBytes();
 }
 
@@ -767,26 +767,26 @@ bool SIRCompactBucketAllocator::resolve( const void *pMemory, sirSlotLocation_t 
 	if ( !owns( pMemory ) || pLocation == nullptr ) {
 		return false;
 	}
-	const uint64_t nOffset = ( ( uintptr_t )( pMemory ) ) - ( ( uintptr_t )( m_pBase ) );
-	const uint32_t nSlab = ( ( uint32_t )( nOffset >> m_nSlabShift ) );
+	const uint64_t nOffset = reinterpret_cast<uintptr_t>(pMemory) - reinterpret_cast<uintptr_t>(m_pBase);
+	const uint32_t nSlab = static_cast<uint32_t>( nOffset >> m_nSlabShift );
 	const sirBucketSlab_t *pSlab = loadSlab( nSlab );
 	if ( pSlab == nullptr ) {
 		return false;
 	}
-	const uint32_t nClass = pSlab->nClass.load( SIR_MEMORY_ORDER_ACQUIRE );
+	const uint32_t nClass = pSlab->nClass.load( std::memory_order_acquire );
 	if ( nClass >= m_nClassCount ) {
 		return false;
 	}
-	const uint32_t nInner = ( ( uint32_t )( nOffset ) ) & ( m_nSlabBytes - 1 );
+	const uint32_t nInner = static_cast<uint32_t>( nOffset ) & ( m_nSlabBytes - 1 );
 	const uint32_t nStride = m_nClassStride[nClass];
-	uint32_t nSlot = ( ( uint32_t )( ( ( uint64_t )( nInner )*m_nClassReciprocal[nClass] ) >> 32 ) );
+	uint32_t nSlot = ( ( uint32_t )( ( static_cast<uint64_t>(nInner) * m_nClassReciprocal[nClass] ) >> 32 ) );
 	if ( nSlot * nStride > nInner ) {
 		--nSlot;
 	}
-	if ( nSlot >= pSlab->nFresh.load( SIR_MEMORY_ORDER_ACQUIRE ) || nSlot * nStride != nInner ) {
+	if ( nSlot >= pSlab->nFresh.load( std::memory_order_acquire ) || nSlot * nStride != nInner ) {
 		return false;
 	}
-	*pLocation = { nSlab, nSlot, nClass, pSlab->nEpoch.load( SIR_MEMORY_ORDER_ACQUIRE ) };
+	*pLocation = { nSlab, nSlot, nClass, pSlab->nEpoch.load( std::memory_order_acquire ) };
 	return true;
 }
 
@@ -802,7 +802,7 @@ uint32_t SIRCompactBucketAllocator::getMinimumAlignment( void ) const
 
 uint32_t SIRCompactBucketAllocator::getUsableSize( const void *pMemory ) const
 {
-	sirSlotLocation_t loc = {};
+	sirSlotLocation_t loc {};
 	return resolve( pMemory, &loc ) && loadState( loc.nSlab, loc.nSlot ) == 1 ? m_nClassStride[loc.nClass] : 0;
 }
 
@@ -815,16 +815,16 @@ void SIRCompactBucketAllocator::makeNeutral( uint32_t nSlab )
 	// Own the retirement bit before releasing the packed state block. Every
 	// concurrent producer must either complete its publication or fail entry.
 	uint32_t nExpected = 0;
-	if ( !slab.nAccessGate.compareExchangeStrong( nExpected, SIR_BUCKET_RETIRED, SIR_MEMORY_ORDER_ACQUIRE_RELEASE,
-	                                              SIR_MEMORY_ORDER_ACQUIRE ) ) {
+	if ( !slab.nAccessGate.compare_exchange_strong( nExpected, SIR_BUCKET_RETIRED, std::memory_order_acq_rel,
+	                                              std::memory_order_acquire ) ) {
 		return;
 	}
 	if ( slab.nLive != 0 ) {
-		slab.nAccessGate.store( 0, SIR_MEMORY_ORDER_RELEASE );
+		slab.nAccessGate.store( 0, std::memory_order_release );
 		return;
 	}
-	const uint32_t nSeat = slab.nSeat.load( SIR_MEMORY_ORDER_ACQUIRE );
-	const uint32_t nClass = slab.nClass.load( SIR_MEMORY_ORDER_RELAXED );
+	const uint32_t nSeat = slab.nSeat.load( std::memory_order_acquire );
+	const uint32_t nClass = slab.nClass.load( std::memory_order_relaxed );
 	if ( nSeat < m_nSeatCount && nClass < m_nClassCount && m_pSeats[nSeat].pActive[nClass] == nSlab ) {
 		m_pSeats[nSeat].pActive[nClass] = SIR_BUCKET_NONE;
 		m_pSeats[nSeat].pActiveDescriptor[nClass] = nullptr;
@@ -840,12 +840,12 @@ void SIRCompactBucketAllocator::makeNeutral( uint32_t nSlab )
 		}
 		slab.bWarmRetained = false;
 	}
-	slab.nClass.store( SIR_BUCKET_NONE, SIR_MEMORY_ORDER_RELEASE );
+	slab.nClass.store( SIR_BUCKET_NONE, std::memory_order_release );
 	releaseStateBlock( slab.pStates );
 	slab.pStates = nullptr;
 
 	slab.pDirtyStateWords = nullptr;
-	slab.nSeat.store( SIR_BUCKET_NONE, SIR_MEMORY_ORDER_RELEASE );
+	slab.nSeat.store( SIR_BUCKET_NONE, std::memory_order_release );
 	slab.nNeutralNext = m_nNeutralHead;
 	m_nNeutralHead = nSlab;
 }
@@ -853,35 +853,35 @@ void SIRCompactBucketAllocator::makeNeutral( uint32_t nSlab )
 void SIRCompactBucketAllocator::releaseSlot( uint32_t nSlab, uint32_t nSlot )
 {
 	sirBucketSlab_t& slab = ( *loadSlab( nSlab ) );
-	const uint32_t nClass = slab.nClass.load( SIR_MEMORY_ORDER_RELAXED );
-	uint8_t *pSlot = m_pBase + ( ( uint64_t )( nSlab ) ) * m_nSlabBytes + nSlot * m_nClassStride[nClass];
+	const uint32_t nClass = slab.nClass.load( std::memory_order_relaxed );
+	uint8_t *pSlot = m_pBase + static_cast<uint64_t>( nSlab ) * m_nSlabBytes + nSlot * m_nClassStride[nClass];
 	std::memcpy( pSlot, &slab.nFreeHead, sizeof( uint32_t ) );
 	slab.nFreeHead = nSlot;
 	--slab.nLive;
-	const uint32_t nOwnerSeat = slab.nSeat.load( SIR_MEMORY_ORDER_RELAXED );
+	const uint32_t nOwnerSeat = slab.nSeat.load( std::memory_order_relaxed );
 	if ( nOwnerSeat < m_nSeatCount ) {
 		sirBucketSeat_t& seat = m_pSeats[nOwnerSeat];
-		if ( seat.nOrphan.load( SIR_MEMORY_ORDER_ACQUIRE ) != 0 ) {
-			seat.nLive.fetchSub( 1, SIR_MEMORY_ORDER_RELAXED );
+		if ( seat.nOrphan.load( std::memory_order_acquire ) != 0 ) {
+			seat.nLive.fetch_sub( 1, std::memory_order_relaxed );
 		} else {
-			seat.nLive.store( --seat.nLiveOwner, SIR_MEMORY_ORDER_RELAXED );
+			seat.nLive.store( --seat.nLiveOwner, std::memory_order_relaxed );
 		}
 	}
 	if ( slab.nLive != 0 && slab.nFreeHead != SIR_BUCKET_NONE ) {
-		const uint32_t nSeat = slab.nSeat.load( SIR_MEMORY_ORDER_RELAXED );
-		const uint32_t nClass = slab.nClass.load( SIR_MEMORY_ORDER_RELAXED );
+		const uint32_t nSeat = slab.nSeat.load( std::memory_order_relaxed );
+		const uint32_t nClass = slab.nClass.load( std::memory_order_relaxed );
 		if ( nSeat < m_nSeatCount && nClass < m_nClassCount && m_pSeats[nSeat].pActive[nClass] != nSlab &&
-		     m_pSeats[nSeat].nOrphan.load( SIR_MEMORY_ORDER_RELAXED ) == 0 ) {
+		     m_pSeats[nSeat].nOrphan.load( std::memory_order_relaxed ) == 0 ) {
 			linkPartial( nSeat, nClass, nSlab );
 		}
 	}
 	if ( slab.nLive == 0 ) {
-		const uint32_t nSeat = slab.nSeat.load( SIR_MEMORY_ORDER_RELAXED );
-		const uint32_t nClass = slab.nClass.load( SIR_MEMORY_ORDER_RELAXED );
+		const uint32_t nSeat = slab.nSeat.load( std::memory_order_relaxed );
+		const uint32_t nClass = slab.nClass.load( std::memory_order_relaxed );
 		// Retain a bounded number of recently emptied active slabs in the
 		// owner's cache. The slot-state map remains valid and all slots are
 		// marked free; a producer cannot have a pending free when nLive=0.
-		if ( nSeat < m_nSeatCount && nClass < m_nClassCount && m_pSeats[nSeat].nOrphan.load( SIR_MEMORY_ORDER_ACQUIRE ) == 0 &&
+		if ( nSeat < m_nSeatCount && nClass < m_nClassCount && m_pSeats[nSeat].nOrphan.load( std::memory_order_acquire ) == 0 &&
 		     m_pSeats[nSeat].pActive[nClass] == nSlab && m_pSeats[nSeat].nWarmRetained < m_nWarmPerSeat ) {
 			slab.bWarmRetained = true;
 			++m_pSeats[nSeat].nWarmRetained;
@@ -896,14 +896,14 @@ bool SIRCompactBucketAllocator::free( void *pMemory )
 	if ( pMemory == nullptr ) {
 		return true;
 	}
-	sirSlotLocation_t loc = {};
+	sirSlotLocation_t loc {};
 	if ( !resolve( pMemory, &loc ) ) {
 		return false;
 	}
 	sirBucketSlab_t& slab = ( *loadSlab( loc.nSlab ) );
 	const uint32_t nSeat = getAttachedSeat();
-	if ( nSeat == slab.nSeat.load( SIR_MEMORY_ORDER_ACQUIRE ) &&
-	     m_pSeats[nSeat].nGeneration.load( SIR_MEMORY_ORDER_ACQUIRE ) == slab.nSeatGeneration.load( SIR_MEMORY_ORDER_ACQUIRE ) ) {
+	if ( nSeat == slab.nSeat.load( std::memory_order_acquire ) &&
+	     m_pSeats[nSeat].nGeneration.load( std::memory_order_acquire ) == slab.nSeatGeneration.load( std::memory_order_acquire ) ) {
 		if ( !claimState( loc.nSlab, loc.nSlot, 1, 0 ) ) {
 			return false;
 		}
@@ -920,7 +920,7 @@ bool SIRCompactBucketAllocator::free( void *pMemory )
 		exitProducer( loc.nSlab );
 		return false;
 	}
-	const uint32_t nOwner = slab.nSeat.load( SIR_MEMORY_ORDER_ACQUIRE );
+	const uint32_t nOwner = slab.nSeat.load( std::memory_order_acquire );
 	if ( nOwner >= m_nSeatCount ) {
 		// The slab must remain discoverable until an orphan worker reclaims it.
 		exitProducer( loc.nSlab );
@@ -930,9 +930,9 @@ bool SIRCompactBucketAllocator::free( void *pMemory )
 	// A consumer exchange racing either publication cannot lose the event:
 	// the later slab publication forces another inspection.
 	const uint64_t nWordMask = 1ull << ( ( loc.nSlot >> 5 ) & 63 );
-	const uint64_t nPreviouslyDirty = slab.pDirtyStateWords[( loc.nSlot >> 5 ) >> 6].fetchOr( nWordMask, SIR_MEMORY_ORDER_RELEASE );
+	const uint64_t nPreviouslyDirty = slab.pDirtyStateWords[( loc.nSlot >> 5 ) >> 6].fetch_or( nWordMask, std::memory_order_release );
 	// An already-published dirty word covers all newly queued slots in
-	// that word. On a concurrent exchange, fetchOr observes zero and must
+	// that word. On a concurrent exchange, fetch_or observes zero and must
 	// re-publish the slab. This saves two shared RMWs per subsequent free.
 	if ( ( nPreviouslyDirty & nWordMask ) == 0 ) {
 		publishDirtySlab( nOwner, loc.nSlab );
@@ -945,37 +945,37 @@ void SIRCompactBucketAllocator::publishDirtySlab( uint32_t nSeat, uint32_t nSlab
 {
 	sirBucketInbox_t& inbox = *m_pSeats[nSeat].pRemote;
 	const uint32_t nWord = nSlab >> 6;
-	inbox.pDirtySlabWords[nWord].fetchOr( 1ull << ( nSlab & 63 ), SIR_MEMORY_ORDER_RELEASE );
-	inbox.pDirtyGroupWords[nWord >> 6].fetchOr( 1ull << ( nWord & 63 ), SIR_MEMORY_ORDER_RELEASE );
+	inbox.pDirtySlabWords[nWord].fetch_or( 1ull << ( nSlab & 63 ), std::memory_order_release );
+	inbox.pDirtyGroupWords[nWord >> 6].fetch_or( 1ull << ( nWord & 63 ), std::memory_order_release );
 }
 
 uint32_t SIRCompactBucketAllocator::drainDirtySlab( uint32_t nSeat, uint32_t nSlab, uint32_t nMaximum )
 {
 	sirBucketSlab_t& slab = ( *loadSlab( nSlab ) );
-	if ( slab.nSeat.load( SIR_MEMORY_ORDER_ACQUIRE ) != nSeat || slab.nClass.load( SIR_MEMORY_ORDER_ACQUIRE ) >= m_nClassCount ||
+	if ( slab.nSeat.load( std::memory_order_acquire ) != nSeat || slab.nClass.load( std::memory_order_acquire ) >= m_nClassCount ||
 	     slab.pDirtyStateWords == nullptr ) {
 		return 0;
 	}
 	uint32_t nDrained = 0;
 	for ( uint32_t i = 0; i < m_nDirtyStateWordsPerSlab; ++i ) {
-		if ( slab.nClass.load( SIR_MEMORY_ORDER_ACQUIRE ) >= m_nClassCount || slab.pDirtyStateWords == nullptr ) {
+		if ( slab.nClass.load( std::memory_order_acquire ) >= m_nClassCount || slab.pDirtyStateWords == nullptr ) {
 			break;
 		}
-		uint64_t nDirty = slab.pDirtyStateWords[i].exchange( 0, SIR_MEMORY_ORDER_ACQUIRE_RELEASE );
+		uint64_t nDirty = slab.pDirtyStateWords[i].exchange( 0, std::memory_order_acq_rel );
 		while ( nDirty != 0 ) {
 #if defined( _MSC_VER )
 			unsigned long nBit = 0;
 			_BitScanForward64( &nBit, nDirty );
 #else
-			const uint32_t nBit = ( ( uint32_t )( __builtin_ctzll( nDirty ) ) );
+			const uint32_t nBit = static_cast<uint32_t>(  __builtin_ctzll( nDirty )  );
 #endif
-			const uint32_t nStateWord = i * 64 + ( ( uint32_t )( nBit ) );
+			const uint32_t nStateWord = i * 64 + static_cast<uint32_t>( nBit );
 			const uint64_t nMask = 1ull << nBit;
 			nDirty &= ~nMask;
-			if ( nStateWord >= m_nStateWordsPerSlab || slab.nClass.load( SIR_MEMORY_ORDER_ACQUIRE ) >= m_nClassCount ) {
+			if ( nStateWord >= m_nStateWordsPerSlab || slab.nClass.load( std::memory_order_acquire ) >= m_nClassCount ) {
 				continue;
 			}
-			const uint64_t nStates = slab.pStates[nStateWord].load( SIR_MEMORY_ORDER_ACQUIRE );
+			const uint64_t nStates = slab.pStates[nStateWord].load( std::memory_order_acquire );
 			// State 2 (binary 10) appears as a bit in every even bit position.
 			uint64_t nQueued = ( ~nStates & ( nStates >> 1 ) ) & 0x5555555555555555ull;
 			while ( nQueued != 0 ) {
@@ -983,18 +983,18 @@ uint32_t SIRCompactBucketAllocator::drainDirtySlab( uint32_t nSeat, uint32_t nSl
 				unsigned long nQueuedBit = 0;
 				_BitScanForward64( &nQueuedBit, nQueued );
 #else
-				const uint32_t nQueuedBit = ( ( uint32_t )( __builtin_ctzll( nQueued ) ) );
+				const uint32_t nQueuedBit = static_cast<uint32_t>(  __builtin_ctzll( nQueued )  );
 #endif
 				nQueued &= nQueued - 1;
-				const uint32_t nSlot = nStateWord * 32 + ( ( uint32_t )( nQueuedBit ) >> 1 );
-				if ( nSlot < slab.nFresh.load( SIR_MEMORY_ORDER_ACQUIRE ) && claimState( nSlab, nSlot, 2, 0 ) ) {
+				const uint32_t nSlot = nStateWord * 32 + ( static_cast<uint32_t>( nQueuedBit ) >> 1 );
+				if ( nSlot < slab.nFresh.load( std::memory_order_acquire ) && claimState( nSlab, nSlot, 2, 0 ) ) {
 					releaseSlot( nSlab, nSlot );
 					++nDrained;
 					if ( nDrained == nMaximum ) {
 						// Preserve unconsumed state words. Revisit this word
 						// because other queued slots may still be present.
-						if ( slab.nClass.load( SIR_MEMORY_ORDER_ACQUIRE ) < m_nClassCount && slab.pDirtyStateWords != nullptr ) {
-							slab.pDirtyStateWords[i].fetchOr( nDirty | nMask, SIR_MEMORY_ORDER_RELEASE );
+						if ( slab.nClass.load( std::memory_order_acquire ) < m_nClassCount && slab.pDirtyStateWords != nullptr ) {
+							slab.pDirtyStateWords[i].fetch_or( nDirty | nMask, std::memory_order_release );
 							publishDirtySlab( nSeat, nSlab );
 						}
 						return nDrained;
@@ -1011,41 +1011,41 @@ uint32_t SIRCompactBucketAllocator::drainSeat( uint32_t nSeat, uint32_t nMaximum
 	sirBucketInbox_t& inbox = *m_pSeats[nSeat].pRemote;
 	uint32_t nDrained = 0;
 	for ( uint32_t group = 0; group < m_nDirtyGroupsPerSeat && nDrained < nMaximum; ++group ) {
-		uint64_t nGroups = inbox.pDirtyGroupWords[group].exchange( 0, SIR_MEMORY_ORDER_ACQUIRE_RELEASE );
+		uint64_t nGroups = inbox.pDirtyGroupWords[group].exchange( 0, std::memory_order_acq_rel );
 		while ( nGroups != 0 ) {
 #if defined( _MSC_VER )
 			unsigned long nBit = 0;
 			_BitScanForward64( &nBit, nGroups );
 #else
-			const uint32_t nBit = ( ( uint32_t )( __builtin_ctzll( nGroups ) ) );
+			const uint32_t nBit = static_cast<uint32_t>(  __builtin_ctzll( nGroups )  );
 #endif
 			const uint64_t nMask = 1ull << nBit;
 			nGroups &= ~nMask;
-			const uint32_t nWord = group * 64 + ( ( uint32_t )( nBit ) );
+			const uint32_t nWord = group * 64 + static_cast<uint32_t>( nBit );
 			if ( nWord >= m_nDirtySlabWordsPerSeat ) {
 				continue;
 			}
-			uint64_t nSlabs = inbox.pDirtySlabWords[nWord].exchange( 0, SIR_MEMORY_ORDER_ACQUIRE_RELEASE );
+			uint64_t nSlabs = inbox.pDirtySlabWords[nWord].exchange( 0, std::memory_order_acq_rel );
 			while ( nSlabs != 0 ) {
 #if defined( _MSC_VER )
 				unsigned long nSlabBit = 0;
 				_BitScanForward64( &nSlabBit, nSlabs );
 #else
-				const uint32_t nSlabBit = ( ( uint32_t )( __builtin_ctzll( nSlabs ) ) );
+				const uint32_t nSlabBit = static_cast<uint32_t>(  __builtin_ctzll( nSlabs )  );
 #endif
 				const uint64_t nSlabMask = 1ull << nSlabBit;
 				nSlabs &= ~nSlabMask;
-				const uint32_t nSlab = nWord * 64 + ( ( uint32_t )( nSlabBit ) );
+				const uint32_t nSlab = nWord * 64 + static_cast<uint32_t>( nSlabBit );
 				if ( nSlab < m_nSlabCount ) {
 					nDrained += drainDirtySlab( nSeat, nSlab, nMaximum - nDrained );
 				}
 				if ( nDrained >= nMaximum ) {
 					if ( nSlabs != 0 ) {
-						inbox.pDirtySlabWords[nWord].fetchOr( nSlabs, SIR_MEMORY_ORDER_RELEASE );
-						inbox.pDirtyGroupWords[group].fetchOr( nMask, SIR_MEMORY_ORDER_RELEASE );
+						inbox.pDirtySlabWords[nWord].fetch_or( nSlabs, std::memory_order_release );
+						inbox.pDirtyGroupWords[group].fetch_or( nMask, std::memory_order_release );
 					}
 					if ( nGroups != 0 ) {
-						inbox.pDirtyGroupWords[group].fetchOr( nGroups, SIR_MEMORY_ORDER_RELEASE );
+						inbox.pDirtyGroupWords[group].fetch_or( nGroups, std::memory_order_release );
 					}
 					return nDrained;
 				}
@@ -1073,7 +1073,7 @@ bool SIRCompactBucketAllocator::detach( void )
 		return false;
 	}
 	drainSeat( nSeat );
-	if ( m_pSeats[nSeat].nLive.load( SIR_MEMORY_ORDER_ACQUIRE ) != 0 ) {
+	if ( m_pSeats[nSeat].nLive.load( std::memory_order_acquire ) != 0 ) {
 		return false;
 	}
 	for ( uint32_t c = 0; c < m_nClassCount; ++c ) {
@@ -1084,7 +1084,7 @@ bool SIRCompactBucketAllocator::detach( void )
 		m_pSeats[nSeat].pActive[c] = SIR_BUCKET_NONE;
 		m_pSeats[nSeat].pActiveDescriptor[c] = nullptr;
 	}
-	m_pSeats[nSeat].nOwnerToken.store( 0, SIR_MEMORY_ORDER_RELEASE );
+	m_pSeats[nSeat].nOwnerToken.store( 0, std::memory_order_release );
 	s_BucketBinding = { nullptr, UINT32_MAX, 0 };
 	return true;
 }
@@ -1099,17 +1099,17 @@ bool SIRCompactBucketAllocator::retireThread( void )
 	// nLive tracks all slots owned by a seat, including remotely queued
 	// objects. It provides an exact retirement predicate without scanning
 	// every activated slab under m_ColdMutex.
-	const bool bHasLive = m_pSeats[nSeat].nLive.load( SIR_MEMORY_ORDER_ACQUIRE ) != 0;
+	const bool bHasLive = m_pSeats[nSeat].nLive.load( std::memory_order_acquire ) != 0;
 	if ( bHasLive ) {
-		m_pSeats[nSeat].nOrphan.store( 1, SIR_MEMORY_ORDER_RELEASE );
-		m_nOrphanCount.fetchAdd( 1, SIR_MEMORY_ORDER_RELEASE );
+		m_pSeats[nSeat].nOrphan.store( 1, std::memory_order_release );
+		m_nOrphanCount.fetch_add( 1, std::memory_order_release );
 	}
 	// Release empty active slabs before letting another worker claim this
 	// seat. No other worker is allowed to mutate this seat while attached.
 	for ( uint32_t c = 0; c < m_nClassCount; ++c ) {
 		const uint32_t nSlab = m_pSeats[nSeat].pActive[c];
 		if ( nSlab != SIR_BUCKET_NONE && ( *loadSlab( nSlab ) ).nLive == 0 &&
-		     ( *loadSlab( nSlab ) ).nAccessGate.load( SIR_MEMORY_ORDER_ACQUIRE ) == 0 ) {
+		     ( *loadSlab( nSlab ) ).nAccessGate.load( std::memory_order_acquire ) == 0 ) {
 			makeNeutral( nSlab );
 		}
 	}
@@ -1117,7 +1117,7 @@ bool SIRCompactBucketAllocator::retireThread( void )
 		m_pSeats[nSeat].pActive[c] = SIR_BUCKET_NONE;
 		m_pSeats[nSeat].pActiveDescriptor[c] = nullptr;
 	}
-	m_pSeats[nSeat].nOwnerToken.store( 0, SIR_MEMORY_ORDER_RELEASE );
+	m_pSeats[nSeat].nOwnerToken.store( 0, std::memory_order_release );
 	s_BucketBinding = { nullptr, UINT32_MAX, 0 };
 	return true;
 }
@@ -1130,13 +1130,13 @@ uint32_t SIRCompactBucketAllocator::serviceOrphans( uint32_t nMaximum )
 	SIRScopedLock<SIRMutex> orphanGuard( m_OrphanMutex );
 	uint32_t nDrained = 0;
 	for ( uint32_t nSeat = 0; nSeat < m_nSeatCount && nDrained < nMaximum; ++nSeat ) {
-		if ( m_pSeats[nSeat].nOrphan.load( SIR_MEMORY_ORDER_ACQUIRE ) == 0 ) {
+		if ( m_pSeats[nSeat].nOrphan.load( std::memory_order_acquire ) == 0 ) {
 			continue;
 		}
 		nDrained += drainSeat( nSeat, nMaximum - nDrained );
-		if ( m_pSeats[nSeat].nLive.load( SIR_MEMORY_ORDER_ACQUIRE ) == 0 ) {
-			m_pSeats[nSeat].nOrphan.store( 0, SIR_MEMORY_ORDER_RELEASE );
-			m_nOrphanCount.fetchSub( 1, SIR_MEMORY_ORDER_RELEASE );
+		if ( m_pSeats[nSeat].nLive.load( std::memory_order_acquire ) == 0 ) {
+			m_pSeats[nSeat].nOrphan.store( 0, std::memory_order_release );
+			m_nOrphanCount.fetch_sub( 1, std::memory_order_release );
 		}
 	}
 	return nDrained;
@@ -1144,7 +1144,7 @@ uint32_t SIRCompactBucketAllocator::serviceOrphans( uint32_t nMaximum )
 
 bool SIRCompactBucketAllocator::hasPendingOrphans( void ) const
 {
-	return m_nOrphanCount.load( SIR_MEMORY_ORDER_ACQUIRE ) != 0;
+	return m_nOrphanCount.load( std::memory_order_acquire ) != 0;
 }
 
 uint64_t SIRCompactBucketAllocator::trimEmptySlabs( uint32_t nMaximumWarm )
@@ -1174,7 +1174,7 @@ uint64_t SIRCompactBucketAllocator::trimEmptySlabs( uint32_t nMaximumWarm )
 		if ( ++nWarm <= nMaximumWarm ) {
 			continue;
 		}
-		if ( m_pSegment->decommit( ( ( uint64_t )( i ) ) * m_nSlabBytes, m_nSlabBytes ) ) {
+		if ( m_pSegment->decommit( static_cast<uint64_t>( i ) * m_nSlabBytes, m_nSlabBytes ) ) {
 			slab.bCommitted = false;
 			nReleased += m_nSlabBytes;
 		}
@@ -1184,15 +1184,15 @@ uint64_t SIRCompactBucketAllocator::trimEmptySlabs( uint32_t nMaximumWarm )
 
 uint64_t SIRCompactBucketAllocator::trimIdle( void )
 {
-	const uint64_t nWarm = ( ( uint64_t )( m_nWarmPerSeat ) ) * m_nSeatCount;
-	return trimEmptySlabs( nWarm > UINT32_MAX ? UINT32_MAX : ( ( uint32_t )( nWarm ) ) );
+	const uint64_t nWarm = static_cast<uint64_t>( m_nWarmPerSeat ) * m_nSeatCount;
+	return trimEmptySlabs( nWarm > UINT32_MAX ? UINT32_MAX : static_cast<uint32_t>( nWarm ) );
 }
 
 uint64_t SIRCompactBucketAllocator::getLiveCount( void ) const
 {
 	uint64_t nTotal = 0;
 	for ( uint32_t i = 0; i < m_nSeatCount; ++i ) {
-		nTotal += m_pSeats[i].nLive.load( SIR_MEMORY_ORDER_ACQUIRE );
+		nTotal += m_pSeats[i].nLive.load( std::memory_order_acquire );
 	}
 	return nTotal;
 }
@@ -1206,7 +1206,7 @@ bool SIRCompactBucketAllocator::shutdown( void )
 		return false;
 	}
 	for ( uint32_t i = 0; i < m_nSeatCount; ++i ) {
-		if ( m_pSeats[i].nOwnerToken.load( SIR_MEMORY_ORDER_ACQUIRE ) != 0 ) {
+		if ( m_pSeats[i].nOwnerToken.load( std::memory_order_acquire ) != 0 ) {
 			return false;
 		}
 	}

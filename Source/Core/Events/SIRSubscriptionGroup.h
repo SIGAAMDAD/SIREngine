@@ -14,8 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSUBSCRIPTIONGROUP_H__
-#define __SIRENGINE_SIRSUBSCRIPTIONGROUP_H__
+#ifndef __SIR_SUBSCRIPTIONGROUP_H__
+#define __SIR_SUBSCRIPTIONGROUP_H__
 
 #include <Core/SIRPCH.h>
 
@@ -82,4 +82,4 @@ private:
 	uint32_t m_nCount;
 };
 
-#endif // __SIRENGINE_SIRSUBSCRIPTIONGROUP_H__
+#endif // __SIR_SUBSCRIPTIONGROUP_H__

@@ -5,13 +5,14 @@
 bool Terrain3DCutoutRegionView::open( const uint8_t *pData, const size_t nBytes, const uint32_t nRegion, const uint32_t nGeneration,
                                       const uint64_t nSourceSignature, const uint64_t nRecipeSignature )
 {
-	t3dStSidecarInfo_t info = {};
+	t3dStSidecarInfo_t info {};
 	if ( !t3dStReadSidecar( pData, nBytes, T3D_ST_SIDECAR_MASK_MAGIC, nRegion, nGeneration, nSourceSignature, nRecipeSignature, info ) ||
 	     info.m_nEntryCount != T3D_ST_CUTOUT_PAGES_PER_REGION || info.m_nPayloadBytes < T3D_ST_CUTOUT_ENTRIES_BYTES ) {
 		return false;
 	}
 	const uint8_t *p = pData + T3D_ST_SIDECAR_HEADER_BYTES;
-	t3dStCutoutEntry_t staged[T3D_ST_CUTOUT_PAGES_PER_REGION] = {};
+	t3dStCutoutEntry_t staged[T3D_ST_CUTOUT_PAGES_PER_REGION];
+	memset( staged, 0, sizeof( staged ) );
 	uint32_t words = 0u;
 	for ( uint32_t page = 0u; page < T3D_ST_CUTOUT_PAGES_PER_REGION; ++page ) {
 		const uint8_t *e = p + size_t( page ) * T3D_ST_CUTOUT_ENTRY_BYTES;

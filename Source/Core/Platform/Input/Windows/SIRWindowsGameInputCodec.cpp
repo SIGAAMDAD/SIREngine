@@ -25,11 +25,11 @@ typedef struct sirGameInputButtonMap_s
 
 // Native GameInputGamepadButtons mask values (Microsoft GameInput v1+).
 static constexpr sirGameInputButtonMap_t s_ButtonMap[] = {
-    { 0x00000004U, SIR_INPUT_PAD_SOUTH },     { 0x00000008U, SIR_INPUT_PAD_EAST },      { 0x00000010U, SIR_INPUT_PAD_WEST },
-    { 0x00000020U, SIR_INPUT_PAD_NORTH },     { 0x00000400U, SIR_INPUT_PAD_LB },        { 0x00000800U, SIR_INPUT_PAD_RB },
-    { 0x00000002U, SIR_INPUT_PAD_BACK },      { 0x00000001U, SIR_INPUT_PAD_START },     { 0x00001000U, SIR_INPUT_PAD_L3 },
-    { 0x00002000U, SIR_INPUT_PAD_R3 },        { 0x00000040U, SIR_INPUT_PAD_DPAD_UP },   { 0x00000080U, SIR_INPUT_PAD_DPAD_DOWN },
-    { 0x00000100U, SIR_INPUT_PAD_DPAD_LEFT }, { 0x00000200U, SIR_INPUT_PAD_DPAD_RIGHT } };
+    { 0x00000004U, SIRInputControllerControl::SIR_INPUT_PAD_SOUTH },     { 0x00000008U, SIRInputControllerControl::SIR_INPUT_PAD_EAST },      { 0x00000010U, SIRInputControllerControl::SIR_INPUT_PAD_WEST },
+    { 0x00000020U, SIRInputControllerControl::SIR_INPUT_PAD_NORTH },     { 0x00000400U, SIRInputControllerControl::SIR_INPUT_PAD_LB },        { 0x00000800U, SIRInputControllerControl::SIR_INPUT_PAD_RB },
+    { 0x00000002U, SIRInputControllerControl::SIR_INPUT_PAD_BACK },      { 0x00000001U, SIRInputControllerControl::SIR_INPUT_PAD_START },     { 0x00001000U, SIRInputControllerControl::SIR_INPUT_PAD_L3 },
+    { 0x00002000U, SIRInputControllerControl::SIR_INPUT_PAD_R3 },        { 0x00000040U, SIRInputControllerControl::SIR_INPUT_PAD_DPAD_UP },   { 0x00000080U, SIRInputControllerControl::SIR_INPUT_PAD_DPAD_DOWN },
+    { 0x00000100U, SIRInputControllerControl::SIR_INPUT_PAD_DPAD_LEFT }, { 0x00000200U, SIRInputControllerControl::SIR_INPUT_PAD_DPAD_RIGHT } };
 
 int32_t SIRWindowsGameInputCodec::normalizeAxis( float fValue, bool bTrigger ) noexcept
 {
@@ -46,7 +46,7 @@ int32_t SIRWindowsGameInputCodec::normalizeAxis( float fValue, bool bTrigger ) n
 		fValue = 0.0f;
 	}
 	const float fScaled = fValue * 32767.0f;
-	return ( int32_t )( fScaled + ( fScaled >= 0.0f ? 0.5f : -0.5f ) );
+	return static_cast<int32_t>(  fScaled + ( fScaled >= 0.0f ? 0.5f : -0.5f )  );
 }
 
 uint64_t SIRWindowsGameInputCodec::timestampNanoseconds( uint64_t nMicroseconds ) noexcept
@@ -65,14 +65,14 @@ bool SIRWindowsGameInputCodec::decode( const sirGameInputRawGamepad_t& raw, cons
 		return false;
 	}
 
-	sirGameInputDecodedGamepad_t next = {};
+	sirGameInputDecodedGamepad_t next {};
 	next.nButtons = raw.nButtons;
-	next.nAxes[SIR_INPUT_AXIS_LX] = normalizeAxis( raw.fLX, false );
-	next.nAxes[SIR_INPUT_AXIS_LY] = normalizeAxis( raw.fLY, false );
-	next.nAxes[SIR_INPUT_AXIS_RX] = normalizeAxis( raw.fRX, false );
-	next.nAxes[SIR_INPUT_AXIS_RY] = normalizeAxis( raw.fRY, false );
-	next.nAxes[SIR_INPUT_AXIS_LT] = normalizeAxis( raw.fLT, true );
-	next.nAxes[SIR_INPUT_AXIS_RT] = normalizeAxis( raw.fRT, true );
+	next.nAxes[SIRInputAxisCode::SIR_INPUT_AXIS_LX] = normalizeAxis( raw.fLX, false );
+	next.nAxes[SIRInputAxisCode::SIR_INPUT_AXIS_LY] = normalizeAxis( raw.fLY, false );
+	next.nAxes[SIRInputAxisCode::SIR_INPUT_AXIS_RX] = normalizeAxis( raw.fRX, false );
+	next.nAxes[SIRInputAxisCode::SIR_INPUT_AXIS_RY] = normalizeAxis( raw.fRY, false );
+	next.nAxes[SIRInputAxisCode::SIR_INPUT_AXIS_LT] = normalizeAxis( raw.fLT, true );
+	next.nAxes[SIRInputAxisCode::SIR_INPUT_AXIS_RT] = normalizeAxis( raw.fRT, true );
 	next.bValid = true;
 
 	uint32_t nChanged = 0;
@@ -80,12 +80,12 @@ bool SIRWindowsGameInputCodec::decode( const sirGameInputRawGamepad_t& raw, cons
 		const uint32_t nMask = s_ButtonMap[i].nNative;
 		const bool bDown = ( next.nButtons & nMask ) != 0;
 		if ( !previous.bValid || bDown != ( ( previous.nButtons & nMask ) != 0 ) ) {
-			pChanges[nChanged++] = { SIR_INPUT_BUTTON, s_ButtonMap[i].nControl, bDown ? 1 : 0 };
+			pChanges[nChanged++] = { SIRInputSignal::SIR_INPUT_BUTTON, s_ButtonMap[i].nControl, bDown ? 1 : 0 };
 		}
 	}
-	for ( uint16_t i = 0; i < SIR_INPUT_AXIS_COUNT; ++i ) {
+	for ( uint16_t i = 0; i < SIRInputAxisCode::SIR_INPUT_AXIS_COUNT; ++i ) {
 		if ( !previous.bValid || next.nAxes[i] != previous.nAxes[i] ) {
-			pChanges[nChanged++] = { SIR_INPUT_AXIS, i, next.nAxes[i] };
+			pChanges[nChanged++] = { SIRInputSignal::SIR_INPUT_AXIS, i, next.nAxes[i] };
 		}
 	}
 

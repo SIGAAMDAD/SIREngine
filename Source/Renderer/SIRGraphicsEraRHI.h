@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRGRAPHICSERARHI_H__
-#define __SIRENGINE_SIRGRAPHICSERARHI_H__
+#ifndef __SIR_GRAPHICSERARHI_H__
+#define __SIR_GRAPHICSERARHI_H__
 
 #include <Core/SIRPCH.h>
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -61,7 +61,7 @@ typedef struct sirGraphicsEraDraw_s
 typedef struct sirGraphicsEraBatch_s
 {
 	uint32_t nDeviceGeneration;
-	sirGraphicsPipelineModel_t eModel;
+	SIRGraphicsPipelineModel eModel;
 	const sirGraphicsRenderPass_t *pPass;
 	const sirGraphicsViewport_t *pViewport;
 	const sirGraphicsRect_t *pScissor;
@@ -74,12 +74,12 @@ typedef struct sirGraphicsEraBatch_s
 class SIRGraphicsEraRHI
 {
 public:
-	static sirGraphicsResult_t admitPipeline( const sirGraphicsABIPipeline_t& pipeline,
+	static SIRGraphicsResult admitPipeline( const sirGraphicsABIPipeline_t& pipeline,
 	                                          const sirGraphicsABIPipelineModelCaps_t& caps ) noexcept;
-	static sirGraphicsResult_t admitBatch( const sirGraphicsEraBatch_t& batch, const sirGraphicsABIPipelineModelCaps_t& caps ) noexcept;
-	static sirGraphicsResult_t record( const sirGraphicsEraBatch_t& batch, SIRGraphicsCommandList& commands,
+	static SIRGraphicsResult admitBatch( const sirGraphicsEraBatch_t& batch, const sirGraphicsABIPipelineModelCaps_t& caps ) noexcept;
+	static SIRGraphicsResult record( const sirGraphicsEraBatch_t& batch, SIRGraphicsCommandList& commands,
 	                                   const sirGraphicsABIPipelineModelCaps_t& caps ) noexcept;
-	static sirGraphicsResult_t execute( const sirGraphicsEraBatch_t& batch, SIRRenderingDevice& device,
+	static SIRGraphicsResult execute( const sirGraphicsEraBatch_t& batch, SIRRenderingDevice& device,
 	                                    sirGraphicsCompletion_t *pCompletion ) noexcept;
 
 protected:
@@ -89,9 +89,9 @@ private:
 class SIRGraphicsProgrammableRHI
 {
 public:
-	static sirGraphicsResult_t admitPipeline( const sirGraphicsABIPipeline_t& pipeline,
+	static SIRGraphicsResult admitPipeline( const sirGraphicsABIPipeline_t& pipeline,
 	                                          const sirGraphicsABIPipelineModelCaps_t& caps ) noexcept;
-	static sirGraphicsResult_t execute( const sirGraphicsEraBatch_t& batch, SIRRenderingDevice& device,
+	static SIRGraphicsResult execute( const sirGraphicsEraBatch_t& batch, SIRRenderingDevice& device,
 	                                    sirGraphicsCompletion_t *pCompletion ) noexcept;
 
 protected:
@@ -101,13 +101,13 @@ private:
 class SIRGraphicsFixedFunctionRHI
 {
 public:
-	static sirGraphicsResult_t admitPipeline( const sirGraphicsABIPipeline_t& pipeline,
+	static SIRGraphicsResult admitPipeline( const sirGraphicsABIPipeline_t& pipeline,
 	                                          const sirGraphicsABIPipelineModelCaps_t& caps ) noexcept;
-	static sirGraphicsResult_t execute( const sirGraphicsEraBatch_t& batch, SIRRenderingDevice& device,
+	static SIRGraphicsResult execute( const sirGraphicsEraBatch_t& batch, SIRRenderingDevice& device,
 	                                    sirGraphicsCompletion_t *pCompletion ) noexcept;
 
 protected:
 private:
 };
 
-#endif // __SIRENGINE_SIRGRAPHICSERARHI_H__
+#endif // __SIR_GRAPHICSERARHI_H__

@@ -15,7 +15,7 @@ static bool t3dParityLookup( void *pUser, uint32_t nPage, uint32_t& rParent, uin
 {
 	if ( nPage >= 32u )
 		return false;
-	const t3dParityTestPage_t *const pPages = ( const t3dParityTestPage_t * )pUser;
+	const t3dParityTestPage_t *const pPages = static_cast<const t3dParityTestPage_t *>(pUser);
 	rParent = pPages[nPage].m_nParent;
 	rMip = pPages[nPage].m_nMip;
 	return true;
@@ -37,7 +37,7 @@ int main()
 	v2Header.m_nVersion = T3D_VT_FEEDBACK_GRID_CONTRACT_VERSION;
 	v2Header.m_nWordCount = 6u;
 	const uint32_t v2Words[6] = { 2u, 3u, 4u, 2u, UINT32_MAX, 1000u };
-	assert( ring.capture( v2Header, ( const uint8_t * )v2Words ) );
+	assert( ring.capture( v2Header, reinterpret_cast<const uint8_t *>(v2Words) ) );
 	assert( memory.front() == 0x12345678u && memory.back() == 0x12345678u );
 
 	t3dParityTestPage_t pages[32]{};
@@ -65,7 +65,7 @@ int main()
 	policy.m_nMinimumSamples = 1u;
 	policy.m_nMaxCandidates = 32u;
 	t3dVTFeedbackReductionStats_t reduction{};
-	assert( t3d_vt_feedback_multi_reduce_capture( ( const uint8_t * )v3Words.data(), v3Words.size() * sizeof( uint32_t ), params,
+	assert( t3d_vt_feedback_multi_reduce_capture( reinterpret_cast<const uint8_t *>(v3Words.data()), v3Words.size() * sizeof( uint32_t ), params,
 	                                              v3Header.m_nFrame, epoch, database, device, viewport, reducer, t3dParityLookup, pages,
 	                                              policy, reduction ) );
 	assert( reducer.hasDirectPage( 2u ) && reducer.hasDirectPage( 4u ) );
@@ -94,7 +94,7 @@ int main()
 	assert( !ring.capture( v2Header, NULL ) );
 	t3dVTFeedbackGridHeader_t invalid = v2Header;
 	invalid.m_nWordCount = T3D_VT_MULTI_PARITY_MAX_WORDS + 1u;
-	assert( !ring.capture( invalid, ( const uint8_t * )v2Words ) );
+	assert( !ring.capture( invalid, reinterpret_cast<const uint8_t *>(v2Words) ) );
 
 	// Four snapshots; a fifth replaces only the oldest, with no heap growth.
 	for ( uint32_t i = 0u; i < 5u; ++i ) {
@@ -102,7 +102,7 @@ int main()
 		frame.m_nFrame = 200u + i;
 		frame.m_nWordCount = 1u;
 		const uint32_t sample = i % 2u == 0u ? 2u : 4u;
-		assert( ring.capture( frame, ( const uint8_t * )&sample ) );
+		assert( ring.capture( frame, reinterpret_cast<const uint8_t *>(&sample) ) );
 	}
 	t3dVTFeedbackGridHeader_t evicted = v3Header;
 	evicted.m_nFrame = 200u;
@@ -133,7 +133,7 @@ int main()
 		t3dVTFeedbackGridHeader_t currentV2 = v2Header;
 		currentV2.m_nFrame = 5000u + iteration;
 		currentV2.m_nWordCount = count;
-		assert( ring.capture( currentV2, ( const uint8_t * )wordSet ) );
+		assert( ring.capture( currentV2, reinterpret_cast<const uint8_t *>(wordSet) ) );
 		t3dVTFeedbackGridHeader_t currentV1 = v3Header;
 		currentV1.m_nFrame = currentV2.m_nFrame;
 		assert( ring.compare( currentV1, 32u, reducer, result ) );
@@ -146,7 +146,7 @@ int main()
 	ring.bindCold( NULL, 0u );
 	assert( !ring.compare( v3Header, 32u, reducer, result ) );
 	const uint32_t legacyWords[] = { 2u };
-	assert( reducer.reduce( ( const uint8_t * )legacyWords, 1u, 32u, t3dParityLookup, pages, policy, reduction ) );
+	assert( reducer.reduce( reinterpret_cast<const uint8_t *>(legacyWords), 1u, 32u, t3dParityLookup, pages, policy, reduction ) );
 	assert( reducer.hasDirectPage( 2u ) && !reducer.hasDirectPage( 4u ) );
 	reducer.discardCapture();
 	assert( !reducer.hasDirectPage( 2u ) );

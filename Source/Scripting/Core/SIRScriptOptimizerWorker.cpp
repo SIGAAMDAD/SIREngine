@@ -23,80 +23,81 @@ SIRScriptOptimizerWorker::SIRScriptOptimizerWorker( void ) noexcept
 {
 }
 
-sirScriptResult_t SIRScriptOptimizerWorker::configure( SIRScriptOptimizerInputStore *pInputs, SIRScriptArtifactCache *pCache,
+SIRScriptResult SIRScriptOptimizerWorker::configure( SIRScriptOptimizerInputStore *pInputs, SIRScriptArtifactCache *pCache,
                                                        const sirScriptOptimizerBackendAPI_t& backend,
                                                        uint64_t nMaximumOutputBytes ) noexcept
 {
 	if ( m_pInputs != nullptr ) {
-		return SIR_SCRIPT_WRONG_STATE;
+		return SIRScriptResult::SIR_SCRIPT_WRONG_STATE;
 	}
 	if ( pInputs == nullptr || pCache == nullptr || backend.nABIRevision != SIR_SCRIPT_OPT_BACKEND_ABI_REVISION ||
 	     backend.pCompile == nullptr || backend.pRelease == nullptr || nMaximumOutputBytes == 0 || nMaximumOutputBytes > UINT32_MAX ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 	m_pInputs = pInputs;
 	m_pCache = pCache;
 	m_Backend = backend;
 	m_nMaximumOutputBytes = nMaximumOutputBytes;
-	return SIR_SCRIPT_OK;
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
-sirScriptResult_t SIRScriptOptimizerWorker::process( const sirScriptOptimizationRequest_t& request,
+SIRScriptResult SIRScriptOptimizerWorker::process( const sirScriptOptimizationRequest_t& request,
                                                      sirScriptOptimizationReply_t *pReply ) noexcept
 {
 	if ( m_pInputs == nullptr || m_pCache == nullptr ) {
-		return SIR_SCRIPT_WRONG_STATE;
+		return SIRScriptResult::SIR_SCRIPT_WRONG_STATE;
 	}
 	if ( pReply == nullptr || m_bProcessing ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
-	uint8_t szWire[SIRScriptOptimizationProtocol::REQUEST_BYTES] = {};
-	if ( SIRScriptOptimizationProtocol::encodeRequest( request, szWire ) != SIR_SCRIPT_OK ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+	uint8_t szWire[SIRScriptOptimizationProtocol::REQUEST_BYTES];
+	memset( szWire, 0, sizeof( szWire ) );
+	if ( SIRScriptOptimizationProtocol::encodeRequest( request, szWire ) != SIRScriptResult::SIR_SCRIPT_OK ) {
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 	m_bProcessing = true;
-	sirScriptOptimizationReply_t reply = {};
+	sirScriptOptimizationReply_t reply {};
 	reply.nJobId = request.nJobId;
-	reply.eResult = SIR_SCRIPT_BACKEND_FAILURE;
+	reply.eResult = SIRScriptResult::SIR_SCRIPT_BACKEND_FAILURE;
 	uint64_t nRecipeBytes = 0;
-	sirScriptResult_t eResult = m_pInputs->inspect( request, &nRecipeBytes );
-	if ( eResult != SIR_SCRIPT_OK ) {
+	SIRScriptResult eResult = m_pInputs->inspect( request, &nRecipeBytes );
+	if ( eResult != SIRScriptResult::SIR_SCRIPT_OK ) {
 		reply.eResult = eResult;
 		*pReply = reply;
 		m_bProcessing = false;
-		return SIR_SCRIPT_OK;
+		return SIRScriptResult::SIR_SCRIPT_OK;
 	}
 	if ( nRecipeBytes > SIZE_MAX || request.nInputBytes > SIZE_MAX ) {
-		reply.eResult = SIR_SCRIPT_CAPACITY_EXCEEDED;
+		reply.eResult = SIRScriptResult::SIR_SCRIPT_CAPACITY_EXCEEDED;
 		*pReply = reply;
 		m_bProcessing = false;
-		return SIR_SCRIPT_OK;
+		return SIRScriptResult::SIR_SCRIPT_OK;
 	}
-	void *pRecipe = malloc( ( size_t )nRecipeBytes );
-	void *pInput = malloc( ( size_t )request.nInputBytes );
+	void *pRecipe = malloc( static_cast<size_t>(nRecipeBytes) );
+	void *pInput = malloc( static_cast<size_t>(request.nInputBytes) );
 	if ( pRecipe == nullptr || pInput == nullptr ) {
 		free( pRecipe );
 		free( pInput );
-		reply.eResult = SIR_SCRIPT_CAPACITY_EXCEEDED;
+		reply.eResult = SIRScriptResult::SIR_SCRIPT_CAPACITY_EXCEEDED;
 		*pReply = reply;
 		m_bProcessing = false;
-		return SIR_SCRIPT_OK;
+		return SIRScriptResult::SIR_SCRIPT_OK;
 	}
 	sirScriptOptimizerInputBuffers_t buffers = { pRecipe, nRecipeBytes, pInput, request.nInputBytes, 0 };
 	eResult = m_pInputs->fetch( request, &buffers );
-	if ( eResult == SIR_SCRIPT_OK ) {
+	if ( eResult == SIRScriptResult::SIR_SCRIPT_OK ) {
 		const sirScriptOptimizerWorkView_t view = { &request, pRecipe, buffers.nRecipeBytes, pInput, request.nInputBytes };
-		sirScriptOptimizerOutput_t output = {};
+		sirScriptOptimizerOutput_t output {};
 		eResult = m_Backend.pCompile( m_Backend.pUser, &view, &output );
-		if ( eResult == SIR_SCRIPT_OK ) {
+		if ( eResult == SIRScriptResult::SIR_SCRIPT_OK ) {
 			if ( output.pBytes == nullptr || output.nBytes == 0 || output.nBytes > m_nMaximumOutputBytes || output.nAlignment == 0 ||
 			     output.nAlignment > 4096 || ( output.nAlignment & ( output.nAlignment - 1 ) ) != 0 ||
-			     ( ( uintptr_t )output.pBytes & ( output.nAlignment - 1 ) ) != 0 ) {
-				eResult = SIR_SCRIPT_CAPACITY_EXCEEDED;
+			     ( reinterpret_cast<uintptr_t>(output.pBytes) & ( output.nAlignment - 1 ) ) != 0 ) {
+				eResult = SIRScriptResult::SIR_SCRIPT_CAPACITY_EXCEEDED;
 			} else {
 				eResult = m_pCache->store( request.artifact, request.key, output.pBytes, output.nBytes, output.nAlignment, &reply.cached );
-				if ( eResult == SIR_SCRIPT_DUPLICATE ) {
-					eResult = SIR_SCRIPT_OK;
+				if ( eResult == SIRScriptResult::SIR_SCRIPT_DUPLICATE ) {
+					eResult = SIRScriptResult::SIR_SCRIPT_OK;
 				}
 			}
 		}
@@ -106,10 +107,10 @@ sirScriptResult_t SIRScriptOptimizerWorker::process( const sirScriptOptimization
 	free( pRecipe );
 	free( pInput );
 	reply.eResult = eResult;
-	if ( eResult != SIR_SCRIPT_OK ) {
+	if ( eResult != SIRScriptResult::SIR_SCRIPT_OK ) {
 		memset( &reply.cached, 0, sizeof( reply.cached ) );
 	}
 	*pReply = reply;
 	m_bProcessing = false;
-	return SIR_SCRIPT_OK;
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }

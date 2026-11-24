@@ -21,19 +21,19 @@ private:
 	SIRVector<uint32_t> m_sizes;
 	SIRVector<uint32_t> m_capacities;
 	uint32_t m_nEdges = 0;
-	sirContainerResult_t growRow( uint32_t iGrow )
+	SIRContainerResult growRow( uint32_t iGrow )
 	{
 		const uint32_t nOld = m_capacities[iGrow];
 		if ( nOld > UINT32_MAX / 2 ) {
-			return SIR_CONTAINER_SIZE_OVERFLOW;
+			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
 		const uint32_t nNew = nOld == 0 ? 4 : nOld * 2;
 		if ( m_storage.getSize() > UINT32_MAX - ( nNew - nOld ) ) {
-			return SIR_CONTAINER_SIZE_OVERFLOW;
+			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
 		SIRVector<std::optional<Edge>> staged( m_pAllocator );
-		sirContainerResult_t eResult = staged.tryResize( m_storage.getSize() + nNew - nOld );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		SIRContainerResult eResult = staged.tryResize( m_storage.getSize() + nNew - nOld );
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		uint32_t iWrite = 0;
@@ -50,7 +50,7 @@ private:
 			m_offsets[iVertex] = iOffset;
 			iOffset += m_capacities[iVertex];
 		}
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
 public:
@@ -58,29 +58,29 @@ public:
 	    : m_pAllocator( pAllocator ), m_storage( pAllocator ), m_offsets( pAllocator ), m_sizes( pAllocator ), m_capacities( pAllocator )
 	{
 	}
-	sirContainerResult_t tryInitialize( uint32_t nVertices, uint32_t nCapacityPerRow = 4 )
+	SIRContainerResult tryInitialize( uint32_t nVertices, uint32_t nCapacityPerRow = 4 )
 	{
 		if ( nVertices == 0 || nCapacityPerRow == 0 || nVertices > UINT32_MAX / nCapacityPerRow ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		SIRVector<std::optional<Edge>> storage( m_pAllocator );
 		SIRVector<uint32_t> offsets( m_pAllocator );
 		SIRVector<uint32_t> sizes( m_pAllocator );
 		SIRVector<uint32_t> capacities( m_pAllocator );
-		sirContainerResult_t eResult = storage.tryResize( nVertices * nCapacityPerRow );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		SIRContainerResult eResult = storage.tryResize( nVertices * nCapacityPerRow );
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		eResult = offsets.tryResize( nVertices );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		eResult = sizes.tryResize( nVertices );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		eResult = capacities.tryResize( nVertices );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		for ( uint32_t iVertex = 0; iVertex < nVertices; ++iVertex ) {
@@ -92,28 +92,28 @@ public:
 		m_sizes = std::move( sizes );
 		m_capacities = std::move( capacities );
 		m_nEdges = 0;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
-	sirContainerResult_t tryAddEdge( uint32_t iSource, uint32_t iDestination, const T& value )
+	SIRContainerResult tryAddEdge( uint32_t iSource, uint32_t iDestination, const T& value )
 	{
 		if ( m_nEdges == UINT32_MAX ) {
-			return SIR_CONTAINER_SIZE_OVERFLOW;
+			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
 		if ( iSource >= m_sizes.getSize() || iDestination >= m_sizes.getSize() ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		// Copy potentially aliased input before a row resize can relocate it.
 		Edge staged{ iDestination, value };
 		if ( m_sizes[iSource] == m_capacities[iSource] ) {
-			sirContainerResult_t eResult = growRow( iSource );
-			if ( eResult != SIR_CONTAINER_OK ) {
+			SIRContainerResult eResult = growRow( iSource );
+			if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 				return eResult;
 			}
 		}
 		m_storage[m_offsets[iSource] + m_sizes[iSource]].emplace( std::move( staged ) );
 		++m_sizes[iSource];
 		++m_nEdges;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 	bool eraseEdge( uint32_t iSource, uint32_t iDestination )
 	{

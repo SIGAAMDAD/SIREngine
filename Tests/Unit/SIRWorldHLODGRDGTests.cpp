@@ -84,7 +84,7 @@ int main( void )
 	sirWorldHLODGRDGInput_t input = { &graph, &scope, szNodes, szProvider, 3, 9, 12 };
 
 	// GRDG source residency must be present, and wrong kinds never qualify.
-	SIR_HLOD_CHECK( sirWorldHLODSnapshotGRDG( input, output ) == SIR_WORLD_HLOD_OK );
+	SIR_HLOD_CHECK( sirWorldHLODSnapshotGRDG( input, output ) == SIRWorldHLODResult::SIR_WORLD_HLOD_OK );
 	SIR_HLOD_CHECK( !szResident[0].bReady && !szResident[1].bReady && !szResident[2].bReady );
 	SIRResourcePublication root = { szNodes[0].keyGeometry, SIR_RESOURCE_KIND_GEOMETRY, 1, 1, nullptr, 0, nullptr, 0 };
 	SIRResourcePublication child = { szNodes[1].keyGeometry, SIR_RESOURCE_KIND_GEOMETRY, 1, 1, nullptr, 0, nullptr, 0 };
@@ -92,7 +92,7 @@ int main( void )
 	SIRResourceHandle hChild = {};
 	SIR_HLOD_CHECK( pWriter->publish( root, &hRoot ) == SIR_RESOURCE_RESULT_SUCCESS );
 	SIR_HLOD_CHECK( pWriter->publish( child, &hChild ) == SIR_RESOURCE_RESULT_SUCCESS );
-	SIR_HLOD_CHECK( sirWorldHLODSnapshotGRDG( input, output ) == SIR_WORLD_HLOD_OK );
+	SIR_HLOD_CHECK( sirWorldHLODSnapshotGRDG( input, output ) == SIRWorldHLODResult::SIR_WORLD_HLOD_OK );
 	SIR_HLOD_CHECK( szResident[0].bReady && szResident[1].bReady && !szResident[2].bReady );
 
 	float szErrors[] = { 100.0f, 0.0f, 0.0f };
@@ -103,40 +103,40 @@ int main( void )
 	uint32_t nSelected = 0;
 	uint32_t nDemands = 0;
 	sirWorldHLODOutput_t cut = { szScratch, 3, szSelected, 3, &nSelected, szDemands, 3, &nDemands };
-	SIR_HLOD_CHECK( sirWorldHLODPlan( selection, cut ) == SIR_WORLD_HLOD_OK );
+	SIR_HLOD_CHECK( sirWorldHLODPlan( selection, cut ) == SIRWorldHLODResult::SIR_WORLD_HLOD_OK );
 	SIR_HLOD_CHECK( nSelected == 1 && szSelected[0] == 0 && nDemands == 1 && szDemands[0].nNodeIndex == 2 );
 
 	SIR_HLOD_CHECK( pWriter->publish( root, &hRoot ) == SIR_RESOURCE_RESULT_SUCCESS );
-	SIR_HLOD_CHECK( sirWorldHLODSnapshotGRDG( input, output ) == SIR_WORLD_HLOD_OK );
+	SIR_HLOD_CHECK( sirWorldHLODSnapshotGRDG( input, output ) == SIRWorldHLODResult::SIR_WORLD_HLOD_OK );
 	SIR_HLOD_CHECK( !szResident[0].bReady && szResident[1].bReady );
 	szProvider[0].nResourceRevision = 2;
-	SIR_HLOD_CHECK( sirWorldHLODSnapshotGRDG( input, output ) == SIR_WORLD_HLOD_OK );
+	SIR_HLOD_CHECK( sirWorldHLODSnapshotGRDG( input, output ) == SIRWorldHLODResult::SIR_WORLD_HLOD_OK );
 	SIR_HLOD_CHECK( szResident[0].bReady );
 
 	szProvider[0].nDeviceGeneration = 11;
-	SIR_HLOD_CHECK( sirWorldHLODSnapshotGRDG( input, output ) == SIR_WORLD_HLOD_OK );
+	SIR_HLOD_CHECK( sirWorldHLODSnapshotGRDG( input, output ) == SIRWorldHLODResult::SIR_WORLD_HLOD_OK );
 	SIR_HLOD_CHECK( !szResident[0].bReady );
 	szProvider[0].nDeviceGeneration = 12;
 	szProvider[0].nSourceRevision = 76;
-	SIR_HLOD_CHECK( sirWorldHLODSnapshotGRDG( input, output ) == SIR_WORLD_HLOD_OK );
+	SIR_HLOD_CHECK( sirWorldHLODSnapshotGRDG( input, output ) == SIRWorldHLODResult::SIR_WORLD_HLOD_OK );
 	SIR_HLOD_CHECK( !szResident[0].bReady );
 	szProvider[0].nSourceRevision = 77;
 	szProvider[0].nWorldGeneration = 8;
-	SIR_HLOD_CHECK( sirWorldHLODSnapshotGRDG( input, output ) == SIR_WORLD_HLOD_OK );
+	SIR_HLOD_CHECK( sirWorldHLODSnapshotGRDG( input, output ) == SIRWorldHLODResult::SIR_WORLD_HLOD_OK );
 	SIR_HLOD_CHECK( !szResident[0].bReady );
 	szProvider[0].nWorldGeneration = 9;
 	szProvider[0].bReady = false;
-	SIR_HLOD_CHECK( sirWorldHLODSnapshotGRDG( input, output ) == SIR_WORLD_HLOD_OK );
+	SIR_HLOD_CHECK( sirWorldHLODSnapshotGRDG( input, output ) == SIRWorldHLODResult::SIR_WORLD_HLOD_OK );
 	SIR_HLOD_CHECK( !szResident[0].bReady );
 	szProvider[0].bReady = true;
 
 	// Invalid buffers/source metadata never overwrite the caller's output.
 	output.pResidency[0] = { 123, 123, true };
 	const sirWorldHLODGRDGOutput_t undersized = { szResident, 2 };
-	SIR_HLOD_CHECK( sirWorldHLODSnapshotGRDG( input, undersized ) == SIR_WORLD_HLOD_INVALID_ARGUMENT );
+	SIR_HLOD_CHECK( sirWorldHLODSnapshotGRDG( input, undersized ) == SIRWorldHLODResult::SIR_WORLD_HLOD_INVALID_ARGUMENT );
 	SIR_HLOD_CHECK( szResident[0].nSourceRevision == 123 );
 	szNodes[1].keyGeometry.m_nAssetId = 0;
-	SIR_HLOD_CHECK( sirWorldHLODSnapshotGRDG( input, output ) == SIR_WORLD_HLOD_INVALID_HIERARCHY );
+	SIR_HLOD_CHECK( sirWorldHLODSnapshotGRDG( input, output ) == SIRWorldHLODResult::SIR_WORLD_HLOD_INVALID_HIERARCHY );
 	SIR_HLOD_CHECK( szResident[0].nSourceRevision == 123 );
 	return 0;
 }

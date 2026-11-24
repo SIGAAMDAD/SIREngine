@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIREDITORHIERARCHYMODEL_H__
-#define __SIRENGINE_SIREDITORHIERARCHYMODEL_H__
+#ifndef __SIR_EDITORHIERARCHYMODEL_H__
+#define __SIR_EDITORHIERARCHYMODEL_H__
 
 #include <Core/SIRPCH.h>
 
@@ -28,8 +28,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Editor/Scene/SIREditorTextScene.h>
 #include <Editor/Widgets/SIREditorVirtualList.h>
 
-typedef enum sirEditorHierarchyResult_e : uint8_t
-{
+enum class SIREditorHierarchyResult : uint8_t {
 	SIR_EDITOR_HIERARCHY_OK = 0,
 	SIR_EDITOR_HIERARCHY_INVALID_ARGUMENT = 1,
 	SIR_EDITOR_HIERARCHY_NOT_INITIALIZED = 2,
@@ -37,7 +36,7 @@ typedef enum sirEditorHierarchyResult_e : uint8_t
 	SIR_EDITOR_HIERARCHY_NOT_FOUND = 4,
 	SIR_EDITOR_HIERARCHY_STALE_SOURCE = 5,
 	SIR_EDITOR_HIERARCHY_INVALID_SOURCE = 6
-} sirEditorHierarchyResult_t;
+};
 
 // Optional authoritative sibling order, sorted ascending by nId. When absent,
 // SIREditorSceneDocument's deterministic ID ordering is used instead.
@@ -100,7 +99,7 @@ typedef struct sirEditorHierarchyStorage_s
 // Convert a validated Godot text-scene index into sibling order hints. Output
 // is sorted by ID for binary lookup, while nOrder preserves the source line.
 // Caller owns the output, and it must not alias the scanned node array.
-sirEditorHierarchyResult_t sirEditorHierarchyOrderFromTextScene( const sirEditorTextSceneIndex_t& index, sirEditorHierarchyOrder_t *pOutput,
+SIREditorHierarchyResult sirEditorHierarchyOrderFromTextScene( const sirEditorTextSceneIndex_t& index, sirEditorHierarchyOrder_t *pOutput,
                                                                  uint32_t nCapacity, uint32_t *pOutCount ) noexcept;
 
 // Editor-main-thread view model. Godot's Control/Tree adapter will consume rows;
@@ -123,22 +122,22 @@ private:
 	uint32_t findFirstChild( uint64_t nParentId ) const noexcept;
 	uint32_t findAfterChildren( uint64_t nParentId ) const noexcept;
 	bool hasChildren( uint64_t nId ) const noexcept;
-	sirEditorHierarchyResult_t buildVisibleRows( void ) noexcept;
+	SIREditorHierarchyResult buildVisibleRows( void ) noexcept;
 	uint32_t findVisibleRow( uint64_t nId ) const noexcept;
 
 public:
 	SIREditorHierarchyModel( void ) noexcept;
-	sirEditorHierarchyResult_t initialize( const sirEditorHierarchyStorage_t& storage, uint32_t nDefaultRowHeight ) noexcept;
+	SIREditorHierarchyResult initialize( const sirEditorHierarchyStorage_t& storage, uint32_t nDefaultRowHeight ) noexcept;
 	void shutdown( void ) noexcept;
-	sirEditorHierarchyResult_t rebuild( const SIREditorSceneDocument& document, const sirEditorHierarchyOrder_t *pOrder = nullptr,
+	SIREditorHierarchyResult rebuild( const SIREditorSceneDocument& document, const sirEditorHierarchyOrder_t *pOrder = nullptr,
 	                                    uint32_t nOrderCount = 0 ) noexcept;
 	bool isCurrent( const SIREditorSceneDocument& document ) const noexcept;
-	sirEditorHierarchyResult_t setExpanded( const SIREditorSceneDocument& document, uint64_t nId, bool bExpanded ) noexcept;
-	sirEditorHierarchyResult_t setSelected( const SIREditorSceneDocument& document, uint64_t nId ) noexcept;
-	sirEditorHierarchyResult_t setRowHeight( const SIREditorSceneDocument& document, uint64_t nId, uint32_t nHeight ) noexcept;
-	sirEditorHierarchyResult_t getVisibleRange( uint64_t nScroll, uint64_t nViewportHeight, uint64_t nOverscan,
+	SIREditorHierarchyResult setExpanded( const SIREditorSceneDocument& document, uint64_t nId, bool bExpanded ) noexcept;
+	SIREditorHierarchyResult setSelected( const SIREditorSceneDocument& document, uint64_t nId ) noexcept;
+	SIREditorHierarchyResult setRowHeight( const SIREditorSceneDocument& document, uint64_t nId, uint32_t nHeight ) noexcept;
+	SIREditorHierarchyResult getVisibleRange( uint64_t nScroll, uint64_t nViewportHeight, uint64_t nOverscan,
 	                                            sirEditorVirtualRange_t *pOutRange ) const noexcept;
-	sirEditorHierarchyResult_t getVisibleRow( uint32_t iRow, sirEditorHierarchyRow_t *pOutRow ) const noexcept;
+	SIREditorHierarchyResult getVisibleRow( uint32_t iRow, sirEditorHierarchyRow_t *pOutRow ) const noexcept;
 	uint32_t getVisibleCount( void ) const noexcept;
 	uint64_t getSourceRevision( void ) const noexcept;
 	uint64_t getLayoutEpoch( void ) const noexcept;
@@ -147,4 +146,4 @@ public:
 	uint64_t getTotalHeight( void ) const noexcept;
 };
 
-#endif // __SIRENGINE_SIREDITORHIERARCHYMODEL_H__
+#endif // __SIR_EDITORHIERARCHYMODEL_H__

@@ -24,16 +24,16 @@ static constexpr uint32_t SIR_GL_COLOR_ATTACHMENT0 = 0x8CE0;
 static constexpr uint32_t SIR_GL_DEPTH_ATTACHMENT = 0x8D00;
 static constexpr uint32_t SIR_GL_DEPTH_STENCIL_ATTACHMENT = 0x821A;
 
-static sirGraphicsResult_t sirGLFramebufferError( uint32_t nError ) noexcept
+static SIRGraphicsResult sirGLFramebufferError( uint32_t nError ) noexcept
 {
-	return nError == SIR_GL_FBO_OUT_OF_MEMORY ? SIR_GRAPHICS_OUT_OF_MEMORY : SIR_GRAPHICS_DRIVER_ERROR;
+	return nError == SIR_GL_FBO_OUT_OF_MEMORY ? SIRGraphicsResult::SIR_GRAPHICS_OUT_OF_MEMORY : SIRGraphicsResult::SIR_GRAPHICS_DRIVER_ERROR;
 }
 
-sirGraphicsResult_t sirGLLoadFramebufferDispatch( sirGLProcedureLookup_t pLookup, void *pContext,
+SIRGraphicsResult sirGLLoadFramebufferDispatch( sirGLProcedureLookup_t pLookup, void *pContext,
                                                   sirGLFramebufferDispatch_t *pAPI ) noexcept
 {
 	if ( pLookup == nullptr || pContext == nullptr || pAPI == nullptr ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	void *pCreate = pLookup( pContext, "glCreateFramebuffers" );
 	void *pDelete = pLookup( pContext, "glDeleteFramebuffers" );
@@ -45,21 +45,21 @@ sirGraphicsResult_t sirGLLoadFramebufferDispatch( sirGLProcedureLookup_t pLookup
 	if ( !sirGLIsUsableProcedure( pCreate ) || !sirGLIsUsableProcedure( pDelete ) || !sirGLIsUsableProcedure( pAttach ) ||
 	     !sirGLIsUsableProcedure( pCheck ) || !sirGLIsUsableProcedure( pDraw ) || !sirGLIsUsableProcedure( pRead ) ||
 	     !sirGLIsUsableProcedure( pError ) ) {
-		return SIR_GRAPHICS_UNSUPPORTED;
+		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
-	sirGLFramebufferDispatch_t result = {};
-	result.pCreateFramebuffers = ( decltype( result.pCreateFramebuffers ) )pCreate;
-	result.pDeleteFramebuffers = ( decltype( result.pDeleteFramebuffers ) )pDelete;
-	result.pNamedFramebufferTexture = ( decltype( result.pNamedFramebufferTexture ) )pAttach;
-	result.pCheckNamedFramebufferStatus = ( decltype( result.pCheckNamedFramebufferStatus ) )pCheck;
-	result.pNamedFramebufferDrawBuffer = ( decltype( result.pNamedFramebufferDrawBuffer ) )pDraw;
-	result.pNamedFramebufferReadBuffer = ( decltype( result.pNamedFramebufferReadBuffer ) )pRead;
-	result.pGetError = ( decltype( result.pGetError ) )pError;
+	sirGLFramebufferDispatch_t result {};
+	result.pCreateFramebuffers = reinterpret_cast<void ( * )( int32_t, uint32_t * )>( pCreate );
+	result.pDeleteFramebuffers = reinterpret_cast<void ( * )( int32_t, const uint32_t * )>( pDelete );
+	result.pNamedFramebufferTexture = reinterpret_cast<void ( * )( uint32_t, uint32_t, uint32_t, int32_t )>( pAttach );
+	result.pCheckNamedFramebufferStatus = reinterpret_cast<uint32_t ( * )( uint32_t, uint32_t )>( pCheck );
+	result.pNamedFramebufferDrawBuffer = reinterpret_cast<void ( * )( uint32_t, uint32_t )>( pDraw );
+	result.pNamedFramebufferReadBuffer = reinterpret_cast<void ( * )( uint32_t, uint32_t )>( pRead );
+	result.pGetError = reinterpret_cast<uint32_t ( * )( void )>( pError );
 	*pAPI = result;
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t sirGLCreateNativeFramebuffer( const sirGLFramebufferDispatch_t *pAPI, const sirGLFramebufferDesc_t *pDesc,
+SIRGraphicsResult sirGLCreateNativeFramebuffer( const sirGLFramebufferDispatch_t *pAPI, const sirGLFramebufferDesc_t *pDesc,
                                                   uint32_t *pName ) noexcept
 {
 	if ( pAPI == nullptr || pDesc == nullptr || pName == nullptr || pAPI->pCreateFramebuffers == nullptr ||
@@ -67,24 +67,24 @@ sirGraphicsResult_t sirGLCreateNativeFramebuffer( const sirGLFramebufferDispatch
 	     pAPI->pCheckNamedFramebufferStatus == nullptr || pAPI->pNamedFramebufferDrawBuffer == nullptr ||
 	     pAPI->pNamedFramebufferReadBuffer == nullptr || pAPI->pGetError == nullptr ||
 	     ( pDesc->nColorName == 0 && pDesc->nDepthName == 0 ) || pDesc->nColorMip > INT32_MAX || pDesc->nDepthMip > INT32_MAX ||
-	     ( pDesc->nColorName == 0 && ( pDesc->nColorMip != 0 || pDesc->eColorFormat != SIR_GRAPHICS_FORMAT_UNKNOWN ) ) ||
-	     ( pDesc->nDepthName == 0 && ( pDesc->nDepthMip != 0 || pDesc->eDepthFormat != SIR_GRAPHICS_FORMAT_UNKNOWN ) ) ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	     ( pDesc->nColorName == 0 && ( pDesc->nColorMip != 0 || pDesc->eColorFormat != SIRGraphicsFormat::SIR_GRAPHICS_FORMAT_UNKNOWN ) ) ||
+	     ( pDesc->nDepthName == 0 && ( pDesc->nDepthMip != 0 || pDesc->eDepthFormat != SIRGraphicsFormat::SIR_GRAPHICS_FORMAT_UNKNOWN ) ) ) {
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( pDesc->nColorName != 0 && pDesc->nColorName == pDesc->nDepthName ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( pDesc->nColorName != 0 && pDesc->eColorFormat != SIR_GRAPHICS_FORMAT_RGBA8_UNORM &&
-	     pDesc->eColorFormat != SIR_GRAPHICS_FORMAT_RGBA8_SRGB && pDesc->eColorFormat != SIR_GRAPHICS_FORMAT_R8_UNORM &&
-	     pDesc->eColorFormat != SIR_GRAPHICS_FORMAT_RG8_UNORM ) {
-		return SIR_GRAPHICS_UNSUPPORTED;
+	if ( pDesc->nColorName != 0 && pDesc->eColorFormat != SIRGraphicsFormat::SIR_GRAPHICS_FORMAT_RGBA8_UNORM &&
+	     pDesc->eColorFormat != SIRGraphicsFormat::SIR_GRAPHICS_FORMAT_RGBA8_SRGB && pDesc->eColorFormat != SIRGraphicsFormat::SIR_GRAPHICS_FORMAT_R8_UNORM &&
+	     pDesc->eColorFormat != SIRGraphicsFormat::SIR_GRAPHICS_FORMAT_RG8_UNORM ) {
+		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
-	if ( pDesc->nDepthName != 0 && pDesc->eDepthFormat != SIR_GRAPHICS_FORMAT_D16_UNORM &&
-	     pDesc->eDepthFormat != SIR_GRAPHICS_FORMAT_D24_UNORM_S8_UINT && pDesc->eDepthFormat != SIR_GRAPHICS_FORMAT_D32_FLOAT ) {
-		return SIR_GRAPHICS_UNSUPPORTED;
+	if ( pDesc->nDepthName != 0 && pDesc->eDepthFormat != SIRGraphicsFormat::SIR_GRAPHICS_FORMAT_D16_UNORM &&
+	     pDesc->eDepthFormat != SIRGraphicsFormat::SIR_GRAPHICS_FORMAT_D24_UNORM_S8_UINT && pDesc->eDepthFormat != SIRGraphicsFormat::SIR_GRAPHICS_FORMAT_D32_FLOAT ) {
+		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
 	if ( pAPI->pGetError() != SIR_GL_FBO_NO_ERROR ) {
-		return SIR_GRAPHICS_DRIVER_ERROR;
+		return SIRGraphicsResult::SIR_GRAPHICS_DRIVER_ERROR;
 	}
 	uint32_t nName = 0;
 	pAPI->pCreateFramebuffers( 1, &nName );
@@ -96,12 +96,12 @@ sirGraphicsResult_t sirGLCreateNativeFramebuffer( const sirGLFramebufferDispatch
 		return sirGLFramebufferError( nCreateError );
 	}
 	if ( pDesc->nColorName != 0 ) {
-		pAPI->pNamedFramebufferTexture( nName, SIR_GL_COLOR_ATTACHMENT0, pDesc->nColorName, ( int32_t )pDesc->nColorMip );
+		pAPI->pNamedFramebufferTexture( nName, SIR_GL_COLOR_ATTACHMENT0, pDesc->nColorName, static_cast<int32_t>(pDesc->nColorMip) );
 	}
 	if ( pDesc->nDepthName != 0 ) {
 		const uint32_t nAttachment =
-		    pDesc->eDepthFormat == SIR_GRAPHICS_FORMAT_D24_UNORM_S8_UINT ? SIR_GL_DEPTH_STENCIL_ATTACHMENT : SIR_GL_DEPTH_ATTACHMENT;
-		pAPI->pNamedFramebufferTexture( nName, nAttachment, pDesc->nDepthName, ( int32_t )pDesc->nDepthMip );
+		    pDesc->eDepthFormat == SIRGraphicsFormat::SIR_GRAPHICS_FORMAT_D24_UNORM_S8_UINT ? SIR_GL_DEPTH_STENCIL_ATTACHMENT : SIR_GL_DEPTH_ATTACHMENT;
+		pAPI->pNamedFramebufferTexture( nName, nAttachment, pDesc->nDepthName, static_cast<int32_t>(pDesc->nDepthMip) );
 	}
 	if ( pDesc->nColorName == 0 ) {
 		pAPI->pNamedFramebufferDrawBuffer( nName, SIR_GL_FBO_NONE );
@@ -116,21 +116,21 @@ sirGraphicsResult_t sirGLCreateNativeFramebuffer( const sirGLFramebufferDispatch
 	const uint32_t nCheckError = pAPI->pGetError();
 	if ( nCheckError != SIR_GL_FBO_NO_ERROR || nStatus != SIR_GL_FRAMEBUFFER_COMPLETE ) {
 		pAPI->pDeleteFramebuffers( 1, &nName );
-		return nCheckError == SIR_GL_FBO_NO_ERROR ? SIR_GRAPHICS_UNSUPPORTED : sirGLFramebufferError( nCheckError );
+		return nCheckError == SIR_GL_FBO_NO_ERROR ? SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED : sirGLFramebufferError( nCheckError );
 	}
 	*pName = nName;
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t sirGLDeleteNativeFramebuffer( const sirGLFramebufferDispatch_t *pAPI, uint32_t nName ) noexcept
+SIRGraphicsResult sirGLDeleteNativeFramebuffer( const sirGLFramebufferDispatch_t *pAPI, uint32_t nName ) noexcept
 {
 	if ( pAPI == nullptr || pAPI->pDeleteFramebuffers == nullptr || pAPI->pGetError == nullptr || nName == 0 ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( pAPI->pGetError() != SIR_GL_FBO_NO_ERROR ) {
-		return SIR_GRAPHICS_DRIVER_ERROR;
+		return SIRGraphicsResult::SIR_GRAPHICS_DRIVER_ERROR;
 	}
 	pAPI->pDeleteFramebuffers( 1, &nName );
 	const uint32_t nError = pAPI->pGetError();
-	return nError == SIR_GL_FBO_NO_ERROR ? SIR_GRAPHICS_SUCCESS : sirGLFramebufferError( nError );
+	return nError == SIR_GL_FBO_NO_ERROR ? SIRGraphicsResult::SIR_GRAPHICS_SUCCESS : sirGLFramebufferError( nError );
 }

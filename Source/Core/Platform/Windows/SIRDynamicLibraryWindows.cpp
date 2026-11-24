@@ -63,7 +63,7 @@ bool SIRDynamicLibrary::load( const char *szPath, sirDynamicLibrary_t *pLibrary 
 	if ( hLibrary == nullptr ) {
 		SetLastError( nError );
 	}
-	pLibrary->pNativeHandle = ( void * )hLibrary;
+	pLibrary->pNativeHandle = reinterpret_cast<void *>(hLibrary);
 	return hLibrary != nullptr;
 }
 
@@ -72,7 +72,7 @@ void *SIRDynamicLibrary::findSymbol( const sirDynamicLibrary_t *pLibrary, const 
 	if ( pLibrary == nullptr || pLibrary->pNativeHandle == nullptr || szSymbol == nullptr || szSymbol[0] == '\0' ) {
 		return nullptr;
 	}
-	return ( void * )GetProcAddress( ( HMODULE )pLibrary->pNativeHandle, szSymbol );
+	return static_cast<void *>(GetProcAddress( static_cast<HMODULE>(pLibrary->pNativeHandle), szSymbol ));
 }
 
 bool SIRDynamicLibrary::unload( sirDynamicLibrary_t *pLibrary ) noexcept
@@ -80,7 +80,7 @@ bool SIRDynamicLibrary::unload( sirDynamicLibrary_t *pLibrary ) noexcept
 	if ( pLibrary == nullptr || pLibrary->pNativeHandle == nullptr ) {
 		return false;
 	}
-	if ( FreeLibrary( ( HMODULE )pLibrary->pNativeHandle ) == FALSE ) {
+	if ( FreeLibrary( static_cast<HMODULE>(pLibrary->pNativeHandle) ) == FALSE ) {
 		return false;
 	}
 	pLibrary->pNativeHandle = nullptr;
@@ -98,6 +98,6 @@ bool SIRDynamicLibrary::getLastError( char *szOutput, size_t nCapacity ) noexcep
 		return false;
 	}
 	const DWORD nLength = FormatMessageA( FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, nError, 0, szOutput,
-	                                      ( DWORD )nCapacity, nullptr );
+	                                      static_cast<DWORD>(nCapacity), nullptr );
 	return nLength != 0;
 }

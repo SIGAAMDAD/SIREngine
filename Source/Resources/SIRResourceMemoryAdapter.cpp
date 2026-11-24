@@ -23,9 +23,9 @@ SIRResourceMemoryAdapter::SIRResourceMemoryAdapter( void ) noexcept : m_pHeaps{}
 {
 }
 
-bool SIRResourceMemoryAdapter::bindDomain( sirMemoryDomain_t eDomain, SIRGeneralHeap *pHeap ) noexcept
+bool SIRResourceMemoryAdapter::bindDomain( SIRMemoryDomain eDomain, SIRGeneralHeap *pHeap ) noexcept
 {
-	if ( eDomain >= SIR_MEMORY_DOMAIN_COUNT || pHeap == nullptr || m_pHeaps[eDomain] != nullptr ||
+	if ( eDomain >= SIRMemoryDomain::SIR_MEMORY_DOMAIN_COUNT || pHeap == nullptr || m_pHeaps[eDomain] != nullptr ||
 	     !pHeap->isConfiguredForDomain( eDomain ) ) {
 		return false;
 	}
@@ -41,25 +41,25 @@ SIRResourceAllocator SIRResourceMemoryAdapter::getAllocator( void ) noexcept
 void *SIRResourceMemoryAdapter::allocate( void *pContext, uint64_t nBytes, uint32_t nAlignment, uint32_t nDomain ) noexcept
 {
 	if ( pContext == nullptr || nBytes == 0 || nBytes > SIZE_MAX || nAlignment == 0 || ( nAlignment & ( nAlignment - 1 ) ) != 0 ||
-	     nDomain >= SIR_MEMORY_DOMAIN_COUNT ) {
+	     nDomain >= SIRMemoryDomain::SIR_MEMORY_DOMAIN_COUNT ) {
 		return nullptr;
 	}
-	SIRResourceMemoryAdapter *pAdapter = ( SIRResourceMemoryAdapter * )pContext;
+	SIRResourceMemoryAdapter *pAdapter = static_cast<SIRResourceMemoryAdapter *>(pContext);
 	SIRGeneralHeap *pHeap = pAdapter->m_pHeaps[nDomain];
-	return pHeap != nullptr ? pHeap->allocAligned( ( size_t )nBytes, ( size_t )nAlignment ) : nullptr;
+	return pHeap != nullptr ? pHeap->allocAligned( static_cast<size_t>(nBytes), static_cast<size_t>(nAlignment) ) : nullptr;
 }
 
 void SIRResourceMemoryAdapter::release( void *pContext, void *pData, uint64_t nBytes, uint32_t nAlignment, uint32_t nDomain ) noexcept
 {
-	( void )nBytes;
-	( void )nAlignment;
+	static_cast<void>(nBytes);
+	static_cast<void>(nAlignment);
 	if ( pData == nullptr ) {
 		return;
 	}
-	if ( pContext == nullptr || nDomain >= SIR_MEMORY_DOMAIN_COUNT ) {
+	if ( pContext == nullptr || nDomain >= SIRMemoryDomain::SIR_MEMORY_DOMAIN_COUNT ) {
 		abort();
 	}
-	SIRResourceMemoryAdapter *pAdapter = ( SIRResourceMemoryAdapter * )pContext;
+	SIRResourceMemoryAdapter *pAdapter = static_cast<SIRResourceMemoryAdapter *>(pContext);
 	SIRGeneralHeap *pHeap = pAdapter->m_pHeaps[nDomain];
 	if ( pHeap == nullptr || !pHeap->owns( pData ) || !pHeap->tryFree( pData ) ) {
 		abort();

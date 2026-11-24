@@ -39,7 +39,7 @@ bool SIRPlatformUtils::releaseVirtualMemory( void *pAddress, size_t nBytes ) noe
 {
 	return SIRVirtualMemory::release( pAddress, nBytes );
 }
-bool SIRPlatformUtils::protectVirtualMemory( void *pAddress, size_t nBytes, sirMemoryProtection_t eProtection ) noexcept
+bool SIRPlatformUtils::protectVirtualMemory( void *pAddress, size_t nBytes, SIRMemoryProtection eProtection ) noexcept
 {
 	return SIRVirtualMemory::protect( pAddress, nBytes, eProtection );
 }

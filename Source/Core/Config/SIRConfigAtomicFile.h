@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRCONFIGATOMICFILE_H__
-#define __SIRENGINE_SIRCONFIGATOMICFILE_H__
+#ifndef __SIR_CONFIGATOMICFILE_H__
+#define __SIR_CONFIGATOMICFILE_H__
 
 #include <Core/SIRPCH.h>
 #include <Core/Config/SIRConfigTypes.h>
@@ -39,15 +39,15 @@ public:
 
 	sirConfigSink_t getSink( void ) noexcept;
 
-	sirConfigResult_t open( const char *pszTargetPath, const char *pszTempPath, uint64_t nMaxBytes ) noexcept;
-	sirConfigResult_t commit( void ) noexcept;
+	SIRConfigResult open( const char *pszTargetPath, const char *pszTempPath, uint64_t nMaxBytes ) noexcept;
+	SIRConfigResult commit( void ) noexcept;
 	void cancel( void ) noexcept;
 
-	static sirConfigResult_t read( const char *pszPath, uint8_t *pBytes, uint32_t nCapacity, uint32_t *pRead ) noexcept;
+	static SIRConfigResult read( const char *pszPath, uint8_t *pBytes, uint32_t nCapacity, uint32_t *pRead ) noexcept;
 
 protected:
 private:
-	static sirConfigResult_t sinkWrite( void *pContext, const uint8_t *pBytes, uint64_t nBytes ) noexcept;
+	static SIRConfigResult sinkWrite( void *pContext, const uint8_t *pBytes, uint64_t nBytes ) noexcept;
 
 	SIRPlatformFile m_File;
 	const char *m_pszTargetPath;
@@ -58,4 +58,4 @@ private:
 	bool m_bFailed;
 };
 
-#endif // __SIRENGINE_SIRCONFIGATOMICFILE_H__
+#endif // __SIR_CONFIGATOMICFILE_H__

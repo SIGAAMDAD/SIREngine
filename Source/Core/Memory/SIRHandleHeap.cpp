@@ -16,7 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/Memory/Allocators/SIRHandleHeap.h>
 #include <Core/Memory/SIRMemoryManager.h>
-#include <Core/Memory/SIRMemoryUtils.h>
+#include <Core/SIRMath.h>
 #include <Core/Memory/SIRMemorySegment.h>
 
 #include <cstring>
@@ -33,7 +33,7 @@ SIRHandleHeap::SIRHandleHeap( void )
 uint64_t SIRHandleHeap::getRequiredMetadataBytes( uint32_t nMaxHandles )
 {
 	return nMaxHandles == 0 ? 0
-	                        : ( ( uint64_t )( nMaxHandles ) ) *
+	                        : static_cast<uint64_t>( nMaxHandles ) *
 	                                  ( sizeof( sirHandleDesc_t ) + sizeof( sirHandleCold_t ) + sizeof( sirHandleHeapExtent_t ) ) +
 	                              sizeof( sirHandleHeapExtent_t ) + 32;
 }
@@ -45,11 +45,11 @@ bool SIRHandleHeap::init( SIRMemorySegment *pSegment, uint32_t nMaxHandles )
 		return false;
 	}
 	SIRMemoryManager *pManager = pSegment->getManager();
-	const uint64_t nCapacity = ( ( uint64_t )( nMaxHandles ) );
+	const uint64_t nCapacity = static_cast<uint64_t>( nMaxHandles );
 	sirHandleDesc_t *pHandles =
-	    ( ( sirHandleDesc_t * )( pManager->allocateMetadata( nCapacity * sizeof( sirHandleDesc_t ), alignof( sirHandleDesc_t ) ) ) );
+	    ( static_cast<sirHandleDesc_t *>(  pManager->allocateMetadata( nCapacity * sizeof( sirHandleDesc_t ), alignof( sirHandleDesc_t ) )  ) );
 	sirHandleCold_t *pCold =
-	    ( ( sirHandleCold_t * )( pManager->allocateMetadata( nCapacity * sizeof( sirHandleCold_t ), alignof( sirHandleCold_t ) ) ) );
+	    ( static_cast<sirHandleCold_t *>(  pManager->allocateMetadata( nCapacity * sizeof( sirHandleCold_t ), alignof( sirHandleCold_t ) )  ) );
 	sirHandleHeapExtent_t *pExtents = ( ( sirHandleHeapExtent_t * )( pManager->allocateMetadata(
 	    ( nCapacity + 1 ) * sizeof( sirHandleHeapExtent_t ), alignof( sirHandleHeapExtent_t ) ) ) );
 	if ( pHandles == nullptr || pCold == nullptr || pExtents == nullptr ) {
@@ -69,13 +69,13 @@ bool SIRHandleHeap::init( SIRMemorySegment *pSegment, uint32_t nMaxHandles )
 	m_nAddressRoot = SIR_HANDLE_NONE;
 	m_nSizeRoot = SIR_HANDLE_NONE;
 	m_pSegment = pSegment;
-	m_pBase = ( ( uint8_t * )( pSegment->getBase() ) );
+	m_pBase = static_cast<uint8_t *>(  pSegment->getBase()  );
 	m_pHandles = pHandles;
 	m_pCold = pCold;
 	m_pExtents = pExtents;
 	m_nMaxHandles = nMaxHandles;
 	m_nExtentCapacity = nMaxHandles + 1;
-	m_nCapacity = ( ( uint32_t )( pSegment->getReservedBytes() ) );
+	m_nCapacity = static_cast<uint32_t>(  pSegment->getReservedBytes()  );
 	return true;
 }
 
@@ -179,7 +179,7 @@ void SIRHandleHeap::updateHeight( uint32_t nNode )
 	sirTreeLinks_t& links = getLinks<bSizeTree>( nNode );
 	const uint8_t nLeft = treeHeight<bSizeTree>( links.nLeft );
 	const uint8_t nRight = treeHeight<bSizeTree>( links.nRight );
-	links.nHeight = ( ( uint8_t )( ( nLeft > nRight ? nLeft : nRight ) + 1 ) );
+	links.nHeight = static_cast<uint8_t>(  ( nLeft > nRight ? nLeft : nRight ) + 1  );
 }
 
 template <bool bSizeTree>
@@ -239,7 +239,7 @@ void SIRHandleHeap::rebalance( uint32_t nNode )
 		const uint8_t nOldHeight = treeHeight<bSizeTree>( nNode );
 		updateHeight<bSizeTree>( nNode );
 		const sirTreeLinks_t& links = getLinks<bSizeTree>( nNode );
-		const int nBalance = ( ( int )( treeHeight<bSizeTree>( links.nLeft ) ) ) - ( ( int )( treeHeight<bSizeTree>( links.nRight ) ) );
+		const int nBalance = static_cast<int>(treeHeight<bSizeTree>( links.nLeft )) - static_cast<int>(treeHeight<bSizeTree>( links.nRight ));
 		if ( nBalance > 1 ) {
 			const sirTreeLinks_t& left = getLinks<bSizeTree>( links.nLeft );
 			if ( treeHeight<bSizeTree>( left.nRight ) > treeHeight<bSizeTree>( left.nLeft ) ) {
@@ -372,8 +372,8 @@ bool SIRHandleHeap::insertExtent( uint32_t nOffset, uint32_t nBytes )
 	}
 
 	const bool bMergePrevious =
-	    nPrevious != SIR_HANDLE_NONE && ( ( uint64_t )( m_pExtents[nPrevious].nOffset ) ) + m_pExtents[nPrevious].nBytes == nOffset;
-	const bool bMergeNext = nNext != SIR_HANDLE_NONE && ( ( uint64_t )( nOffset ) ) + nBytes == m_pExtents[nNext].nOffset;
+	    nPrevious != SIR_HANDLE_NONE && ( static_cast<uint64_t>( m_pExtents[nPrevious].nOffset ) ) + m_pExtents[nPrevious].nBytes == nOffset;
+	const bool bMergeNext = nNext != SIR_HANDLE_NONE && static_cast<uint64_t>( nOffset ) + nBytes == m_pExtents[nNext].nOffset;
 	if ( bMergePrevious ) {
 		// Offset of the left extent stays unchanged. Only its size index
 		// must be updated; retain its existing address-tree position.
@@ -409,8 +409,8 @@ bool SIRHandleHeap::insertExtent( uint32_t nOffset, uint32_t nBytes )
 uint32_t SIRHandleHeap::findFittingExtent( uint32_t nBytes, uint32_t nAlignment, uint32_t *pUserOffset, uint32_t *pBlockBytes ) const
 {
 	uint64_t nMinimum = 0;
-	if ( !SIR_IS_POWER_OF_TWO( 16 ) || ( uint64_t )( 16 ) > UINTPTR_MAX ||
-	     ( uint64_t )( nBytes ) > UINTPTR_MAX - ( ( uint64_t )( 16 ) - 1 ) ) {
+	if ( !SIR_IS_POWER_OF_TWO( 16 ) || static_cast<uint64_t>( 16 ) > UINTPTR_MAX ||
+	     static_cast<uint64_t>( nBytes ) > UINTPTR_MAX - ( static_cast<uint64_t>( 16 ) - 1 ) ) {
 		return SIR_HANDLE_NONE;
 	}
 	nMinimum = SIR_ALIGN_UP( nBytes, 16 );
@@ -443,7 +443,7 @@ uint32_t SIRHandleHeap::findFittingExtent( uint32_t nBytes, uint32_t nAlignment,
 void SIRHandleHeap::trimLogicalTail( void )
 {
 	uint32_t nLast = treeLast<false>( m_nAddressRoot );
-	while ( nLast != SIR_HANDLE_NONE && ( ( uint64_t )( m_pExtents[nLast].nOffset ) ) + m_pExtents[nLast].nBytes == m_nHighWater ) {
+	while ( nLast != SIR_HANDLE_NONE && ( static_cast<uint64_t>( m_pExtents[nLast].nOffset ) ) + m_pExtents[nLast].nBytes == m_nHighWater ) {
 		m_nHighWater = m_pExtents[nLast].nOffset;
 		removeExtent( nLast );
 		recycleExtent( nLast );
@@ -455,23 +455,23 @@ bool SIRHandleHeap::prepareBlock( uint32_t nOffset, uint32_t nBytes, uint32_t nA
                                   uint32_t *pBlockBytes ) const
 {
 	uint64_t nAligned = 0;
-	if ( !SIR_IS_POWER_OF_TWO( nAlignment ) || ( uint64_t )( nAlignment ) > UINTPTR_MAX ||
-	     ( uint64_t )( ( ( uintptr_t )( m_pBase ) ) + nOffset ) > UINTPTR_MAX - ( ( uint64_t )( nAlignment )-1 ) ) {
+	if ( !SIR_IS_POWER_OF_TWO( nAlignment ) || static_cast<uint64_t>( nAlignment ) > UINTPTR_MAX ||
+	     ( uint64_t )( reinterpret_cast<uintptr_t>(m_pBase) + nOffset ) > UINTPTR_MAX - ( static_cast<uint64_t>( nAlignment )-1 ) ) {
 		return false;
 	}
-	nAligned = SIR_ALIGN_UP( ( ( uintptr_t )( m_pBase ) ) + nOffset, nAlignment );
-	const uint64_t nUserOffset = nAligned - ( ( uintptr_t )( m_pBase ) );
+	nAligned = SIR_ALIGN_UP( reinterpret_cast<uintptr_t>(m_pBase) + nOffset, nAlignment );
+	const uint64_t nUserOffset = nAligned - reinterpret_cast<uintptr_t>(m_pBase);
 	uint64_t nEnd = 0;
-	if ( !SIR_IS_POWER_OF_TWO( 16 ) || ( uint64_t )( 16 ) > UINTPTR_MAX ||
-	     ( uint64_t )( nUserOffset + nBytes ) > UINTPTR_MAX - ( ( uint64_t )( 16 ) - 1 ) ) {
+	if ( !SIR_IS_POWER_OF_TWO( 16 ) || static_cast<uint64_t>( 16 ) > UINTPTR_MAX ||
+	     static_cast<uint64_t>( nUserOffset + nBytes ) > UINTPTR_MAX - ( static_cast<uint64_t>( 16 ) - 1 ) ) {
 		return false;
 	}
 	nEnd = SIR_ALIGN_UP( nUserOffset + nBytes, 16 );
 	if ( nEnd > m_nCapacity ) {
 		return false;
 	}
-	*pUserOffset = ( ( uint32_t )( nUserOffset ) );
-	*pBlockBytes = ( ( uint32_t )( nEnd - nOffset ) );
+	*pUserOffset = static_cast<uint32_t>( nUserOffset );
+	*pBlockBytes = static_cast<uint32_t>( nEnd - nOffset );
 	return true;
 }
 
@@ -492,20 +492,20 @@ void *SIRHandleHeap::alloc( uint32_t nBytes, uint32_t nAlignment, sirMemoryHandl
 		if ( !prepareBlock( nBlockOffset, nBytes, nAlignment, &nUserOffset, &nBlockBytes ) ) {
 			return nullptr;
 		}
-		const uint64_t nEnd = ( ( uint64_t )( nBlockOffset ) ) + nBlockBytes;
+		const uint64_t nEnd = static_cast<uint64_t>( nBlockOffset ) + nBlockBytes;
 		if ( nEnd > m_nCommitted ) {
 			uint64_t nTarget = 0;
-			if ( !SIR_IS_POWER_OF_TWO( m_pSegment->getPageSize() ) || ( uint64_t )( m_pSegment->getPageSize() ) > UINTPTR_MAX ||
-			     ( uint64_t )( nEnd ) > UINTPTR_MAX - ( ( uint64_t )( m_pSegment->getPageSize() ) - 1 ) ) {
+			if ( !SIR_IS_POWER_OF_TWO( m_pSegment->getPageSize() ) || static_cast<uint64_t>(  m_pSegment->getPageSize()  ) > UINTPTR_MAX ||
+			     static_cast<uint64_t>( nEnd ) > UINTPTR_MAX - ( ( uint64_t )( m_pSegment->getPageSize() ) - 1 ) ) {
 				return nullptr;
 			}
 			nTarget = SIR_ALIGN_UP( nEnd, m_pSegment->getPageSize() );
 			if ( nTarget > m_nCapacity || !m_pSegment->commit( m_nCommitted, nTarget - m_nCommitted ) ) {
 				return nullptr;
 			}
-			m_nCommitted = ( ( uint32_t )( nTarget ) );
+			m_nCommitted = static_cast<uint32_t>( nTarget );
 		}
-		m_nHighWater = ( ( uint32_t )( nEnd ) );
+		m_nHighWater = static_cast<uint32_t>( nEnd );
 	} else {
 		sirHandleHeapExtent_t& extent = m_pExtents[nChosenExtent];
 		removeExtent( nChosenExtent );
@@ -570,7 +570,7 @@ bool SIRHandleHeap::free( sirMemoryHandle_t handle )
 	}
 	const uint32_t nOffset = pDesc->nBlockOffset;
 	const uint32_t nBytes = m_pCold[handle.nIndex].nBlockBytes;
-	if ( ( ( uint64_t )( nOffset ) ) + nBytes == m_nHighWater ) {
+	if ( static_cast<uint64_t>( nOffset ) + nBytes == m_nHighWater ) {
 		// Tail blocks require no AVL insertion: shrink high water directly,
 		// then consume preceding free extents in address order.
 		m_nHighWater = nOffset;
@@ -671,17 +671,17 @@ bool SIRHandleHeap::compact( void )
 	for ( uint32_t i = nSortHead; i != SIR_HANDLE_NONE; i = m_pCold[i].nNextFree ) {
 		const sirHandleDesc_t& desc = m_pHandles[i];
 		const sirHandleCold_t& cold = m_pCold[i];
-		const uint64_t nOldEnd = ( ( uint64_t )( desc.nBlockOffset ) ) + cold.nBlockBytes;
+		const uint64_t nOldEnd = static_cast<uint64_t>( desc.nBlockOffset ) + cold.nBlockBytes;
 		if ( desc.nBlockOffset < nPreviousEnd || nOldEnd > m_nHighWater || desc.nUserOffset < desc.nBlockOffset ||
-		     ( ( uint64_t )( desc.nUserOffset ) ) + cold.nPayloadBytes > nOldEnd ) {
+		     static_cast<uint64_t>( desc.nUserOffset ) + cold.nPayloadBytes > nOldEnd ) {
 			return false;
 		}
-		nPreviousEnd = ( ( uint32_t )( nOldEnd ) );
+		nPreviousEnd = static_cast<uint32_t>( nOldEnd );
 		if ( ( desc.nStatePin >> 1 ) == 0 ) {
 			uint32_t nUser = 0;
 			uint32_t nBlock = 0;
 			if ( prepareBlock( nPreflightCursor, cold.nPayloadBytes, cold.nAlignment, &nUser, &nBlock ) &&
-			     ( ( uint64_t )( nPreflightCursor ) ) + nBlock <= nOldEnd ) {
+			     static_cast<uint64_t>( nPreflightCursor ) + nBlock <= nOldEnd ) {
 				nPreflightCursor += nBlock;
 				continue;
 			}
@@ -689,7 +689,7 @@ bool SIRHandleHeap::compact( void )
 		if ( desc.nBlockOffset > nPreflightCursor ) {
 			++nPreflightGaps;
 		}
-		nPreflightCursor = ( ( uint32_t )( nOldEnd ) );
+		nPreflightCursor = static_cast<uint32_t>( nOldEnd );
 	}
 	if ( nPreflightGaps > m_nExtentCapacity ) {
 		return false;
@@ -707,7 +707,7 @@ bool SIRHandleHeap::compact( void )
 		uint32_t nNewUser = 0;
 		uint32_t nNewBytes = 0;
 		if ( !prepareBlock( nCursor, cold.nPayloadBytes, cold.nAlignment, &nNewUser, &nNewBytes ) ||
-		     ( ( uint64_t )( nCursor ) ) + nNewBytes > nOldEnd ) {
+		     static_cast<uint64_t>( nCursor ) + nNewBytes > nOldEnd ) {
 			nCursor = nOldEnd;
 			continue;
 		}
@@ -743,8 +743,8 @@ bool SIRHandleHeap::trimUnusedPages( void )
 		return false;
 	}
 	uint64_t nTarget = 0;
-	if ( !SIR_IS_POWER_OF_TWO( m_pSegment->getPageSize() ) || ( uint64_t )( m_pSegment->getPageSize() ) > UINTPTR_MAX ||
-	     ( uint64_t )( m_nHighWater ) > UINTPTR_MAX - ( ( uint64_t )( m_pSegment->getPageSize() ) - 1 ) ) {
+	if ( !SIR_IS_POWER_OF_TWO( m_pSegment->getPageSize() ) || static_cast<uint64_t>(  m_pSegment->getPageSize()  ) > UINTPTR_MAX ||
+	     static_cast<uint64_t>( m_nHighWater ) > UINTPTR_MAX - ( ( uint64_t )( m_pSegment->getPageSize() ) - 1 ) ) {
 		return false;
 	}
 	nTarget = SIR_ALIGN_UP( m_nHighWater, m_pSegment->getPageSize() );
@@ -754,7 +754,7 @@ bool SIRHandleHeap::trimUnusedPages( void )
 	if ( !m_pSegment->decommit( nTarget, m_nCommitted - nTarget ) ) {
 		return false;
 	}
-	m_nCommitted = ( ( uint32_t )( nTarget ) );
+	m_nCommitted = static_cast<uint32_t>( nTarget );
 	return true;
 }
 

@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRRESOURCEVIEWS_H__
-#define __SIRENGINE_SIRRESOURCEVIEWS_H__
+#ifndef __SIR_RESOURCEVIEWS_H__
+#define __SIR_RESOURCEVIEWS_H__
 
 #include <Core/SIRPCH.h>
 
@@ -151,7 +151,7 @@ typedef sirTimeSeriesDesc_t SIRTimeSeriesDesc;
 class SIRBlobResourceView : public SIRResourceView
 {
 public:
-	static constexpr SIRResourceKind RESOURCE_KIND = SIR_RESOURCE_KIND_BLOB;
+	static constexpr SIRResourceKind RESOURCE_KIND = SIRResourceKind::SIR_RESOURCE_KIND_BLOB;
 	explicit SIRBlobResourceView( const SIRResourceView& rView ) noexcept : SIRResourceView( rView )
 	{
 	}
@@ -161,7 +161,7 @@ public:
 class SIRImageResourceView : public SIRResourceView
 {
 public:
-	static constexpr SIRResourceKind RESOURCE_KIND = SIR_RESOURCE_KIND_IMAGE;
+	static constexpr SIRResourceKind RESOURCE_KIND = SIRResourceKind::SIR_RESOURCE_KIND_IMAGE;
 	explicit SIRImageResourceView( const SIRResourceView& rView ) noexcept : SIRResourceView( rView )
 	{
 	}
@@ -172,7 +172,7 @@ public:
 class SIRGeometryResourceView : public SIRResourceView
 {
 public:
-	static constexpr SIRResourceKind RESOURCE_KIND = SIR_RESOURCE_KIND_GEOMETRY;
+	static constexpr SIRResourceKind RESOURCE_KIND = SIRResourceKind::SIR_RESOURCE_KIND_GEOMETRY;
 	explicit SIRGeometryResourceView( const SIRResourceView& rView ) noexcept : SIRResourceView( rView )
 	{
 	}
@@ -185,7 +185,7 @@ public:
 class SIRFieldResourceView : public SIRResourceView
 {
 public:
-	static constexpr SIRResourceKind RESOURCE_KIND = SIR_RESOURCE_KIND_FIELD;
+	static constexpr SIRResourceKind RESOURCE_KIND = SIRResourceKind::SIR_RESOURCE_KIND_FIELD;
 	explicit SIRFieldResourceView( const SIRResourceView& rView ) noexcept : SIRResourceView( rView )
 	{
 	}
@@ -196,7 +196,7 @@ public:
 class SIRTableResourceView : public SIRResourceView
 {
 public:
-	static constexpr SIRResourceKind RESOURCE_KIND = SIR_RESOURCE_KIND_TABLE;
+	static constexpr SIRResourceKind RESOURCE_KIND = SIRResourceKind::SIR_RESOURCE_KIND_TABLE;
 	explicit SIRTableResourceView( const SIRResourceView& rView ) noexcept : SIRResourceView( rView )
 	{
 	}
@@ -207,7 +207,7 @@ public:
 class SIRGraphResourceView : public SIRResourceView
 {
 public:
-	static constexpr SIRResourceKind RESOURCE_KIND = SIR_RESOURCE_KIND_GRAPH;
+	static constexpr SIRResourceKind RESOURCE_KIND = SIRResourceKind::SIR_RESOURCE_KIND_GRAPH;
 	explicit SIRGraphResourceView( const SIRResourceView& rView ) noexcept : SIRResourceView( rView )
 	{
 	}
@@ -219,7 +219,7 @@ public:
 class SIRHierarchyResourceView : public SIRResourceView
 {
 public:
-	static constexpr SIRResourceKind RESOURCE_KIND = SIR_RESOURCE_KIND_HIERARCHY;
+	static constexpr SIRResourceKind RESOURCE_KIND = SIRResourceKind::SIR_RESOURCE_KIND_HIERARCHY;
 	explicit SIRHierarchyResourceView( const SIRResourceView& rView ) noexcept : SIRResourceView( rView )
 	{
 	}
@@ -231,7 +231,7 @@ public:
 class SIRTimeSeriesResourceView : public SIRResourceView
 {
 public:
-	static constexpr SIRResourceKind RESOURCE_KIND = SIR_RESOURCE_KIND_TIME_SERIES;
+	static constexpr SIRResourceKind RESOURCE_KIND = SIRResourceKind::SIR_RESOURCE_KIND_TIME_SERIES;
 	explicit SIRTimeSeriesResourceView( const SIRResourceView& rView ) noexcept : SIRResourceView( rView )
 	{
 	}
@@ -242,7 +242,7 @@ public:
 class SIRSampleStreamResourceView : public SIRResourceView
 {
 public:
-	static constexpr SIRResourceKind RESOURCE_KIND = SIR_RESOURCE_KIND_SAMPLE_STREAM;
+	static constexpr SIRResourceKind RESOURCE_KIND = SIRResourceKind::SIR_RESOURCE_KIND_SAMPLE_STREAM;
 	explicit SIRSampleStreamResourceView( const SIRResourceView& rView ) noexcept : SIRResourceView( rView )
 	{
 	}
@@ -253,7 +253,7 @@ public:
 class SIRCompositionResourceView : public SIRResourceView
 {
 public:
-	static constexpr SIRResourceKind RESOURCE_KIND = SIR_RESOURCE_KIND_COMPOSITION;
+	static constexpr SIRResourceKind RESOURCE_KIND = SIRResourceKind::SIR_RESOURCE_KIND_COMPOSITION;
 	explicit SIRCompositionResourceView( const SIRResourceView& rView ) noexcept : SIRResourceView( rView )
 	{
 	}
@@ -265,16 +265,16 @@ template <class T>
 SIRResourceResult tryCastResourceView( const SIRResourceView& rView, T *pOut ) noexcept
 {
 	if ( pOut == nullptr ) {
-		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	if ( !rView.isValid() ) {
-		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_HANDLE;
 	}
 	if ( rView.getKind() != T::RESOURCE_KIND ) {
-		return SIR_RESOURCE_RESULT_TYPE_MISMATCH;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_TYPE_MISMATCH;
 	}
 	*pOut = T( rView );
-	return SIR_RESOURCE_RESULT_SUCCESS;
+	return SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS;
 }
 
-#endif // __SIRENGINE_SIRRESOURCEVIEWS_H__
+#endif // __SIR_RESOURCEVIEWS_H__

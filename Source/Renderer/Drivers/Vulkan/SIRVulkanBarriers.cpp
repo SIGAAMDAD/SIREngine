@@ -59,119 +59,119 @@ bool sirVulkanImageAccessScope( VkImageLayout eLayout, VkPipelineStageFlags2 *pS
 	}
 }
 
-static sirGraphicsResult_t sirVulkanBarrierState( sirGraphicsState_t eState, const sirVulkanImage_t *pImage,
+static SIRGraphicsResult sirVulkanBarrierState( SIRGraphicsState eState, const sirVulkanImage_t *pImage,
                                                   VkImageLayout *pLayout ) noexcept
 {
 	if ( pImage == nullptr || pLayout == nullptr ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	switch ( eState ) {
-	case SIR_GRAPHICS_STATE_UNDEFINED:
+	case SIRGraphicsState::SIR_GRAPHICS_STATE_UNDEFINED:
 		*pLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		return SIR_GRAPHICS_SUCCESS;
-	case SIR_GRAPHICS_STATE_COMMON:
+		return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
+	case SIRGraphicsState::SIR_GRAPHICS_STATE_COMMON:
 		*pLayout = VK_IMAGE_LAYOUT_GENERAL;
-		return SIR_GRAPHICS_SUCCESS;
-	case SIR_GRAPHICS_STATE_SHADER_READ:
+		return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
+	case SIRGraphicsState::SIR_GRAPHICS_STATE_SHADER_READ:
 		if ( ( pImage->nUsage & VK_IMAGE_USAGE_SAMPLED_BIT ) == 0 ) {
-			return SIR_GRAPHICS_INVALID_ARGUMENT;
+			return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
 		*pLayout = sirVulkanImageAspectMask( pImage->eFormat ) == VK_IMAGE_ASPECT_COLOR_BIT
 		               ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 		               : VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-		return SIR_GRAPHICS_SUCCESS;
-	case SIR_GRAPHICS_STATE_SHADER_WRITE:
+		return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
+	case SIRGraphicsState::SIR_GRAPHICS_STATE_SHADER_WRITE:
 		if ( sirVulkanImageAspectMask( pImage->eFormat ) != VK_IMAGE_ASPECT_COLOR_BIT ||
 		     ( pImage->nUsage & VK_IMAGE_USAGE_STORAGE_BIT ) == 0 ) {
-			return SIR_GRAPHICS_INVALID_ARGUMENT;
+			return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
 		*pLayout = VK_IMAGE_LAYOUT_GENERAL;
-		return SIR_GRAPHICS_SUCCESS;
-	case SIR_GRAPHICS_STATE_COLOR_ATTACHMENT:
+		return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
+	case SIRGraphicsState::SIR_GRAPHICS_STATE_COLOR_ATTACHMENT:
 		if ( sirVulkanImageAspectMask( pImage->eFormat ) != VK_IMAGE_ASPECT_COLOR_BIT ||
 		     ( pImage->nUsage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT ) == 0 ) {
-			return SIR_GRAPHICS_INVALID_ARGUMENT;
+			return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
 		*pLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
-		return SIR_GRAPHICS_SUCCESS;
-	case SIR_GRAPHICS_STATE_DEPTH_WRITE:
+		return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
+	case SIRGraphicsState::SIR_GRAPHICS_STATE_DEPTH_WRITE:
 		if ( sirVulkanImageAspectMask( pImage->eFormat ) == VK_IMAGE_ASPECT_COLOR_BIT ||
 		     ( pImage->nUsage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT ) == 0 ) {
-			return SIR_GRAPHICS_INVALID_ARGUMENT;
+			return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
 		*pLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-		return SIR_GRAPHICS_SUCCESS;
-	case SIR_GRAPHICS_STATE_DEPTH_READ:
+		return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
+	case SIRGraphicsState::SIR_GRAPHICS_STATE_DEPTH_READ:
 		if ( sirVulkanImageAspectMask( pImage->eFormat ) == VK_IMAGE_ASPECT_COLOR_BIT ||
 		     ( pImage->nUsage & ( VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT ) ) == 0 ) {
-			return SIR_GRAPHICS_INVALID_ARGUMENT;
+			return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
 		*pLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-		return SIR_GRAPHICS_SUCCESS;
-	case SIR_GRAPHICS_STATE_COPY_SOURCE:
+		return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
+	case SIRGraphicsState::SIR_GRAPHICS_STATE_COPY_SOURCE:
 		if ( ( pImage->nUsage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT ) == 0 ) {
-			return SIR_GRAPHICS_INVALID_ARGUMENT;
+			return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
 		*pLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-		return SIR_GRAPHICS_SUCCESS;
-	case SIR_GRAPHICS_STATE_COPY_DESTINATION:
+		return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
+	case SIRGraphicsState::SIR_GRAPHICS_STATE_COPY_DESTINATION:
 		if ( ( pImage->nUsage & VK_IMAGE_USAGE_TRANSFER_DST_BIT ) == 0 ) {
-			return SIR_GRAPHICS_INVALID_ARGUMENT;
+			return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
 		*pLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-		return SIR_GRAPHICS_SUCCESS;
+		return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 	default:
-		return SIR_GRAPHICS_UNSUPPORTED;
+		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
 }
 
-sirGraphicsResult_t sirVulkanPlanImageBarrier( const sirGraphicsBarrier_t& barrier, const sirVulkanImage_t *pImage,
+SIRGraphicsResult sirVulkanPlanImageBarrier( const sirGraphicsBarrier_t& barrier, const sirVulkanImage_t *pImage,
                                                sirVulkanImageBarrier_t *pNative ) noexcept
 {
 	if ( pNative == nullptr ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	*pNative = {};
 	if ( pImage == nullptr ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( barrier.eType != SIR_GRAPHICS_BARRIER_TRANSITION && barrier.eType != SIR_GRAPHICS_BARRIER_UAV ) {
-		return SIR_GRAPHICS_UNSUPPORTED;
+	if ( barrier.eType != SIRGraphicsBarrierType::SIR_GRAPHICS_BARRIER_TRANSITION && barrier.eType != SIRGraphicsBarrierType::SIR_GRAPHICS_BARRIER_UAV ) {
+		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
 	if ( !sirGraphicsTextureBarrierRangeValid( barrier, pImage->nMips, pImage->nLayers ) ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	VkImageLayout eBefore = VK_IMAGE_LAYOUT_UNDEFINED;
 	VkImageLayout eAfter = VK_IMAGE_LAYOUT_UNDEFINED;
-	const sirGraphicsResult_t eBeforeResult = sirVulkanBarrierState( barrier.eBefore, pImage, &eBefore );
-	if ( eBeforeResult != SIR_GRAPHICS_SUCCESS ) {
+	const SIRGraphicsResult eBeforeResult = sirVulkanBarrierState( barrier.eBefore, pImage, &eBefore );
+	if ( eBeforeResult != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 		return eBeforeResult;
 	}
-	const sirGraphicsResult_t eAfterResult = sirVulkanBarrierState( barrier.eAfter, pImage, &eAfter );
-	if ( eAfterResult != SIR_GRAPHICS_SUCCESS ) {
+	const SIRGraphicsResult eAfterResult = sirVulkanBarrierState( barrier.eAfter, pImage, &eAfter );
+	if ( eAfterResult != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 		return eAfterResult;
 	}
 	if ( eAfter == VK_IMAGE_LAYOUT_UNDEFINED ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( barrier.eType == SIR_GRAPHICS_BARRIER_UAV ) {
+	if ( barrier.eType == SIRGraphicsBarrierType::SIR_GRAPHICS_BARRIER_UAV ) {
 		if ( eBefore != VK_IMAGE_LAYOUT_GENERAL || eAfter != VK_IMAGE_LAYOUT_GENERAL ||
-		     barrier.eBefore != SIR_GRAPHICS_STATE_SHADER_WRITE || barrier.eAfter != SIR_GRAPHICS_STATE_SHADER_WRITE ) {
-			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		     barrier.eBefore != SIRGraphicsState::SIR_GRAPHICS_STATE_SHADER_WRITE || barrier.eAfter != SIRGraphicsState::SIR_GRAPHICS_STATE_SHADER_WRITE ) {
+			return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
 	} else if ( eBefore == eAfter ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	sirVulkanImageBarrier_t native = {};
+	sirVulkanImageBarrier_t native {};
 	native.eBefore = eBefore;
 	native.eAfter = eAfter;
 	native.nMip = barrier.nBaseMip;
 	native.nLayer = barrier.nBaseLayer;
 	native.nMipCount = barrier.nMipCount;
 	native.nLayerCount = barrier.nLayerCount;
-	native.bUav = barrier.eType == SIR_GRAPHICS_BARRIER_UAV;
+	native.bUav = barrier.eType == SIRGraphicsBarrierType::SIR_GRAPHICS_BARRIER_UAV;
 	if ( !sirVulkanValidateNativeImageBarrier( pImage, native ) ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	pNative->eBefore = eBefore;
 	pNative->eAfter = eAfter;
@@ -179,63 +179,63 @@ sirGraphicsResult_t sirVulkanPlanImageBarrier( const sirGraphicsBarrier_t& barri
 	pNative->nLayer = barrier.nBaseLayer;
 	pNative->nMipCount = barrier.nMipCount;
 	pNative->nLayerCount = barrier.nLayerCount;
-	pNative->bUav = barrier.eType == SIR_GRAPHICS_BARRIER_UAV;
-	return SIR_GRAPHICS_SUCCESS;
+	pNative->bUav = barrier.eType == SIRGraphicsBarrierType::SIR_GRAPHICS_BARRIER_UAV;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t SIRVulkanCommandList::barrier( const sirGraphicsBarrier_t *pBarriers, uint32_t nCount ) noexcept
+SIRGraphicsResult SIRVulkanCommandList::barrier( const sirGraphicsBarrier_t *pBarriers, uint32_t nCount ) noexcept
 {
-	if ( m_eState != SIR_VULKAN_COMMAND_RECORDING || m_pOwner == nullptr ) {
-		return SIR_GRAPHICS_BUSY;
+	if ( m_eState != SIRVulkanCommandState::SIR_VULKAN_COMMAND_RECORDING || m_pOwner == nullptr ) {
+		return SIRGraphicsResult::SIR_GRAPHICS_BUSY;
 	}
 	if ( nCount == 0 ) {
-		return SIR_GRAPHICS_SUCCESS;
+		return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 	}
 	if ( pBarriers == nullptr ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( nCount > SIR_VULKAN_COPY_BATCH_CAPACITY - m_nOperationCount ) {
-		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+		return SIRGraphicsResult::SIR_GRAPHICS_CAPACITY_EXCEEDED;
 	}
 	// Prevalidate all handles and buffer access scopes before recording.
 	// Image layout transitions after earlier operations are revalidated
 	// against the ordered shadow state during submission.
 	for ( uint32_t iBarrier = 0; iBarrier < nCount; ++iBarrier ) {
 		const sirGraphicsBarrier_t& barrier = pBarriers[iBarrier];
-		if ( barrier.eType != SIR_GRAPHICS_BARRIER_TRANSITION && barrier.eType != SIR_GRAPHICS_BARRIER_UAV ) {
-			return SIR_GRAPHICS_UNSUPPORTED;
+		if ( barrier.eType != SIRGraphicsBarrierType::SIR_GRAPHICS_BARRIER_TRANSITION && barrier.eType != SIRGraphicsBarrierType::SIR_GRAPHICS_BARRIER_UAV ) {
+			return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 		}
-		if ( barrier.hResource.eType == SIR_GRAPHICS_HANDLE_BUFFER ) {
+		if ( barrier.hResource.eType == SIRGraphicsHandleType::SIR_GRAPHICS_HANDLE_BUFFER ) {
 			const sirVulkanGraphicsBufferSlot_t *pBuffer = m_pOwner->resolveBuffer( barrier.hResource );
 			if ( pBuffer == nullptr ) {
-				return SIR_GRAPHICS_INVALID_HANDLE;
+				return SIRGraphicsResult::SIR_GRAPHICS_INVALID_HANDLE;
 			}
 			if ( pBuffer->pMapped != nullptr ) {
-				return SIR_GRAPHICS_BUSY;
+				return SIRGraphicsResult::SIR_GRAPHICS_BUSY;
 			}
-			sirVulkanBufferBarrier_t native = {};
-			const sirGraphicsResult_t ePlan = sirVulkanPlanBufferBarrier( barrier, &pBuffer->native, &native );
-			if ( ePlan != SIR_GRAPHICS_SUCCESS ) {
+			sirVulkanBufferBarrier_t native {};
+			const SIRGraphicsResult ePlan = sirVulkanPlanBufferBarrier( barrier, &pBuffer->native, &native );
+			if ( ePlan != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 				return ePlan;
 			}
 			continue;
 		}
-		if ( barrier.hResource.eType != SIR_GRAPHICS_HANDLE_TEXTURE ||
+		if ( barrier.hResource.eType != SIRGraphicsHandleType::SIR_GRAPHICS_HANDLE_TEXTURE ||
 		     barrier.hResource.nDeviceGeneration != m_pOwner->m_nDeviceGeneration ||
 		     barrier.hResource.nSlot >= SIRVulkanRenderingDevice::SIR_VULKAN_TEXTURE_CAPACITY ) {
-			return SIR_GRAPHICS_INVALID_HANDLE;
+			return SIRGraphicsResult::SIR_GRAPHICS_INVALID_HANDLE;
 		}
 		const sirVulkanGraphicsImageSlot_t *pImage = &m_pOwner->m_szImages[barrier.hResource.nSlot];
 		if ( !pImage->bActive || pImage->nGeneration != barrier.hResource.nGeneration ) {
-			return SIR_GRAPHICS_INVALID_HANDLE;
+			return SIRGraphicsResult::SIR_GRAPHICS_INVALID_HANDLE;
 		}
 		if ( !sirGraphicsTextureBarrierRangeValid( barrier, pImage->native.nMips, pImage->native.nLayers ) ) {
-			return SIR_GRAPHICS_INVALID_ARGUMENT;
+			return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
 		if ( m_nOperationCount == 0 && iBarrier == 0 ) {
-			sirVulkanImageBarrier_t planned = {};
-			const sirGraphicsResult_t ePlan = sirVulkanPlanImageBarrier( barrier, &pImage->native, &planned );
-			if ( ePlan != SIR_GRAPHICS_SUCCESS ) {
+			sirVulkanImageBarrier_t planned {};
+			const SIRGraphicsResult ePlan = sirVulkanPlanImageBarrier( barrier, &pImage->native, &planned );
+			if ( ePlan != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 				return ePlan;
 			}
 		}
@@ -243,35 +243,35 @@ sirGraphicsResult_t SIRVulkanCommandList::barrier( const sirGraphicsBarrier_t *p
 	for ( uint32_t iBarrier = 0; iBarrier < nCount; ++iBarrier ) {
 		sirVulkanGraphicsOperation_t& operation = m_szOperations[m_nOperationCount++];
 		operation = {};
-		operation.eKind = pBarriers[iBarrier].hResource.eType == SIR_GRAPHICS_HANDLE_BUFFER ? SIR_VULKAN_GRAPHICS_BUFFER_BARRIER
-		                                                                                    : SIR_VULKAN_GRAPHICS_IMAGE_BARRIER;
+		operation.eKind = pBarriers[iBarrier].hResource.eType == SIRGraphicsHandleType::SIR_GRAPHICS_HANDLE_BUFFER ? SIRVulkanGraphicsOpKind::SIR_VULKAN_GRAPHICS_BUFFER_BARRIER
+		                                                                                    : SIRVulkanGraphicsOpKind::SIR_VULKAN_GRAPHICS_IMAGE_BARRIER;
 		operation.barrier = pBarriers[iBarrier];
 	}
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
-sirVulkanResult_t SIRVulkanDevice::submitImageBarrier( sirVulkanImage_t *pImage, const sirVulkanImageBarrier_t& barrier,
+SIRVulkanResult SIRVulkanDevice::submitImageBarrier( sirVulkanImage_t *pImage, const sirVulkanImageBarrier_t& barrier,
                                                        sirVulkanCompletion_t *pCompletion ) noexcept
 {
 	if ( pCompletion != nullptr ) {
 		*pCompletion = {};
 	}
 	if ( !m_bReady || m_bDeviceLost ) {
-		return SIR_VULKAN_INVALID_STATE;
+		return SIRVulkanResult::SIR_VULKAN_INVALID_STATE;
 	}
 	if ( pImage == nullptr || pCompletion == nullptr || pImage->hImage == VK_NULL_HANDLE || pImage->pOwnerAllocator != m_Allocator ||
 	     pImage->nDeviceSerial != m_nDeviceSerial || m_nLastTransferValue == UINT64_MAX ) {
-		return SIR_VULKAN_INVALID_ARGUMENT;
+		return SIRVulkanResult::SIR_VULKAN_INVALID_ARGUMENT;
 	}
 	if ( !sirVulkanValidateNativeImageBarrier( pImage, barrier ) ) {
-		return SIR_VULKAN_INVALID_ARGUMENT;
+		return SIRVulkanResult::SIR_VULKAN_INVALID_ARGUMENT;
 	}
 
 	uint64_t nCompleted = 0;
 	const VkResult ePoll = m_pfnGetSemaphoreCounterValue( m_Device, m_TransferTimeline, &nCompleted );
 	if ( ePoll != VK_SUCCESS ) {
 		m_bDeviceLost = ePoll == VK_ERROR_DEVICE_LOST;
-		return SIR_VULKAN_NATIVE_FAILURE;
+		return SIRVulkanResult::SIR_VULKAN_NATIVE_FAILURE;
 	}
 	sirVulkanTransferSlot_t *pSlot = nullptr;
 	for ( uint32_t iCheck = 0; iCheck < SIR_VULKAN_TRANSFER_SLOT_COUNT; ++iCheck ) {
@@ -283,25 +283,25 @@ sirVulkanResult_t SIRVulkanDevice::submitImageBarrier( sirVulkanImage_t *pImage,
 		}
 	}
 	if ( pSlot == nullptr ) {
-		return SIR_VULKAN_BUSY;
+		return SIRVulkanResult::SIR_VULKAN_BUSY;
 	}
 	const VkResult eReset = m_pfnResetCommandBuffer( pSlot->hCommandBuffer, 0 );
 	if ( eReset != VK_SUCCESS ) {
 		m_bDeviceLost = eReset == VK_ERROR_DEVICE_LOST;
-		return SIR_VULKAN_NATIVE_FAILURE;
+		return SIRVulkanResult::SIR_VULKAN_NATIVE_FAILURE;
 	}
-	VkCommandBufferBeginInfo begin = {};
+	VkCommandBufferBeginInfo begin {};
 	begin.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 	const VkResult eBegin = m_pfnBeginCommandBuffer( pSlot->hCommandBuffer, &begin );
 	if ( eBegin != VK_SUCCESS ) {
 		m_bDeviceLost = eBegin == VK_ERROR_DEVICE_LOST;
-		return SIR_VULKAN_NATIVE_FAILURE;
+		return SIRVulkanResult::SIR_VULKAN_NATIVE_FAILURE;
 	}
-	VkImageMemoryBarrier2 transition = {};
+	VkImageMemoryBarrier2 transition {};
 	transition.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
-	( void )sirVulkanImageAccessScope( barrier.eBefore, &transition.srcStageMask, &transition.srcAccessMask );
-	( void )sirVulkanImageAccessScope( barrier.eAfter, &transition.dstStageMask, &transition.dstAccessMask );
+	static_cast<void>(sirVulkanImageAccessScope( barrier.eBefore, &transition.srcStageMask, &transition.srcAccessMask ));
+	static_cast<void>(sirVulkanImageAccessScope( barrier.eAfter, &transition.dstStageMask, &transition.dstAccessMask ));
 	transition.oldLayout = barrier.eBefore;
 	transition.newLayout = barrier.eAfter;
 	transition.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -312,7 +312,7 @@ sirVulkanResult_t SIRVulkanDevice::submitImageBarrier( sirVulkanImage_t *pImage,
 	transition.subresourceRange.levelCount = barrier.nMipCount;
 	transition.subresourceRange.baseArrayLayer = barrier.nLayer;
 	transition.subresourceRange.layerCount = barrier.nLayerCount;
-	VkDependencyInfo dependency = {};
+	VkDependencyInfo dependency {};
 	dependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
 	dependency.imageMemoryBarrierCount = 1;
 	dependency.pImageMemoryBarriers = &transition;
@@ -320,18 +320,18 @@ sirVulkanResult_t SIRVulkanDevice::submitImageBarrier( sirVulkanImage_t *pImage,
 	const VkResult eEnd = m_pfnEndCommandBuffer( pSlot->hCommandBuffer );
 	if ( eEnd != VK_SUCCESS ) {
 		m_bDeviceLost = eEnd == VK_ERROR_DEVICE_LOST;
-		return SIR_VULKAN_NATIVE_FAILURE;
+		return SIRVulkanResult::SIR_VULKAN_NATIVE_FAILURE;
 	}
 	const uint64_t nNext = m_nLastTransferValue + 1;
-	VkCommandBufferSubmitInfo command = {};
+	VkCommandBufferSubmitInfo command {};
 	command.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
 	command.commandBuffer = pSlot->hCommandBuffer;
-	VkSemaphoreSubmitInfo signal = {};
+	VkSemaphoreSubmitInfo signal {};
 	signal.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
 	signal.semaphore = m_TransferTimeline;
 	signal.value = nNext;
 	signal.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-	VkSubmitInfo2 submission = {};
+	VkSubmitInfo2 submission {};
 	submission.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
 	submission.commandBufferInfoCount = 1;
 	submission.pCommandBufferInfos = &command;
@@ -340,17 +340,17 @@ sirVulkanResult_t SIRVulkanDevice::submitImageBarrier( sirVulkanImage_t *pImage,
 	const VkResult eSubmit = m_pfnQueueSubmit2( m_GraphicsQueue, 1, &submission, VK_NULL_HANDLE );
 	if ( eSubmit != VK_SUCCESS ) {
 		m_bDeviceLost = eSubmit == VK_ERROR_DEVICE_LOST;
-		return SIR_VULKAN_NATIVE_FAILURE;
+		return SIRVulkanResult::SIR_VULKAN_NATIVE_FAILURE;
 	}
 	m_nLastTransferValue = nNext;
 	pSlot->nLastValue = nNext;
 	pImage->nLastGpuUse = nNext;
 	for ( uint32_t iLayer = 0; iLayer < barrier.nLayerCount; ++iLayer ) {
 		for ( uint32_t iMip = 0; iMip < barrier.nMipCount; ++iMip ) {
-			( void )sirVulkanSetSubresourceLayout( pImage, barrier.nMip + iMip, barrier.nLayer + iLayer, barrier.eAfter );
+			static_cast<void>(sirVulkanSetSubresourceLayout( pImage, barrier.nMip + iMip, barrier.nLayer + iLayer, barrier.eAfter ));
 		}
 	}
 	pCompletion->nDeviceSerial = m_nDeviceSerial;
 	pCompletion->nValue = nNext;
-	return SIR_VULKAN_SUCCESS;
+	return SIRVulkanResult::SIR_VULKAN_SUCCESS;
 }

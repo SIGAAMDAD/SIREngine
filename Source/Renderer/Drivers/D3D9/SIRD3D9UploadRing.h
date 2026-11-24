@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRD3D9UPLOADRING_H__
-#define __SIRENGINE_SIRD3D9UPLOADRING_H__
+#ifndef __SIR_D3_D9_UPLOADRING_H__
+#define __SIR_D3_D9_UPLOADRING_H__
 
 #include <Core/SIRPCH.h>
 
@@ -47,11 +47,11 @@ typedef struct sirD3D9UploadRing_s
 static constexpr uint32_t SIR_D3D9_RING_DISCARD = 1;
 static constexpr uint32_t SIR_D3D9_RING_NOOVERWRITE = 2;
 
-sirGraphicsResult_t sirD3D9RingInitialize( sirD3D9UploadRing_t *pRing, uint32_t nCapacity ) noexcept;
-sirGraphicsResult_t sirD3D9RingReserve( sirD3D9UploadRing_t *pRing, uint32_t nBytes, uint32_t nAlignment,
+SIRGraphicsResult sirD3D9RingInitialize( sirD3D9UploadRing_t *pRing, uint32_t nCapacity ) noexcept;
+SIRGraphicsResult sirD3D9RingReserve( sirD3D9UploadRing_t *pRing, uint32_t nBytes, uint32_t nAlignment,
                                         sirD3D9UploadRange_t *pRange ) noexcept;
-sirGraphicsResult_t sirD3D9RingSubmit( sirD3D9UploadRing_t *pRing, uint64_t nSubmission ) noexcept;
-sirGraphicsResult_t sirD3D9RingComplete( sirD3D9UploadRing_t *pRing, uint64_t nSubmission ) noexcept;
+SIRGraphicsResult sirD3D9RingSubmit( sirD3D9UploadRing_t *pRing, uint64_t nSubmission ) noexcept;
+SIRGraphicsResult sirD3D9RingComplete( sirD3D9UploadRing_t *pRing, uint64_t nSubmission ) noexcept;
 void sirD3D9RingReset( sirD3D9UploadRing_t *pRing ) noexcept;
 
-#endif // __SIRENGINE_SIRD3D9UPLOADRING_H__
+#endif // __SIR_D3_D9_UPLOADRING_H__

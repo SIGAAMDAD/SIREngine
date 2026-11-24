@@ -37,7 +37,7 @@ class SIRColony
 	uint64_t m_nNextGeneration = 0;
 	static T *slot( Block *pBlock, uint32_t iIndex ) noexcept
 	{
-		return ( T * )( pBlock->szSlots + ( size_t )iIndex * sizeof( T ) );
+		return ( T * )( pBlock->szSlots + static_cast<size_t>(iIndex * sizeof(  T  )) );
 	}
 
 	void attachAvailable( Block *pBlock ) noexcept
@@ -66,7 +66,7 @@ class SIRColony
 	{
 		const uint64_t nVacant = ~nOccupied;
 #if defined( __clang__ ) || defined( __GNUC__ )
-		return ( uint32_t )__builtin_ctzll( nVacant );
+		return static_cast<uint32_t>(__builtin_ctzll( nVacant ));
 #else
 		uint32_t iBit = 0;
 		while ( ( nVacant & ( uint64_t( 1 ) << iBit ) ) == 0 ) {
@@ -78,7 +78,7 @@ class SIRColony
 	static uint32_t firstOccupiedBit( uint64_t nOccupied ) noexcept
 	{
 #if defined( __clang__ ) || defined( __GNUC__ )
-		return ( uint32_t )__builtin_ctzll( nOccupied );
+		return static_cast<uint32_t>(__builtin_ctzll( nOccupied ));
 #else
 		uint32_t iBit = 0;
 		while ( ( nOccupied & ( uint64_t( 1 ) << iBit ) ) == 0 ) {
@@ -105,17 +105,17 @@ public:
 	SIRColony& operator=( const SIRColony& ) = delete;
 
 	template <typename... Args>
-	sirContainerResult_t tryEmplace( T **ppValue, Args&&...args )
+	SIRContainerResult tryEmplace( T **ppValue, Args&&...args )
 	{
 		if ( ppValue == nullptr ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		if ( m_nSize == UINT32_MAX ) {
-			return SIR_CONTAINER_SIZE_OVERFLOW;
+			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
 		if constexpr ( TRACK_GENERATIONS ) {
 			if ( m_nNextGeneration == UINT64_MAX ) {
-				return SIR_CONTAINER_SIZE_OVERFLOW;
+				return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 			}
 		}
 		Block *pBlock = m_pAvailable;
@@ -123,8 +123,8 @@ public:
 		bool bNew = false;
 		if ( pBlock == nullptr ) {
 			void *pMemory = nullptr;
-			sirContainerResult_t eResult = SIRRawStorage::tryAllocate( m_pAllocator, sizeof( Block ), alignof( Block ), &pMemory );
-			if ( eResult != SIR_CONTAINER_OK ) {
+			SIRContainerResult eResult = SIRRawStorage::tryAllocate( m_pAllocator, sizeof( Block ), alignof( Block ), &pMemory );
+			if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 				return eResult;
 			}
 			pBlock = new ( pMemory ) Block{};
@@ -158,7 +158,7 @@ public:
 		}
 		++m_nSize;
 		*ppValue = pValue;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 	// Generation-aware handles are enabled only for tracked colony variants.
 	// Untracked colonies retain the original compact block representation.
@@ -168,13 +168,13 @@ public:
 		if ( pValue == nullptr ) {
 			return {};
 		}
-		const uintptr_t nAddress = ( uintptr_t )pValue;
+		const uintptr_t nAddress = reinterpret_cast<uintptr_t>(pValue);
 		for ( Block *pBlock = m_pFirst; pBlock != nullptr; pBlock = pBlock->pNext ) {
-			const uintptr_t nStart = ( uintptr_t )pBlock->szSlots;
+			const uintptr_t nStart = reinterpret_cast<uintptr_t>(pBlock->szSlots);
 			if ( nAddress < nStart || nAddress - nStart >= sizeof( pBlock->szSlots ) || ( nAddress - nStart ) % sizeof( T ) != 0 ) {
 				continue;
 			}
-			const uint32_t iSlot = ( uint32_t )( ( nAddress - nStart ) / sizeof( T ) );
+			const uint32_t iSlot = static_cast<uint32_t>(  ( nAddress - nStart ) / sizeof( T )  );
 			if ( ( pBlock->nOccupied & ( uint64_t( 1 ) << iSlot ) ) != 0 ) {
 				return { pValue, pBlock->nGenerations[iSlot] };
 			}
@@ -193,15 +193,15 @@ public:
 	}
 
 	template <typename... Args>
-	sirContainerResult_t tryEmplaceHandle( Handle *pHandle, Args&&...args )
+	SIRContainerResult tryEmplaceHandle( Handle *pHandle, Args&&...args )
 	{
 		static_assert( TRACK_GENERATIONS, "Generation handles require SIRGenerationColony" );
 		if ( pHandle == nullptr ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		T *pValue = nullptr;
-		const sirContainerResult_t eResult = tryEmplace( &pValue, std::forward<Args>( args )... );
-		if ( eResult == SIR_CONTAINER_OK ) {
+		const SIRContainerResult eResult = tryEmplace( &pValue, std::forward<Args>( args )... );
+		if ( eResult == SIRContainerResult::SIR_CONTAINER_OK ) {
 			*pHandle = tryGetHandle( pValue );
 		}
 		return eResult;
@@ -219,9 +219,9 @@ public:
 		if ( pValue == nullptr ) {
 			return false;
 		}
-		const uintptr_t nAddress = ( uintptr_t )pValue;
+		const uintptr_t nAddress = reinterpret_cast<uintptr_t>(pValue);
 		for ( Block *pBlock = m_pFirst; pBlock != nullptr; pBlock = pBlock->pNext ) {
-			const uintptr_t nStart = ( uintptr_t )pBlock->szSlots;
+			const uintptr_t nStart = reinterpret_cast<uintptr_t>(pBlock->szSlots);
 			const uintptr_t nEnd = nStart + sizeof( pBlock->szSlots );
 			if ( nAddress < nStart || nAddress >= nEnd ) {
 				continue;
@@ -229,7 +229,7 @@ public:
 			if ( ( nAddress - nStart ) % sizeof( T ) != 0 ) {
 				return false;
 			}
-			const uint32_t iIndex = ( uint32_t )( ( nAddress - nStart ) / sizeof( T ) );
+			const uint32_t iIndex = static_cast<uint32_t>(  ( nAddress - nStart ) / sizeof( T )  );
 			const uint64_t nMask = uint64_t( 1 ) << iIndex;
 			if ( ( pBlock->nOccupied & nMask ) == 0 ) {
 				return false;
@@ -280,7 +280,7 @@ public:
 	}
 	sirContainerFootprint_t getFootprint( void ) const noexcept
 	{
-		return { sizeof( *this ), ( uint64_t )m_nBlocks * sizeof( Block ), 0, 0, ( uint64_t )m_nSize * sizeof( T ) };
+		return { sizeof( *this ), static_cast<uint64_t>(m_nBlocks * sizeof(  Block  )), 0, 0, static_cast<uint64_t>(m_nSize * sizeof(  T  )) };
 	}
 };
 template <typename T, uint32_t BLOCK_SIZE = 64>

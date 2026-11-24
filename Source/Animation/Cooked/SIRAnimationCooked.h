@@ -12,8 +12,8 @@ express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIRANIMATIONCOOKED_H__
-#define __SIRENGINE_SIRANIMATIONCOOKED_H__
+#ifndef __SIR_ANIMATIONCOOKED_H__
+#define __SIR_ANIMATIONCOOKED_H__
 
 #include <Core/SIRPCH.h>
 // clang-format off
@@ -33,8 +33,7 @@ static constexpr uint32_t SIR_ANIM_COOK_MAX_TRACKS = 4096;
 static constexpr uint32_t SIR_ANIM_COOK_MAX_SAMPLES = 65536;
 static constexpr uint32_t SIR_ANIM_COOK_MAX_METADATA = 65536;
 
-typedef enum sirAnimationCookResult_e : uint8_t
-{
+enum class SIRAnimationCookResult : uint8_t {
 	SIR_ANIM_COOK_OK = 0,
 	SIR_ANIM_COOK_INVALID,
 	SIR_ANIM_COOK_VERSION_ERROR,
@@ -43,20 +42,18 @@ typedef enum sirAnimationCookResult_e : uint8_t
 	SIR_ANIM_COOK_CORRUPT,
 	SIR_ANIM_COOK_MISSING,
 	SIR_ANIM_COOK_UNSUPPORTED
-} sirAnimationCookResult_t;
+};
 
-typedef enum sirAnimationCookKind_e : uint8_t
-{
+enum class SIRAnimationCookKind : uint8_t {
 	SIR_ANIM_COOK_SKELETON = 1,
 	SIR_ANIM_COOK_CLIP = 2
-} sirAnimationCookKind_t;
+};
 
-typedef enum sirAnimationTrackEncoding_e : uint8_t
-{
+enum class SIRAnimationTrackEncoding : uint8_t {
 	SIR_ANIM_TRACK_CONSTANT = 0,
 	SIR_ANIM_TRACK_QUANT16 = 1,
 	SIR_ANIM_TRACK_RAW32 = 2
-} sirAnimationTrackEncoding_t;
+};
 
 typedef struct sirAnimationCookSpan_s
 {
@@ -176,7 +173,7 @@ typedef struct sirAnimationCookAssetInfo_s
 	uint32_t nDuration;
 	uint32_t nRootBoneIndex;
 	sirAnimationBounds_t bounds;
-	sirAnimationCookKind_t eKind;
+	SIRAnimationCookKind eKind;
 } sirAnimationCookAssetInfo_t;
 
 class SIRAnimationCooked
@@ -184,22 +181,22 @@ class SIRAnimationCooked
 public:
 	SIRAnimationCooked( void ) noexcept = delete;
 
-	static sirAnimationCookResult_t inspect( sirAnimationCookSpan_t source, sirAnimationCookAssetInfo_t *pInfo ) noexcept;
-	static sirAnimationCookResult_t readBone( sirAnimationCookSpan_t source, uint32_t nIndex, sirAnimationCookBone_t *pBone ) noexcept;
-	static sirAnimationCookResult_t readLodMapping( sirAnimationCookSpan_t source, uint32_t nIndex,
+	static SIRAnimationCookResult inspect( sirAnimationCookSpan_t source, sirAnimationCookAssetInfo_t *pInfo ) noexcept;
+	static SIRAnimationCookResult readBone( sirAnimationCookSpan_t source, uint32_t nIndex, sirAnimationCookBone_t *pBone ) noexcept;
+	static SIRAnimationCookResult readLodMapping( sirAnimationCookSpan_t source, uint32_t nIndex,
 	                                                sirAnimationCookLodMapping_t *pMapping ) noexcept;
-	static sirAnimationCookResult_t readInfluence( sirAnimationCookSpan_t source, uint32_t nIndex, uint32_t *pBoneIndex ) noexcept;
-	static sirAnimationCookResult_t readDependency( sirAnimationCookSpan_t source, uint32_t nIndex, SIRResourceKey *pKey ) noexcept;
-	static sirAnimationCookResult_t readTrack( sirAnimationCookSpan_t source, uint32_t nBoneIndex, bool bPreferFine,
+	static SIRAnimationCookResult readInfluence( sirAnimationCookSpan_t source, uint32_t nIndex, uint32_t *pBoneIndex ) noexcept;
+	static SIRAnimationCookResult readDependency( sirAnimationCookSpan_t source, uint32_t nIndex, SIRResourceKey *pKey ) noexcept;
+	static SIRAnimationCookResult readTrack( sirAnimationCookSpan_t source, uint32_t nBoneIndex, bool bPreferFine,
 	                                           sirAnimationCookTrackOutput_t *pOutput ) noexcept;
-	static sirAnimationCookResult_t getTrackCount( sirAnimationCookSpan_t source, uint32_t nBoneIndex, bool bPreferFine,
+	static SIRAnimationCookResult getTrackCount( sirAnimationCookSpan_t source, uint32_t nBoneIndex, bool bPreferFine,
 	                                               uint32_t *pCount ) noexcept;
-	static sirAnimationCookResult_t readEvent( sirAnimationCookSpan_t source, uint32_t nIndex, sirAnimationCookEvent_t *pEvent ) noexcept;
-	static sirAnimationCookResult_t readCurve( sirAnimationCookSpan_t source, uint32_t nIndex, sirAnimationCookCurve_t *pCurve ) noexcept;
-	static sirAnimationCookResult_t readMorph( sirAnimationCookSpan_t source, uint32_t nIndex, sirAnimationCookMorph_t *pMorph ) noexcept;
+	static SIRAnimationCookResult readEvent( sirAnimationCookSpan_t source, uint32_t nIndex, sirAnimationCookEvent_t *pEvent ) noexcept;
+	static SIRAnimationCookResult readCurve( sirAnimationCookSpan_t source, uint32_t nIndex, sirAnimationCookCurve_t *pCurve ) noexcept;
+	static SIRAnimationCookResult readMorph( sirAnimationCookSpan_t source, uint32_t nIndex, sirAnimationCookMorph_t *pMorph ) noexcept;
 
 protected:
 private:
 };
 
-#endif // __SIRENGINE_SIRANIMATIONCOOKED_H__
+#endif // __SIR_ANIMATIONCOOKED_H__

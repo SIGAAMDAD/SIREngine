@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSTREAMINGPROVIDERBRIDGE_H__
-#define __SIRENGINE_SIRSTREAMINGPROVIDERBRIDGE_H__
+#ifndef __SIR_STREAMINGPROVIDERBRIDGE_H__
+#define __SIR_STREAMINGPROVIDERBRIDGE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -63,7 +63,7 @@ private:
 	bool m_bInitialized;
 
 	bool hasValidEntry( sirStreamingTicket_t ticket ) const noexcept;
-	sirStreamingResult_t beginRetirement( sirStreamingTicket_t ticket, sirStreamingBridgeSlot_t& slot,
+	SIRStreamingResult beginRetirement( sirStreamingTicket_t ticket, sirStreamingBridgeSlot_t& slot,
 	                                      sirStreamingBridgeStats_t& stats ) noexcept;
 	void processSlot( sirStreamingTicket_t ticket, const sirStreamingSnapshot_t& snapshot, sirStreamingBridgeStats_t& stats ) noexcept;
 
@@ -73,20 +73,20 @@ public:
 	SIRStreamingProviderBridge& operator=( const SIRStreamingProviderBridge& ) = delete;
 
 	static uint64_t requiredBytes( uint32_t nCapacity ) noexcept;
-	sirStreamingResult_t initialize( SIRStreamingCoordinator *pCoordinator, void *pStorage, uint64_t nStorageBytes,
+	SIRStreamingResult initialize( SIRStreamingCoordinator *pCoordinator, void *pStorage, uint64_t nStorageBytes,
 	                                 const sirStreamingProviderCallbacks_t& callbacks ) noexcept;
-	sirStreamingResult_t shutdown( void ) noexcept;
+	SIRStreamingResult shutdown( void ) noexcept;
 
 	// Each pump visits at most nMaximumSlots, including vacant slots. Priority
 	// ordering remains owned by the producer/Core Jobs scheduling path.
-	sirStreamingResult_t pump( uint32_t nMaximumSlots, sirStreamingBridgeStats_t *pStats ) noexcept;
+	SIRStreamingResult pump( uint32_t nMaximumSlots, sirStreamingBridgeStats_t *pStats ) noexcept;
 
 	// Call only after the canonical provider has finished the corresponding
 	// operation. Success requires validated GRDG publication/provider readiness.
-	sirStreamingResult_t acknowledgePrepared( sirStreamingTicket_t ticket, bool bSucceeded ) noexcept;
-	sirStreamingResult_t acknowledgeActivated( sirStreamingTicket_t ticket, bool bSucceeded ) noexcept;
+	SIRStreamingResult acknowledgePrepared( sirStreamingTicket_t ticket, bool bSucceeded ) noexcept;
+	SIRStreamingResult acknowledgeActivated( sirStreamingTicket_t ticket, bool bSucceeded ) noexcept;
 	// Ack only after GPU/physics/audio fences, reader leases and jobs are safe.
-	sirStreamingResult_t acknowledgeRetired( sirStreamingTicket_t ticket ) noexcept;
+	SIRStreamingResult acknowledgeRetired( sirStreamingTicket_t ticket ) noexcept;
 };
 
-#endif // __SIRENGINE_SIRSTREAMINGPROVIDERBRIDGE_H__
+#endif // __SIR_STREAMINGPROVIDERBRIDGE_H__

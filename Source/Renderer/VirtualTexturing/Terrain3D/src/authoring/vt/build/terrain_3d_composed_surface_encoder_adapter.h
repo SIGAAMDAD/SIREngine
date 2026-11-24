@@ -7,7 +7,7 @@
 inline bool t3d_comp_surf_reference_encode( void *pUser, const uint32_t nChannel, const uint8_t *pRgba, const uint32_t nRgbaBytes,
                                             uint8_t *pCompressed, const uint32_t nCapacity, uint32_t& rWritten )
 {
-	( void )pUser;
+	static_cast<void>(pUser);
 	if ( nChannel >= T3D_COMP_SURF_CHANNEL_COUNT || nRgbaBytes != T3D_COMP_SURF_RGBA_SCRATCH_BYTES || !pRgba || !pCompressed ||
 	     nCapacity < t3d_comp_surf_channel_bytes( nChannel ) )
 		return false;

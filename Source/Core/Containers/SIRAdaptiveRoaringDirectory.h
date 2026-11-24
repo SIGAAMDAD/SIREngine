@@ -24,7 +24,7 @@ class SIRAdaptiveRoaringDirectory
 		static uint32_t pop( uint64_t nBits ) noexcept
 		{
 #if defined( __clang__ ) || defined( __GNUC__ )
-			return ( uint32_t )__builtin_popcountll( nBits );
+			return static_cast<uint32_t>(__builtin_popcountll( nBits ));
 #else
 			uint32_t nCount = 0;
 			while ( nBits ) {
@@ -51,10 +51,10 @@ class SIRAdaptiveRoaringDirectory
 			}
 			return nLo < lows.getSize() && lows[nLo] == nLow;
 		}
-		sirContainerResult_t tryAdd( uint16_t nLow, const sirContainerAllocator_t *pAllocator, bool *pInserted = nullptr )
+		SIRContainerResult tryAdd( uint16_t nLow, const sirContainerAllocator_t *pAllocator, bool *pInserted = nullptr )
 		{
 			if ( contains( nLow ) ) {
-				return SIR_CONTAINER_OK;
+				return SIRContainerResult::SIR_CONTAINER_OK;
 			}
 			if ( bDense ) {
 				words[nLow / 64] |= uint64_t( 1 ) << ( nLow % 64 );
@@ -62,12 +62,12 @@ class SIRAdaptiveRoaringDirectory
 				if ( pInserted != nullptr ) {
 					*pInserted = true;
 				}
-				return SIR_CONTAINER_OK;
+				return SIRContainerResult::SIR_CONTAINER_OK;
 			}
 			if ( nCount == 4096 ) {
 				SIRVector<uint64_t> staged( pAllocator );
-				sirContainerResult_t eResult = staged.tryResize( 1024 );
-				if ( eResult != SIR_CONTAINER_OK ) {
+				SIRContainerResult eResult = staged.tryResize( 1024 );
+				if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 					return eResult;
 				}
 				for ( uint32_t iIndex = 0; iIndex < lows.getSize(); ++iIndex ) {
@@ -82,7 +82,7 @@ class SIRAdaptiveRoaringDirectory
 				if ( pInserted != nullptr ) {
 					*pInserted = true;
 				}
-				return SIR_CONTAINER_OK;
+				return SIRContainerResult::SIR_CONTAINER_OK;
 			}
 			uint32_t nLo = 0;
 			uint32_t nHi = lows.getSize();
@@ -94,8 +94,8 @@ class SIRAdaptiveRoaringDirectory
 					nHi = iMid;
 				}
 			}
-			sirContainerResult_t eResult = lows.tryEmplaceBack( nLow );
-			if ( eResult != SIR_CONTAINER_OK ) {
+			SIRContainerResult eResult = lows.tryEmplaceBack( nLow );
+			if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 				return eResult;
 			}
 			for ( uint32_t iMove = lows.getSize() - 1; iMove > nLo; --iMove ) {
@@ -106,7 +106,7 @@ class SIRAdaptiveRoaringDirectory
 			if ( pInserted != nullptr ) {
 				*pInserted = true;
 			}
-			return SIR_CONTAINER_OK;
+			return SIRContainerResult::SIR_CONTAINER_OK;
 		}
 		bool erase( uint16_t nLow ) noexcept
 		{
@@ -149,7 +149,7 @@ class SIRAdaptiveRoaringDirectory
 				uint64_t nBits = words[iWord];
 				while ( nBits != 0 ) {
 #if defined( __clang__ ) || defined( __GNUC__ )
-					const uint32_t nLow = iWord * 64 + ( uint32_t )__builtin_ctzll( nBits );
+					const uint32_t nLow = iWord * 64 + static_cast<uint32_t>(__builtin_ctzll( nBits ));
 #else
 					uint32_t nLow = iWord * 64;
 					uint64_t nTmp = nBits;
@@ -158,7 +158,7 @@ class SIRAdaptiveRoaringDirectory
 						++nLow;
 					}
 #endif
-					visitor( ( uint16_t )nLow );
+					visitor( static_cast<uint16_t>(nLow) );
 					nBits &= nBits - 1;
 				}
 			}
@@ -169,35 +169,35 @@ class SIRAdaptiveRoaringDirectory
 	uint64_t m_nCount = 0;
 	// Build a private copy of a chunk without per-value lookup or insertion.
 	// The caller publishes only after every allocation has succeeded.
-	static sirContainerResult_t tryCopyChunk( const Chunk& source, Chunk& target )
+	static SIRContainerResult tryCopyChunk( const Chunk& source, Chunk& target )
 	{
 		target.nCount = source.nCount;
 		target.bDense = source.bDense;
 		if ( source.bDense ) {
-			sirContainerResult_t eResult = target.words.tryReserve( source.words.getSize() );
-			if ( eResult != SIR_CONTAINER_OK ) {
+			SIRContainerResult eResult = target.words.tryReserve( source.words.getSize() );
+			if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 				return eResult;
 			}
 			for ( uint32_t iWord = 0; iWord < source.words.getSize(); ++iWord ) {
 				target.words.tryEmplaceBack( source.words[iWord] );
 			}
-			return SIR_CONTAINER_OK;
+			return SIRContainerResult::SIR_CONTAINER_OK;
 		}
-		sirContainerResult_t eResult = target.lows.tryReserve( source.lows.getSize() );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		SIRContainerResult eResult = target.lows.tryReserve( source.lows.getSize() );
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		for ( uint32_t iLow = 0; iLow < source.lows.getSize(); ++iLow ) {
 			target.lows.tryEmplaceBack( source.lows[iLow] );
 		}
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
-	static sirContainerResult_t tryUnionChunks( const Chunk& left, const Chunk& right, Chunk& target )
+	static SIRContainerResult tryUnionChunks( const Chunk& left, const Chunk& right, Chunk& target )
 	{
 		if ( left.bDense || right.bDense ) {
-			sirContainerResult_t eResult = target.words.tryResize( 1024 );
-			if ( eResult != SIR_CONTAINER_OK ) {
+			SIRContainerResult eResult = target.words.tryResize( 1024 );
+			if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 				return eResult;
 			}
 			const Chunk& dense = left.bDense ? left : right;
@@ -219,14 +219,14 @@ class SIRAdaptiveRoaringDirectory
 				target.nCount += Chunk::pop( target.words[iWord] );
 			}
 			target.bDense = true;
-			return SIR_CONTAINER_OK;
+			return SIRContainerResult::SIR_CONTAINER_OK;
 		}
 
 		// The sparse arrays are already ordered and unique. Merge them in
 		// linear time, then convert the result if it exceeds array capacity.
 		const uint32_t nUpperBound = left.nCount + right.nCount;
-		sirContainerResult_t eResult = target.lows.tryReserve( nUpperBound );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		SIRContainerResult eResult = target.lows.tryReserve( nUpperBound );
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		uint32_t iLeft = 0;
@@ -247,10 +247,10 @@ class SIRAdaptiveRoaringDirectory
 		}
 		target.nCount = target.lows.getSize();
 		if ( target.nCount <= 4096 ) {
-			return SIR_CONTAINER_OK;
+			return SIRContainerResult::SIR_CONTAINER_OK;
 		}
 		eResult = target.words.tryResize( 1024 );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		for ( uint32_t iLow = 0; iLow < target.lows.getSize(); ++iLow ) {
@@ -259,7 +259,7 @@ class SIRAdaptiveRoaringDirectory
 		}
 		target.lows.clear();
 		target.bDense = true;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
 	uint32_t lowerBound( uint16_t nHigh ) const noexcept
@@ -281,26 +281,26 @@ public:
 	explicit SIRAdaptiveRoaringDirectory( const sirContainerAllocator_t *pAllocator ) : m_pAllocator( pAllocator ), m_chunks( pAllocator )
 	{
 	}
-	sirContainerResult_t tryAdd( uint32_t nValue )
+	SIRContainerResult tryAdd( uint32_t nValue )
 	{
-		const uint16_t nHigh = ( uint16_t )( nValue >> 16 );
-		const uint16_t nLow = ( uint16_t )nValue;
+		const uint16_t nHigh = static_cast<uint16_t>( nValue >> 16 );
+		const uint16_t nLow = static_cast<uint16_t>(nValue);
 		const uint32_t iChunk = lowerBound( nHigh );
 		if ( iChunk < m_chunks.getSize() && m_chunks[iChunk].nHigh == nHigh ) {
 			bool bInserted = false;
-			sirContainerResult_t eResult = m_chunks[iChunk].tryAdd( nLow, m_pAllocator, &bInserted );
-			if ( eResult == SIR_CONTAINER_OK && bInserted ) {
+			SIRContainerResult eResult = m_chunks[iChunk].tryAdd( nLow, m_pAllocator, &bInserted );
+			if ( eResult == SIRContainerResult::SIR_CONTAINER_OK && bInserted ) {
 				++m_nCount;
 			}
 			return eResult;
 		}
 		Chunk staged( nHigh, m_pAllocator );
-		sirContainerResult_t eResult = staged.tryAdd( nLow, m_pAllocator );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		SIRContainerResult eResult = staged.tryAdd( nLow, m_pAllocator );
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		eResult = m_chunks.tryEmplaceBack( std::move( staged ) );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		for ( uint32_t iMove = m_chunks.getSize() - 1; iMove > iChunk; --iMove ) {
@@ -309,16 +309,16 @@ public:
 			m_chunks[iMove - 1] = std::move( hold );
 		}
 		++m_nCount;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 	bool erase( uint32_t nValue ) noexcept
 	{
-		const uint16_t nHigh = ( uint16_t )( nValue >> 16 );
+		const uint16_t nHigh = static_cast<uint16_t>( nValue >> 16 );
 		const uint32_t iChunk = lowerBound( nHigh );
 		if ( iChunk == m_chunks.getSize() || m_chunks[iChunk].nHigh != nHigh ) {
 			return false;
 		}
-		if ( !m_chunks[iChunk].erase( ( uint16_t )nValue ) ) {
+		if ( !m_chunks[iChunk].erase( static_cast<uint16_t>(nValue) ) ) {
 			return false;
 		}
 		--m_nCount;
@@ -329,9 +329,9 @@ public:
 	}
 	bool contains( uint32_t nValue ) const noexcept
 	{
-		const uint16_t nHigh = ( uint16_t )( nValue >> 16 );
+		const uint16_t nHigh = static_cast<uint16_t>( nValue >> 16 );
 		const uint32_t iChunk = lowerBound( nHigh );
-		return iChunk < m_chunks.getSize() && m_chunks[iChunk].nHigh == nHigh && m_chunks[iChunk].contains( ( uint16_t )nValue );
+		return iChunk < m_chunks.getSize() && m_chunks[iChunk].nHigh == nHigh && m_chunks[iChunk].contains( static_cast<uint16_t>(nValue) );
 	}
 	template <typename Visitor>
 	void forEach( Visitor&& visitor ) const
@@ -341,14 +341,14 @@ public:
 			m_chunks[iChunk].forEach( [&]( uint16_t nLow ) { visitor( nBase | nLow ); } );
 		}
 	}
-	sirContainerResult_t tryUnionWith( const SIRAdaptiveRoaringDirectory& other )
+	SIRContainerResult tryUnionWith( const SIRAdaptiveRoaringDirectory& other )
 	{
 		if ( this == &other || other.m_chunks.isEmpty() ) {
-			return SIR_CONTAINER_OK;
+			return SIRContainerResult::SIR_CONTAINER_OK;
 		}
 		SIRAdaptiveRoaringDirectory staged( m_pAllocator );
-		sirContainerResult_t eResult = staged.m_chunks.tryReserve( m_chunks.getSize() + other.m_chunks.getSize() );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		SIRContainerResult eResult = staged.m_chunks.tryReserve( m_chunks.getSize() + other.m_chunks.getSize() );
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		uint32_t iLeft = 0;
@@ -370,30 +370,30 @@ public:
 				++iLeft;
 				++iRight;
 			}
-			if ( eResult != SIR_CONTAINER_OK ) {
+			if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 				return eResult;
 			}
 			staged.m_nCount += result.nCount;
 			eResult = staged.m_chunks.tryEmplaceBack( std::move( result ) );
-			if ( eResult != SIR_CONTAINER_OK ) {
+			if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 				return eResult;
 			}
 		}
 		m_chunks = std::move( staged.m_chunks );
 		m_nCount = staged.m_nCount;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 	// Transactionally intersect matching high-key chunks. The dense-dense
 	// case operates on whole words and sparse cases visit only existing lows.
-	sirContainerResult_t tryIntersectWith( const SIRAdaptiveRoaringDirectory& other )
+	SIRContainerResult tryIntersectWith( const SIRAdaptiveRoaringDirectory& other )
 	{
 		if ( this == &other ) {
-			return SIR_CONTAINER_OK;
+			return SIRContainerResult::SIR_CONTAINER_OK;
 		}
 		SIRAdaptiveRoaringDirectory staged( m_pAllocator );
 		const uint32_t nMaxChunks = m_chunks.getSize() < other.m_chunks.getSize() ? m_chunks.getSize() : other.m_chunks.getSize();
-		sirContainerResult_t eResult = staged.m_chunks.tryReserve( nMaxChunks );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		SIRContainerResult eResult = staged.m_chunks.tryReserve( nMaxChunks );
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		uint32_t iLeft = 0;
@@ -411,7 +411,7 @@ public:
 			Chunk result( left.nHigh, m_pAllocator );
 			if ( left.bDense && right.bDense ) {
 				eResult = result.words.tryResize( 1024 );
-				if ( eResult != SIR_CONTAINER_OK ) {
+				if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 					return eResult;
 				}
 				for ( uint32_t iWord = 0; iWord < 1024; ++iWord ) {
@@ -422,7 +422,7 @@ public:
 				result.bDense = true;
 				if ( result.nCount != 0 && result.nCount <= 4096 ) {
 					eResult = result.lows.tryReserve( result.nCount );
-					if ( eResult != SIR_CONTAINER_OK ) {
+					if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 						return eResult;
 					}
 					result.forEach( [&]( uint16_t nLow ) { result.lows.tryEmplaceBack( nLow ); } );
@@ -432,7 +432,7 @@ public:
 			} else if ( !left.bDense && !right.bDense ) {
 				const uint32_t nCapacity = left.nCount < right.nCount ? left.nCount : right.nCount;
 				eResult = result.lows.tryReserve( nCapacity );
-				if ( eResult != SIR_CONTAINER_OK ) {
+				if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 					return eResult;
 				}
 				uint32_t iLowLeft = 0;
@@ -451,7 +451,7 @@ public:
 				const Chunk& sparse = left.bDense ? right : left;
 				const Chunk& dense = left.bDense ? left : right;
 				eResult = result.lows.tryReserve( sparse.nCount );
-				if ( eResult != SIR_CONTAINER_OK ) {
+				if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 					return eResult;
 				}
 				for ( uint32_t iLow = 0; iLow < sparse.lows.getSize(); ++iLow ) {
@@ -467,13 +467,13 @@ public:
 			}
 			staged.m_nCount += result.nCount;
 			eResult = staged.m_chunks.tryEmplaceBack( std::move( result ) );
-			if ( eResult != SIR_CONTAINER_OK ) {
+			if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 				return eResult;
 			}
 		}
 		m_chunks = std::move( staged.m_chunks );
 		m_nCount = staged.m_nCount;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 	uint64_t getSize( void ) const noexcept
 	{

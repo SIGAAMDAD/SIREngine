@@ -19,7 +19,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // WGL can return 1, 2, 3, or -1 for a missing function. These are not callable pointers.
 bool sirGLIsUsableProcedure( const void *pAddress ) noexcept
 {
-	const uintptr_t nAddress = ( uintptr_t )pAddress;
+	const uintptr_t nAddress = reinterpret_cast<uintptr_t>(pAddress);
 	return nAddress > 3 && nAddress != UINTPTR_MAX;
 }
 

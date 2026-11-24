@@ -31,45 +31,45 @@ bool SIRFMODMixerBackend::isReady( void ) const noexcept
 	return m_bInitialized && m_pContext != nullptr && m_pContext->isReady() && m_pContext->getEpoch() == m_nContextEpoch;
 }
 
-sirAudioResult_t SIRFMODMixerBackend::configure( SIRFMODContext *pContext, const sirContainerAllocator_t *pAllocator,
+SIRAudioResult SIRFMODMixerBackend::configure( SIRFMODContext *pContext, const sirContainerAllocator_t *pAllocator,
                                                  const sirFMODMixerNativeOps_t& ops, uint32_t nMaxControls ) noexcept
 {
 	if ( m_pContext != nullptr || m_bInitialized || !SIRRawStorage::isValidAllocator( pAllocator ) || pContext == nullptr ||
 	     !pContext->isReady() || nMaxControls == 0 || ops.nAbiVersion != 1 || ops.resolveBus == nullptr || ops.resolveVCA == nullptr ||
 	     ops.setBusVolume == nullptr || ops.setBusMute == nullptr || ops.setVCAVolume == nullptr ) {
-		return SIR_AUDIO_INVALID_ARGUMENT;
+		return SIRAudioResult::SIR_AUDIO_INVALID_ARGUMENT;
 	}
 
 	m_pContext = pContext;
 	m_pAllocator = pAllocator;
 	m_Ops = ops;
 	m_nCapacity = nMaxControls;
-	return SIR_AUDIO_OK;
+	return SIRAudioResult::SIR_AUDIO_OK;
 }
 
-sirAudioResult_t SIRFMODMixerBackend::initialize( void ) noexcept
+SIRAudioResult SIRFMODMixerBackend::initialize( void ) noexcept
 {
 	if ( m_pContext == nullptr || m_pAllocator == nullptr || m_nCapacity == 0 || m_bInitialized || !m_pContext->isReady() ) {
-		return SIR_AUDIO_NOT_INITIALIZED;
+		return SIRAudioResult::SIR_AUDIO_NOT_INITIALIZED;
 	}
 
 	size_t nBytes = 0;
 	if ( !SIRRawStorage::checkedMultiply( m_nCapacity, sizeof( sirFMODMixerControl_t ), &nBytes ) ) {
-		return SIR_AUDIO_INVALID_ARGUMENT;
+		return SIRAudioResult::SIR_AUDIO_INVALID_ARGUMENT;
 	}
 
 	void *pMemory = nullptr;
-	if ( SIRRawStorage::tryAllocate( m_pAllocator, nBytes, alignof( sirFMODMixerControl_t ), &pMemory ) != SIR_CONTAINER_OK ) {
-		return SIR_AUDIO_CAPACITY;
+	if ( SIRRawStorage::tryAllocate( m_pAllocator, nBytes, alignof( sirFMODMixerControl_t ), &pMemory ) != SIRContainerResult::SIR_CONTAINER_OK ) {
+		return SIRAudioResult::SIR_AUDIO_CAPACITY;
 	}
 
-	m_pControls = ( sirFMODMixerControl_t * )pMemory;
+	m_pControls = static_cast<sirFMODMixerControl_t *>(pMemory);
 	memset( m_pControls, 0, nBytes );
 	m_nCount = 0;
 	m_nContextEpoch = m_pContext->getEpoch();
 	m_nLastNativeResult = 0;
 	m_bInitialized = true;
-	return SIR_AUDIO_OK;
+	return SIRAudioResult::SIR_AUDIO_OK;
 }
 
 void SIRFMODMixerBackend::shutdown( void ) noexcept
@@ -85,7 +85,7 @@ void SIRFMODMixerBackend::shutdown( void ) noexcept
 		m_pContext->unpinBorrowedBankObject( control.pBankStore != nullptr );
 	}
 	if ( m_pControls != nullptr ) {
-		SIRRawStorage::deallocate( m_pAllocator, m_pControls, ( size_t )m_nCapacity * sizeof( sirFMODMixerControl_t ),
+		SIRRawStorage::deallocate( m_pAllocator, m_pControls, static_cast<size_t>(m_nCapacity * sizeof(  sirFMODMixerControl_t  )),
 		                           alignof( sirFMODMixerControl_t ) );
 	}
 
@@ -116,45 +116,45 @@ bool SIRFMODMixerBackend::findControl( uint64_t nControlId, uint32_t& iIndex ) c
 	return iLow < m_nCount && m_pControls[iLow].nControlId == nControlId;
 }
 
-sirAudioResult_t SIRFMODMixerBackend::registerControl( uint64_t nControlId, const char *szPath, sirFMODMixerControlKind_t eKind,
+SIRAudioResult SIRFMODMixerBackend::registerControl( uint64_t nControlId, const char *szPath, SIRFMODMixerControlKind eKind,
                                                        SIRFMODBankStore *pBankStore, uint64_t nPackageId ) noexcept
 {
 	if ( !isReady() ) {
-		return SIR_AUDIO_NOT_INITIALIZED;
+		return SIRAudioResult::SIR_AUDIO_NOT_INITIALIZED;
 	}
 	if ( nControlId == 0 || szPath == nullptr || szPath[0] == '\0' || ( pBankStore == nullptr && nPackageId != 0 ) ||
 	     ( pBankStore != nullptr && nPackageId == 0 ) || ( pBankStore != nullptr && !pBankStore->isBoundTo( m_pContext ) ) ) {
-		return SIR_AUDIO_INVALID_ARGUMENT;
+		return SIRAudioResult::SIR_AUDIO_INVALID_ARGUMENT;
 	}
 
 	uint32_t iInsert = 0;
 	if ( findControl( nControlId, iInsert ) ) {
-		return SIR_AUDIO_INVALID_ARGUMENT;
+		return SIRAudioResult::SIR_AUDIO_INVALID_ARGUMENT;
 	}
 	if ( m_nCount == m_nCapacity ) {
-		return SIR_AUDIO_CAPACITY;
+		return SIRAudioResult::SIR_AUDIO_CAPACITY;
 	}
 
 	if ( pBankStore != nullptr ) {
-		const sirFMODBankObjectKind_t eBankKind = eKind == SIR_FMOD_MIXER_BUS ? SIR_FMOD_BANK_OBJECT_BUS : SIR_FMOD_BANK_OBJECT_VCA;
-		const sirAudioResult_t eMembership = pBankStore->containsBankObject( nPackageId, eBankKind, szPath );
-		if ( eMembership != SIR_AUDIO_OK ) {
+		const SIRFMODBankObjectKind eBankKind = eKind == SIRFMODMixerControlKind::SIR_FMOD_MIXER_BUS ? SIRFMODBankObjectKind::SIR_FMOD_BANK_OBJECT_BUS : SIRFMODBankObjectKind::SIR_FMOD_BANK_OBJECT_VCA;
+		const SIRAudioResult eMembership = pBankStore->containsBankObject( nPackageId, eBankKind, szPath );
+		if ( eMembership != SIRAudioResult::SIR_AUDIO_OK ) {
 			return eMembership;
 		}
 	}
 	void *pNative = nullptr;
-	if ( eKind == SIR_FMOD_MIXER_BUS ) {
+	if ( eKind == SIRFMODMixerControlKind::SIR_FMOD_MIXER_BUS ) {
 		m_nLastNativeResult = m_Ops.resolveBus( m_Ops.pUserData, m_pContext->m_pStudio, szPath, &pNative );
 	} else {
 		m_nLastNativeResult = m_Ops.resolveVCA( m_Ops.pUserData, m_pContext->m_pStudio, szPath, &pNative );
 	}
 	if ( m_nLastNativeResult != 0 || pNative == nullptr ) {
-		return SIR_AUDIO_BACKEND_ERROR;
+		return SIRAudioResult::SIR_AUDIO_BACKEND_ERROR;
 	}
 
 	if ( pBankStore != nullptr ) {
-		const sirAudioResult_t ePin = pBankStore->pinBankObject( nPackageId );
-		if ( ePin != SIR_AUDIO_OK ) {
+		const SIRAudioResult ePin = pBankStore->pinBankObject( nPackageId );
+		if ( ePin != SIRAudioResult::SIR_AUDIO_OK ) {
 			return ePin;
 		}
 	}
@@ -162,106 +162,106 @@ sirAudioResult_t SIRFMODMixerBackend::registerControl( uint64_t nControlId, cons
 		if ( pBankStore != nullptr ) {
 			pBankStore->unpinBankObject( nPackageId );
 		}
-		return SIR_AUDIO_CAPACITY;
+		return SIRAudioResult::SIR_AUDIO_CAPACITY;
 	}
 
 	if ( iInsert < m_nCount ) {
-		memmove( m_pControls + iInsert + 1, m_pControls + iInsert, ( size_t )( m_nCount - iInsert ) * sizeof( sirFMODMixerControl_t ) );
+		memmove( m_pControls + iInsert + 1, m_pControls + iInsert, static_cast<size_t>( m_nCount - iInsert ) * sizeof( sirFMODMixerControl_t ) );
 	}
 	m_pControls[iInsert] = { nControlId, nPackageId, pNative, pBankStore, eKind, {} };
 	++m_nCount;
-	return SIR_AUDIO_OK;
+	return SIRAudioResult::SIR_AUDIO_OK;
 }
 
-sirAudioResult_t SIRFMODMixerBackend::registerBus( uint64_t nControlId, const char *szPath ) noexcept
+SIRAudioResult SIRFMODMixerBackend::registerBus( uint64_t nControlId, const char *szPath ) noexcept
 {
-	return registerControl( nControlId, szPath, SIR_FMOD_MIXER_BUS );
+	return registerControl( nControlId, szPath, SIRFMODMixerControlKind::SIR_FMOD_MIXER_BUS );
 }
 
-sirAudioResult_t SIRFMODMixerBackend::registerVCA( uint64_t nControlId, const char *szPath ) noexcept
+SIRAudioResult SIRFMODMixerBackend::registerVCA( uint64_t nControlId, const char *szPath ) noexcept
 {
-	return registerControl( nControlId, szPath, SIR_FMOD_MIXER_VCA );
+	return registerControl( nControlId, szPath, SIRFMODMixerControlKind::SIR_FMOD_MIXER_VCA );
 }
 
-sirAudioResult_t SIRFMODMixerBackend::registerBusFromBank( uint64_t nControlId, uint64_t nPackageId, SIRFMODBankStore *pBankStore,
+SIRAudioResult SIRFMODMixerBackend::registerBusFromBank( uint64_t nControlId, uint64_t nPackageId, SIRFMODBankStore *pBankStore,
                                                            const char *szPath ) noexcept
 {
-	return registerControl( nControlId, szPath, SIR_FMOD_MIXER_BUS, pBankStore, nPackageId );
+	return registerControl( nControlId, szPath, SIRFMODMixerControlKind::SIR_FMOD_MIXER_BUS, pBankStore, nPackageId );
 }
 
-sirAudioResult_t SIRFMODMixerBackend::registerVCAFromBank( uint64_t nControlId, uint64_t nPackageId, SIRFMODBankStore *pBankStore,
+SIRAudioResult SIRFMODMixerBackend::registerVCAFromBank( uint64_t nControlId, uint64_t nPackageId, SIRFMODBankStore *pBankStore,
                                                            const char *szPath ) noexcept
 {
-	return registerControl( nControlId, szPath, SIR_FMOD_MIXER_VCA, pBankStore, nPackageId );
+	return registerControl( nControlId, szPath, SIRFMODMixerControlKind::SIR_FMOD_MIXER_VCA, pBankStore, nPackageId );
 }
 
-sirAudioResult_t SIRFMODMixerBackend::unregisterControl( uint64_t nControlId ) noexcept
+SIRAudioResult SIRFMODMixerBackend::unregisterControl( uint64_t nControlId ) noexcept
 {
 	if ( !isReady() ) {
-		return SIR_AUDIO_NOT_INITIALIZED;
+		return SIRAudioResult::SIR_AUDIO_NOT_INITIALIZED;
 	}
 	uint32_t iIndex = 0;
 	if ( !findControl( nControlId, iIndex ) ) {
-		return SIR_AUDIO_INVALID_ARGUMENT;
+		return SIRAudioResult::SIR_AUDIO_INVALID_ARGUMENT;
 	}
 
 	const sirFMODMixerControl_t control = m_pControls[iIndex];
 	if ( iIndex + 1 < m_nCount ) {
-		memmove( m_pControls + iIndex, m_pControls + iIndex + 1, ( size_t )( m_nCount - iIndex - 1 ) * sizeof( sirFMODMixerControl_t ) );
+		memmove( m_pControls + iIndex, m_pControls + iIndex + 1, static_cast<size_t>( m_nCount - iIndex - 1 ) * sizeof( sirFMODMixerControl_t ) );
 	}
 	--m_nCount;
 	if ( control.pBankStore != nullptr ) {
 		control.pBankStore->unpinBankObject( control.nPackageId );
 	}
 	m_pContext->unpinBorrowedBankObject( control.pBankStore != nullptr );
-	return SIR_AUDIO_OK;
+	return SIRAudioResult::SIR_AUDIO_OK;
 }
 
-sirAudioResult_t SIRFMODMixerBackend::setVolume( uint64_t nControlId, float fVolume, sirFMODMixerControlKind_t eKind ) noexcept
+SIRAudioResult SIRFMODMixerBackend::setVolume( uint64_t nControlId, float fVolume, SIRFMODMixerControlKind eKind ) noexcept
 {
 	if ( !isReady() ) {
-		return SIR_AUDIO_NOT_INITIALIZED;
+		return SIRAudioResult::SIR_AUDIO_NOT_INITIALIZED;
 	}
 	if ( !std::isfinite( fVolume ) || fVolume < 0.0f || fVolume > 1.0f ) {
-		return SIR_AUDIO_INVALID_ARGUMENT;
+		return SIRAudioResult::SIR_AUDIO_INVALID_ARGUMENT;
 	}
 
 	uint32_t iIndex = 0;
 	if ( !findControl( nControlId, iIndex ) || m_pControls[iIndex].eKind != eKind ) {
-		return SIR_AUDIO_INVALID_ARGUMENT;
+		return SIRAudioResult::SIR_AUDIO_INVALID_ARGUMENT;
 	}
 
-	if ( eKind == SIR_FMOD_MIXER_BUS ) {
+	if ( eKind == SIRFMODMixerControlKind::SIR_FMOD_MIXER_BUS ) {
 		m_nLastNativeResult = m_Ops.setBusVolume( m_Ops.pUserData, m_pControls[iIndex].pNative, fVolume );
 	} else {
 		m_nLastNativeResult = m_Ops.setVCAVolume( m_Ops.pUserData, m_pControls[iIndex].pNative, fVolume );
 	}
-	return m_nLastNativeResult == 0 ? SIR_AUDIO_OK : SIR_AUDIO_BACKEND_ERROR;
+	return m_nLastNativeResult == 0 ? SIRAudioResult::SIR_AUDIO_OK : SIRAudioResult::SIR_AUDIO_BACKEND_ERROR;
 }
 
-sirAudioResult_t SIRFMODMixerBackend::setBusVolume( uint64_t nControlId, float fVolume ) noexcept
+SIRAudioResult SIRFMODMixerBackend::setBusVolume( uint64_t nControlId, float fVolume ) noexcept
 {
-	return setVolume( nControlId, fVolume, SIR_FMOD_MIXER_BUS );
+	return setVolume( nControlId, fVolume, SIRFMODMixerControlKind::SIR_FMOD_MIXER_BUS );
 }
 
-sirAudioResult_t SIRFMODMixerBackend::setVCAVolume( uint64_t nControlId, float fVolume ) noexcept
+SIRAudioResult SIRFMODMixerBackend::setVCAVolume( uint64_t nControlId, float fVolume ) noexcept
 {
-	return setVolume( nControlId, fVolume, SIR_FMOD_MIXER_VCA );
+	return setVolume( nControlId, fVolume, SIRFMODMixerControlKind::SIR_FMOD_MIXER_VCA );
 }
 
-sirAudioResult_t SIRFMODMixerBackend::setBusMute( uint64_t nControlId, bool bMute ) noexcept
+SIRAudioResult SIRFMODMixerBackend::setBusMute( uint64_t nControlId, bool bMute ) noexcept
 {
 	if ( !isReady() ) {
-		return SIR_AUDIO_NOT_INITIALIZED;
+		return SIRAudioResult::SIR_AUDIO_NOT_INITIALIZED;
 	}
 
 	uint32_t iIndex = 0;
-	if ( !findControl( nControlId, iIndex ) || m_pControls[iIndex].eKind != SIR_FMOD_MIXER_BUS ) {
-		return SIR_AUDIO_INVALID_ARGUMENT;
+	if ( !findControl( nControlId, iIndex ) || m_pControls[iIndex].eKind != SIRFMODMixerControlKind::SIR_FMOD_MIXER_BUS ) {
+		return SIRAudioResult::SIR_AUDIO_INVALID_ARGUMENT;
 	}
 
 	m_nLastNativeResult = m_Ops.setBusMute( m_Ops.pUserData, m_pControls[iIndex].pNative, bMute ? 1 : 0 );
-	return m_nLastNativeResult == 0 ? SIR_AUDIO_OK : SIR_AUDIO_BACKEND_ERROR;
+	return m_nLastNativeResult == 0 ? SIRAudioResult::SIR_AUDIO_OK : SIRAudioResult::SIR_AUDIO_BACKEND_ERROR;
 }
 
 bool SIRFMODMixerBackend::isBoundTo( const SIRFMODContext *pContext ) const noexcept

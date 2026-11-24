@@ -26,7 +26,7 @@ SIRMutex::SIRMutex( void ) noexcept
 #else
 	const int nResult = pthread_mutex_init( &m_hMutex, nullptr );
 	assert( nResult == 0 );
-	( void )nResult;
+	static_cast<void>(nResult);
 #endif
 }
 
@@ -35,7 +35,7 @@ SIRMutex::~SIRMutex()
 #if !defined( _WIN32 )
 	const int nResult = pthread_mutex_destroy( &m_hMutex );
 	assert( nResult == 0 );
-	( void )nResult;
+	static_cast<void>(nResult);
 #endif
 }
 
@@ -46,7 +46,7 @@ void SIRMutex::lock( void ) noexcept
 #else
 	const int nResult = pthread_mutex_lock( &m_hMutex );
 	assert( nResult == 0 );
-	( void )nResult;
+	static_cast<void>(nResult);
 #endif
 }
 
@@ -68,7 +68,7 @@ void SIRMutex::unlock( void ) noexcept
 #else
 	const int nResult = pthread_mutex_unlock( &m_hMutex );
 	assert( nResult == 0 );
-	( void )nResult;
+	static_cast<void>(nResult);
 #endif
 }
 
@@ -86,7 +86,7 @@ SIRRecursiveMutex::SIRRecursiveMutex( void ) noexcept
 	assert( nResult == 0 );
 	nResult = pthread_mutexattr_destroy( &attributes );
 	assert( nResult == 0 );
-	( void )nResult;
+	static_cast<void>(nResult);
 #endif
 }
 
@@ -97,7 +97,7 @@ SIRRecursiveMutex::~SIRRecursiveMutex()
 #else
 	const int nResult = pthread_mutex_destroy( &m_hMutex );
 	assert( nResult == 0 );
-	( void )nResult;
+	static_cast<void>(nResult);
 #endif
 }
 
@@ -108,7 +108,7 @@ void SIRRecursiveMutex::lock( void ) noexcept
 #else
 	const int nResult = pthread_mutex_lock( &m_hMutex );
 	assert( nResult == 0 );
-	( void )nResult;
+	static_cast<void>(nResult);
 #endif
 }
 
@@ -130,7 +130,7 @@ void SIRRecursiveMutex::unlock( void ) noexcept
 #else
 	const int nResult = pthread_mutex_unlock( &m_hMutex );
 	assert( nResult == 0 );
-	( void )nResult;
+	static_cast<void>(nResult);
 #endif
 }
 
@@ -141,7 +141,7 @@ SIRConditionVariable::SIRConditionVariable( void ) noexcept
 #else
 	const int nResult = pthread_cond_init( &m_hCondition, nullptr );
 	assert( nResult == 0 );
-	( void )nResult;
+	static_cast<void>(nResult);
 #endif
 }
 
@@ -150,7 +150,7 @@ SIRConditionVariable::~SIRConditionVariable()
 #if !defined( _WIN32 )
 	const int nResult = pthread_cond_destroy( &m_hCondition );
 	assert( nResult == 0 );
-	( void )nResult;
+	static_cast<void>(nResult);
 #endif
 }
 
@@ -159,11 +159,11 @@ void SIRConditionVariable::wait( SIRMutex& mutex ) noexcept
 #if defined( _WIN32 )
 	const BOOL bResult = SleepConditionVariableSRW( &m_hCondition, &mutex.m_hMutex, INFINITE, 0 );
 	assert( bResult != FALSE );
-	( void )bResult;
+	static_cast<void>(bResult);
 #else
 	const int nResult = pthread_cond_wait( &m_hCondition, &mutex.m_hMutex );
 	assert( nResult == 0 );
-	( void )nResult;
+	static_cast<void>(nResult);
 #endif
 }
 
@@ -174,7 +174,7 @@ void SIRConditionVariable::notifyOne( void ) noexcept
 #else
 	const int nResult = pthread_cond_signal( &m_hCondition );
 	assert( nResult == 0 );
-	( void )nResult;
+	static_cast<void>(nResult);
 #endif
 }
 
@@ -185,7 +185,7 @@ void SIRConditionVariable::notifyAll( void ) noexcept
 #else
 	const int nResult = pthread_cond_broadcast( &m_hCondition );
 	assert( nResult == 0 );
-	( void )nResult;
+	static_cast<void>(nResult);
 #endif
 }
 
@@ -196,8 +196,8 @@ SIRSpinLock::SIRSpinLock( void ) noexcept
 void SIRSpinLock::lock( void ) noexcept
 {
 	uint32_t nSpins = 0;
-	while ( m_Lock.testAndSet( SIR_MEMORY_ORDER_ACQUIRE ) ) {
-		while ( m_Lock.test( SIR_MEMORY_ORDER_RELAXED ) ) {
+	while ( m_Lock.exchange( true, std::memory_order_acquire ) ) {
+		while ( m_Lock.load( std::memory_order_relaxed ) ) {
 			SIRPlatformUtils::cpuRelax();
 			++nSpins;
 			if ( nSpins == 1024 ) {
@@ -210,10 +210,10 @@ void SIRSpinLock::lock( void ) noexcept
 
 bool SIRSpinLock::tryLock( void ) noexcept
 {
-	return !m_Lock.testAndSet( SIR_MEMORY_ORDER_ACQUIRE );
+	return !m_Lock.exchange( true, std::memory_order_acquire );
 }
 
 void SIRSpinLock::unlock( void ) noexcept
 {
-	m_Lock.clear( SIR_MEMORY_ORDER_RELEASE );
+	m_Lock.store( false, std::memory_order_release );
 }

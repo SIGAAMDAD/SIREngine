@@ -8,14 +8,14 @@ License, v2. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIRGLSCOPEDOWNERSHIP_H__
-#define __SIRENGINE_SIRGLSCOPEDOWNERSHIP_H__
+#ifndef __SIR_GLSCOPEDOWNERSHIP_H__
+#define __SIR_GLSCOPEDOWNERSHIP_H__
 #include <Renderer/SIRGraphicsDriverABI.h>
 #include <Renderer/Drivers/OpenGL/SIRGLContext.h>
 
 // Non-owning until adopt(). Failure paths return native names to their original GL owner.
 // The wrapper is stack-only; its size and allocation cost are independent of resource count.
-template <typename TDispatch, sirGraphicsResult_t ( *DESTROY )( const TDispatch *, uint32_t ) noexcept>
+template <typename TDispatch, SIRGraphicsResult ( *DESTROY )( const TDispatch *, uint32_t ) noexcept>
 class SIRGLScopedName final
 {
 public:
@@ -25,7 +25,7 @@ public:
 	~SIRGLScopedName( void ) noexcept
 	{
 		if ( m_nName != 0 ) {
-			( void )DESTROY( m_pDispatch, m_nName );
+			static_cast<void>(DESTROY( m_pDispatch, m_nName ));
 		}
 	}
 	SIRGLScopedName( const SIRGLScopedName& ) = delete;

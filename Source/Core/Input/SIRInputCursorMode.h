@@ -12,8 +12,8 @@ express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIRINPUTCURSORMODE_H__
-#define __SIRENGINE_SIRINPUTCURSORMODE_H__
+#ifndef __SIR_INPUTCURSORMODE_H__
+#define __SIR_INPUTCURSORMODE_H__
 #include <Core/SIRPCH.h>
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -21,11 +21,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-typedef enum sirInputCursorMode_e : uint8_t
-{
+enum class SIRInputCursorMode : uint8_t {
 	SIR_INPUT_CURSOR_FREE = 0,
 	SIR_INPUT_CURSOR_HIDDEN = 1,
 	SIR_INPUT_CURSOR_CAPTURED = 2
-} sirInputCursorMode_t;
+};
 
-#endif // __SIRENGINE_SIRINPUTCURSORMODE_H__
+#endif // __SIR_INPUTCURSORMODE_H__

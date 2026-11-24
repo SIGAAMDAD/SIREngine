@@ -23,7 +23,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 static const SYSTEM_INFO *getSystemMemoryInfo( void ) noexcept
 {
 	static const SYSTEM_INFO s_Info = []() {
-		SYSTEM_INFO info = {};
+		SYSTEM_INFO info {};
 		GetSystemInfo( &info );
 		return info;
 	}();
@@ -33,17 +33,17 @@ static const SYSTEM_INFO *getSystemMemoryInfo( void ) noexcept
 static bool validPageRange( const void *pAddress, size_t nBytes ) noexcept
 {
 	const size_t nPageSize = SIRVirtualMemory::getPageSize();
-	return pAddress != nullptr && nPageSize != 0 && nBytes != 0 && ( ( uintptr_t )pAddress % nPageSize ) == 0 &&
+	return pAddress != nullptr && nPageSize != 0 && nBytes != 0 && ( reinterpret_cast<uintptr_t>(pAddress) % nPageSize ) == 0 &&
 	       ( nBytes % nPageSize ) == 0;
 }
 
 size_t SIRVirtualMemory::getPageSize( void ) noexcept
 {
-	return ( size_t )getSystemMemoryInfo()->dwPageSize;
+	return static_cast<size_t>(getSystemMemoryInfo())->dwPageSize;
 }
 size_t SIRVirtualMemory::getAllocationGranularity( void ) noexcept
 {
-	return ( size_t )getSystemMemoryInfo()->dwAllocationGranularity;
+	return static_cast<size_t>(getSystemMemoryInfo())->dwAllocationGranularity;
 }
 
 void *SIRVirtualMemory::reserve( size_t nBytes ) noexcept
@@ -80,23 +80,23 @@ bool SIRVirtualMemory::release( void *pAddress, size_t nBytes ) noexcept
 	return VirtualFree( pAddress, 0, MEM_RELEASE ) != FALSE;
 }
 
-bool SIRVirtualMemory::protect( void *pAddress, size_t nBytes, sirMemoryProtection_t eProtection ) noexcept
+bool SIRVirtualMemory::protect( void *pAddress, size_t nBytes, SIRMemoryProtection eProtection ) noexcept
 {
 	if ( !validPageRange( pAddress, nBytes ) ) {
 		return false;
 	}
 	DWORD nFlags = PAGE_NOACCESS;
 	switch ( eProtection ) {
-	case SIR_MEMORY_NO_ACCESS:
+	case SIRMemoryProtection::SIR_MEMORY_NO_ACCESS:
 		nFlags = PAGE_NOACCESS;
 		break;
-	case SIR_MEMORY_READ_ONLY:
+	case SIRMemoryProtection::SIR_MEMORY_READ_ONLY:
 		nFlags = PAGE_READONLY;
 		break;
-	case SIR_MEMORY_READ_WRITE:
+	case SIRMemoryProtection::SIR_MEMORY_READ_WRITE:
 		nFlags = PAGE_READWRITE;
 		break;
-	case SIR_MEMORY_READ_EXECUTE:
+	case SIRMemoryProtection::SIR_MEMORY_READ_EXECUTE:
 		nFlags = PAGE_EXECUTE_READ;
 		break;
 	default:

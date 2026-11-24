@@ -15,8 +15,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIREDITORSCENEWORKSPACE_H__
-#define __SIRENGINE_SIREDITORSCENEWORKSPACE_H__
+#ifndef __SIR_EDITORSCENEWORKSPACE_H__
+#define __SIR_EDITORSCENEWORKSPACE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -35,8 +35,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 class SIRMemorySegment;
 
-typedef enum sirEditorWorkspaceResult_e : uint8_t
-{
+enum class SIREditorWorkspaceResult : uint8_t {
 	SIR_EDITOR_WORKSPACE_OK = 0,
 	SIR_EDITOR_WORKSPACE_NOT_INITIALIZED = 1,
 	SIR_EDITOR_WORKSPACE_INVALID_ARGUMENT = 2,
@@ -48,7 +47,7 @@ typedef enum sirEditorWorkspaceResult_e : uint8_t
 	SIR_EDITOR_WORKSPACE_HIERARCHY_FAILED = 8,
 	SIR_EDITOR_WORKSPACE_FILE_IO = 9,
 	SIR_EDITOR_WORKSPACE_INVALID_PROPERTIES = 10
-} sirEditorWorkspaceResult_t;
+};
 
 // Editor-main-thread source owner. The Godot scene reader remains authoritative
 // for serialization: this workspace indexes source without rewriting it.
@@ -77,16 +76,16 @@ public:
 	SIREditorHierarchyModel& getHierarchy( void ) noexcept;
 
 	bool initialize( SIRMemorySegment *pEditorSegment ) noexcept;
-	sirEditorWorkspaceResult_t openTextSource( const char *pszSource, size_t nSourceBytes ) noexcept;
-	sirEditorWorkspaceResult_t openTextFile( const char *pszPath ) noexcept;
-	sirEditorCatalogBuildResult_t buildResourceCatalog( const sirEditorCatalogBuildRequest_t& request ) const noexcept;
+	SIREditorWorkspaceResult openTextSource( const char *pszSource, size_t nSourceBytes ) noexcept;
+	SIREditorWorkspaceResult openTextFile( const char *pszPath ) noexcept;
+	SIREditorCatalogBuildResult buildResourceCatalog( const sirEditorCatalogBuildRequest_t& request ) const noexcept;
 	void close( void ) noexcept;
 	bool shutdown( void ) noexcept;
 
 protected:
 private:
 	char *allocateSource( size_t nSourceBytes ) noexcept;
-	sirEditorWorkspaceResult_t finishOpen( size_t nSourceBytes ) noexcept;
+	SIREditorWorkspaceResult finishOpen( size_t nSourceBytes ) noexcept;
 	void rollbackOpen( void ) noexcept;
 
 	SIRLinearAllocator m_Arena;
@@ -104,4 +103,4 @@ private:
 	bool m_bOpen;
 };
 
-#endif // __SIRENGINE_SIREDITORSCENEWORKSPACE_H__
+#endif // __SIR_EDITORSCENEWORKSPACE_H__

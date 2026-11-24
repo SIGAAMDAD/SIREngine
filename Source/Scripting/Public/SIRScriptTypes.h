@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSCRIPTTYPES_H__
-#define __SIRENGINE_SIRSCRIPTTYPES_H__
+#ifndef __SIR_SCRIPTTYPES_H__
+#define __SIR_SCRIPTTYPES_H__
 
 #include <Core/SIRPCH.h>
 
@@ -28,8 +28,7 @@ constexpr uint32_t SIR_SCRIPT_BACKEND_ABI_REVISION = 4;
 constexpr uint32_t SIR_SCRIPT_PROGRAM_SOURCE_ABI_REVISION = 1;
 constexpr uint32_t SIR_SCRIPT_PAYLOAD_ALLOCATOR_ABI_REVISION = 1;
 
-typedef enum sirScriptResult_e : uint8_t
-{
+enum class SIRScriptResult : uint8_t {
 	SIR_SCRIPT_OK = 0,
 	SIR_SCRIPT_INVALID_ARGUMENT = 1,
 	SIR_SCRIPT_NOT_FOUND = 2,
@@ -40,7 +39,7 @@ typedef enum sirScriptResult_e : uint8_t
 	SIR_SCRIPT_TYPE_MISMATCH = 7,
 	SIR_SCRIPT_BUSY = 8,
 	SIR_SCRIPT_BACKEND_FAILURE = 9
-} sirScriptResult_t;
+};
 
 typedef struct sirScriptProgramHandle_s
 {
@@ -97,7 +96,7 @@ typedef struct sirScriptProgramSourceAPI_s
 {
 	uint32_t nABIRevision;
 	void *pUser;
-	sirScriptResult_t ( *pAcquire )( void *, uint64_t, uint64_t, uint64_t, sirScriptProgramView_t *, uint64_t * ) noexcept;
+	SIRScriptResult ( *pAcquire )( void *, uint64_t, uint64_t, uint64_t, sirScriptProgramView_t *, uint64_t * ) noexcept;
 	void ( *pRelease )( void *, uint64_t ) noexcept;
 } sirScriptProgramSourceAPI_t;
 
@@ -116,15 +115,15 @@ typedef struct sirScriptBackendAPI_s
 {
 	uint32_t nABIRevision;
 	void *pUser;
-	sirScriptResult_t ( *pStart )( void * ) noexcept;
+	SIRScriptResult ( *pStart )( void * ) noexcept;
 	void ( *pStop )( void * ) noexcept;
-	sirScriptResult_t ( *pLoadProgram )( void *, sirScriptProgramView_t, uint64_t * ) noexcept;
+	SIRScriptResult ( *pLoadProgram )( void *, sirScriptProgramView_t, uint64_t * ) noexcept;
 	void ( *pUnloadProgram )( void *, uint64_t ) noexcept;
-	sirScriptResult_t ( *pCreateInstance )( void *, uint64_t, uint64_t, uint64_t * ) noexcept;
-	sirScriptResult_t ( *pInitializeInstance )( void *, uint64_t ) noexcept;
+	SIRScriptResult ( *pCreateInstance )( void *, uint64_t, uint64_t, uint64_t * ) noexcept;
+	SIRScriptResult ( *pInitializeInstance )( void *, uint64_t ) noexcept;
 	void ( *pShutdownInstance )( void *, uint64_t ) noexcept;
 	void ( *pDestroyInstance )( void *, uint64_t ) noexcept;
-	sirScriptResult_t ( *pInvoke )( void *, const sirScriptInvokeRequest_t * ) noexcept;
+	SIRScriptResult ( *pInvoke )( void *, const sirScriptInvokeRequest_t * ) noexcept;
 } sirScriptBackendAPI_t;
 
-#endif // __SIRENGINE_SIRSCRIPTTYPES_H__
+#endif // __SIR_SCRIPTTYPES_H__

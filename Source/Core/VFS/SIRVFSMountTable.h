@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRVFSMOUNTTABLE_H__
-#define __SIRENGINE_SIRVFSMOUNTTABLE_H__
+#ifndef __SIR_VFSMOUNTTABLE_H__
+#define __SIR_VFSMOUNTTABLE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -30,8 +30,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 constexpr uint32_t SIR_VFS_MAX_MOUNTS = 32;
 constexpr uint32_t SIR_VFS_MAX_LEASES = 128;
 
-typedef enum sirVFSResult_e : uint8_t
-{
+enum class SIRVFSResult : uint8_t {
 	SIR_VFS_OK = 0,
 	SIR_VFS_INVALID_ARGUMENT,
 	SIR_VFS_FORBIDDEN,
@@ -41,22 +40,20 @@ typedef enum sirVFSResult_e : uint8_t
 	SIR_VFS_IO_ERROR,
 	SIR_VFS_BUSY,
 	SIR_VFS_STOPPED
-} sirVFSResult_t;
+};
 
-typedef enum sirVFSBackendKind_e : uint8_t
-{
+enum class SIRVFSBackendKind : uint8_t {
 	SIR_VFS_BACKEND_DIRECTORY = 0,
 	SIR_VFS_BACKEND_SIRPACK,
 	SIR_VFS_BACKEND_MEMORY,
 	SIR_VFS_BACKEND_GENERATED
-} sirVFSBackendKind_t;
+};
 
-typedef enum sirVFSAccess_e : uint32_t
-{
+enum class SIRVFSAccess : uint32_t {
 	SIR_VFS_ACCESS_READ = 1u << 0,
 	SIR_VFS_ACCESS_WRITE = 1u << 1,
 	SIR_VFS_ACCESS_ENUMERATE = 1u << 2
-} sirVFSAccess_t;
+};
 
 typedef struct sirVFSMountDescriptor_s
 {
@@ -66,7 +63,7 @@ typedef struct sirVFSMountDescriptor_s
 	int32_t iPriority;
 	uint32_t nAllowedOps;
 	uint32_t nOwnerScope;
-	sirVFSBackendKind_t eKind;
+	SIRVFSBackendKind eKind;
 	bool bTrusted;
 } sirVFSMountDescriptor_t;
 
@@ -127,12 +124,12 @@ public:
 
 	uint64_t getRevision( void ) const noexcept;
 
-	sirVFSResult_t mount( const sirVFSMountDescriptor_t& descriptor, sirVFSMountHandle_t *pHandle ) noexcept;
-	sirVFSResult_t unmount( sirVFSMountHandle_t handle ) noexcept;
-	sirVFSResult_t acquireCandidates( const sirVFSPath_t& path, uint32_t nOperation, sirVFSCandidateList_t *pCandidates ) noexcept;
-	sirVFSResult_t acquireWriteTarget( const sirVFSPath_t& path, sirVFSMountHandle_t handle, sirVFSMountCandidate_t *pCandidate ) noexcept;
-	sirVFSResult_t retain( sirVFSMountLease_t lease, sirVFSMountCandidate_t *pCandidate ) noexcept;
-	sirVFSResult_t release( sirVFSMountLease_t lease ) noexcept;
+	SIRVFSResult mount( const sirVFSMountDescriptor_t& descriptor, sirVFSMountHandle_t *pHandle ) noexcept;
+	SIRVFSResult unmount( sirVFSMountHandle_t handle ) noexcept;
+	SIRVFSResult acquireCandidates( const sirVFSPath_t& path, uint32_t nOperation, sirVFSCandidateList_t *pCandidates ) noexcept;
+	SIRVFSResult acquireWriteTarget( const sirVFSPath_t& path, sirVFSMountHandle_t handle, sirVFSMountCandidate_t *pCandidate ) noexcept;
+	SIRVFSResult retain( sirVFSMountLease_t lease, sirVFSMountCandidate_t *pCandidate ) noexcept;
+	SIRVFSResult release( sirVFSMountLease_t lease ) noexcept;
 
 protected:
 private:
@@ -149,4 +146,4 @@ private:
 	uint64_t m_nNextToken;
 };
 
-#endif // __SIRENGINE_SIRVFSMOUNTTABLE_H__
+#endif // __SIR_VFSMOUNTTABLE_H__

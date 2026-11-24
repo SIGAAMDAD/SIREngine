@@ -9,8 +9,8 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRCOMMONGEOMETRYQUERIES_H__
-#define __SIRENGINE_SIRCOMMONGEOMETRYQUERIES_H__
+#ifndef __SIR_COMMONGEOMETRYQUERIES_H__
+#define __SIR_COMMONGEOMETRYQUERIES_H__
 
 #include <Mesh/SIRMeshCache.h>
 
@@ -46,19 +46,18 @@ typedef struct sirCommonGeometryHit_s
 	sirMeshKey_t sourceKey;
 } sirCommonGeometryHit_t;
 
-typedef enum sirCommonGeometryResult_e : uint8_t
-{
+enum class SIRCommonGeometryResult : uint8_t {
 	SIR_COMMON_GEOMETRY_HIT = 0,
 	SIR_COMMON_GEOMETRY_MISS = 1,
 	SIR_COMMON_GEOMETRY_INVALID_ARGUMENT = 2,
 	SIR_COMMON_GEOMETRY_INVALID_BVH = 3,
 	SIR_COMMON_GEOMETRY_OUT_OF_BUDGET = 4
-} sirCommonGeometryResult_t;
+};
 
 // The caller owns an active SIRMeshCache borrow, which pins these exact
 // canonical arrays. Rendering, physics, acoustic rays and navigation all
 // run this same read-only evaluator without private BVHs or scratch heaps.
-sirCommonGeometryResult_t sirCommonGeometryTraceRay( const sirMeshGeometryRead_t& rGeometry, const sirCommonGeometryRay_t& rRay,
+SIRCommonGeometryResult sirCommonGeometryTraceRay( const sirMeshGeometryRead_t& rGeometry, const sirCommonGeometryRay_t& rRay,
                                                      sirCommonGeometryHit_t *pHit ) noexcept;
 
-#endif // __SIRENGINE_SIRCOMMONGEOMETRYQUERIES_H__
+#endif // __SIR_COMMONGEOMETRYQUERIES_H__

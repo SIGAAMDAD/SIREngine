@@ -14,7 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#include <Core/Platform/SIRAtomic.h>
+#include <atomic>
 #include <Core/Platform/SIRScopedLock.h>
 #include <Core/Platform/SIRSync.h>
 #include <Core/Platform/SIRThread.h>
@@ -33,13 +33,13 @@ typedef enum sirTestPhase_e : uint8_t
 typedef struct sirThreadIdentityProbe_s
 {
 	sirThreadId_t hOwner;
-	SIRAtomic<bool> bCrossThreadValidated;
+	std::atomic<bool> bCrossThreadValidated;
 } sirThreadIdentityProbe_t;
 
 static void sirCheckThreadIdentity( void *pContext )
 {
 	sirThreadIdentityProbe_t *pProbe = ( sirThreadIdentityProbe_t * )pContext;
-	pProbe->bCrossThreadValidated.store( !SIRThread::isCurrentThread( pProbe->hOwner ), SIR_MEMORY_ORDER_RELEASE );
+	pProbe->bCrossThreadValidated.store( !SIRThread::isCurrentThread( pProbe->hOwner ), std::memory_order_release );
 }
 
 static bool testEngineThreadIdentity( void )
@@ -50,37 +50,37 @@ static bool testEngineThreadIdentity( void )
 	}
 	sirThreadIdentityProbe_t probe{};
 	probe.hOwner = hOwner;
-	probe.bCrossThreadValidated.store( false, SIR_MEMORY_ORDER_RELAXED );
+	probe.bCrossThreadValidated.store( false, std::memory_order_relaxed );
 	SIRThread worker;
 	if ( !worker.start( &sirCheckThreadIdentity, &probe ) || !worker.join() ) {
 		return false;
 	}
-	return probe.bCrossThreadValidated.load( SIR_MEMORY_ORDER_ACQUIRE ) && SIRThread::isCurrentThread( hOwner );
+	return probe.bCrossThreadValidated.load( std::memory_order_acquire ) && SIRThread::isCurrentThread( hOwner );
 }
 
 static bool testAtomicOrders( void )
 {
-	static_assert( SIRAtomic<uint64_t>::isAlwaysLockFree(), "64-bit lock free atomic is required" );
-	static_assert( sizeof( SIRAtomic<uint64_t> ) == sizeof( uint64_t ), "no wrapper overhead" );
-	static_assert( sizeof( SIRAtomic<uint32_t> ) == sizeof( uint32_t ), "no wrapper overhead" );
-	static_assert( !std::is_copy_constructible<SIRAtomic<uint64_t>>::value, "no atomic copies" );
+	static_assert( std::atomic<uint64_t>::is_always_lock_free, "64-bit lock free atomic is required" );
+	static_assert( sizeof( std::atomic<uint64_t> ) == sizeof( uint64_t ), "no wrapper overhead" );
+	static_assert( sizeof( std::atomic<uint32_t> ) == sizeof( uint32_t ), "no wrapper overhead" );
+	static_assert( !std::is_copy_constructible<std::atomic<uint64_t>>::value, "no atomic copies" );
 	static_assert( !std::is_copy_constructible<SIRScopedLock<SIRMutex>>::value, "no guard copies" );
 
-	SIRAtomic<uint64_t> nState( 5 );
-	if ( nState.fetchAdd( 3, SIR_MEMORY_ORDER_ACQUIRE_RELEASE ) != 5 || nState.load() != 8 ) {
+	std::atomic<uint64_t> nState( 5 );
+	if ( nState.fetch_add( 3, std::memory_order_acq_rel ) != 5 || nState.load() != 8 ) {
 		return false;
 	}
-	if ( nState.fetchSub( 2, SIR_MEMORY_ORDER_ACQUIRE_RELEASE ) != 8 || nState.load() != 6 ) {
+	if ( nState.fetch_sub( 2, std::memory_order_acq_rel ) != 8 || nState.load() != 6 ) {
 		return false;
 	}
 	uint64_t nExpected = 3;
-	if ( nState.compareExchangeStrong( nExpected, 15, SIR_MEMORY_ORDER_ACQUIRE_RELEASE ) || nExpected != 6 ) {
+	if ( nState.compare_exchange_strong( nExpected, 15, std::memory_order_acq_rel ) || nExpected != 6 ) {
 		return false;
 	}
-	if ( !nState.compareExchangeStrong( nExpected, 15, SIR_MEMORY_ORDER_ACQUIRE_RELEASE, SIR_MEMORY_ORDER_ACQUIRE ) ) {
+	if ( !nState.compare_exchange_strong( nExpected, 15, std::memory_order_acq_rel, std::memory_order_acquire ) ) {
 		return false;
 	}
-	if ( nState.exchange( 11, SIR_MEMORY_ORDER_RELEASE ) != 15 || nState.load( SIR_MEMORY_ORDER_ACQUIRE ) != 11 ) {
+	if ( nState.exchange( 11, std::memory_order_release ) != 15 || nState.load( std::memory_order_acquire ) != 11 ) {
 		return false;
 	}
 	if ( ( nState &= 7 ) != 3 || ( nState |= 16 ) != 19 || ( nState ^= 2 ) != 17 ) {
@@ -90,43 +90,43 @@ static bool testAtomicOrders( void )
 		return false;
 	}
 
-	SIRAtomic<bool> bFlag;
+	std::atomic<bool> bFlag;
 	if ( bFlag.load() || bFlag.exchange( true ) || !bFlag.load() ) {
 		return false;
 	}
-	bFlag.store( false, SIR_MEMORY_ORDER_RELEASE );
-	SIRAtomicFlag flag;
-	if ( flag.test() || flag.testAndSet( SIR_MEMORY_ORDER_ACQUIRE ) || !flag.test() || !flag.testAndSet() ) {
+	bFlag.store( false, std::memory_order_release );
+	std::atomic<bool> flag;
+	if ( flag.load() || flag.exchange( true, std::memory_order_acquire ) || !flag.load() || !flag.exchange( true ) ) {
 		return false;
 	}
-	flag.clear( SIR_MEMORY_ORDER_RELEASE );
-	if ( flag.test() ) {
+	flag.store( false, std::memory_order_release );
+	if ( flag.load() ) {
 		return false;
 	}
 
-	SIRAtomic<float> fCount( 1.5f );
-	if ( fCount.fetchAdd( 2.0f ) != 1.5f || fCount.fetchSub( 0.5f ) != 3.5f || fCount.load() != 3.0f ) {
+	std::atomic<float> fCount( 1.5f );
+	if ( fCount.fetch_add( 2.0f ) != 1.5f || fCount.fetch_sub( 0.5f ) != 3.5f || fCount.load() != 3.0f ) {
 		return false;
 	}
 
 	int szValues[8]{};
-	SIRAtomic<int *> pValue( szValues );
-	if ( pValue.fetchAdd( 2 ) != szValues || pValue.load() != szValues + 2 ) {
+	std::atomic<int *> pValue( szValues );
+	if ( pValue.fetch_add( 2 ) != szValues || pValue.load() != szValues + 2 ) {
 		return false;
 	}
-	if ( pValue.fetchSub( 1 ) != szValues + 2 || pValue.load() != szValues + 1 ) {
+	if ( pValue.fetch_sub( 1 ) != szValues + 2 || pValue.load() != szValues + 1 ) {
 		return false;
 	}
 	if ( ( pValue += 2 ) != szValues + 3 || pValue-- != szValues + 3 || pValue.load() != szValues + 2 ) {
 		return false;
 	}
 
-	SIRAtomic<sirTestPhase_t> ePhase( SIR_TEST_PHASE_IDLE );
-	ePhase.store( SIR_TEST_PHASE_RUNNING, SIR_MEMORY_ORDER_RELEASE );
-	if ( ePhase.load( SIR_MEMORY_ORDER_ACQUIRE ) != SIR_TEST_PHASE_RUNNING ) {
+	std::atomic<sirTestPhase_t> ePhase( SIR_TEST_PHASE_IDLE );
+	ePhase.store( SIR_TEST_PHASE_RUNNING, std::memory_order_release );
+	if ( ePhase.load( std::memory_order_acquire ) != SIR_TEST_PHASE_RUNNING ) {
 		return false;
 	}
-	return nState.isLockFree() && flag.isLockFree();
+	return nState.is_lock_free() && flag.is_lock_free();
 }
 
 static bool testScopedLock( void )
@@ -167,14 +167,14 @@ static bool testScopedLock( void )
 
 static bool testReleaseAcquirePublication( void )
 {
-	SIRAtomic<bool> bPublished( false );
+	std::atomic<bool> bPublished( false );
 	uint32_t nPayload = 0;
 	std::thread producer( [&bPublished, &nPayload]() {
 		nPayload = 0xA5A5A5A5u;
-		bPublished.store( true, SIR_MEMORY_ORDER_RELEASE );
+		bPublished.store( true, std::memory_order_release );
 	} );
 
-	while ( !bPublished.load( SIR_MEMORY_ORDER_ACQUIRE ) ) {
+	while ( !bPublished.load( std::memory_order_acquire ) ) {
 		std::this_thread::yield();
 	}
 	const bool bValid = nPayload == 0xA5A5A5A5u;
@@ -184,14 +184,14 @@ static bool testReleaseAcquirePublication( void )
 
 static bool testConcurrentAtomic( void )
 {
-	SIRAtomic<uint32_t> counter( 0 );
+	std::atomic<uint32_t> counter( 0 );
 	constexpr uint32_t N_THREADS = 6;
 	constexpr uint32_t N_INCREMENTS = 50000;
 	std::thread workers[N_THREADS];
 	for ( uint32_t iThread = 0; iThread < N_THREADS; ++iThread ) {
 		workers[iThread] = std::thread( [&counter, N_INCREMENTS]() {
 			for ( uint32_t iIncrement = 0; iIncrement < N_INCREMENTS; ++iIncrement ) {
-				counter.fetchAdd( 1, SIR_MEMORY_ORDER_RELAXED );
+				counter.fetch_add( 1, std::memory_order_relaxed );
 			}
 		} );
 	}

@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRANIMATIONSYSTEM_H__
-#define __SIRENGINE_SIRANIMATIONSYSTEM_H__
+#ifndef __SIR_ANIMATIONSYSTEM_H__
+#define __SIR_ANIMATIONSYSTEM_H__
 
 #include <Core/SIRPCH.h>
 
@@ -80,16 +80,16 @@ public:
 	SIRAnimationSystem( void ) noexcept = default;
 	virtual ~SIRAnimationSystem( void ) noexcept = default;
 
-	virtual sirAnimationResult_t getPosePublisher( SIRAnimationPosePublisher **ppPublisher ) noexcept = 0;
-	virtual sirAnimationResult_t getInstanceRegistry( SIRAnimationInstanceRegistry **ppRegistry ) noexcept = 0;
+	virtual SIRAnimationResult getPosePublisher( SIRAnimationPosePublisher **ppPublisher ) noexcept = 0;
+	virtual SIRAnimationResult getInstanceRegistry( SIRAnimationInstanceRegistry **ppRegistry ) noexcept = 0;
 
-	virtual sirAnimationResult_t initialize( const sirAnimationSystemConfig_t& config ) noexcept = 0;
-	virtual sirAnimationResult_t scheduleTick( const sirAnimationTickRequest_t& request, sirAnimationTickReceipt_t *pReceipt ) noexcept = 0;
-	virtual sirAnimationResult_t cancelWorldEpoch( uint64_t nWorldEpoch, uint32_t nCancellationGeneration ) noexcept = 0;
-	virtual sirAnimationResult_t shutdown( void ) noexcept = 0;
+	virtual SIRAnimationResult initialize( const sirAnimationSystemConfig_t& config ) noexcept = 0;
+	virtual SIRAnimationResult scheduleTick( const sirAnimationTickRequest_t& request, sirAnimationTickReceipt_t *pReceipt ) noexcept = 0;
+	virtual SIRAnimationResult cancelWorldEpoch( uint64_t nWorldEpoch, uint32_t nCancellationGeneration ) noexcept = 0;
+	virtual SIRAnimationResult shutdown( void ) noexcept = 0;
 
 protected:
 private:
 };
 
-#endif // __SIRENGINE_SIRANIMATIONSYSTEM_H__
+#endif // __SIR_ANIMATIONSYSTEM_H__

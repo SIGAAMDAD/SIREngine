@@ -34,7 +34,7 @@ static bool sirEditorWriterOutputOverlaps( const void *pInput, size_t nInputByte
 	if ( nInputBytes == 0 ) {
 		return false;
 	}
-	const uintptr_t nInputPtr = ( uintptr_t )pInput;
+	const uintptr_t nInputPtr = reinterpret_cast<uintptr_t>(pInput);
 	if ( nInputBytes > UINTPTR_MAX - nInputPtr ) {
 		return true;
 	}
@@ -55,7 +55,7 @@ static bool sirEditorScalarValid( const char *pszText, uint32_t nLength ) noexce
 		}
 		for ( uint32_t iCharacter = 1; iCharacter < nLength - 1; ++iCharacter ) {
 			const char nCurrent = pszText[iCharacter];
-			if ( nCurrent == '\n' || nCurrent == '\r' || ( unsigned char )nCurrent < 0x20 || nCurrent == '"' ) {
+			if ( nCurrent == '\n' || nCurrent == '\r' || static_cast<unsigned char>(nCurrent) < 0x20 || nCurrent == '"' ) {
 				return false;
 			}
 			if ( nCurrent != '\\' ) {
@@ -115,81 +115,81 @@ static bool sirEditorScalarValid( const char *pszText, uint32_t nLength ) noexce
 	return iCharacter == nLength;
 }
 
-sirEditorTextWriteResult_t sirEditorWriteScalarPatches( const char *pszSource, size_t nSourceBytes,
+SIREditorTextWriteResult sirEditorWriteScalarPatches( const char *pszSource, size_t nSourceBytes,
                                                         const sirEditorTextPropertyIndex_t& index, const sirEditorTextEdit_t *pEdits,
                                                         uint32_t nEdits, char *pszOutput, size_t nCapacity, size_t *pOutBytes ) noexcept
 {
 	if ( pOutBytes == nullptr || pszSource == nullptr || ( nEdits != 0 && pEdits == nullptr ) ||
 	     ( pszOutput == nullptr && nCapacity != 0 ) || ( index.nCount != 0 && index.pProperties == nullptr ) ) {
-		return SIR_EDITOR_WRITE_INVALID_ARGUMENT;
+		return SIREditorTextWriteResult::SIR_EDITOR_WRITE_INVALID_ARGUMENT;
 	}
 	if ( pszOutput != nullptr ) {
-		const uintptr_t nOutputPtr = ( uintptr_t )pszOutput;
+		const uintptr_t nOutputPtr = reinterpret_cast<uintptr_t>(pszOutput);
 		if ( nCapacity > UINTPTR_MAX - nOutputPtr ||
 		     sirEditorWriterOutputOverlaps( pOutBytes, sizeof( *pOutBytes ), nOutputPtr, nCapacity ) ) {
-			return SIR_EDITOR_WRITE_INVALID_ARGUMENT;
+			return SIREditorTextWriteResult::SIR_EDITOR_WRITE_INVALID_ARGUMENT;
 		}
 	}
 	*pOutBytes = 0;
 	if ( index.nCount > index.nCapacity || nEdits > index.nCount || nSourceBytes == SIZE_MAX ) {
-		return SIR_EDITOR_WRITE_INVALID_ARGUMENT;
+		return SIREditorTextWriteResult::SIR_EDITOR_WRITE_INVALID_ARGUMENT;
 	}
 	for ( uint32_t iProperty = 0; iProperty < index.nCount; ++iProperty ) {
 		const sirEditorTextProperty_t& property = index.pProperties[iProperty];
 		if ( property.nValueLength == 0 || property.nValueOffset > nSourceBytes ||
 		     property.nValueLength > nSourceBytes - property.nValueOffset ) {
-			return SIR_EDITOR_WRITE_INVALID_SOURCE;
+			return SIREditorTextWriteResult::SIR_EDITOR_WRITE_INVALID_SOURCE;
 		}
 	}
 	size_t nOutputBytes = nSourceBytes;
 	for ( uint32_t iEdit = 0; iEdit < nEdits; ++iEdit ) {
 		const sirEditorTextEdit_t& edit = pEdits[iEdit];
 		if ( edit.iProperty >= index.nCount || !sirEditorScalarValid( edit.pszReplacement, edit.nReplacementBytes ) ) {
-			return SIR_EDITOR_WRITE_INVALID_SCALAR;
+			return SIREditorTextWriteResult::SIR_EDITOR_WRITE_INVALID_SCALAR;
 		}
 		const sirEditorTextProperty_t& property = index.pProperties[edit.iProperty];
 		for ( uint32_t iPrior = 0; iPrior < iEdit; ++iPrior ) {
 			const sirEditorTextProperty_t& prior = index.pProperties[pEdits[iPrior].iProperty];
 			if ( edit.iProperty == pEdits[iPrior].iProperty ||
-			     ( property.nValueOffset < ( uint64_t )prior.nValueOffset + prior.nValueLength &&
-			       prior.nValueOffset < ( uint64_t )property.nValueOffset + property.nValueLength ) ) {
-				return SIR_EDITOR_WRITE_DUPLICATE_PATCH;
+			     ( property.nValueOffset < static_cast<uint64_t>(prior.nValueOffset) + prior.nValueLength &&
+			       prior.nValueOffset < static_cast<uint64_t>(property.nValueOffset) + property.nValueLength ) ) {
+				return SIREditorTextWriteResult::SIR_EDITOR_WRITE_DUPLICATE_PATCH;
 			}
 		}
 		if ( edit.nReplacementBytes > SIZE_MAX - nOutputBytes ) {
-			return SIR_EDITOR_WRITE_OUT_OF_CAPACITY;
+			return SIREditorTextWriteResult::SIR_EDITOR_WRITE_OUT_OF_CAPACITY;
 		}
 		nOutputBytes += edit.nReplacementBytes;
 		nOutputBytes -= property.nValueLength;
 	}
 	*pOutBytes = nOutputBytes;
 	if ( pszOutput == nullptr && nCapacity == 0 ) {
-		return SIR_EDITOR_WRITE_OK;
+		return SIREditorTextWriteResult::SIR_EDITOR_WRITE_OK;
 	}
 	if ( pszOutput == nullptr || nOutputBytes == SIZE_MAX || nCapacity <= nOutputBytes ) {
-		return SIR_EDITOR_WRITE_OUT_OF_CAPACITY;
+		return SIREditorTextWriteResult::SIR_EDITOR_WRITE_OUT_OF_CAPACITY;
 	}
-	const uintptr_t nSourcePtr = ( uintptr_t )pszSource;
-	const uintptr_t nOutputPtr = ( uintptr_t )pszOutput;
+	const uintptr_t nSourcePtr = reinterpret_cast<uintptr_t>(pszSource);
+	const uintptr_t nOutputPtr = reinterpret_cast<uintptr_t>(pszOutput);
 	if ( ( nSourceBytes > UINTPTR_MAX - nSourcePtr ) || ( nCapacity > UINTPTR_MAX - nOutputPtr ) ) {
-		return SIR_EDITOR_WRITE_INVALID_ARGUMENT;
+		return SIREditorTextWriteResult::SIR_EDITOR_WRITE_INVALID_ARGUMENT;
 	}
 	if ( nSourcePtr < nOutputPtr + nCapacity && nOutputPtr < nSourcePtr + nSourceBytes ) {
-		return SIR_EDITOR_WRITE_INVALID_ARGUMENT;
+		return SIREditorTextWriteResult::SIR_EDITOR_WRITE_INVALID_ARGUMENT;
 	}
 	if ( ( nEdits != 0 && SIZE_MAX / nEdits < sizeof( sirEditorTextEdit_t ) ) ||
 	     ( index.nCount != 0 && SIZE_MAX / index.nCount < sizeof( sirEditorTextProperty_t ) ) ||
-	     sirEditorWriterOutputOverlaps( pEdits, ( size_t )nEdits * sizeof( sirEditorTextEdit_t ), nOutputPtr, nCapacity ) ||
-	     sirEditorWriterOutputOverlaps( index.pProperties, ( size_t )index.nCount * sizeof( sirEditorTextProperty_t ), nOutputPtr,
+	     sirEditorWriterOutputOverlaps( pEdits, static_cast<size_t>(nEdits * sizeof(  sirEditorTextEdit_t  )), nOutputPtr, nCapacity ) ||
+	     sirEditorWriterOutputOverlaps( index.pProperties, static_cast<size_t>(index.nCount) * sizeof( sirEditorTextProperty_t ), nOutputPtr,
 	                                    nCapacity ) ) {
-		return SIR_EDITOR_WRITE_INVALID_ARGUMENT;
+		return SIREditorTextWriteResult::SIR_EDITOR_WRITE_INVALID_ARGUMENT;
 	}
 	// All replacement spans must stay outside the output destination. A prior
 	// copy could otherwise overwrite a later edit's input before it is read.
 	for ( uint32_t iEdit = 0; iEdit < nEdits; ++iEdit ) {
 		const sirEditorTextEdit_t& edit = pEdits[iEdit];
 		if ( sirEditorWriterOutputOverlaps( edit.pszReplacement, edit.nReplacementBytes, nOutputPtr, nCapacity ) ) {
-			return SIR_EDITOR_WRITE_INVALID_ARGUMENT;
+			return SIREditorTextWriteResult::SIR_EDITOR_WRITE_INVALID_ARGUMENT;
 		}
 	}
 	size_t nSourceOffset = 0;
@@ -206,7 +206,7 @@ sirEditorTextWriteResult_t sirEditorWriteScalarPatches( const char *pszSource, s
 			}
 		}
 		if ( iNext == UINT32_MAX ) {
-			return SIR_EDITOR_WRITE_INVALID_SOURCE;
+			return SIREditorTextWriteResult::SIR_EDITOR_WRITE_INVALID_SOURCE;
 		}
 		const sirEditorTextEdit_t& edit = pEdits[iNext];
 		const sirEditorTextProperty_t& property = index.pProperties[edit.iProperty];
@@ -220,5 +220,5 @@ sirEditorTextWriteResult_t sirEditorWriteScalarPatches( const char *pszSource, s
 	}
 	memcpy( pszOutput + nDestinationOffset, pszSource + nSourceOffset, nSourceBytes - nSourceOffset );
 	pszOutput[nOutputBytes] = '\0';
-	return SIR_EDITOR_WRITE_OK;
+	return SIREditorTextWriteResult::SIR_EDITOR_WRITE_OK;
 }

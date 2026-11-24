@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef SIRENGINE_SIRCOMPRESSEDFUNCTOR_H
-#define SIRENGINE_SIRCOMPRESSEDFUNCTOR_H
+#ifndef __SIR_COMPRESSEDFUNCTOR_H__
+#define __SIR_COMPRESSEDFUNCTOR_H__
 
 #include <Core/SIRPCH.h>
 
@@ -71,4 +71,4 @@ public:
 	}
 };
 
-#endif // SIRENGINE_SIRCOMPRESSEDFUNCTOR_H
+#endif // __SIR_COMPRESSEDFUNCTOR_H__

@@ -14,8 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSPSCEVENTRING_H__
-#define __SIRENGINE_SIRSPSCEVENTRING_H__
+#ifndef __SIR_SPSCEVENTRING_H__
+#define __SIR_SPSCEVENTRING_H__
 
 #include <Core/SIRPCH.h>
 
@@ -26,7 +26,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <Core/Events/SIREventTypes.h>
-#include <Core/Platform/SIRAtomic.h>
+#include <atomic>
 #include <stdint.h>
 #include <string.h>
 #include <type_traits>
@@ -40,13 +40,13 @@ struct sirEventReadSpan_s
 
 typedef struct sirSPSCProducerState_s
 {
-	SIRAtomic<uint64_t> nTail{ 0 };
+	std::atomic<uint64_t> nTail{ 0 };
 	uint64_t nHeadCache;
 } sirSPSCProducerState_t;
 
 typedef struct sirSPSCConsumerState_s
 {
-	SIRAtomic<uint64_t> nHead{ 0 };
+	std::atomic<uint64_t> nHead{ 0 };
 	uint64_t nTailCache;
 	uint32_t nReserved;
 	bool bDraining;
@@ -69,18 +69,18 @@ public:
 	SIRSPSCEventRing( const SIRSPSCEventRing& ) = delete;
 	SIRSPSCEventRing& operator=( const SIRSPSCEventRing& ) = delete;
 
-	sirEventEnqueueStatus_t tryEnqueue( const TPayload& payload ) noexcept
+	SIREventEnqueueStatus tryEnqueue( const TPayload& payload ) noexcept
 	{
-		if ( m_bStopped.load( SIR_MEMORY_ORDER_ACQUIRE ) ) {
-			return SIR_EVENT_ENQUEUE_STOPPED;
+		if ( m_bStopped.load( std::memory_order_acquire ) ) {
+			return SIREventEnqueueStatus::SIR_EVENT_ENQUEUE_STOPPED;
 		}
-		return enqueueBatchUnchecked( &payload, 1 ) == 1 ? SIR_EVENT_ENQUEUE_OK : SIR_EVENT_ENQUEUE_FULL;
+		return enqueueBatchUnchecked( &payload, 1 ) == 1 ? SIREventEnqueueStatus::SIR_EVENT_ENQUEUE_OK : SIREventEnqueueStatus::SIR_EVENT_ENQUEUE_FULL;
 	}
 
 	// Returns the accepted prefix length. Zero can mean full, stopped or nCount=0.
 	uint32_t enqueueBatch( const TPayload *pPayloads, uint32_t nCount ) noexcept
 	{
-		if ( pPayloads == nullptr || nCount == 0 || m_bStopped.load( SIR_MEMORY_ORDER_ACQUIRE ) ) {
+		if ( pPayloads == nullptr || nCount == 0 || m_bStopped.load( std::memory_order_acquire ) ) {
 			return 0;
 		}
 		return enqueueBatchUnchecked( pPayloads, nCount );
@@ -99,18 +99,18 @@ public:
 		if ( pOutput == nullptr || nCount == 0 || m_Consumer.bDraining ) {
 			return 0;
 		}
-		const uint64_t nHead = m_Consumer.nHead.load( SIR_MEMORY_ORDER_RELAXED );
+		const uint64_t nHead = m_Consumer.nHead.load( std::memory_order_relaxed );
 		const uint32_t nAvailable = availableForConsumer( nHead, nCount );
 		if ( nAvailable == 0 ) {
 			return 0;
 		}
-		const uint32_t nStart = ( uint32_t )( nHead & ( Capacity - 1 ) );
+		const uint32_t nStart = static_cast<uint32_t>(  nHead & ( Capacity - 1 )  );
 		const uint32_t nFirst = nAvailable < Capacity - nStart ? nAvailable : Capacity - nStart;
 		memcpy( pOutput, &m_Events[nStart], nFirst * sizeof( TPayload ) );
 		if ( nFirst < nAvailable ) {
 			memcpy( pOutput + nFirst, m_Events, ( nAvailable - nFirst ) * sizeof( TPayload ) );
 		}
-		m_Consumer.nHead.store( nHead + nAvailable, SIR_MEMORY_ORDER_RELEASE );
+		m_Consumer.nHead.store( nHead + nAvailable, std::memory_order_release );
 		return nAvailable;
 	}
 
@@ -121,13 +121,13 @@ public:
 			return 0;
 		}
 		m_Consumer.bDraining = true;
-		const uint64_t nHead = m_Consumer.nHead.load( SIR_MEMORY_ORDER_RELAXED );
+		const uint64_t nHead = m_Consumer.nHead.load( std::memory_order_relaxed );
 		const uint32_t nAvailable = availableForConsumer( nHead, nBudget );
 		for ( uint32_t i = 0; i < nAvailable; ++i ) {
 			callback( m_Events[( nHead + i ) & ( Capacity - 1 )] );
 		}
 		if ( nAvailable != 0 ) {
-			m_Consumer.nHead.store( nHead + nAvailable, SIR_MEMORY_ORDER_RELEASE );
+			m_Consumer.nHead.store( nHead + nAvailable, std::memory_order_release );
 		}
 		m_Consumer.bDraining = false;
 		return nAvailable;
@@ -144,12 +144,12 @@ public:
 		if ( m_Consumer.bDraining || nBudget == 0 ) {
 			return 0;
 		}
-		const uint64_t nHead = m_Consumer.nHead.load( SIR_MEMORY_ORDER_RELAXED );
+		const uint64_t nHead = m_Consumer.nHead.load( std::memory_order_relaxed );
 		const uint32_t nAvailable = availableForConsumer( nHead, nBudget );
 		if ( nAvailable == 0 ) {
 			return 0;
 		}
-		const uint32_t nStart = ( uint32_t )( nHead & ( Capacity - 1 ) );
+		const uint32_t nStart = static_cast<uint32_t>(  nHead & ( Capacity - 1 )  );
 		const uint32_t nFirst = nAvailable < Capacity - nStart ? nAvailable : Capacity - nStart;
 		first = { &m_Events[nStart], nFirst };
 		if ( nFirst != nAvailable ) {
@@ -166,8 +166,8 @@ public:
 			return false;
 		}
 		if ( nConsumed != 0 ) {
-			const uint64_t nHead = m_Consumer.nHead.load( SIR_MEMORY_ORDER_RELAXED );
-			m_Consumer.nHead.store( nHead + nConsumed, SIR_MEMORY_ORDER_RELEASE );
+			const uint64_t nHead = m_Consumer.nHead.load( std::memory_order_relaxed );
+			m_Consumer.nHead.store( nHead + nConsumed, std::memory_order_release );
 		}
 		m_Consumer.nReserved = 0;
 		m_Consumer.bDraining = false;
@@ -199,37 +199,37 @@ public:
 
 	void stop( void ) noexcept
 	{
-		m_bStopped.store( true, SIR_MEMORY_ORDER_RELEASE );
+		m_bStopped.store( true, std::memory_order_release );
 	}
 
 	uint64_t approximateCount( void ) const noexcept
 	{
-		const uint64_t nTail = m_Producer.nTail.load( SIR_MEMORY_ORDER_ACQUIRE );
-		const uint64_t nHead = m_Consumer.nHead.load( SIR_MEMORY_ORDER_ACQUIRE );
+		const uint64_t nTail = m_Producer.nTail.load( std::memory_order_acquire );
+		const uint64_t nHead = m_Consumer.nHead.load( std::memory_order_acquire );
 		return nTail - nHead;
 	}
 
 private:
 	uint32_t enqueueBatchUnchecked( const TPayload *pPayloads, uint32_t nCount ) noexcept
 	{
-		const uint64_t nTail = m_Producer.nTail.load( SIR_MEMORY_ORDER_RELAXED );
+		const uint64_t nTail = m_Producer.nTail.load( std::memory_order_relaxed );
 		uint64_t nUsed = nTail - m_Producer.nHeadCache;
 		if ( nUsed >= Capacity || nCount > Capacity - nUsed ) {
-			m_Producer.nHeadCache = m_Consumer.nHead.load( SIR_MEMORY_ORDER_ACQUIRE );
+			m_Producer.nHeadCache = m_Consumer.nHead.load( std::memory_order_acquire );
 			nUsed = nTail - m_Producer.nHeadCache;
 		}
 		if ( nUsed >= Capacity ) {
 			return 0;
 		}
-		const uint32_t nRoom = Capacity - ( uint32_t )nUsed;
+		const uint32_t nRoom = Capacity - static_cast<uint32_t>(nUsed);
 		const uint32_t nWritten = nCount < nRoom ? nCount : nRoom;
-		const uint32_t nStart = ( uint32_t )( nTail & ( Capacity - 1 ) );
+		const uint32_t nStart = static_cast<uint32_t>(  nTail & ( Capacity - 1 )  );
 		const uint32_t nFirst = nWritten < Capacity - nStart ? nWritten : Capacity - nStart;
 		memcpy( &m_Events[nStart], pPayloads, nFirst * sizeof( TPayload ) );
 		if ( nFirst < nWritten ) {
 			memcpy( m_Events, pPayloads + nFirst, ( nWritten - nFirst ) * sizeof( TPayload ) );
 		}
-		m_Producer.nTail.store( nTail + nWritten, SIR_MEMORY_ORDER_RELEASE );
+		m_Producer.nTail.store( nTail + nWritten, std::memory_order_release );
 		return nWritten;
 	}
 
@@ -237,17 +237,17 @@ private:
 	{
 		uint64_t nAvailable = m_Consumer.nTailCache - nHead;
 		if ( nAvailable < nLimit ) {
-			m_Consumer.nTailCache = m_Producer.nTail.load( SIR_MEMORY_ORDER_ACQUIRE );
+			m_Consumer.nTailCache = m_Producer.nTail.load( std::memory_order_acquire );
 			nAvailable = m_Consumer.nTailCache - nHead;
 		}
-		return nAvailable < nLimit ? ( uint32_t )nAvailable : nLimit;
+		return nAvailable < nLimit ? static_cast<uint32_t>(nAvailable) : nLimit;
 	}
 
 	alignas( 64 ) sirSPSCProducerState_t m_Producer;
 	alignas( 64 ) sirSPSCConsumerState_t m_Consumer;
-	SIRAtomic<bool> m_bStopped;
+	std::atomic<bool> m_bStopped;
 	// Slots are initialized only when published; skip eager payload zeroing.
 	TPayload m_Events[Capacity];
 };
 
-#endif // __SIRENGINE_SIRSPSCEVENTRING_H__
+#endif // __SIR_SPSCEVENTRING_H__

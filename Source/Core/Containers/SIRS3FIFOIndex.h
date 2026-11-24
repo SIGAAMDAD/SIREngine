@@ -7,8 +7,7 @@
 class SIRS3FIFOIndex
 {
 	static constexpr uint32_t NONE = UINT32_MAX;
-	enum Queue : uint8_t
-	{
+	enum class SIRQueue : uint8_t {
 		SMALL = 0,
 		MAIN = 1,
 		GHOST = 2
@@ -20,7 +19,7 @@ class SIRS3FIFOIndex
 		uint32_t iNext = NONE;
 		uint32_t nFrequency = 0;
 		uint32_t iFree = NONE;
-		Queue eQueue = SMALL;
+		SIRQueue eQueue = SIRQueue::SMALL;
 		bool bLive = false;
 	};
 	struct List
@@ -52,7 +51,7 @@ class SIRS3FIFOIndex
 		}
 		--list.nCount;
 	}
-	void append( uint32_t iEntry, Queue eQueue ) noexcept
+	void append( uint32_t iEntry, SIRQueue eQueue ) noexcept
 	{
 		Entry& entry = m_entries[iEntry];
 		List& list = m_lists[eQueue];
@@ -69,7 +68,7 @@ class SIRS3FIFOIndex
 	}
 	void dropOldestGhost( void ) noexcept
 	{
-		const uint32_t iEntry = m_lists[GHOST].iHead;
+		const uint32_t iEntry = m_lists[SIRQueue::GHOST].iHead;
 		if ( iEntry == NONE ) {
 			return;
 		}
@@ -81,23 +80,23 @@ class SIRS3FIFOIndex
 	}
 	void retireResident( void ) noexcept
 	{
-		uint32_t iEntry = m_lists[SMALL].iHead;
+		uint32_t iEntry = m_lists[SIRQueue::SMALL].iHead;
 		if ( iEntry == NONE ) {
-			iEntry = m_lists[MAIN].iHead;
+			iEntry = m_lists[SIRQueue::MAIN].iHead;
 		}
 		while ( iEntry != NONE ) {
 			Entry& entry = m_entries[iEntry];
 			unlink( iEntry );
 			if ( entry.nFrequency != 0 ) {
 				--entry.nFrequency;
-				append( iEntry, MAIN );
-				iEntry = m_lists[SMALL].iHead;
+				append( iEntry, SIRQueue::MAIN );
+				iEntry = m_lists[SIRQueue::SMALL].iHead;
 				if ( iEntry == NONE ) {
-					iEntry = m_lists[MAIN].iHead;
+					iEntry = m_lists[SIRQueue::MAIN].iHead;
 				}
 				continue;
 			}
-			append( iEntry, GHOST );
+			append( iEntry, SIRQueue::GHOST );
 			--m_nResidents;
 			return;
 		}
@@ -107,32 +106,32 @@ public:
 	explicit SIRS3FIFOIndex( const sirContainerAllocator_t *pAllocator ) : m_entries( pAllocator ), m_positions( pAllocator )
 	{
 	}
-	sirContainerResult_t tryInitialize( uint32_t nResidents, uint32_t nGhosts )
+	SIRContainerResult tryInitialize( uint32_t nResidents, uint32_t nGhosts )
 	{
 		if ( m_nResidentCapacity != 0 || nResidents == 0 || nGhosts == 0 || nResidents > UINT32_MAX - nGhosts ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
-		sirContainerResult_t eResult = m_entries.tryReserve( nResidents + nGhosts );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		SIRContainerResult eResult = m_entries.tryReserve( nResidents + nGhosts );
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		eResult = m_positions.tryReserve( nResidents + nGhosts );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		m_nResidentCapacity = nResidents;
 		m_nGhostCapacity = nGhosts;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
-	sirContainerResult_t tryAccess( uint64_t nKey, bool *pHit = nullptr )
+	SIRContainerResult tryAccess( uint64_t nKey, bool *pHit = nullptr )
 	{
 		if ( m_nResidentCapacity == 0 ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		uint32_t *pIndex = m_positions.find( nKey );
 		if ( pIndex != nullptr ) {
 			Entry& entry = m_entries[*pIndex];
-			const bool bResident = entry.eQueue != GHOST;
+			const bool bResident = entry.eQueue != SIRQueue::GHOST;
 			if ( pHit != nullptr ) {
 				*pHit = bResident;
 			}
@@ -140,16 +139,16 @@ public:
 				if ( entry.nFrequency < 3 ) {
 					++entry.nFrequency;
 				}
-				return SIR_CONTAINER_OK;
+				return SIRContainerResult::SIR_CONTAINER_OK;
 			}
 			if ( m_nResidents == m_nResidentCapacity ) {
 				retireResident();
 			}
 			unlink( *pIndex );
 			entry.nFrequency = 1;
-			append( *pIndex, MAIN );
+			append( *pIndex, SIRQueue::MAIN );
 			++m_nResidents;
-			return SIR_CONTAINER_OK;
+			return SIRContainerResult::SIR_CONTAINER_OK;
 		}
 		if ( pHit != nullptr ) {
 			*pHit = false;
@@ -160,8 +159,8 @@ public:
 		uint32_t iEntry = m_iFree;
 		bool bNew = false;
 		if ( iEntry == NONE ) {
-			const sirContainerResult_t eResult = m_entries.tryEmplaceBack();
-			if ( eResult != SIR_CONTAINER_OK ) {
+			const SIRContainerResult eResult = m_entries.tryEmplaceBack();
+			if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 				return eResult;
 			}
 			iEntry = m_entries.getSize() - 1;
@@ -169,8 +168,8 @@ public:
 		} else {
 			m_iFree = m_entries[iEntry].iFree;
 		}
-		const sirContainerResult_t eResult = m_positions.tryInsert( nKey, iEntry );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		const SIRContainerResult eResult = m_positions.tryInsert( nKey, iEntry );
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			if ( bNew ) {
 				m_entries.tryPopBack();
 			} else {
@@ -186,17 +185,17 @@ public:
 		entry.nKey = nKey;
 		entry.nFrequency = 0;
 		entry.bLive = true;
-		append( iEntry, SMALL );
+		append( iEntry, SIRQueue::SMALL );
 		++m_nResidents;
-		while ( m_lists[GHOST].nCount > m_nGhostCapacity ) {
+		while ( m_lists[SIRQueue::GHOST].nCount > m_nGhostCapacity ) {
 			dropOldestGhost();
 		}
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 	bool containsResident( uint64_t nKey ) const
 	{
 		const uint32_t *pIndex = m_positions.find( nKey );
-		return pIndex != nullptr && m_entries[*pIndex].eQueue != GHOST;
+		return pIndex != nullptr && m_entries[*pIndex].eQueue != SIRQueue::GHOST;
 	}
 	uint32_t getResidentCount( void ) const noexcept
 	{
@@ -204,7 +203,7 @@ public:
 	}
 	uint32_t getGhostCount( void ) const noexcept
 	{
-		return m_lists[GHOST].nCount;
+		return m_lists[SIRQueue::GHOST].nCount;
 	}
 };
 #endif

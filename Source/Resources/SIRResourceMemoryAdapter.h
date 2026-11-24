@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRRESOURCEMEMORYADAPTER_H__
-#define __SIRENGINE_SIRRESOURCEMEMORYADAPTER_H__
+#ifndef __SIR_RESOURCEMEMORYADAPTER_H__
+#define __SIR_RESOURCEMEMORYADAPTER_H__
 
 #include <Core/SIRPCH.h>
 
@@ -40,14 +40,14 @@ public:
 	SIRResourceMemoryAdapter( const SIRResourceMemoryAdapter& ) = delete;
 	SIRResourceMemoryAdapter& operator=( const SIRResourceMemoryAdapter& ) = delete;
 
-	bool bindDomain( sirMemoryDomain_t eDomain, SIRGeneralHeap *pHeap ) noexcept;
+	bool bindDomain( SIRMemoryDomain eDomain, SIRGeneralHeap *pHeap ) noexcept;
 	SIRResourceAllocator getAllocator( void ) noexcept;
 
 private:
 	static void *allocate( void *pContext, uint64_t nBytes, uint32_t nAlignment, uint32_t nDomain ) noexcept;
 	static void release( void *pContext, void *pData, uint64_t nBytes, uint32_t nAlignment, uint32_t nDomain ) noexcept;
 
-	SIRGeneralHeap *m_pHeaps[SIR_MEMORY_DOMAIN_COUNT];
+	SIRGeneralHeap *m_pHeaps[SIRMemoryDomain::SIR_MEMORY_DOMAIN_COUNT];
 };
 
-#endif // __SIRENGINE_SIRRESOURCEMEMORYADAPTER_H__
+#endif // __SIR_RESOURCEMEMORYADAPTER_H__

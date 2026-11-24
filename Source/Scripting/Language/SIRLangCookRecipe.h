@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRLANGCOOKRECIPE_H__
-#define __SIRENGINE_SIRLANGCOOKRECIPE_H__
+#ifndef __SIR_LANGCOOKRECIPE_H__
+#define __SIR_LANGCOOKRECIPE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -49,7 +49,7 @@ typedef struct sirLangCookImport_s
 // Returns a fixed-order content-addressable key over the complete cook input.
 // A source importer/cooker must calculate the transitive import digests and
 // reject dependency cycles before providing this immutable array.
-sirScriptResult_t SIRLangMakeCookKey( const sirLangCookIdentity_t& identity, const sirLangCookImport_t *pImports, uint32_t nImportCount,
+SIRScriptResult SIRLangMakeCookKey( const sirLangCookIdentity_t& identity, const sirLangCookImport_t *pImports, uint32_t nImportCount,
                                       sirScriptCacheKey_t *pKey ) noexcept;
 
-#endif // __SIRENGINE_SIRLANGCOOKRECIPE_H__
+#endif // __SIR_LANGCOOKRECIPE_H__

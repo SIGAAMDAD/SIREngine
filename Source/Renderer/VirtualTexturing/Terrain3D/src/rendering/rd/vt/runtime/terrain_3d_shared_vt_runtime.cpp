@@ -33,7 +33,7 @@ bool Terrain3DSharedVTRuntime::refresh_shared_vt_bindings_hot()
 	if ( !m_Resources.is_initialized() || !m_VirtualTexture.is_initialized() ) {
 		return false;
 	}
-	t3dSharedVTBindings_t next = {};
+	t3dSharedVTBindings_t next {};
 	next.hAllocationTable = m_Resources.get_buffer_rid( T3D_VT_GPU_BUFFER_ALLOCATION_TABLE );
 	next.hPageTable = m_Resources.get_buffer_rid( T3D_VT_GPU_BUFFER_PAGE_TABLE );
 	next.hAncestorHints = m_Resources.get_buffer_rid( T3D_VT_GPU_BUFFER_ANCESTOR_HINTS );
@@ -44,15 +44,15 @@ bool Terrain3DSharedVTRuntime::refresh_shared_vt_bindings_hot()
 		return false;
 	}
 	for ( uint32_t c = 0u; c < T3D_VT_CHANNEL_COUNT; ++c ) {
-		next.hTail[c] = m_Resources.get_vt_tail_rid( ( t3dVTResourceChannel_t )c );
-		next.nBankCount[c] = m_Resources.get_vt_bank_count( ( t3dVTResourceChannel_t )c );
+		next.hTail[c] = m_Resources.get_vt_tail_ridstatic_cast<t3dVTResourceChannel_t>(c);
+		next.nBankCount[c] = m_Resources.get_vt_bank_countstatic_cast<t3dVTResourceChannel_t>(c);
 		// Current shader/descriptor ABI binds exactly one physical bank per channel.
 		if ( !next.hTail[c].is_valid() || next.nBankCount[c] != 1u ) {
 			return false;
 		}
 		for ( uint32_t b = 0u; b < next.nBankCount[c]; ++b ) {
-			next.hPhysical[c][b] = m_Resources.get_vt_bank_rid( ( t3dVTResourceChannel_t )c, b );
-			next.nBankLayers[c][b] = m_Resources.get_vt_bank_layer_count( ( t3dVTResourceChannel_t )c, b );
+			next.hPhysical[c][b] = m_Resources.get_vt_bank_rid( static_cast<t3dVTResourceChannel_t>(c), b );
+			next.nBankLayers[c][b] = m_Resources.get_vt_bank_layer_count( static_cast<t3dVTResourceChannel_t>(c), b );
 			if ( !next.hPhysical[c][b].is_valid() || next.nBankLayers[c][b] == 0u ) {
 				return false;
 			}
@@ -99,7 +99,7 @@ bool Terrain3DSharedVTRuntime::prepare_shared_vt_cpu_cold( const t3dVTSharedReso
                                                            const t3dWorldResourceLimits_t *const pProductionWorldLimits )
 {
 	if ( eResourceClass != T3D_VT_SHARED_RESOURCES_PREVIEW && eResourceClass != T3D_VT_SHARED_RESOURCES_PRODUCTION ) {
-		UtilityFunctions::push_error( "[Terrain3D][Startup][VT][CpuPlan] Invalid resource class=", ( int )eResourceClass );
+		UtilityFunctions::push_error( "[Terrain3D][Startup][VT][CpuPlan] Invalid resource class=", static_cast<int>(eResourceClass) );
 		return false;
 	}
 	if ( m_bSharedResourcesInitialized || m_pRuntimeAllocatorZone == NULL ) {
@@ -108,8 +108,8 @@ bool Terrain3DSharedVTRuntime::prepare_shared_vt_cpu_cold( const t3dVTSharedReso
 		return false;
 	}
 	if ( m_ePreparingSharedResourceClass != T3D_VT_SHARED_RESOURCES_NONE && m_ePreparingSharedResourceClass != eResourceClass ) {
-		UtilityFunctions::push_error( "[Terrain3D][Startup][VT][CpuPlan] Resource class conflict requested=", ( int )eResourceClass,
-		                              " preparing=", ( int )m_ePreparingSharedResourceClass );
+		UtilityFunctions::push_error( "[Terrain3D][Startup][VT][CpuPlan] Resource class conflict requested=", static_cast<int>(eResourceClass),
+		                              " preparing=", static_cast<int>(m_ePreparingSharedResourceClass) );
 		return false;
 	}
 	if ( m_VirtualTexture.is_cpu_ready() ) {
@@ -128,16 +128,16 @@ bool Terrain3DSharedVTRuntime::prepare_shared_vt_cpu_cold( const t3dVTSharedReso
 	}
 	if ( !t3d_world_validate_limits( m_Limits ) || !t3d_vt_validate_gpu_profile( m_Profile ) ) {
 		UtilityFunctions::push_error( "[Terrain3D][Startup][VT][CpuPlan] Invalid world limits or GPU profile class=",
-		                              ( int )eResourceClass );
+		                              static_cast<int>(eResourceClass) );
 		memset( &m_Limits, 0, sizeof( m_Limits ) );
 		memset( &m_Profile, 0, sizeof( m_Profile ) );
 		return false;
 	}
-	t3dVTGpuResourcePlan_t Plan = {};
+	t3dVTGpuResourcePlan_t Plan {};
 	const uint32_t nTailHeight = m_VirtualTexture.getLoadedPackageTailAtlasHeightCold();
 	if ( nTailHeight == 0u || !t3d_vt_compute_resource_plan( m_Limits, m_Profile, Plan, nTailHeight ) ) {
 		UtilityFunctions::push_error( "[Terrain3D][Startup][VT][CpuPlan] Resource-plan generation failed tail_height=", nTailHeight,
-		                              " class=", ( int )eResourceClass );
+		                              " class=", static_cast<int>(eResourceClass) );
 		memset( &m_Limits, 0, sizeof( m_Limits ) );
 		memset( &m_Profile, 0, sizeof( m_Profile ) );
 		return false;
@@ -160,13 +160,13 @@ bool Terrain3DSharedVTRuntime::prepare_shared_vt_cpu_cold( const t3dVTSharedReso
 	const uint32_t nGeneration = m_VirtualTexture.get_startup_snapshot().m_nGeneration;
 	if ( !m_VirtualTexture.prepare_cpu_cold( m_Limits, Plan, nGeneration ) ) {
 		UtilityFunctions::push_error( "[Terrain3D][Startup][VT][CpuPlan] VT CPU preparation rejected generation=", nGeneration,
-		                              " class=", ( int )eResourceClass );
+		                              " class=", static_cast<int>(eResourceClass) );
 		m_ePreparingSharedResourceClass = T3D_VT_SHARED_RESOURCES_NONE;
 		memset( &m_Limits, 0, sizeof( m_Limits ) );
 		memset( &m_Profile, 0, sizeof( m_Profile ) );
 		return false;
 	}
-	UtilityFunctions::print( "[Terrain3D][Startup][VT][CpuPlan] READY generation=", nGeneration, " class=", ( int )eResourceClass,
+	UtilityFunctions::print( "[Terrain3D][Startup][VT][CpuPlan] READY generation=", nGeneration, " class=", static_cast<int>(eResourceClass),
 	                         " tail_height=", nTailHeight );
 	return true;
 }
@@ -481,8 +481,8 @@ void Terrain3DSharedVTRuntime::abortPackageRepublishWarm()
 
 bool Terrain3DSharedVTRuntime::are_shared_resources_ready() const
 {
-	t3dSharedVTBindings_t bindings = {};
-	return acquirePublishedBindingsHot( m_eSharedResourceClass, bindings ) == T3D_VT_ACQUIRE_READY;
+	t3dSharedVTBindings_t bindings {};
+	return acquirePublishedBindingsHot( m_eSharedResourceClass, bindings ) == SIRVTAcquireStatus::T3D_VT_ACQUIRE_READY;
 }
 t3dVTSharedResourceClass_t Terrain3DSharedVTRuntime::get_shared_resource_class() const
 {
@@ -496,22 +496,22 @@ const Terrain3DVTResourceImage& Terrain3DSharedVTRuntime::get_resources() const
 {
 	return m_Resources;
 }
-t3dVTAcquireStatus_t Terrain3DSharedVTRuntime::acquirePublishedBindingsHot( const t3dVTSharedResourceClass_t eRequestedClass,
+SIRVTAcquireStatus Terrain3DSharedVTRuntime::acquirePublishedBindingsHot( const t3dVTSharedResourceClass_t eRequestedClass,
                                                                             t3dSharedVTBindings_t& rBindings ) const
 {
 	if ( eRequestedClass != T3D_VT_SHARED_RESOURCES_PREVIEW && eRequestedClass != T3D_VT_SHARED_RESOURCES_PRODUCTION ) {
-		return T3D_VT_ACQUIRE_FAILED;
+		return SIRVTAcquireStatus::T3D_VT_ACQUIRE_FAILED;
 	}
 	if ( m_bResourceReplacementInProgress ||
 	     ( m_ePreparingSharedResourceClass != T3D_VT_SHARED_RESOURCES_NONE && !m_bSharedResourcesInitialized ) ) {
-		return T3D_VT_ACQUIRE_REBUILD_IN_PROGRESS;
+		return SIRVTAcquireStatus::T3D_VT_ACQUIRE_REBUILD_IN_PROGRESS;
 	}
 	if ( !m_bSharedResourcesInitialized || !m_Resources.is_initialized() || !m_VirtualTexture.is_initialized() ) {
-		return T3D_VT_ACQUIRE_UNPUBLISHED;
+		return SIRVTAcquireStatus::T3D_VT_ACQUIRE_UNPUBLISHED;
 	}
 	if ( m_eSharedResourceClass != eRequestedClass &&
 	     !( m_eSharedResourceClass == T3D_VT_SHARED_RESOURCES_PRODUCTION && eRequestedClass == T3D_VT_SHARED_RESOURCES_PREVIEW ) ) {
-		return T3D_VT_ACQUIRE_RESOURCE_CLASS_MISMATCH;
+		return SIRVTAcquireStatus::T3D_VT_ACQUIRE_RESOURCE_CLASS_MISMATCH;
 	}
 	const t3dSharedVTBindings_t& published = m_SharedVTBindings;
 	if ( published.nBindingGeneration == 0u || published.nResourceGeneration != m_Resources.get_stats().nResourceGeneration ||
@@ -521,18 +521,18 @@ t3dVTAcquireStatus_t Terrain3DSharedVTRuntime::acquirePublishedBindingsHot( cons
 	     published.hPageTable != m_Resources.get_buffer_rid( T3D_VT_GPU_BUFFER_PAGE_TABLE ) ||
 	     published.hMipLayoutTable != m_Resources.get_buffer_rid( T3D_VT_GPU_BUFFER_MIP_LAYOUT_TABLE ) ||
 	     published.hTailMetadata != m_Resources.get_buffer_rid( T3D_VT_GPU_BUFFER_TAIL_METADATA ) ) {
-		return T3D_VT_ACQUIRE_INVALID_BINDINGS;
+		return SIRVTAcquireStatus::T3D_VT_ACQUIRE_INVALID_BINDINGS;
 	}
 	for ( uint32_t c = 0u; c < T3D_VT_CHANNEL_COUNT; ++c ) {
-		const t3dVTResourceChannel_t eChannel = ( t3dVTResourceChannel_t )c;
+		const t3dVTResourceChannel_t eChannel = static_cast<t3dVTResourceChannel_t>(c);
 		if ( published.nBankCount[c] != 1u || !published.hTail[c].is_valid() || !published.hPhysical[c][0].is_valid() ||
 		     published.nBankLayers[c][0] == 0u || published.hTail[c] != m_Resources.get_vt_tail_rid( eChannel ) ||
 		     published.nBankCount[c] != m_Resources.get_vt_bank_count( eChannel ) ||
 		     published.hPhysical[c][0] != m_Resources.get_vt_bank_rid( eChannel, 0u ) ||
 		     published.nBankLayers[c][0] != m_Resources.get_vt_bank_layer_count( eChannel, 0u ) ) {
-			return T3D_VT_ACQUIRE_INVALID_BINDINGS;
+			return SIRVTAcquireStatus::T3D_VT_ACQUIRE_INVALID_BINDINGS;
 		}
 	}
 	rBindings = published;
-	return T3D_VT_ACQUIRE_READY;
+	return SIRVTAcquireStatus::T3D_VT_ACQUIRE_READY;
 }

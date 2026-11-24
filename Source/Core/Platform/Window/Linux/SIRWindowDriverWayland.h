@@ -12,8 +12,8 @@ express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIRWINDOWDRIVERWAYLAND_H__
-#define __SIRENGINE_SIRWINDOWDRIVERWAYLAND_H__
+#ifndef __SIR_WINDOWDRIVERWAYLAND_H__
+#define __SIR_WINDOWDRIVERWAYLAND_H__
 #include <Core/SIRPCH.h>
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -83,11 +83,11 @@ public:
 	SIRWindowDriverWayland( void ) noexcept = default;
 	~SIRWindowDriverWayland( void ) noexcept override;
 
-	sirWindowResult_t initialize( void ) noexcept override;
-	sirWindowResult_t createWindow( const sirWindowCreateDesc_t& desc, uint32_t nSlot, sirWindowNativeView_t *pView ) noexcept override;
-	sirWindowResult_t destroyWindow( uint32_t nSlot ) noexcept override;
-	sirWindowResult_t mutateWindow( uint32_t nSlot, const sirWindowMutation_t& mutation ) noexcept override;
-	sirWindowResult_t pumpEvents( uint32_t nBudget, sirWindowDriverEventFn_t pCallback, void *pContext ) noexcept override;
+	SIRWindowResult initialize( void ) noexcept override;
+	SIRWindowResult createWindow( const sirWindowCreateDesc_t& desc, uint32_t nSlot, sirWindowNativeView_t *pView ) noexcept override;
+	SIRWindowResult destroyWindow( uint32_t nSlot ) noexcept override;
+	SIRWindowResult mutateWindow( uint32_t nSlot, const sirWindowMutation_t& mutation ) noexcept override;
+	SIRWindowResult pumpEvents( uint32_t nBudget, sirWindowDriverEventFn_t pCallback, void *pContext ) noexcept override;
 	void shutdown( void ) noexcept override;
 	wl_seat *borrowSeat( void ) const noexcept;
 	bool setSeatLostSink( sirWaylandSeatLostFn_t pSink, void *pContext ) noexcept;
@@ -113,7 +113,7 @@ private:
 	static void outputDone( void *pContext, wl_output *pOutput ) noexcept;
 	static void outputScale( void *pContext, wl_output *pOutput, int32_t nScale ) noexcept;
 	static void fractionalPreferredScale( void *pContext, wp_fractional_scale_v1 *pScale, uint32_t nScale120 ) noexcept;
-	void queueEvent( uint32_t nSlot, sirWindowEventKind_t eKind, uint32_t nWidth, uint32_t nHeight ) noexcept;
+	void queueEvent( uint32_t nSlot, SIRWindowEventKind eKind, uint32_t nWidth, uint32_t nHeight ) noexcept;
 	void loseDisplay( void ) noexcept;
 	void refreshOutputScale( sirWaylandWindowSlot_t& slot ) noexcept;
 	void refreshSurfaceExtent( sirWaylandWindowSlot_t& slot, bool bEmit ) noexcept;
@@ -147,4 +147,4 @@ private:
 	bool m_bLost = false;
 	bool m_bOverflow = false;
 };
-#endif // __SIRENGINE_SIRWINDOWDRIVERWAYLAND_H__
+#endif // __SIR_WINDOWDRIVERWAYLAND_H__

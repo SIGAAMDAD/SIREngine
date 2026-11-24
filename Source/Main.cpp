@@ -43,32 +43,32 @@ typedef struct sirNativeWindowPumpContext_s
 #endif
 } sirNativeWindowPumpContext_t;
 
-static sirAppWindowPumpResult_t sirPumpNativeWindows( void *pContext )
+static SIRAppWindowPumpResult sirPumpNativeWindows( void *pContext )
 {
-	sirNativeWindowPumpContext_t *pPump = ( sirNativeWindowPumpContext_t * )pContext;
+	sirNativeWindowPumpContext_t *pPump = static_cast<sirNativeWindowPumpContext_t *>(pContext);
 #if defined( SIR_INPUT_X11_AVAILABLE ) && !defined( _WIN32 )
 	if ( pPump->pBridge != nullptr && !pPump->pBridge->beginFrame() ) {
-		return SIR_APP_WINDOW_ERROR;
+		return SIRAppWindowPumpResult::SIR_APP_WINDOW_ERROR;
 	}
 	if ( pPump->pInput != nullptr && !pPump->bDiscoveryAttempted ) {
 		pPump->bDiscoveryAttempted = true;
-		( void )pPump->pEvdev->discover( *pPump->pInput );
+		static_cast<void>(pPump->pEvdev->discover( *pPump->pInput ));
 	}
 #endif
-	const sirWindowResult_t ePump = pPump->pWindows->pumpEvents( 256 );
+	const SIRWindowResult ePump = pPump->pWindows->pumpEvents( 256 );
 #if defined( _WIN32 )
 	if ( pPump->pWinInput != nullptr ) {
 		pPump->pWinInput->finishPump();
 	}
 #endif
-	return ePump == SIR_WINDOW_OK || ePump == SIR_WINDOW_EVENTS_LOST ? SIR_APP_WINDOW_CONTINUE : SIR_APP_WINDOW_ERROR;
+	return ePump == SIRWindowResult::SIR_WINDOW_OK || ePump == SIRWindowResult::SIR_WINDOW_EVENTS_LOST ? SIRAppWindowPumpResult::SIR_APP_WINDOW_CONTINUE : SIRAppWindowPumpResult::SIR_APP_WINDOW_ERROR;
 }
 
 #if defined( _WIN32 )
 static sirWindowWin32Dispatch_t sirDispatchWin32Input( const sirWindowWin32Message_t& message, void *pContext ) noexcept
 {
-	SIRWin32InputBridge *pInput = ( SIRWin32InputBridge * )pContext;
-	sirWindowWin32Dispatch_t result = {};
+	SIRWin32InputBridge *pInput = static_cast<SIRWin32InputBridge *>(pContext);
+	sirWindowWin32Dispatch_t result {};
 	if ( !pInput->acceptsWindow( message.nWindow ) ) {
 		return result;
 	}
@@ -78,7 +78,7 @@ static sirWindowWin32Dispatch_t sirDispatchWin32Input( const sirWindowWin32Messa
 #else
 static void sirDispatchX11Input( const XEvent& event, void *pContext ) noexcept
 {
-	SIRX11InputBridge *pInput = ( SIRX11InputBridge * )pContext;
+	SIRX11InputBridge *pInput = static_cast<SIRX11InputBridge *>(pContext);
 	pInput->processEvent( event );
 }
 #endif
@@ -94,18 +94,18 @@ typedef struct sirWaylandInputPumpContext_s
 	bool bDiscoveryAttempted;
 } sirWaylandInputPumpContext_t;
 
-static sirAppWindowPumpResult_t sirPumpWaylandInputWindows( void *pContext )
+static SIRAppWindowPumpResult sirPumpWaylandInputWindows( void *pContext )
 {
-	sirWaylandInputPumpContext_t *pPump = ( sirWaylandInputPumpContext_t * )pContext;
+	sirWaylandInputPumpContext_t *pPump = static_cast<sirWaylandInputPumpContext_t *>(pContext);
 	if ( pPump->pBridge->isBound() && !pPump->pBridge->beginFrame() ) {
 		return false;
 	}
 	if ( !pPump->bDiscoveryAttempted ) {
 		pPump->bDiscoveryAttempted = true;
-		( void )pPump->pEvdev->discover( *pPump->pInput );
+		static_cast<void>(pPump->pEvdev->discover( *pPump->pInput ));
 	}
-	const sirWindowResult_t ePump = pPump->pWindows->pumpEvents( 256 );
-	return ePump == SIR_WINDOW_OK || ePump == SIR_WINDOW_EVENTS_LOST ? SIR_APP_WINDOW_CONTINUE : SIR_APP_WINDOW_ERROR;
+	const SIRWindowResult ePump = pPump->pWindows->pumpEvents( 256 );
+	return ePump == SIRWindowResult::SIR_WINDOW_OK || ePump == SIRWindowResult::SIR_WINDOW_EVENTS_LOST ? SIRAppWindowPumpResult::SIR_APP_WINDOW_CONTINUE : SIRAppWindowPumpResult::SIR_APP_WINDOW_ERROR;
 }
 
 static int sirRunWaylandInputWindow( bool bMultiwindow, uint64_t nMaxFrames )
@@ -124,19 +124,22 @@ static int sirRunWaylandInputWindow( bool bMultiwindow, uint64_t nMaxFrames )
 	SIRApplication app;
 	if ( !app.attachInput( input ) || !app.registerSystem( &windows ) || !app.attachWindowPump( sirPumpWaylandInputWindows, &context ) ||
 	     !app.initialize() ) {
-		( void )app.shutdown();
+		static_cast<void>(app.shutdown());
 		return 1;
 	}
-	sirWindowHandle_t handles[2] = {};
-	sirWindowNativeLease_t leases[2] = {};
-	uintptr_t surfaces[2] = {};
+	sirWindowHandle_t handles[2];
+	memset( handles, 0, sizeof( handles ) );
+	sirWindowNativeLease_t leases[2];
+	memset( leases, 0, sizeof( leases ) );
+	uintptr_t surfaces[2];
+	memset( surfaces, 0, sizeof( surfaces ) );
 	const uint32_t nRequested = bMultiwindow ? 2 : 1;
 	uint32_t nCreated = 0;
 	bool bSucceeded = input.attach( nativeControllers );
 	for ( uint32_t i = 0; bSucceeded && i < nRequested; ++i ) {
 		const sirWindowCreateDesc_t desc = { i == 0 ? "SIREngine native input" : "SIREngine auxiliary input", i == 0 ? 800U : 640U,
 		                                     i == 0 ? 450U : 400U };
-		if ( windows.createWindow( desc, &handles[i] ) != SIR_WINDOW_OK ) {
+		if ( windows.createWindow( desc, &handles[i] ) != SIRWindowResult::SIR_WINDOW_OK ) {
 			bSucceeded = false;
 			break;
 		}
@@ -154,20 +157,20 @@ static int sirRunWaylandInputWindow( bool bMultiwindow, uint64_t nMaxFrames )
 			if ( handles[i].nGeneration == 0 ) {
 				continue;
 			}
-			sirWindowSnapshot_t snapshot = {};
-			if ( windows.querySnapshot( handles[i], &snapshot ) != SIR_WINDOW_OK ) {
+			sirWindowSnapshot_t snapshot {};
+			if ( windows.querySnapshot( handles[i], &snapshot ) != SIRWindowResult::SIR_WINDOW_OK ) {
 				bSucceeded = false;
 				break;
 			}
 			if ( snapshot.bCloseRequested ) {
 				if ( leases[i].nToken != 0 ) {
 					bridge.unregisterWindow( surfaces[i] );
-					if ( windows.releaseNativeLease( leases[i] ) != SIR_WINDOW_OK ) {
+					if ( windows.releaseNativeLease( leases[i] ) != SIRWindowResult::SIR_WINDOW_OK ) {
 						bSucceeded = false;
 					}
 					leases[i] = {};
 				}
-				if ( windows.destroyWindow( handles[i] ) != SIR_WINDOW_OK ) {
+				if ( windows.destroyWindow( handles[i] ) != SIRWindowResult::SIR_WINDOW_OK ) {
 					bSucceeded = false;
 				} else {
 					handles[i] = {};
@@ -176,8 +179,8 @@ static int sirRunWaylandInputWindow( bool bMultiwindow, uint64_t nMaxFrames )
 				continue;
 			}
 			if ( snapshot.bReady && leases[i].nToken == 0 && driver.borrowSeat() != nullptr ) {
-				sirWindowNativeView_t view = {};
-				if ( windows.acquireNativeLease( handles[i], &leases[i], &view ) != SIR_WINDOW_OK ) {
+				sirWindowNativeView_t view {};
+				if ( windows.acquireNativeLease( handles[i], &leases[i], &view ) != SIRWindowResult::SIR_WINDOW_OK ) {
 					bSucceeded = false;
 					break;
 				}
@@ -191,7 +194,7 @@ static int sirRunWaylandInputWindow( bool bMultiwindow, uint64_t nMaxFrames )
 					bSucceeded = bridge.registerWindow( view );
 				}
 				if ( !bSucceeded ) {
-					( void )windows.releaseNativeLease( leases[i] );
+					static_cast<void>(windows.releaseNativeLease( leases[i] ));
 					leases[i] = {};
 				}
 			}
@@ -200,14 +203,14 @@ static int sirRunWaylandInputWindow( bool bMultiwindow, uint64_t nMaxFrames )
 	bridge.unbind();
 	while ( nCreated != 0 ) {
 		--nCreated;
-		if ( leases[nCreated].nToken != 0 && windows.releaseNativeLease( leases[nCreated] ) != SIR_WINDOW_OK ) {
+		if ( leases[nCreated].nToken != 0 && windows.releaseNativeLease( leases[nCreated] ) != SIRWindowResult::SIR_WINDOW_OK ) {
 			bSucceeded = false;
 		}
-		if ( handles[nCreated].nGeneration != 0 && windows.destroyWindow( handles[nCreated] ) != SIR_WINDOW_OK ) {
+		if ( handles[nCreated].nGeneration != 0 && windows.destroyWindow( handles[nCreated] ) != SIRWindowResult::SIR_WINDOW_OK ) {
 			bSucceeded = false;
 		}
 	}
-	return bSucceeded && app.shutdown() == SIR_SYSTEM_OK ? 0 : 1;
+	return bSucceeded && app.shutdown() == SIRSystemResult::SIR_SYSTEM_OK ? 0 : 1;
 }
 #endif
 
@@ -235,7 +238,7 @@ static int sirRunNativeInputWindow( bool bMultiwindow, uint64_t nMaxFrames )
 	SIRX11InputBridge bridge;
 	SIRLinuxX11Backend desktop;
 	SIRLinuxEvdevBackend nativeControllers;
-	( void )setlocale( LC_CTYPE, "" );
+	static_cast<void>(setlocale( LC_CTYPE, "" ));
 	const char *pszCookedProfiles = getenv( "SIR_INPUT_CONTROLLER_PROFILE_DB" );
 	if ( pszCookedProfiles != nullptr && pszCookedProfiles[0] != 0 && !nativeControllers.loadCookedProfilesFile( pszCookedProfiles ) ) {
 		fputs( "Unable to load cooked controller profiles\n", stderr );
@@ -243,7 +246,7 @@ static int sirRunNativeInputWindow( bool bMultiwindow, uint64_t nMaxFrames )
 	}
 #endif
 	SIRWindowSystem windows( driver );
-	sirNativeWindowPumpContext_t context = {};
+	sirNativeWindowPumpContext_t context {};
 	context.pWindows = &windows;
 #if defined( _WIN32 )
 	context.pWinInput = &bridge;
@@ -259,58 +262,58 @@ static int sirRunNativeInputWindow( bool bMultiwindow, uint64_t nMaxFrames )
 		fputs( "Unable to initialize native window system\n", stderr );
 		return 1;
 	}
-	sirWindowHandle_t hWindow = {};
+	sirWindowHandle_t hWindow {};
 	const sirWindowCreateDesc_t desc = { "SIREngine native input", 800, 450 };
-	if ( windows.createWindow( desc, &hWindow ) != SIR_WINDOW_OK ) {
+	if ( windows.createWindow( desc, &hWindow ) != SIRWindowResult::SIR_WINDOW_OK ) {
 		fputs( "Unable to create native window\n", stderr );
-		( void )application.shutdown();
+		static_cast<void>(application.shutdown());
 		return 1;
 	}
-	sirWindowNativeLease_t lease = {};
-	sirWindowNativeView_t view = {};
-	if ( windows.acquireNativeLease( hWindow, &lease, &view ) != SIR_WINDOW_OK || !bridge.bind( input, desktop, view ) ) {
+	sirWindowNativeLease_t lease {};
+	sirWindowNativeView_t view {};
+	if ( windows.acquireNativeLease( hWindow, &lease, &view ) != SIRWindowResult::SIR_WINDOW_OK || !bridge.bind( input, desktop, view ) ) {
 		fputs( "Unable to attach native input bridge\n", stderr );
 		if ( lease.nToken != 0 ) {
-			( void )windows.releaseNativeLease( lease );
+			static_cast<void>(windows.releaseNativeLease( lease ));
 		}
-		( void )windows.destroyWindow( hWindow );
-		( void )application.shutdown();
+		static_cast<void>(windows.destroyWindow( hWindow ));
+		static_cast<void>(application.shutdown());
 		return 1;
 	}
 #if defined( _WIN32 )
 	if ( !driver.setMessageSink( sirDispatchWin32Input, &bridge ) ) {
 		bridge.unbind();
-		( void )windows.releaseNativeLease( lease );
-		( void )windows.destroyWindow( hWindow );
-		( void )application.shutdown();
+		static_cast<void>(windows.releaseNativeLease( lease ));
+		static_cast<void>(windows.destroyWindow( hWindow ));
+		static_cast<void>(application.shutdown());
 		return 1;
 	}
 #if defined( SIR_INPUT_GAMEINPUT_AVAILABLE )
 	const bool bModern = modernController.initialize();
 	if ( bModern && !input.attach( modernController ) ) {
 		modernController.stop( input );
-		( void )driver.setMessageSink( nullptr, nullptr );
+		static_cast<void>(driver.setMessageSink( nullptr, nullptr ));
 		bridge.unbind();
-		( void )windows.releaseNativeLease( lease );
-		( void )windows.destroyWindow( hWindow );
-		( void )application.shutdown();
+		static_cast<void>(windows.releaseNativeLease( lease ));
+		static_cast<void>(windows.destroyWindow( hWindow ));
+		static_cast<void>(application.shutdown());
 		return 1;
 	}
 	if ( !bModern && legacyController.initialize() ) {
-		( void )input.attach( legacyController );
+		static_cast<void>(input.attach( legacyController ));
 	}
 #else
 	if ( legacyController.initialize() ) {
-		( void )input.attach( legacyController );
+		static_cast<void>(input.attach( legacyController ));
 	}
 #endif
 #else
 	if ( !driver.setEventSink( sirDispatchX11Input, &bridge ) || !input.attach( nativeControllers ) ) {
-		( void )driver.setEventSink( nullptr, nullptr );
+		static_cast<void>(driver.setEventSink( nullptr, nullptr ));
 		bridge.unbind();
-		( void )windows.releaseNativeLease( lease );
-		( void )windows.destroyWindow( hWindow );
-		( void )application.shutdown();
+		static_cast<void>(windows.releaseNativeLease( lease ));
+		static_cast<void>(windows.destroyWindow( hWindow ));
+		static_cast<void>(application.shutdown());
 		return 1;
 	}
 #endif
@@ -321,11 +324,11 @@ static int sirRunNativeInputWindow( bool bMultiwindow, uint64_t nMaxFrames )
 	uint32_t nCreated = 1;
 	bool bSucceeded = true;
 	if ( bMultiwindow ) {
-		if ( windows.createWindow( { "SIREngine auxiliary input", 640, 400 }, &handles[1] ) != SIR_WINDOW_OK ) {
+		if ( windows.createWindow( { "SIREngine auxiliary input", 640, 400 }, &handles[1] ) != SIRWindowResult::SIR_WINDOW_OK ) {
 			bSucceeded = false;
 		} else {
 			nCreated = 2;
-			if ( windows.acquireNativeLease( handles[1], &leases[1], &views[1] ) != SIR_WINDOW_OK || !bridge.registerWindow( views[1] ) ) {
+			if ( windows.acquireNativeLease( handles[1], &leases[1], &views[1] ) != SIRWindowResult::SIR_WINDOW_OK || !bridge.registerWindow( views[1] ) ) {
 				bSucceeded = false;
 			}
 		}
@@ -342,8 +345,8 @@ static int sirRunNativeInputWindow( bool bMultiwindow, uint64_t nMaxFrames )
 			if ( handles[i].nGeneration == 0 ) {
 				continue;
 			}
-			sirWindowSnapshot_t snapshot = {};
-			if ( windows.querySnapshot( handles[i], &snapshot ) != SIR_WINDOW_OK ) {
+			sirWindowSnapshot_t snapshot {};
+			if ( windows.querySnapshot( handles[i], &snapshot ) != SIRWindowResult::SIR_WINDOW_OK ) {
 				bSucceeded = false;
 				break;
 			}
@@ -353,11 +356,11 @@ static int sirRunNativeInputWindow( bool bMultiwindow, uint64_t nMaxFrames )
 			if ( !bridge.unregisterWindow( views[i].nNativeWindow ) ) {
 				bSucceeded = false;
 			}
-			if ( leases[i].nToken != 0 && windows.releaseNativeLease( leases[i] ) != SIR_WINDOW_OK ) {
+			if ( leases[i].nToken != 0 && windows.releaseNativeLease( leases[i] ) != SIRWindowResult::SIR_WINDOW_OK ) {
 				bSucceeded = false;
 			}
 			leases[i] = {};
-			if ( windows.destroyWindow( handles[i] ) != SIR_WINDOW_OK ) {
+			if ( windows.destroyWindow( handles[i] ) != SIRWindowResult::SIR_WINDOW_OK ) {
 				bSucceeded = false;
 			} else {
 				handles[i] = {};
@@ -366,22 +369,22 @@ static int sirRunNativeInputWindow( bool bMultiwindow, uint64_t nMaxFrames )
 		}
 	}
 #if defined( _WIN32 )
-	( void )driver.setMessageSink( nullptr, nullptr );
+	static_cast<void>(driver.setMessageSink( nullptr, nullptr ));
 #else
-	( void )driver.setEventSink( nullptr, nullptr );
+	static_cast<void>(driver.setEventSink( nullptr, nullptr ));
 #endif
 	bridge.unbind();
 	while ( nCreated != 0 ) {
 		--nCreated;
-		if ( leases[nCreated].nToken != 0 && windows.releaseNativeLease( leases[nCreated] ) != SIR_WINDOW_OK ) {
+		if ( leases[nCreated].nToken != 0 && windows.releaseNativeLease( leases[nCreated] ) != SIRWindowResult::SIR_WINDOW_OK ) {
 			bSucceeded = false;
 		}
-		if ( handles[nCreated].nGeneration != 0 && windows.destroyWindow( handles[nCreated] ) != SIR_WINDOW_OK ) {
+		if ( handles[nCreated].nGeneration != 0 && windows.destroyWindow( handles[nCreated] ) != SIRWindowResult::SIR_WINDOW_OK ) {
 			bSucceeded = false;
 		}
 	}
-	const sirSystemResult_t eShutdown = application.shutdown();
-	return bSucceeded && eShutdown == SIR_SYSTEM_OK ? 0 : 1;
+	const SIRSystemResult eShutdown = application.shutdown();
+	return bSucceeded && eShutdown == SIRSystemResult::SIR_SYSTEM_OK ? 0 : 1;
 #else
 	fputs( "Native input window backend unavailable on this build\n", stderr );
 	return 1;
@@ -398,7 +401,7 @@ static bool sirParseFrameCount( const char *pszValue, uint64_t *pFrames ) noexce
 		if ( *pChar < '0' || *pChar > '9' ) {
 			return false;
 		}
-		const uint64_t nDigit = ( uint64_t )( *pChar - '0' );
+		const uint64_t nDigit = static_cast<uint64_t>( *pChar - '0' );
 		if ( nFrames > ( UINT64_MAX - nDigit ) / 10 ) {
 			return false;
 		}
@@ -417,15 +420,15 @@ static int sirRunHeadless( uint64_t nMaxFrames ) noexcept
 	if ( nMaxFrames == 0 || !application.initialize() ) {
 		return 1;
 	}
-	const sirAppRunResult_t eRun = application.run( nMaxFrames );
-	const sirSystemResult_t eShutdown = application.shutdown();
-	return eRun == SIR_APP_RUN_OK && eShutdown == SIR_SYSTEM_OK ? 0 : 1;
+	const SIRAppRunResult eRun = application.run( nMaxFrames );
+	const SIRSystemResult eShutdown = application.shutdown();
+	return eRun == SIRAppRunResult::SIR_APP_RUN_OK && eShutdown == SIRSystemResult::SIR_SYSTEM_OK ? 0 : 1;
 }
 
 static int sirRunNativeScriptingSmoke( void )
 {
 	SIRScriptServer scripting;
-	if ( scripting.bindings().publish() != SIR_SCRIPT_OK ) {
+	if ( scripting.bindings().publish() != SIRScriptResult::SIR_SCRIPT_OK ) {
 		fputs( "Scripting binding publication failed\n", stderr );
 		return 1;
 	}
@@ -475,7 +478,7 @@ int main( int nArgs, char **pszArgs )
 		}
 	}
 	const uint32_t nModes =
-	    ( uint32_t )bInputWindow + ( uint32_t )bInputMulti + ( uint32_t )bWindowNoInput + ( uint32_t )bWindowMulti + ( uint32_t )bHeadless;
+	    static_cast<uint32_t>(bInputWindow) + static_cast<uint32_t>(bInputMulti) + static_cast<uint32_t>(bWindowNoInput) + static_cast<uint32_t>(bWindowMulti) + static_cast<uint32_t>(bHeadless);
 	if ( nModes > 1 || ( bHeadless && nFrames == 0 ) || ( ( bWindowNoInput || bWindowMulti ) && nFrames != 0 ) ) {
 		fputs( "Invalid window mode or frame count\n", stderr );
 		return 2;

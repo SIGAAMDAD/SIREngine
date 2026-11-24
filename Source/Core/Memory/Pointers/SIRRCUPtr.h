@@ -13,10 +13,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRRCUPTR_H__
-#define __SIRENGINE_SIRRCUPTR_H__
+#ifndef __SIR_RCUPTR_H__
+#define __SIR_RCUPTR_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -78,7 +78,7 @@ public:
 		uint32_t iReader = iReaderStart;
 		for ( uint32_t nAttempt = 0; nAttempt < m_nCapacity; ++nAttempt ) {
 			uint64_t nEmpty = 0;
-			if ( m_pReaders[iReader].m_nEpoch.compareExchangeStrong( nEmpty, UINT64_MAX ) ) {
+			if ( m_pReaders[iReader].m_nEpoch.compare_exchange_strong( nEmpty, UINT64_MAX ) ) {
 				return &m_pReaders[iReader];
 			}
 			++iReader;
@@ -260,4 +260,4 @@ private:
 	T *m_pObject = nullptr;
 };
 
-#endif // __SIRENGINE_SIRRCUPTR_H__
+#endif // __SIR_RCUPTR_H__

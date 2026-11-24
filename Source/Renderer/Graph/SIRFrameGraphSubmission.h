@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRFRAMEGRAPHSUBMISSION_H__
-#define __SIRENGINE_SIRFRAMEGRAPHSUBMISSION_H__
+#ifndef __SIR_FRAMEGRAPHSUBMISSION_H__
+#define __SIR_FRAMEGRAPHSUBMISSION_H__
 
 #include <Core/SIRPCH.h>
 
@@ -30,7 +30,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 typedef struct sirFrameGraphSubmissionPass_s
 {
 	uint32_t nPass;
-	sirGraphicsQueue_t eQueue;
+	SIRGraphicsQueue eQueue;
 	uint32_t nBarrierBegin;
 	uint32_t nBarrierCount;
 	uint32_t nWaitBegin;
@@ -41,8 +41,8 @@ typedef struct sirFrameGraphSubmissionWait_s
 {
 	uint32_t nProducerPass;
 	uint32_t nConsumerPass;
-	sirGraphicsQueue_t eProducerQueue;
-	sirGraphicsQueue_t eConsumerQueue;
+	SIRGraphicsQueue eProducerQueue;
+	SIRGraphicsQueue eConsumerQueue;
 } sirFrameGraphSubmissionWait_t;
 
 typedef struct sirFrameGraphSubmissionPlan_s
@@ -55,4 +55,4 @@ typedef struct sirFrameGraphSubmissionPlan_s
 	sirFrameGraphSubmissionWait_t szWaits[SIR_FRAMEGRAPH_MAX_DEPENDENCIES];
 } sirFrameGraphSubmissionPlan_t;
 
-#endif // __SIRENGINE_SIRFRAMEGRAPHSUBMISSION_H__
+#endif // __SIR_FRAMEGRAPHSUBMISSION_H__

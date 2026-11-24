@@ -48,7 +48,7 @@ static_assert( T3D_VT_COMPRESSOR_ABI_VERSION == 1u, "Sparse VT V1 RGBA compresso
 // A distinct stable-key namespace identifies logical terrain regions.
 inline uint64_t t3d_vt_terrain_region_stable_key( const uint32_t nRegionMapIndex )
 {
-	return 0x5445525245470000ull | ( uint64_t )nRegionMapIndex;
+	return 0x5445525245470000ull | static_cast<uint64_t>(nRegionMapIndex);
 }
 inline uint32_t t3d_vt_allocation_capacity( const uint32_t nMaxMaterials )
 {
@@ -65,7 +65,7 @@ inline uint32_t t3d_vt_allocation_capacity( const uint32_t nMaxMaterials )
 
 static inline uint64_t t3d_vt_terrain_material_stable_key( const uint32_t nLogicalMaterialId )
 {
-	return T3D_VT_TERRAIN_MATERIAL_KEY_TAG | ( uint64_t )( nLogicalMaterialId + 1u );
+	return T3D_VT_TERRAIN_MATERIAL_KEY_TAG | static_cast<uint64_t>( nLogicalMaterialId + 1u );
 }
 
 static inline bool t3d_vt_decode_terrain_material_stable_key( const uint64_t nStableKey, uint32_t& rLogicalMaterialId )
@@ -73,7 +73,7 @@ static inline bool t3d_vt_decode_terrain_material_stable_key( const uint64_t nSt
 	if ( ( nStableKey & T3D_VT_TERRAIN_MATERIAL_KEY_MASK ) != T3D_VT_TERRAIN_MATERIAL_KEY_TAG ) {
 		return false;
 	}
-	const uint32_t nEncoded = ( uint32_t )( nStableKey & 0xffffffffULL );
+	const uint32_t nEncoded = static_cast<uint32_t>( nStableKey & 0xffffffffULL );
 	if ( nEncoded == 0u ) {
 		return false;
 	}
@@ -85,7 +85,7 @@ static inline bool t3d_vt_decode_terrain_material_stable_key( const uint64_t nSt
 // stored in the existing allocation table, never a second composed page table.
 inline uint64_t t3d_vt_composed_region_stable_key( const uint32_t nRegionMapIndex )
 {
-	return 0x5443535245470000ull | ( uint64_t )nRegionMapIndex;
+	return 0x5443535245470000ull | static_cast<uint64_t>(nRegionMapIndex);
 }
 inline bool t3d_vt_is_composed_region_stable_key( const uint64_t nStableKey )
 {
@@ -164,15 +164,15 @@ inline bool t3d_vt_is_terrain_region_stable_key( const uint64_t nStableKey )
 
 static inline uint32_t t3d_vt_pack_physical_address( const t3dVTPhysicalFormatFamily_t Family, const uint32_t nSlot )
 {
-	if ( ( uint32_t )Family >= T3D_VT_PHYSICAL_FORMAT_COUNT || nSlot > T3D_VT_PHYSICAL_SLOT_MASK ) {
+	if ( static_cast<uint32_t>(Family) >= T3D_VT_PHYSICAL_FORMAT_COUNT || nSlot > T3D_VT_PHYSICAL_SLOT_MASK ) {
 		return T3D_VT_INVALID_SLOT;
 	}
-	return ( ( uint32_t )Family << T3D_VT_PHYSICAL_FAMILY_SHIFT ) | nSlot;
+	return ( static_cast<uint32_t>(Family) << T3D_VT_PHYSICAL_FAMILY_SHIFT ) | nSlot;
 }
 
 static inline t3dVTPhysicalFormatFamily_t t3d_vt_physical_address_family( const uint32_t nAddress )
 {
-	return ( t3dVTPhysicalFormatFamily_t )( ( nAddress & T3D_VT_PHYSICAL_FAMILY_MASK ) >> T3D_VT_PHYSICAL_FAMILY_SHIFT );
+	return static_cast<t3dVTPhysicalFormatFamily_t>(  ( nAddress & T3D_VT_PHYSICAL_FAMILY_MASK ) >> T3D_VT_PHYSICAL_FAMILY_SHIFT  );
 }
 
 static inline uint32_t t3d_vt_physical_address_slot( const uint32_t nAddress )
@@ -326,7 +326,7 @@ static inline bool t3d_vt_logical_channel_for_runtime_slot( const t3dVTConsumer_
 	return false;
 }
 
-#define T3D_VT_LOGICAL_CHANNEL_BIT( channel ) ( 1u << ( uint32_t )( channel ) )
+#define T3D_VT_LOGICAL_CHANNEL_BIT( channel ) ( 1u << static_cast<uint32_t>( channel ) )
 #define T3D_VT_CLIPMAP_ALLOWED_CHANNEL_MASK                                                                                                \
 	( T3D_VT_LOGICAL_CHANNEL_BIT( T3D_VT_LOGICAL_CHANNEL_ALBEDO ) | T3D_VT_LOGICAL_CHANNEL_BIT( T3D_VT_LOGICAL_CHANNEL_PBR ) |             \
 	  T3D_VT_LOGICAL_CHANNEL_BIT( T3D_VT_LOGICAL_CHANNEL_HEIGHT ) )
@@ -389,7 +389,7 @@ static inline t3dVTLogicalChannelFormat_t t3d_vt_logical_channel_format( const t
 
 static inline uint32_t t3d_vt_allocation_quality_base_mip( const uint16_t nFlags )
 {
-	return ( ( uint32_t )nFlags & T3D_VT_ALLOCATION_QUALITY_BASE_MIP_MASK ) >> T3D_VT_ALLOCATION_QUALITY_BASE_MIP_SHIFT;
+	return ( static_cast<uint32_t>( static_cast<nFlags>( & T3D_VT_ALLOCATION_QUALITY_BASE_MIP_MASK ) ) ) >> T3D_VT_ALLOCATION_QUALITY_BASE_MIP_SHIFT;
 }
 
 static inline bool t3d_vt_allocation_quality_enabled( const uint16_t nFlags )
@@ -515,7 +515,7 @@ static_assert( offsetof( t3dRenderingMaterialGpu_t, m_nSamplerClass ) == 56u, "V
 
 // 16-byte open-addressing entry. wantedMip and priority intentionally occupy
 // separate 32-bit atomic words: same-page merges independently retain the
-// finest wanted mip (atomicMin) and highest priority (atomicMax) without 64-bit
+// finest wanted mip atomicMin and highest priority (without atomicMax) 64-bit
 // shader atomics. producerMask is diagnostic only.
 
 // Immutable draw-slot prediction metadata. WG-C can publish this beside its

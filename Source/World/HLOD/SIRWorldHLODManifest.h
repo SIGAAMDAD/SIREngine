@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRWORLDHLODMANIFEST_H__
-#define __SIRENGINE_SIRWORLDHLODMANIFEST_H__
+#ifndef __SIR_WORLDHLODMANIFEST_H__
+#define __SIR_WORLDHLODMANIFEST_H__
 
 #include <Core/SIRPCH.h>
 
@@ -34,15 +34,14 @@ static constexpr uint16_t SIR_WORLD_HLOD_MANIFEST_VERSION = 1;
 static constexpr uint32_t SIR_WORLD_HLOD_MANIFEST_HEADER_BYTES = 48;
 static constexpr uint32_t SIR_WORLD_HLOD_MANIFEST_NODE_BYTES = 64;
 
-typedef enum sirWorldHLODManifestResult_e : uint8_t
-{
+enum class SIRWorldHLODManifestResult : uint8_t {
 	SIR_WORLD_HLOD_MANIFEST_OK = 0,
 	SIR_WORLD_HLOD_MANIFEST_INVALID_ARGUMENT = 1,
 	SIR_WORLD_HLOD_MANIFEST_INVALID_FORMAT = 2,
 	SIR_WORLD_HLOD_MANIFEST_STALE_SOURCE = 3,
 	SIR_WORLD_HLOD_MANIFEST_INVALID_HIERARCHY = 4,
 	SIR_WORLD_HLOD_MANIFEST_CAPACITY = 5
-} sirWorldHLODManifestResult_t;
+};
 
 typedef struct sirWorldHLODManifestIdentity_s
 {
@@ -103,9 +102,9 @@ typedef struct sirWorldHLODManifestEncode_s
 // Source is immutable during either call. Both operations use caller-owned
 // scratch and commit output only after full validation. Input/output storage
 // must not alias. Parent bounds conservatively enclose every direct child.
-sirWorldHLODManifestResult_t sirWorldHLODReadManifest( const sirWorldHLODManifestRead_t& input,
+SIRWorldHLODManifestResult sirWorldHLODReadManifest( const sirWorldHLODManifestRead_t& input,
                                                        sirWorldHLODManifestDecode_t& output ) noexcept;
-sirWorldHLODManifestResult_t sirWorldHLODWriteManifest( const sirWorldHLODManifestWrite_t& input,
+SIRWorldHLODManifestResult sirWorldHLODWriteManifest( const sirWorldHLODManifestWrite_t& input,
                                                         sirWorldHLODManifestEncode_t& output ) noexcept;
 
-#endif // __SIRENGINE_SIRWORLDHLODMANIFEST_H__
+#endif // __SIR_WORLDHLODMANIFEST_H__

@@ -12,8 +12,8 @@ express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIRX11INPUTBRIDGE_H__
-#define __SIRENGINE_SIRX11INPUTBRIDGE_H__
+#ifndef __SIR_X11_INPUTBRIDGE_H__
+#define __SIR_X11_INPUTBRIDGE_H__
 #include <Core/SIRPCH.h>
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -38,8 +38,8 @@ public:
 	bool beginFrame( void ) noexcept;
 	bool registerWindow( const sirWindowNativeView_t& view ) noexcept;
 	bool unregisterWindow( uintptr_t nNativeWindow ) noexcept;
-	bool setCursorMode( sirInputCursorMode_t eMode ) noexcept;
-	sirInputCursorMode_t cursorMode( void ) const noexcept;
+	bool setCursorMode( SIRInputCursorMode eMode ) noexcept;
+	SIRInputCursorMode cursorMode( void ) const noexcept;
 	void setTextEnabled( bool bEnabled ) noexcept;
 	void processEvent( const XEvent& event ) noexcept;
 	void unbind( void ) noexcept;
@@ -60,7 +60,7 @@ private:
 	bool m_bDeferredResync = false;
 	bool m_bDeferredRetarget = false;
 	bool m_bCursorCaptured = false;
-	sirInputCursorMode_t m_eCursorMode = SIR_INPUT_CURSOR_FREE;
+	SIRInputCursorMode m_eCursorMode = SIRInputCursorMode::SIR_INPUT_CURSOR_FREE;
 	uintptr_t m_nInvisibleCursor = 0;
 };
-#endif // __SIRENGINE_SIRX11INPUTBRIDGE_H__
+#endif // __SIR_X11_INPUTBRIDGE_H__

@@ -102,7 +102,7 @@ Dictionary Terrain3DRenderCoordinator::getForceRebakeVirtualTexturesStatusCold( 
 	result["dirty_regions"] = m_terrainMegaVT.getDirtyRegionCount();
 	const bool approvedComposed = !m_pAuthoring->m_approvedComposedV1Fragment.is_empty();
 	result["composed_v1_shared_package_ready"] = approvedComposed;
-	result["composed_v1_shared_package_bytes"] = ( int64_t )m_pAuthoring->m_approvedComposedV1Fragment.size();
+	result["composed_v1_shared_package_bytes"] = static_cast<int64_t>(m_pAuthoring->m_approvedComposedV1Fragment.size());
 	result["composed_v1_import_status"] = m_pAuthoring->m_approvedComposedStatus;
 	result["composed_cache_enabled"] = approvedComposed;
 	result["composed_parity_supported"] = approvedComposed;
@@ -115,19 +115,19 @@ Dictionary Terrain3DRenderCoordinator::getForceRebakeVirtualTexturesStatusCold( 
 	result["composed_bake_reference_ready"] = m_pAuthoring->m_composedCandidate.m_bSaved;
 	result["composed_bake_path"] = m_pAuthoring->m_composedCandidate.m_path;
 	result["composed_bake_error"] = m_pAuthoring->m_composedCandidate.m_error;
-	result["composed_bake_pages"] = ( int64_t )m_pAuthoring->m_composedCandidate.m_nPages;
-	result["composed_bake_bytes"] = ( int64_t )m_pAuthoring->m_composedCandidate.m_nWrittenBytes;
-	result["composed_bake_reused_pages"] = ( int64_t )m_pAuthoring->m_composedCandidate.m_nReusedPages;
-	result["composed_bake_boundary_clamped_pages"] = ( int64_t )m_pAuthoring->m_composedCandidate.m_nBoundaryClampedPages;
-	result["composed_bake_fingerprint"] = ( int64_t )m_pAuthoring->m_composedCandidate.m_nSourceFingerprint;
+	result["composed_bake_pages"] = static_cast<int64_t>(m_pAuthoring->m_composedCandidate.m_nPages);
+	result["composed_bake_bytes"] = static_cast<int64_t>(m_pAuthoring->m_composedCandidate.m_nWrittenBytes);
+	result["composed_bake_reused_pages"] = static_cast<int64_t>(m_pAuthoring->m_composedCandidate.m_nReusedPages);
+	result["composed_bake_boundary_clamped_pages"] = static_cast<int64_t>(m_pAuthoring->m_composedCandidate.m_nBoundaryClampedPages);
+	result["composed_bake_fingerprint"] = static_cast<int64_t>(m_pAuthoring->m_composedCandidate.m_nSourceFingerprint);
 	result["composed_bake_pending"] = m_pAuthoring->m_bComposedCandidatePending;
-	result["composed_bake_request_serial"] = ( int64_t )m_pAuthoring->m_nComposedCandidateRequestSerial;
-	result["composed_bake_completion_serial"] = ( int64_t )m_pAuthoring->m_nComposedCandidateCompletionSerial;
+	result["composed_bake_request_serial"] = static_cast<int64_t>(m_pAuthoring->m_nComposedCandidateRequestSerial);
+	result["composed_bake_completion_serial"] = static_cast<int64_t>(m_pAuthoring->m_nComposedCandidateCompletionSerial);
 	result["composed_dirty_regions"] = m_composedSurfaceEdits.statsCold().m_nDirtyRegions;
-	result["composed_dirty_edit_events"] = ( int64_t )m_composedSurfaceEdits.statsCold().m_nEditEvents;
-	result["composed_source_invalidations"] = ( int64_t )m_composedSurfaceEdits.statsCold().m_nSourceInvalidations;
-	result["composed_stale_discarded"] = ( int64_t )m_composedSurfaceEdits.statsCold().m_nStaleCompletions;
-	result["composed_accepted_recooks"] = ( int64_t )m_composedSurfaceEdits.statsCold().m_nAcceptedCompletions;
+	result["composed_dirty_edit_events"] = static_cast<int64_t>(m_composedSurfaceEdits.statsCold()).m_nEditEvents;
+	result["composed_source_invalidations"] = static_cast<int64_t>(m_composedSurfaceEdits.statsCold()).m_nSourceInvalidations;
+	result["composed_stale_discarded"] = static_cast<int64_t>(m_composedSurfaceEdits.statsCold()).m_nStaleCompletions;
+	result["composed_accepted_recooks"] = static_cast<int64_t>(m_composedSurfaceEdits.statsCold()).m_nAcceptedCompletions;
 	result["composed_bake_parity_ready"] = false;
 	// Replacements remain forbidden until all independent acceptance gates pass.
 	result["composed_legacy_middle_atlas_retirable"] =
@@ -149,7 +149,7 @@ Dictionary Terrain3DRenderCoordinator::getForceRebakeVirtualTexturesStatusCold( 
 	String phase = "idle";
 	if ( m_pAuthoring->m_bForceRebakeQueued && !m_terrainMegaVT.isReady() ) {
 		phase = "waiting_for_terrain_topology";
-	} else if ( m_pAuthoring->m_bForceRebakeQueued && ( bool )status.get( "pending", false ) ) {
+	} else if ( m_pAuthoring->m_bForceRebakeQueued && static_cast<bool>(status.get( "pending", false ) )) {
 		phase = "waiting_for_previous_vt_publication";
 	} else if ( m_pAuthoring->m_bForceRebakeQueued ) {
 		phase = "queued_for_region_cook";
@@ -157,10 +157,10 @@ Dictionary Terrain3DRenderCoordinator::getForceRebakeVirtualTexturesStatusCold( 
 		phase = "waiting_for_runtime_vt";
 	} else if ( m_pAuthoring->m_bForceRebakeActive && !m_pAuthoring->m_bForceMaterialsStaged ) {
 		phase = "cooking_regions";
-	} else if ( m_pAuthoring->m_bForceRebakeActive && ( bool )status.get( "pending", false ) ) {
+	} else if ( m_pAuthoring->m_bForceRebakeActive && static_cast<bool>(status.get( "pending", false ) )) {
 		phase = "publishing_material_vt";
 	} else if ( m_pAuthoring->m_bForceRebakeActive &&
-	            ( uint64_t )status.get( "published_serial", 0u ) < m_pAuthoring->m_nForceRebakeActiveSerial ) {
+	            static_cast<uint64_t>(status.get( "published_serial", 0u ) < m_pAuthoring->m_nForceRebakeActiveSerial )) {
 		phase = "waiting_for_material_vt_publication";
 	} else if ( m_pAuthoring->m_bForceRebakeActive ) {
 		phase = "finalizing_runtime_package";
@@ -189,7 +189,7 @@ void Terrain3DRenderCoordinator::serviceForceRebakeCold( void )
 	                                         m_terrainMegaVT.getTexelsPerMeter() };
 	Dictionary status = m_previewService.getForceRebakeStatusCold();
 	if ( !m_pAuthoring->m_bForceRebakeActive && m_pAuthoring->m_bForceRebakeQueued ) {
-		if ( !m_terrainMegaVT.isReady() || ( bool )status.get( "pending", false ) ) {
+		if ( !m_terrainMegaVT.isReady() || static_cast<bool>(status.get( "pending", false ) )) {
 			return;
 		}
 		m_pAuthoring->m_bForceRebakeQueued = false;
@@ -240,10 +240,10 @@ void Terrain3DRenderCoordinator::serviceForceRebakeCold( void )
 	}
 	if ( m_pAuthoring->m_bForceMaterialsStaged && !failed ) {
 		const String error = status.get( "error", String() );
-		if ( !error.is_empty() && !( bool )status.get( "pending", false ) ) {
+		if ( !error.is_empty() && !static_cast<bool>(status.get( "pending", false ) )) {
 			m_pAuthoring->m_forceRebakeError = error;
 			failed = true;
-		} else if ( ( uint64_t )status.get( "published_serial", 0u ) >= m_pAuthoring->m_nForceRebakeActiveSerial ) {
+		} else if ( static_cast<uint64_t>(status.get( "published_serial", 0u ) >= m_pAuthoring->m_nForceRebakeActiveSerial )) {
 			m_pAuthoring->m_forceRebakeState = "published";
 			uint32_t materials = 0u;
 			PackedByteArray shippingPackage;
@@ -282,7 +282,7 @@ void Terrain3DRenderCoordinator::serviceForceRebakeCold( void )
 	}
 	if ( failed || m_pAuthoring->m_forceRebakeState == "saved" ) {
 		if ( failed ) {
-			( void )m_pAuthoring->m_cooker.finishForceRecookAllRegionsCold( inputs, m_terrainMegaVT, *this, false );
+			static_cast<void>(m_pAuthoring->m_cooker.finishForceRecookAllRegionsCold( inputs, m_terrainMegaVT, *this, false ));
 			m_pAuthoring->m_forceRebakeState = "failed";
 		}
 		m_pAuthoring->m_nForceRebakeCompletionSerial = m_pAuthoring->m_nForceRebakeActiveSerial;
@@ -390,7 +390,7 @@ void Terrain3DRenderCoordinator::serviceAuthoringUpdateCold( void )
 		// A forced owner pauses automatic recooking, but publications deferred by
 		// streaming/readbacks still need render-thread callbacks on later ticks.
 		if ( m_pAuthoring->m_bForceRebakeActive || m_pAuthoring->m_bForceRebakeQueued ) {
-			( void )m_previewService.queuePreviewVtRepublishCold( previewServices() );
+			static_cast<void>(m_previewService.queuePreviewVtRepublishCold( previewServices() ));
 		}
 		if ( !m_pAuthoring->m_bForceRebakeActive && !m_pAuthoring->m_bForceRebakeQueued ) {
 			Terrain3DMemoryAccountScope authoring_scope( m_pAuthoring->m_cooker.getAuthoringMemoryAccountCold() );

@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRWGLBOOTSTRAPWINDOW_H__
-#define __SIRENGINE_SIRWGLBOOTSTRAPWINDOW_H__
+#ifndef __SIR_WGLBOOTSTRAPWINDOW_H__
+#define __SIR_WGLBOOTSTRAPWINDOW_H__
 
 #include <Core/SIRPCH.h>
 
@@ -40,4 +40,4 @@ typedef struct sirWGLBootstrapWindow_s
 bool sirCreateWGLBootstrapWindow( sirWGLBootstrapWindow_t *pWindow ) noexcept;
 void sirDestroyWGLBootstrapWindow( sirWGLBootstrapWindow_t *pWindow ) noexcept;
 
-#endif // __SIRENGINE_SIRWGLBOOTSTRAPWINDOW_H__
+#endif // __SIR_WGLBOOTSTRAPWINDOW_H__

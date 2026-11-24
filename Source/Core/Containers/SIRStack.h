@@ -15,8 +15,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSTACK_H__
-#define __SIRENGINE_SIRSTACK_H__
+#ifndef __SIR_STACK_H__
+#define __SIR_STACK_H__
 
 #include <Core/SIRPCH.h>
 
@@ -56,23 +56,23 @@ public:
 	}
 
 	template <typename... Args>
-	sirContainerResult_t tryEmplace( Args&&...args )
+	SIRContainerResult tryEmplace( Args&&...args )
 	{
 		return m_elements.tryEmplaceBack( std::forward<Args>( args )... );
 	}
-	sirContainerResult_t tryPush( const T& value )
+	SIRContainerResult tryPush( const T& value )
 	{
 		return m_elements.tryPushBack( value );
 	}
-	sirContainerResult_t tryPush( T&& value )
+	SIRContainerResult tryPush( T&& value )
 	{
 		return m_elements.tryPushBack( std::move( value ) );
 	}
-	sirContainerResult_t tryPop( void ) noexcept
+	SIRContainerResult tryPop( void ) noexcept
 	{
 		return m_elements.tryPopBack();
 	}
-	sirContainerResult_t tryShrinkToFit( void )
+	SIRContainerResult tryShrinkToFit( void )
 	{
 		return m_elements.tryShrinkToFit();
 	}
@@ -82,4 +82,4 @@ public:
 	}
 };
 
-#endif // __SIRENGINE_SIRSTACK_H__
+#endif // __SIR_STACK_H__

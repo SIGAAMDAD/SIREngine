@@ -34,13 +34,13 @@ private:
 			int64_t iLeft = iMid;
 			uint64_t iRight = iMid + 1ull;
 			uint32_t iProbe = UINT32_MAX;
-			while ( iLeft >= ( int64_t )nLo || iRight < nHi ) {
-				if ( iLeft >= ( int64_t )nLo && m_slots[( uint32_t )iLeft].has_value() ) {
-					iProbe = ( uint32_t )iLeft;
+			while ( iLeft >= static_cast<int64_t>(nLo) || iRight < nHi ) {
+				if ( iLeft >= static_cast<int64_t>(nLo) && m_slots[static_cast<uint32_t>(iLeft)].has_value() ) {
+					iProbe = static_cast<uint32_t>(iLeft);
 					break;
 				}
-				if ( iRight < nHi && m_slots[( uint32_t )iRight].has_value() ) {
-					iProbe = ( uint32_t )iRight;
+				if ( iRight < nHi && m_slots[static_cast<uint32_t>(iRight)].has_value() ) {
+					iProbe = static_cast<uint32_t>(iRight);
 					break;
 				}
 				--iLeft;
@@ -57,16 +57,16 @@ private:
 		}
 		return nLo;
 	}
-	sirContainerResult_t grow( void )
+	SIRContainerResult grow( void )
 	{
 		const uint32_t nBefore = m_slots.getSize();
 		if ( nBefore > UINT32_MAX / 2 ) {
-			return SIR_CONTAINER_SIZE_OVERFLOW;
+			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
 		const uint32_t nCapacity = nBefore == 0 ? 8 : nBefore * 2;
 		SIRVector<std::optional<Entry>> staged( m_pAllocator );
-		sirContainerResult_t eResult = staged.tryResize( nCapacity );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		SIRContainerResult eResult = staged.tryResize( nCapacity );
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		// Retain distributed gaps so middle inserts shift only local neighbors.
@@ -75,12 +75,12 @@ private:
 			if ( !m_slots[iIndex].has_value() ) {
 				continue;
 			}
-			const uint32_t iTarget = ( uint32_t )( ( ( uint64_t )( iMoved + 1 ) * nCapacity ) / ( m_nCount + 1 ) ) - 1;
+			const uint32_t iTarget = ( uint32_t )( ( static_cast<uint64_t>( iMoved + 1 ) * nCapacity ) / ( m_nCount + 1 ) ) - 1;
 			staged[iTarget].emplace( *m_slots[iIndex] );
 			++iMoved;
 		}
 		m_slots = std::move( staged );
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
 public:
@@ -88,21 +88,21 @@ public:
 	    : m_pAllocator( pAllocator ), m_slots( pAllocator ), m_less( std::move( less ) )
 	{
 	}
-	sirContainerResult_t tryInsert( const K& key, const V& value )
+	SIRContainerResult tryInsert( const K& key, const V& value )
 	{
 		if ( m_nCount == UINT32_MAX ) {
-			return SIR_CONTAINER_SIZE_OVERFLOW;
+			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
 		if ( find( key ) != nullptr ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		// Relocation below requires a nonthrowing move to keep the existing slots intact.
 		static_assert( std::is_nothrow_move_constructible<Entry>::value && std::is_nothrow_move_assignable<Entry>::value,
 		               "Gap movements require noexcept relocation" );
 		Entry staged{ key, value };
 		if ( m_nCount == m_slots.getSize() ) {
-			sirContainerResult_t eResult = grow();
-			if ( eResult != SIR_CONTAINER_OK ) {
+			SIRContainerResult eResult = grow();
+			if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 				return eResult;
 			}
 		}
@@ -119,7 +119,7 @@ public:
 			}
 			m_slots[nCapacity - 1].emplace( std::move( staged ) );
 			++m_nCount;
-			return SIR_CONTAINER_OK;
+			return SIRContainerResult::SIR_CONTAINER_OK;
 		}
 		if ( !m_slots[iInsert].has_value() ) {
 			m_slots[iInsert].emplace( std::move( staged ) );
@@ -148,7 +148,7 @@ public:
 			}
 		}
 		++m_nCount;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 	const V *find( const K& key ) const
 	{

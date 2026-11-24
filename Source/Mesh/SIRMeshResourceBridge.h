@@ -9,10 +9,10 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRMESHRESOURCEBRIDGE_H__
-#define __SIRENGINE_SIRMESHRESOURCEBRIDGE_H__
+#ifndef __SIR_MESHRESOURCEBRIDGE_H__
+#define __SIR_MESHRESOURCEBRIDGE_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -43,4 +43,4 @@ SIRResourceResult SIRMeshResourceBridge::publish( SIRResourceGraphWriter& writer
 SIRResourceResult SIRMeshResourceBridge::open( const SIRResourceGraph& graph, const SIRResourceReadScope& scope,
                                                const sirMeshKey_t& key, sirMeshGeometryRead_t* pRead ) noexcept;
 
-#endif // __SIRENGINE_SIRMESHRESOURCEBRIDGE_H__
+#endif // __SIR_MESHRESOURCEBRIDGE_H__

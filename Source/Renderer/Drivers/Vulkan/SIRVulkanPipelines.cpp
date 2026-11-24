@@ -16,123 +16,123 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Renderer/Drivers/Vulkan/SIRVulkanGraphics.h>
 #include <Renderer/SIRGraphicsValidation.h>
 
-sirGraphicsResult_t SIRVulkanRenderingDevice::createPipeline( const sirGraphicsPipelineDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept
+SIRGraphicsResult SIRVulkanRenderingDevice::createPipeline( const sirGraphicsPipelineDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept
 {
 	if ( pHandle == nullptr ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	*pHandle = {};
 	if ( !m_bReady ) {
-		return SIR_GRAPHICS_BUSY;
+		return SIRGraphicsResult::SIR_GRAPHICS_BUSY;
 	}
-	const sirGraphicsResult_t eValidation = sirGraphicsValidatePipeline( desc );
-	if ( eValidation != SIR_GRAPHICS_SUCCESS ) {
+	const SIRGraphicsResult eValidation = sirGraphicsValidatePipeline( desc );
+	if ( eValidation != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 		return eValidation;
 	}
-	if ( ( desc.eType != SIR_GRAPHICS_PIPELINE_COMPUTE && desc.eType != SIR_GRAPHICS_PIPELINE_GRAPHICS ) ||
-	     ( desc.eType == SIR_GRAPHICS_PIPELINE_COMPUTE && desc.nBindingCount != 0 ) ||
-	     ( desc.eType == SIR_GRAPHICS_PIPELINE_COMPUTE
-	           ? desc.computeShader.eFormat != SIR_GRAPHICS_SHADER_SPIRV
-			   : desc.vertexShader.eFormat != SIR_GRAPHICS_SHADER_SPIRV || desc.pixelShader.eFormat != SIR_GRAPHICS_SHADER_SPIRV ) ) {
-		return SIR_GRAPHICS_UNSUPPORTED;
+	if ( ( desc.eType != SIRGraphicsPipelineType::SIR_GRAPHICS_PIPELINE_COMPUTE && desc.eType != SIRGraphicsPipelineType::SIR_GRAPHICS_PIPELINE_GRAPHICS ) ||
+	     ( desc.eType == SIRGraphicsPipelineType::SIR_GRAPHICS_PIPELINE_COMPUTE && desc.nBindingCount != 0 ) ||
+	     ( desc.eType == SIRGraphicsPipelineType::SIR_GRAPHICS_PIPELINE_COMPUTE
+	           ? desc.computeShader.eFormat != SIRGraphicsShaderFormat::SIR_GRAPHICS_SHADER_SPIRV
+			   : desc.vertexShader.eFormat != SIRGraphicsShaderFormat::SIR_GRAPHICS_SHADER_SPIRV || desc.pixelShader.eFormat != SIRGraphicsShaderFormat::SIR_GRAPHICS_SHADER_SPIRV ) ) {
+		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
-	if ( desc.eType == SIR_GRAPHICS_PIPELINE_COMPUTE &&
+	if ( desc.eType == SIRGraphicsPipelineType::SIR_GRAPHICS_PIPELINE_COMPUTE &&
 	     !sirVulkanValidateSpirv( desc.computeShader.pBytes, desc.computeShader.nByteCount, desc.computeShader.pszEntryPoint ) ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	for ( uint32_t iSlot = 0; iSlot < SIR_VULKAN_PIPELINE_CAPACITY; ++iSlot ) {
 		sirVulkanGraphicsPipelineSlot_t *pSlot = &m_szPipelines[iSlot];
 		if ( pSlot->bActive || pSlot->bRetiring || pSlot->nGeneration == 0 ) {
 			continue;
 		}
-		const sirVulkanResult_t eCreate = desc.eType == SIR_GRAPHICS_PIPELINE_COMPUTE
+		const SIRVulkanResult eCreate = desc.eType == SIRGraphicsPipelineType::SIR_GRAPHICS_PIPELINE_COMPUTE
 		                                      ? m_Native.createComputePipeline( desc.computeShader.pBytes, desc.computeShader.nByteCount,
 		                                                                        desc.computeShader.pszEntryPoint, &pSlot->native )
 		                                      : m_Native.createRasterPipeline( desc, &pSlot->native );
 		switch ( eCreate ) {
-		case SIR_VULKAN_SUCCESS:
+		case SIRVulkanResult::SIR_VULKAN_SUCCESS:
 			break;
-		case SIR_VULKAN_INVALID_ARGUMENT:
-			return SIR_GRAPHICS_INVALID_ARGUMENT;
-		case SIR_VULKAN_API_UNSUPPORTED:
-			return SIR_GRAPHICS_UNSUPPORTED;
-		case SIR_VULKAN_ALLOCATION_FAILED:
-			return SIR_GRAPHICS_OUT_OF_MEMORY;
+		case SIRVulkanResult::SIR_VULKAN_INVALID_ARGUMENT:
+			return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
+		case SIRVulkanResult::SIR_VULKAN_API_UNSUPPORTED:
+			return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
+		case SIRVulkanResult::SIR_VULKAN_ALLOCATION_FAILED:
+			return SIRGraphicsResult::SIR_GRAPHICS_OUT_OF_MEMORY;
 		default:
-			return SIR_GRAPHICS_DRIVER_ERROR;
+			return SIRGraphicsResult::SIR_GRAPHICS_DRIVER_ERROR;
 		}
-		pSlot->bGraphics = desc.eType == SIR_GRAPHICS_PIPELINE_GRAPHICS;
+		pSlot->bGraphics = desc.eType == SIRGraphicsPipelineType::SIR_GRAPHICS_PIPELINE_GRAPHICS;
 		m_nNativeSerial = pSlot->native.nDeviceSerial;
 		pSlot->bActive = true;
-		*pHandle = { iSlot, pSlot->nGeneration, m_nDeviceGeneration, SIR_GRAPHICS_HANDLE_PIPELINE };
-		return SIR_GRAPHICS_SUCCESS;
+		*pHandle = { iSlot, pSlot->nGeneration, m_nDeviceGeneration, SIRGraphicsHandleType::SIR_GRAPHICS_HANDLE_PIPELINE };
+		return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 	}
-	return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+	return SIRGraphicsResult::SIR_GRAPHICS_CAPACITY_EXCEEDED;
 }
 
-sirGraphicsResult_t SIRVulkanCommandList::bindPipeline( sirGraphicsHandle_t hPipeline ) noexcept
+SIRGraphicsResult SIRVulkanCommandList::bindPipeline( sirGraphicsHandle_t hPipeline ) noexcept
 {
-	if ( m_eState != SIR_VULKAN_COMMAND_RECORDING || m_pOwner == nullptr ) {
-		return SIR_GRAPHICS_BUSY;
+	if ( m_eState != SIRVulkanCommandState::SIR_VULKAN_COMMAND_RECORDING || m_pOwner == nullptr ) {
+		return SIRGraphicsResult::SIR_GRAPHICS_BUSY;
 	}
-	if ( hPipeline.eType != SIR_GRAPHICS_HANDLE_PIPELINE || hPipeline.nDeviceGeneration != m_pOwner->m_nDeviceGeneration ||
+	if ( hPipeline.eType != SIRGraphicsHandleType::SIR_GRAPHICS_HANDLE_PIPELINE || hPipeline.nDeviceGeneration != m_pOwner->m_nDeviceGeneration ||
 	     hPipeline.nSlot >= SIRVulkanRenderingDevice::SIR_VULKAN_PIPELINE_CAPACITY ) {
-		return SIR_GRAPHICS_INVALID_HANDLE;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_HANDLE;
 	}
 	const sirVulkanGraphicsPipelineSlot_t *pSlot = &m_pOwner->m_szPipelines[hPipeline.nSlot];
 	if ( !pSlot->bActive || pSlot->nGeneration != hPipeline.nGeneration ) {
-		return SIR_GRAPHICS_INVALID_HANDLE;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_HANDLE;
 	}
 	if ( pSlot->bGraphics != m_bInRenderPass ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( m_bInRenderPass && m_nOperationCount >= SIR_VULKAN_COPY_BATCH_CAPACITY ) {
-		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+		return SIRGraphicsResult::SIR_GRAPHICS_CAPACITY_EXCEEDED;
 	}
 	m_hBoundPipeline = hPipeline;
 	if ( m_bInRenderPass ) {
 		sirVulkanGraphicsOperation_t& operation = m_szOperations[m_nOperationCount++];
 		operation = {};
-		operation.eKind = SIR_VULKAN_GRAPHICS_BIND_PIPELINE;
+		operation.eKind = SIRVulkanGraphicsOpKind::SIR_VULKAN_GRAPHICS_BIND_PIPELINE;
 		operation.hPipeline = hPipeline;
 	}
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t SIRVulkanCommandList::dispatch( uint32_t nGroupCountX, uint32_t nGroupCountY, uint32_t nGroupCountZ ) noexcept
+SIRGraphicsResult SIRVulkanCommandList::dispatch( uint32_t nGroupCountX, uint32_t nGroupCountY, uint32_t nGroupCountZ ) noexcept
 {
-	if ( m_eState != SIR_VULKAN_COMMAND_RECORDING || m_pOwner == nullptr ) {
-		return SIR_GRAPHICS_BUSY;
+	if ( m_eState != SIRVulkanCommandState::SIR_VULKAN_COMMAND_RECORDING || m_pOwner == nullptr ) {
+		return SIRGraphicsResult::SIR_GRAPHICS_BUSY;
 	}
 	if ( m_nOperationCount >= SIR_VULKAN_COPY_BATCH_CAPACITY ) {
-		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+		return SIRGraphicsResult::SIR_GRAPHICS_CAPACITY_EXCEEDED;
 	}
 	if ( nGroupCountX == 0 || nGroupCountY == 0 || nGroupCountZ == 0 ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	const sirGraphicsHandle_t hPipeline = m_hBoundPipeline;
-	if ( hPipeline.eType != SIR_GRAPHICS_HANDLE_PIPELINE || hPipeline.nDeviceGeneration != m_pOwner->m_nDeviceGeneration ||
+	if ( hPipeline.eType != SIRGraphicsHandleType::SIR_GRAPHICS_HANDLE_PIPELINE || hPipeline.nDeviceGeneration != m_pOwner->m_nDeviceGeneration ||
 	     hPipeline.nSlot >= SIRVulkanRenderingDevice::SIR_VULKAN_PIPELINE_CAPACITY ) {
-		return SIR_GRAPHICS_INVALID_HANDLE;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_HANDLE;
 	}
 	const sirVulkanGraphicsPipelineSlot_t *pSlot = &m_pOwner->m_szPipelines[hPipeline.nSlot];
 	if ( !pSlot->bActive || pSlot->nGeneration != hPipeline.nGeneration || pSlot->bGraphics || m_bInRenderPass ) {
-		return SIR_GRAPHICS_INVALID_HANDLE;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_HANDLE;
 	}
-	sirVulkanAdapterInfo_t adapter = {};
+	sirVulkanAdapterInfo_t adapter {};
 	if ( !m_pOwner->m_Native.queryAdapter( &adapter ) || !adapter.bComputeCapable ) {
-		return SIR_GRAPHICS_UNSUPPORTED;
+		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
 	if ( nGroupCountX > adapter.szMaximumComputeGroupCount[0] || nGroupCountY > adapter.szMaximumComputeGroupCount[1] ||
 	     nGroupCountZ > adapter.szMaximumComputeGroupCount[2] ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	sirVulkanGraphicsOperation_t& operation = m_szOperations[m_nOperationCount++];
 	operation = {};
-	operation.eKind = SIR_VULKAN_GRAPHICS_COMPUTE_DISPATCH;
+	operation.eKind = SIRVulkanGraphicsOpKind::SIR_VULKAN_GRAPHICS_COMPUTE_DISPATCH;
 	operation.hPipeline = hPipeline;
 	operation.nGroupCountX = nGroupCountX;
 	operation.nGroupCountY = nGroupCountY;
 	operation.nGroupCountZ = nGroupCountZ;
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }

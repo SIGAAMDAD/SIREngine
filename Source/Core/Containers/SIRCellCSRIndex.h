@@ -27,10 +27,10 @@ public:
 	    : m_pAllocator( pAllocator ), m_cells( pAllocator ), m_offsets( pAllocator ), m_handles( pAllocator ), m_less( std::move( less ) )
 	{
 	}
-	sirContainerResult_t tryBuild( const Entry *pEntries, uint32_t nCount )
+	SIRContainerResult tryBuild( const Entry *pEntries, uint32_t nCount )
 	{
 		if ( nCount == UINT32_MAX || ( nCount > 0 && pEntries == nullptr ) ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		// Most pre-cooked cell directories arrive grouped by cell already.
 		// An early-out sortedness probe avoids copying and sorting that input;
@@ -44,15 +44,15 @@ public:
 		}
 		SIRVector<Entry> sorted( m_pAllocator );
 		const Entry *pOrdered = pEntries;
-		sirContainerResult_t eResult = SIR_CONTAINER_OK;
+		SIRContainerResult eResult = SIRContainerResult::SIR_CONTAINER_OK;
 		if ( !bOrdered ) {
 			eResult = sorted.tryReserve( nCount );
-			if ( eResult != SIR_CONTAINER_OK ) {
+			if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 				return eResult;
 			}
 			for ( uint32_t iEntry = 0; iEntry < nCount; ++iEntry ) {
 				eResult = sorted.tryEmplaceBack( pEntries[iEntry] );
-				if ( eResult != SIR_CONTAINER_OK ) {
+				if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 					return eResult;
 				}
 			}
@@ -65,15 +65,15 @@ public:
 		SIRVector<uint32_t> offsets( m_pAllocator );
 		SIRVector<Handle> handles( m_pAllocator );
 		eResult = cells.tryReserve( nCount );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		eResult = offsets.tryReserve( nCount + 1 );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		eResult = handles.tryReserve( nCount );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		for ( uint32_t iIndex = 0; iIndex < nCount; ++iIndex ) {
@@ -87,7 +87,7 @@ public:
 		m_cells = std::move( cells );
 		m_offsets = std::move( offsets );
 		m_handles = std::move( handles );
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 	bool find( const CellKey& cell, const Handle **ppData, uint32_t *pCount ) const
 	{

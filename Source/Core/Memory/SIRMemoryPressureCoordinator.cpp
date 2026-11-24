@@ -14,7 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#include <Core/Platform/SIRAtomic.h>
+#include <atomic>
 #include <Core/Platform/SIRScopedLock.h>
 #include <Core/Memory/SIRMemoryPressureCoordinator.h>
 #include <Core/Memory/SIRMemoryManager.h>
@@ -50,8 +50,8 @@ bool SIRMemoryPressureCoordinator::init( SIRMemoryManager *pManager, uint32_t nO
 	if ( m_pManager != nullptr || pManager == nullptr || nOwnerCapacity == 0 || !pManager->isInitialized() ) {
 		return false;
 	}
-	const uint64_t nBytes = ( ( uint64_t )( nOwnerCapacity ) ) * sizeof( sirOwner_t );
-	sirOwner_t *pOwners = ( ( sirOwner_t * )( pManager->allocateMetadata( nBytes, alignof( sirOwner_t ) ) ) );
+	const uint64_t nBytes = static_cast<uint64_t>( nOwnerCapacity ) * sizeof( sirOwner_t );
+	sirOwner_t *pOwners = static_cast<sirOwner_t *>(  pManager->allocateMetadata( nBytes, alignof( sirOwner_t ) )  );
 	if ( pOwners == nullptr ) {
 		return false;
 	}
@@ -67,10 +67,10 @@ bool SIRMemoryPressureCoordinator::init( SIRMemoryManager *pManager, uint32_t nO
 bool SIRMemoryPressureCoordinator::registerOwner( const sirReclaimOwnerConfig_t& config, uint32_t *pIndex )
 {
 	// Registration must complete before pressure requests or owner services begin.
-	const uint32_t nIndex = m_nOwnerCount.load( SIR_MEMORY_ORDER_RELAXED );
+	const uint32_t nIndex = m_nOwnerCount.load( std::memory_order_relaxed );
 	if ( m_pManager == nullptr || pIndex == nullptr || config.pAllocator == nullptr || config.ppSegments == nullptr ||
-	     config.nSegmentCount == 0 || config.nOwnerType > SIR_RECLAIM_COMPACT_BUCKET ||
-	     ( config.nOwnerType == SIR_RECLAIM_CACHE_EVICT && config.nMaximumVictims == 0 ) || nIndex >= m_nOwnerCapacity ) {
+	     config.nSegmentCount == 0 || config.nOwnerType > static_cast<uint32_t>( SIRReclaimOwnerType::SIR_RECLAIM_COMPACT_BUCKET ) ||
+	     ( config.nOwnerType == static_cast<uint32_t>( SIRReclaimOwnerType::SIR_RECLAIM_CACHE_EVICT ) && config.nMaximumVictims == 0 ) || nIndex >= m_nOwnerCapacity ) {
 		return false;
 	}
 	for ( uint32_t i = 0; i < config.nSegmentCount; ++i ) {
@@ -89,7 +89,7 @@ bool SIRMemoryPressureCoordinator::registerOwner( const sirReclaimOwnerConfig_t&
 		}
 	}
 	SIRMemorySegment **ppCopy = ( ( SIRMemorySegment ** )( m_pManager->allocateMetadata(
-	    ( ( uint64_t )( config.nSegmentCount ) ) * sizeof( SIRMemorySegment * ), alignof( SIRMemorySegment * ) ) ) );
+	    static_cast<uint64_t>( config.nSegmentCount ) * sizeof( SIRMemorySegment * ), alignof( SIRMemorySegment * ) ) ) );
 	if ( ppCopy == nullptr ) {
 		return false;
 	}
@@ -106,7 +106,7 @@ bool SIRMemoryPressureCoordinator::registerOwner( const sirReclaimOwnerConfig_t&
 	owner.nMaximumVictims = config.nMaximumVictims;
 	owner.nPriority = config.nPriority;
 	*pIndex = nIndex;
-	m_nOwnerCount.store( nIndex + 1, SIR_MEMORY_ORDER_RELEASE );
+	m_nOwnerCount.store( nIndex + 1, std::memory_order_release );
 	return true;
 }
 
@@ -116,15 +116,15 @@ bool SIRMemoryPressureCoordinator::requestReclaim( uint64_t nTargetBytes )
 		return false;
 	}
 	SIRScopedLock<SIRMutex> lock( m_RequestMutex );
-	m_nRequestedBytes.fetchAdd( nTargetBytes, SIR_MEMORY_ORDER_RELAXED );
+	m_nRequestedBytes.fetch_add( nTargetBytes, std::memory_order_relaxed );
 	// Cooperative fan-out. Owner lifetimes are fixed; the cold requesting thread
 	// never accesses allocation state or invokes a trim callback.
-	const uint32_t nCount = m_nOwnerCount.load( SIR_MEMORY_ORDER_ACQUIRE );
+	const uint32_t nCount = m_nOwnerCount.load( std::memory_order_acquire );
 	for ( uint32_t i = 0; i < nCount; ++i ) {
-		SIRAtomic<uint64_t>& pending = m_pOwners[i].nPendingBytes;
-		uint64_t nOld = pending.load( SIR_MEMORY_ORDER_RELAXED );
+		std::atomic<uint64_t>& pending = m_pOwners[i].nPendingBytes;
+		uint64_t nOld = pending.load( std::memory_order_relaxed );
 		while ( nOld < nTargetBytes &&
-		        !pending.compareExchangeWeak( nOld, nTargetBytes, SIR_MEMORY_ORDER_RELEASE, SIR_MEMORY_ORDER_RELAXED ) ) {
+		        !pending.compare_exchange_weak( nOld, nTargetBytes, std::memory_order_release, std::memory_order_relaxed ) ) {
 		}
 	}
 	return true;
@@ -142,42 +142,42 @@ uint64_t SIRMemoryPressureCoordinator::countOwnerCommitted( const sirOwner_t& ow
 bool SIRMemoryPressureCoordinator::trimOwner( sirOwner_t& owner, uint64_t nTargetBytes )
 {
 	switch ( owner.nType ) {
-	case SIR_RECLAIM_COMPACT_BUCKET:
-		if ( ( ( SIRCompactBucketAllocator * )( owner.pAllocator ) )->getAttachedSeat() == UINT32_MAX ) {
+	case static_cast<uint32_t>( SIRReclaimOwnerType::SIR_RECLAIM_COMPACT_BUCKET ):
+		if ( static_cast<SIRCompactBucketAllocator *>( owner.pAllocator )->getAttachedSeat() == UINT32_MAX ) {
 			return false;
 		}
-		( ( SIRCompactBucketAllocator * )( owner.pAllocator ) )->drainRemote();
-		( ( SIRCompactBucketAllocator * )( owner.pAllocator ) )->trimEmptySlabs( owner.nWarmSlabs );
+		static_cast<SIRCompactBucketAllocator *>( owner.pAllocator )->drainRemote();
+		static_cast<SIRCompactBucketAllocator *>( owner.pAllocator )->trimEmptySlabs( owner.nWarmSlabs );
 		return true;
-	case SIR_RECLAIM_SLAB:
-		return ( ( SIRSlabAllocator * )( owner.pAllocator ) )->trimEmptySlabsTo( owner.nWarmSlabs );
-	case SIR_RECLAIM_SIZE_CLASSES:
-		return ( ( SIRReclaimableSizeClassAllocator * )( owner.pAllocator ) )->trimIdle();
-	case SIR_RECLAIM_SIZE_CLASSES_PRESSURE:
-		return ( ( SIRReclaimableSizeClassAllocator * )( owner.pAllocator ) )->trimTo( 0 );
-	case SIR_RECLAIM_THREAD_SEAT:
-		return ( ( SIRThreadLocalAllocator * )( owner.pAllocator ) )->trimSeat( owner.nSeat, owner.nWarmSlabs );
-	case SIR_RECLAIM_BUDDY:
-		return ( ( SIRBuddyAllocator * )( owner.pAllocator ) )->trimUnusedPages();
-	case SIR_RECLAIM_CACHE:
-		return ( ( SIRCacheAllocator * )( owner.pAllocator ) )->trimUnusedPages();
-	case SIR_RECLAIM_HANDLE:
-		return ( ( SIRHandleHeap * )( owner.pAllocator ) )->trimUnusedPages();
-	case SIR_RECLAIM_FREE_LIST:
-		return ( ( SIRFreeListAllocator * )( owner.pAllocator ) )->trimUnusedPages();
-	case SIR_RECLAIM_TLSF:
-		return ( ( SIRTLSFAllocator * )( owner.pAllocator ) )->trimUnusedPages();
-	case SIR_RECLAIM_POOL: {
-		SIRPoolAllocator *pPool = ( ( SIRPoolAllocator * )( owner.pAllocator ) );
+	case static_cast<uint32_t>( SIRReclaimOwnerType::SIR_RECLAIM_SLAB ):
+		return static_cast<SIRSlabAllocator *>( owner.pAllocator )->trimEmptySlabsTo( owner.nWarmSlabs );
+	case static_cast<uint32_t>( SIRReclaimOwnerType::SIR_RECLAIM_SIZE_CLASSES ):
+		return static_cast<SIRReclaimableSizeClassAllocator *>( owner.pAllocator )->trimIdle();
+	case static_cast<uint32_t>( SIRReclaimOwnerType::SIR_RECLAIM_SIZE_CLASSES_PRESSURE ):
+		return static_cast<SIRReclaimableSizeClassAllocator *>( owner.pAllocator )->trimTo( 0 );
+	case static_cast<uint32_t>( SIRReclaimOwnerType::SIR_RECLAIM_THREAD_SEAT ):
+		return static_cast<SIRThreadLocalAllocator *>( owner.pAllocator )->trimSeat( owner.nSeat, owner.nWarmSlabs );
+	case static_cast<uint32_t>( SIRReclaimOwnerType::SIR_RECLAIM_BUDDY ):
+		return static_cast<SIRBuddyAllocator *>( owner.pAllocator )->trimUnusedPages();
+	case static_cast<uint32_t>( SIRReclaimOwnerType::SIR_RECLAIM_CACHE ):
+		return static_cast<SIRCacheAllocator *>( owner.pAllocator )->trimUnusedPages();
+	case static_cast<uint32_t>( SIRReclaimOwnerType::SIR_RECLAIM_HANDLE ):
+		return static_cast<SIRHandleHeap *>( owner.pAllocator )->trimUnusedPages();
+	case static_cast<uint32_t>( SIRReclaimOwnerType::SIR_RECLAIM_FREE_LIST ):
+		return static_cast<SIRFreeListAllocator *>( owner.pAllocator )->trimUnusedPages();
+	case static_cast<uint32_t>( SIRReclaimOwnerType::SIR_RECLAIM_TLSF ):
+		return static_cast<SIRTLSFAllocator *>( owner.pAllocator )->trimUnusedPages();
+	case static_cast<uint32_t>( SIRReclaimOwnerType::SIR_RECLAIM_POOL ): {
+		SIRPoolAllocator *pPool = static_cast<SIRPoolAllocator *>( owner.pAllocator );
 		return pPool->getLiveSlots() == 0 && pPool->reset( true );
 	}
-	case SIR_RECLAIM_FRAME:
-		return ( ( SIRFrameAllocator * )( owner.pAllocator ) )->trimIdle();
-	case SIR_RECLAIM_CACHE_EVICT:
-		( ( SIRCacheAllocator * )( owner.pAllocator ) )->reclaimCold( nTargetBytes, owner.nMaximumVictims );
+	case static_cast<uint32_t>( SIRReclaimOwnerType::SIR_RECLAIM_FRAME ):
+		return static_cast<SIRFrameAllocator *>( owner.pAllocator )->trimIdle();
+	case static_cast<uint32_t>( SIRReclaimOwnerType::SIR_RECLAIM_CACHE_EVICT ):
+		static_cast<SIRCacheAllocator *>( owner.pAllocator )->reclaimCold( nTargetBytes, owner.nMaximumVictims );
 		return true;
-	case SIR_RECLAIM_RING:
-		return ( ( SIRRingAllocator * )( owner.pAllocator ) )->trimIfEmpty();
+	case static_cast<uint32_t>( SIRReclaimOwnerType::SIR_RECLAIM_RING ):
+		return static_cast<SIRRingAllocator *>( owner.pAllocator )->trimIfEmpty();
 	default:
 		return false;
 	}
@@ -185,17 +185,17 @@ bool SIRMemoryPressureCoordinator::trimOwner( sirOwner_t& owner, uint64_t nTarge
 
 uint64_t SIRMemoryPressureCoordinator::serviceOwner( uint32_t nIndex )
 {
-	if ( m_pOwners == nullptr || nIndex >= m_nOwnerCount.load( SIR_MEMORY_ORDER_ACQUIRE ) ) {
+	if ( m_pOwners == nullptr || nIndex >= m_nOwnerCount.load( std::memory_order_acquire ) ) {
 		return 0;
 	}
 	sirOwner_t& owner = m_pOwners[nIndex];
 	uint64_t nRequested = 0;
 	{
 		SIRScopedLock<SIRMutex> lock( m_RequestMutex );
-		if ( owner.nServicing.exchange( 1, SIR_MEMORY_ORDER_ACQUIRE ) != 0 ) {
+		if ( owner.nServicing.exchange( 1, std::memory_order_acquire ) != 0 ) {
 			return 0;
 		}
-		nRequested = owner.nPendingBytes.exchange( 0, SIR_MEMORY_ORDER_ACQUIRE_RELEASE );
+		nRequested = owner.nPendingBytes.exchange( 0, std::memory_order_acq_rel );
 	}
 	uint64_t nReclaimed = 0;
 	if ( nRequested != 0 ) {
@@ -204,14 +204,14 @@ uint64_t SIRMemoryPressureCoordinator::serviceOwner( uint32_t nIndex )
 			const uint64_t nAfter = countOwnerCommitted( owner );
 			nReclaimed = nBefore > nAfter ? nBefore - nAfter : 0;
 		} else {
-			uint64_t nOld = owner.nPendingBytes.load( SIR_MEMORY_ORDER_RELAXED );
+			uint64_t nOld = owner.nPendingBytes.load( std::memory_order_relaxed );
 			while ( nOld < nRequested &&
-			        !owner.nPendingBytes.compareExchangeWeak( nOld, nRequested, SIR_MEMORY_ORDER_RELEASE, SIR_MEMORY_ORDER_RELAXED ) ) {
+			        !owner.nPendingBytes.compare_exchange_weak( nOld, nRequested, std::memory_order_release, std::memory_order_relaxed ) ) {
 			}
 		}
-		m_nReclaimedBytes.fetchAdd( nReclaimed, SIR_MEMORY_ORDER_RELAXED );
+		m_nReclaimedBytes.fetch_add( nReclaimed, std::memory_order_relaxed );
 	}
-	owner.nServicing.store( 0, SIR_MEMORY_ORDER_RELEASE );
+	owner.nServicing.store( 0, std::memory_order_release );
 	return nReclaimed;
 }
 
@@ -220,13 +220,13 @@ uint32_t SIRMemoryPressureCoordinator::findNextPendingOwner( uint32_t nMaxPriori
 	if ( m_pOwners == nullptr ) {
 		return UINT32_MAX;
 	}
-	const uint32_t nCount = m_nOwnerCount.load( SIR_MEMORY_ORDER_ACQUIRE );
+	const uint32_t nCount = m_nOwnerCount.load( std::memory_order_acquire );
 	uint32_t nChosen = UINT32_MAX;
 	uint32_t nPriority = UINT32_MAX;
 	for ( uint32_t i = 0; i < nCount; ++i ) {
 		const sirOwner_t& owner = m_pOwners[i];
 		if ( owner.nPriority <= nMaxPriority && owner.nPriority <= nPriority &&
-		     owner.nPendingBytes.load( SIR_MEMORY_ORDER_ACQUIRE ) != 0 ) {
+		     owner.nPendingBytes.load( std::memory_order_acquire ) != 0 ) {
 			if ( owner.nPriority < nPriority || nChosen == UINT32_MAX ) {
 				nChosen = i;
 				nPriority = owner.nPriority;
@@ -239,13 +239,13 @@ uint32_t SIRMemoryPressureCoordinator::findNextPendingOwner( uint32_t nMaxPriori
 sirPressureStats_t SIRMemoryPressureCoordinator::getStats( void ) const
 {
 	SIRScopedLock<SIRMutex> lock( m_RequestMutex );
-	sirPressureStats_t stats = {};
-	stats.nRequestedBytes = m_nRequestedBytes.load( SIR_MEMORY_ORDER_RELAXED );
-	stats.nReclaimedBytes = m_nReclaimedBytes.load( SIR_MEMORY_ORDER_RELAXED );
-	stats.nCanceledBytes = m_nCanceledBytes.load( SIR_MEMORY_ORDER_RELAXED );
-	stats.nOwnerCount = m_nOwnerCount.load( SIR_MEMORY_ORDER_ACQUIRE );
+	sirPressureStats_t stats {};
+	stats.nRequestedBytes = m_nRequestedBytes.load( std::memory_order_relaxed );
+	stats.nReclaimedBytes = m_nReclaimedBytes.load( std::memory_order_relaxed );
+	stats.nCanceledBytes = m_nCanceledBytes.load( std::memory_order_relaxed );
+	stats.nOwnerCount = m_nOwnerCount.load( std::memory_order_acquire );
 	for ( uint32_t i = 0; i < stats.nOwnerCount; ++i ) {
-		const uint64_t nPending = m_pOwners[i].nPendingBytes.load( SIR_MEMORY_ORDER_ACQUIRE );
+		const uint64_t nPending = m_pOwners[i].nPendingBytes.load( std::memory_order_acquire );
 		stats.nPendingOwners += nPending != 0;
 		// Owners receive one target each; this is pending owner-work, not
 		// historical requested-minus-reclaimed traffic.
@@ -260,17 +260,17 @@ bool SIRMemoryPressureCoordinator::cancelPending( void )
 	if ( m_pOwners == nullptr ) {
 		return false;
 	}
-	const uint32_t nCount = m_nOwnerCount.load( SIR_MEMORY_ORDER_ACQUIRE );
+	const uint32_t nCount = m_nOwnerCount.load( std::memory_order_acquire );
 	for ( uint32_t i = 0; i < nCount; ++i ) {
-		if ( m_pOwners[i].nServicing.load( SIR_MEMORY_ORDER_ACQUIRE ) != 0 ) {
+		if ( m_pOwners[i].nServicing.load( std::memory_order_acquire ) != 0 ) {
 			return false;
 		}
 	}
 	uint64_t nCanceled = 0;
 	for ( uint32_t i = 0; i < nCount; ++i ) {
-		nCanceled += m_pOwners[i].nPendingBytes.exchange( 0, SIR_MEMORY_ORDER_ACQUIRE_RELEASE );
+		nCanceled += m_pOwners[i].nPendingBytes.exchange( 0, std::memory_order_acq_rel );
 	}
-	m_nCanceledBytes.fetchAdd( nCanceled, SIR_MEMORY_ORDER_RELAXED );
+	m_nCanceledBytes.fetch_add( nCanceled, std::memory_order_relaxed );
 	return true;
 }
 
@@ -279,9 +279,9 @@ bool SIRMemoryPressureCoordinator::shutdown( void )
 	if ( m_pOwners == nullptr ) {
 		return false;
 	}
-	for ( uint32_t i = 0; i < m_nOwnerCount.load( SIR_MEMORY_ORDER_RELAXED ); ++i ) {
-		if ( m_pOwners[i].nServicing.load( SIR_MEMORY_ORDER_ACQUIRE ) != 0 ||
-		     m_pOwners[i].nPendingBytes.load( SIR_MEMORY_ORDER_ACQUIRE ) != 0 ) {
+	for ( uint32_t i = 0; i < m_nOwnerCount.load( std::memory_order_relaxed ); ++i ) {
+		if ( m_pOwners[i].nServicing.load( std::memory_order_acquire ) != 0 ||
+		     m_pOwners[i].nPendingBytes.load( std::memory_order_acquire ) != 0 ) {
 			return false;
 		}
 	}
@@ -289,6 +289,6 @@ bool SIRMemoryPressureCoordinator::shutdown( void )
 	m_pOwners = nullptr;
 	m_pManager = nullptr;
 	m_nOwnerCapacity = 0;
-	m_nOwnerCount.store( 0, SIR_MEMORY_ORDER_RELAXED );
+	m_nOwnerCount.store( 0, std::memory_order_relaxed );
 	return true;
 }

@@ -13,10 +13,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRRENDERPIPELINE_H__
-#define __SIRENGINE_SIRRENDERPIPELINE_H__
+#ifndef __SIR_RENDERPIPELINE_H__
+#define __SIR_RENDERPIPELINE_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -42,11 +42,11 @@ public:
 	}
 	bool isValid( void ) const noexcept
 	{
-		return m_hHandle.nGeneration != 0 && m_hHandle.nDeviceGeneration != 0 && m_hHandle.eType == SIR_GRAPHICS_HANDLE_PIPELINE;
+		return m_hHandle.nGeneration != 0 && m_hHandle.nDeviceGeneration != 0 && m_hHandle.eType == SIRGraphicsHandleType::SIR_GRAPHICS_HANDLE_PIPELINE;
 	}
 
 private:
-	sirGraphicsHandle_t m_hHandle = {};
+	sirGraphicsHandle_t m_hHandle {};
 };
 
-#endif // __SIRENGINE_SIRRENDERPIPELINE_H__
+#endif // __SIR_RENDERPIPELINE_H__

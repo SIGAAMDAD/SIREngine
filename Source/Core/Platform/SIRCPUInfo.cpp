@@ -30,10 +30,11 @@ static void queryCPUID( uint32_t nLeaf, uint32_t nSubleaf, uint32_t *pRegs ) noe
 	pRegs[2] = 0;
 	pRegs[3] = 0;
 #if defined( _MSC_VER ) && ( defined( _M_X64 ) || defined( _M_IX86 ) )
-	int szRegs[4] = {};
-	__cpuidex( szRegs, ( int )nLeaf, ( int )nSubleaf );
+	int szRegs[4];
+	memset( szRegs, 0, sizeof( szRegs ) );
+	__cpuidex( szRegs, static_cast<int>(nLeaf), static_cast<int>(nSubleaf) );
 	for ( int iReg = 0; iReg < 4; ++iReg ) {
-		pRegs[iReg] = ( uint32_t )szRegs[iReg];
+		pRegs[iReg] = static_cast<uint32_t>(szRegs[iReg]);
 	}
 #elif ( defined( __x86_64__ ) || defined( __i386__ ) ) && ( defined( __GNUC__ ) || defined( __clang__ ) )
 	uint32_t nA = 0, nB = 0, nC = 0, nD = 0;
@@ -43,20 +44,20 @@ static void queryCPUID( uint32_t nLeaf, uint32_t nSubleaf, uint32_t *pRegs ) noe
 	pRegs[2] = nC;
 	pRegs[3] = nD;
 #else
-	( void )nLeaf;
-	( void )nSubleaf;
+	static_cast<void>(nLeaf);
+	static_cast<void>(nSubleaf);
 #endif
 }
 
 static uint64_t getEnabledXCR0( void ) noexcept
 {
 #if defined( _MSC_VER ) && ( defined( _M_X64 ) || defined( _M_IX86 ) )
-	return ( uint64_t )_xgetbv( 0 );
+	return static_cast<uint64_t>(_xgetbv( 0 ));
 #elif defined( __x86_64__ ) || defined( __i386__ )
 	uint32_t nLo = 0;
 	uint32_t nHi = 0;
 	__asm__ volatile( "xgetbv" : "=a"( nLo ), "=d"( nHi ) : "c"( 0 ) );
-	return ( ( uint64_t )nHi << 32 ) | nLo;
+	return ( static_cast<uint64_t>(nHi) << 32 ) | nLo;
 #else
 	return 0;
 #endif
@@ -79,7 +80,7 @@ static void queryCacheSizes( sirCPUInfo_t *pInfo, uint32_t nHighestLeaf ) noexce
 		const uint64_t nLine = ( ( szRegs[1] & 0xfffU ) + 1U );
 		const uint64_t nPartitions = ( ( szRegs[1] >> 12 ) & 0x3ffU ) + 1U;
 		const uint64_t nWays = ( ( szRegs[1] >> 22 ) & 0x3ffU ) + 1U;
-		const uint64_t nSets = ( uint64_t )szRegs[2] + 1U;
+		const uint64_t nSets = static_cast<uint64_t>(szRegs[2]) + 1U;
 		const uint64_t nSize = nLine * nPartitions * nWays * nSets;
 		if ( nLevel == 1 && nType == 1 && nSize > pInfo->nL1DataCacheBytes ) {
 			pInfo->nL1DataCacheBytes = nSize;
@@ -89,7 +90,7 @@ static void queryCacheSizes( sirCPUInfo_t *pInfo, uint32_t nHighestLeaf ) noexce
 			pInfo->nL3CacheBytes = nSize;
 		}
 		if ( nLevel == 1 && pInfo->nCacheLineBytes == 0 ) {
-			pInfo->nCacheLineBytes = ( uint32_t )nLine;
+			pInfo->nCacheLineBytes = static_cast<uint32_t>(nLine);
 		}
 	}
 }
@@ -118,48 +119,48 @@ void SIRCPUInfo::queryInstructionSet( sirCPUInfo_t *pInfo ) noexcept
 	const uint32_t nECX = szRegs[2];
 	const uint32_t nEDX = szRegs[3];
 	if ( nEDX & ( 1U << 26 ) ) {
-		pInfo->nFeatures |= SIR_CPU_FEATURE_SSE2;
+		pInfo->nFeatures |= static_cast<uint64_t>( SIRCPUFeature::SIR_CPU_FEATURE_SSE2 );
 	}
 	if ( nECX & ( 1U << 19 ) ) {
-		pInfo->nFeatures |= SIR_CPU_FEATURE_SSE41;
+		pInfo->nFeatures |= static_cast<uint64_t>( SIRCPUFeature::SIR_CPU_FEATURE_SSE41 );
 	}
 	if ( nECX & ( 1U << 20 ) ) {
-		pInfo->nFeatures |= SIR_CPU_FEATURE_SSE42;
+		pInfo->nFeatures |= static_cast<uint64_t>( SIRCPUFeature::SIR_CPU_FEATURE_SSE42 );
 	}
 	if ( nECX & ( 1U << 23 ) ) {
-		pInfo->nFeatures |= SIR_CPU_FEATURE_POPCNT;
+		pInfo->nFeatures |= static_cast<uint64_t>( SIRCPUFeature::SIR_CPU_FEATURE_POPCNT );
 	}
 	if ( nECX & ( 1U << 25 ) ) {
-		pInfo->nFeatures |= SIR_CPU_FEATURE_AES;
+		pInfo->nFeatures |= static_cast<uint64_t>( SIRCPUFeature::SIR_CPU_FEATURE_AES );
 	}
 	const bool bOSXSAVE = ( nECX & ( 1U << 27 ) ) != 0;
 	const uint64_t nXCR0 = bOSXSAVE ? getEnabledXCR0() : 0;
 	const bool bAVXEnabled = ( nECX & ( 1U << 28 ) ) != 0 && ( nXCR0 & 0x6U ) == 0x6U;
 	if ( bAVXEnabled ) {
-		pInfo->nFeatures |= SIR_CPU_FEATURE_AVX;
+		pInfo->nFeatures |= static_cast<uint64_t>( SIRCPUFeature::SIR_CPU_FEATURE_AVX );
 		if ( nECX & ( 1U << 12 ) ) {
-			pInfo->nFeatures |= SIR_CPU_FEATURE_FMA;
+			pInfo->nFeatures |= static_cast<uint64_t>( SIRCPUFeature::SIR_CPU_FEATURE_FMA );
 		}
 	}
 	if ( nHighest >= 7 ) {
 		queryCPUID( 7, 0, szRegs );
 		if ( szRegs[1] & ( 1U << 3 ) ) {
-			pInfo->nFeatures |= SIR_CPU_FEATURE_BMI1;
+			pInfo->nFeatures |= static_cast<uint64_t>( SIRCPUFeature::SIR_CPU_FEATURE_BMI1 );
 		}
 		if ( szRegs[1] & ( 1U << 8 ) ) {
-			pInfo->nFeatures |= SIR_CPU_FEATURE_BMI2;
+			pInfo->nFeatures |= static_cast<uint64_t>( SIRCPUFeature::SIR_CPU_FEATURE_BMI2 );
 		}
 		if ( bAVXEnabled && ( szRegs[1] & ( 1U << 5 ) ) ) {
-			pInfo->nFeatures |= SIR_CPU_FEATURE_AVX2;
+			pInfo->nFeatures |= static_cast<uint64_t>( SIRCPUFeature::SIR_CPU_FEATURE_AVX2 );
 		}
 		const bool bZMM = ( nXCR0 & 0xe6U ) == 0xe6U;
 		if ( bAVXEnabled && bZMM && ( szRegs[1] & ( 1U << 16 ) ) ) {
-			pInfo->nFeatures |= SIR_CPU_FEATURE_AVX512F;
+			pInfo->nFeatures |= static_cast<uint64_t>( SIRCPUFeature::SIR_CPU_FEATURE_AVX512F );
 		}
 	}
 	queryCacheSizes( pInfo, nHighest );
 #elif defined( __aarch64__ ) || defined( _M_ARM64 )
-	pInfo->nFeatures |= SIR_CPU_FEATURE_NEON;
+	pInfo->nFeatures |= static_cast<uint64_t>( SIRCPUFeature::SIR_CPU_FEATURE_NEON );
 #endif
 }
 
@@ -168,7 +169,7 @@ bool SIRCPUInfo::query( sirCPUInfo_t *pInfo ) noexcept
 	if ( pInfo == nullptr ) {
 		return false;
 	}
-	sirCPUInfo_t info = {};
+	sirCPUInfo_t info {};
 	if ( !queryTopology( &info ) || info.nLogicalProcessorCount == 0 ) {
 		return false;
 	}

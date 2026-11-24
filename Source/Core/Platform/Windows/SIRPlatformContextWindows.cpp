@@ -27,8 +27,8 @@ bool sirPlatformCaptureContext( sirPlatformContext_t *pContext ) noexcept
 		return false;
 	}
 	pContext->nAbiVersion = SIR_PLATFORM_CONTEXT_ABI_VERSION;
-	pContext->ePlatform = SIR_PLATFORM_WINDOWS;
-	pContext->native.windows.nInstance = ( uintptr_t )GetModuleHandleW( nullptr );
+	pContext->ePlatform = SIRPlatformKind::SIR_PLATFORM_WINDOWS;
+	pContext->native.windows.nInstance = static_cast<uintptr_t>(GetModuleHandleW( nullptr ));
 	pContext->native.windows.nProcessId = nPid;
 	pContext->native.windows.nOwnerThreadId = nTid;
 	return pContext->native.windows.nInstance != 0;

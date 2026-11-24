@@ -20,7 +20,7 @@ static bool sirWindowCopyTitle( const char *pszSource, uint32_t nDeclaredBytes, 
 	}
 	uint32_t i = 0;
 	while ( i < nBytes ) {
-		const uint8_t nFirst = ( uint8_t )pszSource[i];
+		const uint8_t nFirst = static_cast<uint8_t>(pszSource[i]);
 		if ( nFirst == 0 ) {
 			return false;
 		}
@@ -50,7 +50,7 @@ static bool sirWindowCopyTitle( const char *pszSource, uint32_t nDeclaredBytes, 
 			return false;
 		}
 		for ( uint32_t k = 1; k < nWidth; ++k ) {
-			const uint8_t nNext = ( uint8_t )pszSource[i + k];
+			const uint8_t nNext = static_cast<uint8_t>(pszSource[i + k]);
 			if ( ( nNext & 0xC0 ) != 0x80 ) {
 				return false;
 			}
@@ -75,19 +75,19 @@ SIRWindowSystem::SIRWindowSystem( SIRWindowDriver& driver ) noexcept
 	}
 }
 
-sirSystemResult_t SIRWindowSystem::initialize( void ) noexcept
+SIRSystemResult SIRWindowSystem::initialize( void ) noexcept
 {
 	if ( m_bInitialized || m_nEpoch == UINT64_MAX ) {
-		return SIR_SYSTEM_ERROR;
+		return SIRSystemResult::SIR_SYSTEM_ERROR;
 	}
-	if ( m_pDriver->initialize() != SIR_WINDOW_OK ) {
+	if ( m_pDriver->initialize() != SIRWindowResult::SIR_WINDOW_OK ) {
 		// A native backend can acquire part of its process/display state
 		// before reporting failure. Roll that state back before retrying.
 		m_pDriver->shutdown();
-		return SIR_SYSTEM_ERROR;
+		return SIRSystemResult::SIR_SYSTEM_ERROR;
 	}
 	m_nOwnerThreadId = SIRPlatformThreadControl::getCurrentThreadId();
-	m_bForeignThreadEvent.store( false, SIR_MEMORY_ORDER_RELEASE );
+	m_bForeignThreadEvent.store( false, std::memory_order_release );
 	{
 		SIRScopedLock<SIRMutex> requestGuard( m_RequestMutex );
 		SIRScopedLock<SIRMutex> guard( m_SnapshotMutex );
@@ -98,21 +98,21 @@ sirSystemResult_t SIRWindowSystem::initialize( void ) noexcept
 		m_nEventSequence = 0;
 		m_bInitialized = true;
 	}
-	return SIR_SYSTEM_OK;
+	return SIRSystemResult::SIR_SYSTEM_OK;
 }
 
-sirSystemResult_t SIRWindowSystem::shutdown( void ) noexcept
+SIRSystemResult SIRWindowSystem::shutdown( void ) noexcept
 {
 	if ( !m_bInitialized ) {
-		return SIR_SYSTEM_OK;
+		return SIRSystemResult::SIR_SYSTEM_OK;
 	}
-	if ( requireOwner() != SIR_WINDOW_OK ) {
-		return SIR_SYSTEM_ERROR;
+	if ( requireOwner() != SIRWindowResult::SIR_WINDOW_OK ) {
+		return SIRSystemResult::SIR_SYSTEM_ERROR;
 	}
 	processReleasedLeases();
 	for ( uint32_t i = 0; i < SIR_WINDOW_MAX_WINDOWS; ++i ) {
 		if ( m_Slots[i].bOccupied ) {
-			return SIR_SYSTEM_BUSY;
+			return SIRSystemResult::SIR_SYSTEM_BUSY;
 		}
 	}
 	m_pDriver->shutdown();
@@ -122,32 +122,32 @@ sirSystemResult_t SIRWindowSystem::shutdown( void ) noexcept
 		m_bInitialized = false;
 		for ( uint32_t i = 0; i < SIR_WINDOW_REQUEST_CAPACITY; ++i ) {
 			if ( m_Requests[i].nState == 1 ) {
-				m_Requests[i].eResult = SIR_WINDOW_STOPPED;
+				m_Requests[i].eResult = SIRWindowResult::SIR_WINDOW_STOPPED;
 				m_Requests[i].nState = 3;
 			}
 		}
 	}
-	return SIR_SYSTEM_OK;
+	return SIRSystemResult::SIR_SYSTEM_OK;
 }
 
-sirWindowResult_t SIRWindowSystem::requireOwner( void ) const noexcept
+SIRWindowResult SIRWindowSystem::requireOwner( void ) const noexcept
 {
 	if ( !m_bInitialized ) {
-		return SIR_WINDOW_STOPPED;
+		return SIRWindowResult::SIR_WINDOW_STOPPED;
 	}
-	return m_nOwnerThreadId == SIRPlatformThreadControl::getCurrentThreadId() ? SIR_WINDOW_OK : SIR_WINDOW_WRONG_THREAD;
+	return m_nOwnerThreadId == SIRPlatformThreadControl::getCurrentThreadId() ? SIRWindowResult::SIR_WINDOW_OK : SIRWindowResult::SIR_WINDOW_WRONG_THREAD;
 }
 
-sirWindowResult_t SIRWindowSystem::validate( sirWindowHandle_t hWindow ) const noexcept
+SIRWindowResult SIRWindowSystem::validate( sirWindowHandle_t hWindow ) const noexcept
 {
 	if ( hWindow.nSlot >= SIR_WINDOW_MAX_WINDOWS || hWindow.nGeneration == 0 || hWindow.nSystemEpoch != m_nEpoch ) {
-		return SIR_WINDOW_INVALID_HANDLE;
+		return SIRWindowResult::SIR_WINDOW_INVALID_HANDLE;
 	}
 	const sirWindowSlot_t& slot = m_Slots[hWindow.nSlot];
-	return slot.bOccupied && slot.nGeneration == hWindow.nGeneration ? SIR_WINDOW_OK : SIR_WINDOW_INVALID_HANDLE;
+	return slot.bOccupied && slot.nGeneration == hWindow.nGeneration ? SIRWindowResult::SIR_WINDOW_OK : SIRWindowResult::SIR_WINDOW_INVALID_HANDLE;
 }
 
-void SIRWindowSystem::pushEvent( sirWindowHandle_t hWindow, sirWindowEventKind_t eKind, uint32_t nWidth, uint32_t nHeight ) noexcept
+void SIRWindowSystem::pushEvent( sirWindowHandle_t hWindow, SIRWindowEventKind eKind, uint32_t nWidth, uint32_t nHeight ) noexcept
 {
 	if ( m_nEventSequence == UINT64_MAX ) {
 		return;
@@ -161,18 +161,19 @@ void SIRWindowSystem::pushEvent( sirWindowHandle_t hWindow, sirWindowEventKind_t
 	event.nSequence = m_nEventSequence;
 }
 
-sirWindowResult_t SIRWindowSystem::createWindow( const sirWindowCreateDesc_t& desc, sirWindowHandle_t *pHandle ) noexcept
+SIRWindowResult SIRWindowSystem::createWindow( const sirWindowCreateDesc_t& desc, sirWindowHandle_t *pHandle ) noexcept
 {
-	const sirWindowResult_t eOwner = requireOwner();
-	if ( eOwner != SIR_WINDOW_OK ) {
+	const SIRWindowResult eOwner = requireOwner();
+	if ( eOwner != SIRWindowResult::SIR_WINDOW_OK ) {
 		return eOwner;
 	}
 	if ( pHandle == nullptr || desc.nWidth == 0 || desc.nHeight == 0 ) {
-		return SIR_WINDOW_INVALID_ARGUMENT;
+		return SIRWindowResult::SIR_WINDOW_INVALID_ARGUMENT;
 	}
-	char szTitle[SIR_WINDOW_TITLE_CAPACITY] = {};
+	char szTitle[SIR_WINDOW_TITLE_CAPACITY];
+	memset( szTitle, 0, sizeof( szTitle ) );
 	if ( !sirWindowCopyTitle( desc.pszTitle, desc.nTitleBytes, szTitle ) ) {
-		return SIR_WINDOW_INVALID_ARGUMENT;
+		return SIRWindowResult::SIR_WINDOW_INVALID_ARGUMENT;
 	}
 	sirWindowCreateDesc_t nativeDesc = desc;
 	nativeDesc.pszTitle = szTitle;
@@ -181,18 +182,18 @@ sirWindowResult_t SIRWindowSystem::createWindow( const sirWindowCreateDesc_t& de
 		if ( slot.bOccupied ) {
 			continue;
 		}
-		sirWindowNativeView_t view = {};
-		const sirWindowResult_t eResult = m_pDriver->createWindow( nativeDesc, i, &view );
-		if ( eResult != SIR_WINDOW_OK ) {
+		sirWindowNativeView_t view {};
+		const SIRWindowResult eResult = m_pDriver->createWindow( nativeDesc, i, &view );
+		if ( eResult != SIRWindowResult::SIR_WINDOW_OK ) {
 			return eResult;
 		}
-		if ( view.nNativeWindow == 0 || view.nDisplayOrInstance == 0 || view.ePlatform == SIR_WINDOW_PLATFORM_HEADLESS ) {
-			( void )m_pDriver->destroyWindow( i );
-			return SIR_WINDOW_NATIVE_FAILURE;
+		if ( view.nNativeWindow == 0 || view.nDisplayOrInstance == 0 || view.ePlatform == SIRWindowPlatform::SIR_WINDOW_PLATFORM_HEADLESS ) {
+			static_cast<void>(m_pDriver->destroyWindow( i ));
+			return SIRWindowResult::SIR_WINDOW_NATIVE_FAILURE;
 		}
 		if ( m_nNativeGeneration == UINT64_MAX ) {
-			( void )m_pDriver->destroyWindow( i );
-			return SIR_WINDOW_OUT_OF_CAPACITY;
+			static_cast<void>(m_pDriver->destroyWindow( i ));
+			return SIRWindowResult::SIR_WINDOW_OUT_OF_CAPACITY;
 		}
 		{
 			SIRScopedLock<SIRMutex> guard( m_SnapshotMutex );
@@ -205,29 +206,29 @@ sirWindowResult_t SIRWindowSystem::createWindow( const sirWindowCreateDesc_t& de
 			slot.snapshot.nDpi = 96;
 			slot.snapshot.nWidth = desc.nWidth;
 			slot.snapshot.nHeight = desc.nHeight;
-			slot.snapshot.bReady = view.ePlatform != SIR_WINDOW_PLATFORM_WAYLAND;
-			slot.snapshot.bVisible = view.ePlatform != SIR_WINDOW_PLATFORM_WAYLAND;
+			slot.snapshot.bReady = view.ePlatform != SIRWindowPlatform::SIR_WINDOW_PLATFORM_WAYLAND;
+			slot.snapshot.bVisible = view.ePlatform != SIRWindowPlatform::SIR_WINDOW_PLATFORM_WAYLAND;
 			slot.snapshot.bMinimized = false;
 			slot.bOccupied = true;
 			*pHandle = slot.snapshot.hWindow;
 		}
-		pushEvent( *pHandle, SIR_WINDOW_EVENT_CREATED, desc.nWidth, desc.nHeight );
-		if ( view.ePlatform != SIR_WINDOW_PLATFORM_WAYLAND ) {
-			pushEvent( *pHandle, SIR_WINDOW_EVENT_READY, desc.nWidth, desc.nHeight );
+		pushEvent( *pHandle, SIRWindowEventKind::SIR_WINDOW_EVENT_CREATED, desc.nWidth, desc.nHeight );
+		if ( view.ePlatform != SIRWindowPlatform::SIR_WINDOW_PLATFORM_WAYLAND ) {
+			pushEvent( *pHandle, SIRWindowEventKind::SIR_WINDOW_EVENT_READY, desc.nWidth, desc.nHeight );
 		}
-		return SIR_WINDOW_OK;
+		return SIRWindowResult::SIR_WINDOW_OK;
 	}
-	return SIR_WINDOW_OUT_OF_CAPACITY;
+	return SIRWindowResult::SIR_WINDOW_OUT_OF_CAPACITY;
 }
 
-sirWindowResult_t SIRWindowSystem::requestClose( sirWindowHandle_t hWindow ) noexcept
+SIRWindowResult SIRWindowSystem::requestClose( sirWindowHandle_t hWindow ) noexcept
 {
-	const sirWindowResult_t eOwner = requireOwner();
-	if ( eOwner != SIR_WINDOW_OK ) {
+	const SIRWindowResult eOwner = requireOwner();
+	if ( eOwner != SIRWindowResult::SIR_WINDOW_OK ) {
 		return eOwner;
 	}
-	const sirWindowResult_t eValid = validate( hWindow );
-	if ( eValid != SIR_WINDOW_OK ) {
+	const SIRWindowResult eValid = validate( hWindow );
+	if ( eValid != SIRWindowResult::SIR_WINDOW_OK ) {
 		return eValid;
 	}
 	SIRScopedLock<SIRMutex> guard( m_SnapshotMutex );
@@ -235,35 +236,36 @@ sirWindowResult_t SIRWindowSystem::requestClose( sirWindowHandle_t hWindow ) noe
 	if ( !slot.snapshot.bCloseRequested ) {
 		slot.snapshot.bCloseRequested = true;
 		slot.snapshot.bReady = false;
-		pushEvent( hWindow, SIR_WINDOW_EVENT_CLOSE_REQUESTED, slot.snapshot.nWidth, slot.snapshot.nHeight );
+		pushEvent( hWindow, SIRWindowEventKind::SIR_WINDOW_EVENT_CLOSE_REQUESTED, slot.snapshot.nWidth, slot.snapshot.nHeight );
 	}
-	return SIR_WINDOW_OK;
+	return SIRWindowResult::SIR_WINDOW_OK;
 }
 
-sirWindowResult_t SIRWindowSystem::mutateWindow( sirWindowHandle_t hWindow, const sirWindowMutation_t& mutation ) noexcept
+SIRWindowResult SIRWindowSystem::mutateWindow( sirWindowHandle_t hWindow, const sirWindowMutation_t& mutation ) noexcept
 {
-	const sirWindowResult_t eOwner = requireOwner();
-	if ( eOwner != SIR_WINDOW_OK ) {
+	const SIRWindowResult eOwner = requireOwner();
+	if ( eOwner != SIRWindowResult::SIR_WINDOW_OK ) {
 		return eOwner;
 	}
-	const sirWindowResult_t eValid = validate( hWindow );
-	if ( eValid != SIR_WINDOW_OK ) {
+	const SIRWindowResult eValid = validate( hWindow );
+	if ( eValid != SIRWindowResult::SIR_WINDOW_OK ) {
 		return eValid;
 	}
 	if ( m_Slots[hWindow.nSlot].snapshot.bCloseRequested ) {
-		return SIR_WINDOW_BUSY;
+		return SIRWindowResult::SIR_WINDOW_BUSY;
 	}
-	if ( mutation.eKind < SIR_WINDOW_MUTATION_TITLE || mutation.eKind > SIR_WINDOW_MUTATION_FULLSCREEN_EXIT ) {
-		return SIR_WINDOW_INVALID_ARGUMENT;
+	if ( mutation.eKind < SIRWindowMutationKind::SIR_WINDOW_MUTATION_TITLE || mutation.eKind > SIRWindowMutationKind::SIR_WINDOW_MUTATION_FULLSCREEN_EXIT ) {
+		return SIRWindowResult::SIR_WINDOW_INVALID_ARGUMENT;
 	}
-	if ( ( mutation.eKind == SIR_WINDOW_MUTATION_TITLE && mutation.pszTitle == nullptr ) ||
-	     ( mutation.eKind == SIR_WINDOW_MUTATION_RESIZE && ( mutation.nWidth == 0 || mutation.nHeight == 0 ) ) ) {
-		return SIR_WINDOW_INVALID_ARGUMENT;
+	if ( ( mutation.eKind == SIRWindowMutationKind::SIR_WINDOW_MUTATION_TITLE && mutation.pszTitle == nullptr ) ||
+	     ( mutation.eKind == SIRWindowMutationKind::SIR_WINDOW_MUTATION_RESIZE && ( mutation.nWidth == 0 || mutation.nHeight == 0 ) ) ) {
+		return SIRWindowResult::SIR_WINDOW_INVALID_ARGUMENT;
 	}
-	if ( mutation.eKind == SIR_WINDOW_MUTATION_TITLE ) {
-		char szTitle[SIR_WINDOW_TITLE_CAPACITY] = {};
+	if ( mutation.eKind == SIRWindowMutationKind::SIR_WINDOW_MUTATION_TITLE ) {
+		char szTitle[SIR_WINDOW_TITLE_CAPACITY];
+		memset( szTitle, 0, sizeof( szTitle ) );
 		if ( !sirWindowCopyTitle( mutation.pszTitle, 0, szTitle ) ) {
-			return SIR_WINDOW_INVALID_ARGUMENT;
+			return SIRWindowResult::SIR_WINDOW_INVALID_ARGUMENT;
 		}
 		sirWindowMutation_t nativeMutation = mutation;
 		nativeMutation.pszTitle = szTitle;
@@ -272,33 +274,33 @@ sirWindowResult_t SIRWindowSystem::mutateWindow( sirWindowHandle_t hWindow, cons
 	return m_pDriver->mutateWindow( hWindow.nSlot, mutation );
 }
 
-sirWindowResult_t SIRWindowSystem::enqueueRequest( sirWindowHandle_t hWindow, const sirWindowMutation_t *pMutation,
+SIRWindowResult SIRWindowSystem::enqueueRequest( sirWindowHandle_t hWindow, const sirWindowMutation_t *pMutation,
                                                    uint64_t *pTicket ) noexcept
 {
 	if ( pTicket == nullptr ) {
-		return SIR_WINDOW_INVALID_ARGUMENT;
+		return SIRWindowResult::SIR_WINDOW_INVALID_ARGUMENT;
 	}
 	if ( pMutation != nullptr ) {
-		if ( pMutation->eKind < SIR_WINDOW_MUTATION_TITLE || pMutation->eKind > SIR_WINDOW_MUTATION_FULLSCREEN_EXIT ||
-		     ( pMutation->eKind == SIR_WINDOW_MUTATION_TITLE && pMutation->pszTitle == nullptr ) ||
-		     ( pMutation->eKind == SIR_WINDOW_MUTATION_RESIZE && ( pMutation->nWidth == 0 || pMutation->nHeight == 0 ) ) ) {
-			return SIR_WINDOW_INVALID_ARGUMENT;
+		if ( pMutation->eKind < SIRWindowMutationKind::SIR_WINDOW_MUTATION_TITLE || pMutation->eKind > SIRWindowMutationKind::SIR_WINDOW_MUTATION_FULLSCREEN_EXIT ||
+		     ( pMutation->eKind == SIRWindowMutationKind::SIR_WINDOW_MUTATION_TITLE && pMutation->pszTitle == nullptr ) ||
+		     ( pMutation->eKind == SIRWindowMutationKind::SIR_WINDOW_MUTATION_RESIZE && ( pMutation->nWidth == 0 || pMutation->nHeight == 0 ) ) ) {
+			return SIRWindowResult::SIR_WINDOW_INVALID_ARGUMENT;
 		}
 	}
 	SIRScopedLock<SIRMutex> requestGuard( m_RequestMutex );
 	SIRScopedLock<SIRMutex> snapshotGuard( m_SnapshotMutex );
 	if ( !m_bInitialized ) {
-		return SIR_WINDOW_STOPPED;
+		return SIRWindowResult::SIR_WINDOW_STOPPED;
 	}
-	const sirWindowResult_t eValid = validate( hWindow );
-	if ( eValid != SIR_WINDOW_OK ) {
+	const SIRWindowResult eValid = validate( hWindow );
+	if ( eValid != SIRWindowResult::SIR_WINDOW_OK ) {
 		return eValid;
 	}
 	if ( m_Slots[hWindow.nSlot].snapshot.bCloseRequested ) {
-		return SIR_WINDOW_BUSY;
+		return SIRWindowResult::SIR_WINDOW_BUSY;
 	}
 	if ( m_nRequestSerial == UINT64_MAX ) {
-		return SIR_WINDOW_OUT_OF_CAPACITY;
+		return SIRWindowResult::SIR_WINDOW_OUT_OF_CAPACITY;
 	}
 	uint32_t nSlot = SIR_WINDOW_REQUEST_CAPACITY;
 	for ( uint32_t i = 0; i < SIR_WINDOW_REQUEST_CAPACITY; ++i ) {
@@ -308,7 +310,7 @@ sirWindowResult_t SIRWindowSystem::enqueueRequest( sirWindowHandle_t hWindow, co
 		}
 	}
 	if ( nSlot == SIR_WINDOW_REQUEST_CAPACITY ) {
-		return SIR_WINDOW_OUT_OF_CAPACITY;
+		return SIRWindowResult::SIR_WINDOW_OUT_OF_CAPACITY;
 	}
 	sirWindowRequestEntry_t& request = m_Requests[nSlot];
 	request = {};
@@ -316,9 +318,9 @@ sirWindowResult_t SIRWindowSystem::enqueueRequest( sirWindowHandle_t hWindow, co
 	request.bClose = pMutation == nullptr;
 	if ( pMutation != nullptr ) {
 		request.mutation = *pMutation;
-		if ( pMutation->eKind == SIR_WINDOW_MUTATION_TITLE ) {
+		if ( pMutation->eKind == SIRWindowMutationKind::SIR_WINDOW_MUTATION_TITLE ) {
 			if ( !sirWindowCopyTitle( pMutation->pszTitle, 0, request.szTitle ) ) {
-				return SIR_WINDOW_INVALID_ARGUMENT;
+				return SIRWindowResult::SIR_WINDOW_INVALID_ARGUMENT;
 			}
 			request.mutation.pszTitle = request.szTitle;
 		}
@@ -326,24 +328,24 @@ sirWindowResult_t SIRWindowSystem::enqueueRequest( sirWindowHandle_t hWindow, co
 	request.nTicket = ++m_nRequestSerial;
 	request.nState = 1;
 	*pTicket = request.nTicket;
-	return SIR_WINDOW_OK;
+	return SIRWindowResult::SIR_WINDOW_OK;
 }
 
-sirWindowResult_t SIRWindowSystem::queueMutation( sirWindowHandle_t hWindow, const sirWindowMutation_t& mutation,
+SIRWindowResult SIRWindowSystem::queueMutation( sirWindowHandle_t hWindow, const sirWindowMutation_t& mutation,
                                                   uint64_t *pTicket ) noexcept
 {
 	return enqueueRequest( hWindow, &mutation, pTicket );
 }
 
-sirWindowResult_t SIRWindowSystem::queueClose( sirWindowHandle_t hWindow, uint64_t *pTicket ) noexcept
+SIRWindowResult SIRWindowSystem::queueClose( sirWindowHandle_t hWindow, uint64_t *pTicket ) noexcept
 {
 	return enqueueRequest( hWindow, nullptr, pTicket );
 }
 
-sirWindowResult_t SIRWindowSystem::queryRequest( uint64_t nTicket, sirWindowResult_t *pResult, bool *pCompleted ) noexcept
+SIRWindowResult SIRWindowSystem::queryRequest( uint64_t nTicket, SIRWindowResult *pResult, bool *pCompleted ) noexcept
 {
 	if ( nTicket == 0 || pResult == nullptr || pCompleted == nullptr ) {
-		return SIR_WINDOW_INVALID_ARGUMENT;
+		return SIRWindowResult::SIR_WINDOW_INVALID_ARGUMENT;
 	}
 	SIRScopedLock<SIRMutex> guard( m_RequestMutex );
 	for ( uint32_t i = 0; i < SIR_WINDOW_REQUEST_CAPACITY; ++i ) {
@@ -356,18 +358,19 @@ sirWindowResult_t SIRWindowSystem::queryRequest( uint64_t nTicket, sirWindowResu
 			*pResult = request.eResult;
 			request = {};
 		}
-		return SIR_WINDOW_OK;
+		return SIRWindowResult::SIR_WINDOW_OK;
 	}
-	return SIR_WINDOW_INVALID_HANDLE;
+	return SIRWindowResult::SIR_WINDOW_INVALID_HANDLE;
 }
 
 void SIRWindowSystem::processRequests( void ) noexcept
 {
 	for ( uint32_t nProcessed = 0; nProcessed < SIR_WINDOW_REQUEST_CAPACITY; ++nProcessed ) {
 		uint64_t nTicket = UINT64_MAX;
-		sirWindowHandle_t hWindow = {};
-		sirWindowMutation_t mutation = {};
-		char szTitle[SIR_WINDOW_REQUEST_TITLE_CAPACITY] = {};
+		sirWindowHandle_t hWindow {};
+		sirWindowMutation_t mutation {};
+		char szTitle[SIR_WINDOW_REQUEST_TITLE_CAPACITY];
+		memset( szTitle, 0, sizeof( szTitle ) );
 		bool bClose = false;
 		{
 			SIRScopedLock<SIRMutex> guard( m_RequestMutex );
@@ -387,12 +390,12 @@ void SIRWindowSystem::processRequests( void ) noexcept
 			hWindow = request.hWindow;
 			mutation = request.mutation;
 			bClose = request.bClose;
-			if ( !bClose && mutation.eKind == SIR_WINDOW_MUTATION_TITLE ) {
+			if ( !bClose && mutation.eKind == SIRWindowMutationKind::SIR_WINDOW_MUTATION_TITLE ) {
 				memcpy( szTitle, request.szTitle, SIR_WINDOW_REQUEST_TITLE_CAPACITY );
 				mutation.pszTitle = szTitle;
 			}
 		}
-		const sirWindowResult_t eResult = bClose ? requestClose( hWindow ) : mutateWindow( hWindow, mutation );
+		const SIRWindowResult eResult = bClose ? requestClose( hWindow ) : mutateWindow( hWindow, mutation );
 		{
 			SIRScopedLock<SIRMutex> guard( m_RequestMutex );
 			for ( uint32_t i = 0; i < SIR_WINDOW_REQUEST_CAPACITY; ++i ) {
@@ -411,61 +414,61 @@ void SIRWindowSystem::processReleasedLeases( void ) noexcept
 {
 	for ( uint32_t i = 0; i < SIR_WINDOW_MAX_LEASES; ++i ) {
 		sirWindowLeaseEntry_t& lease = m_Leases[i];
-		if ( lease.nState.load( SIR_MEMORY_ORDER_ACQUIRE ) != 2 ) {
+		if ( lease.nState.load( std::memory_order_acquire ) != 2 ) {
 			continue;
 		}
-		const uint32_t nSlot = lease.nSlot.load( SIR_MEMORY_ORDER_RELAXED );
-		const uint32_t nGeneration = lease.nGeneration.load( SIR_MEMORY_ORDER_RELAXED );
-		const uint64_t nEpoch = lease.nEpoch.load( SIR_MEMORY_ORDER_RELAXED );
+		const uint32_t nSlot = lease.nSlot.load( std::memory_order_relaxed );
+		const uint32_t nGeneration = lease.nGeneration.load( std::memory_order_relaxed );
+		const uint64_t nEpoch = lease.nEpoch.load( std::memory_order_relaxed );
 		if ( nSlot < SIR_WINDOW_MAX_WINDOWS && m_nEpoch == nEpoch && m_Slots[nSlot].nGeneration == nGeneration &&
 		     m_Slots[nSlot].nLeaseCount != 0 ) {
 			--m_Slots[nSlot].nLeaseCount;
 		}
-		lease.nState.store( 0, SIR_MEMORY_ORDER_RELEASE );
+		lease.nState.store( 0, std::memory_order_release );
 	}
 }
 
-sirWindowResult_t SIRWindowSystem::destroyWindow( sirWindowHandle_t hWindow ) noexcept
+SIRWindowResult SIRWindowSystem::destroyWindow( sirWindowHandle_t hWindow ) noexcept
 {
-	const sirWindowResult_t eOwner = requireOwner();
-	if ( eOwner != SIR_WINDOW_OK ) {
+	const SIRWindowResult eOwner = requireOwner();
+	if ( eOwner != SIRWindowResult::SIR_WINDOW_OK ) {
 		return eOwner;
 	}
-	const sirWindowResult_t eValid = validate( hWindow );
-	if ( eValid != SIR_WINDOW_OK ) {
+	const SIRWindowResult eValid = validate( hWindow );
+	if ( eValid != SIRWindowResult::SIR_WINDOW_OK ) {
 		return eValid;
 	}
 	processReleasedLeases();
 	sirWindowSlot_t& slot = m_Slots[hWindow.nSlot];
 	if ( slot.nLeaseCount != 0 ) {
-		return SIR_WINDOW_BUSY;
+		return SIRWindowResult::SIR_WINDOW_BUSY;
 	}
 	if ( slot.nGeneration == UINT32_MAX ) {
-		return SIR_WINDOW_OUT_OF_CAPACITY;
+		return SIRWindowResult::SIR_WINDOW_OUT_OF_CAPACITY;
 	}
-	const sirWindowResult_t eResult = m_pDriver->destroyWindow( hWindow.nSlot );
-	if ( eResult != SIR_WINDOW_OK ) {
+	const SIRWindowResult eResult = m_pDriver->destroyWindow( hWindow.nSlot );
+	if ( eResult != SIRWindowResult::SIR_WINDOW_OK ) {
 		return eResult;
 	}
 	{
 		SIRScopedLock<SIRMutex> guard( m_SnapshotMutex );
-		pushEvent( hWindow, SIR_WINDOW_EVENT_DESTROYED, 0, 0 );
+		pushEvent( hWindow, SIRWindowEventKind::SIR_WINDOW_EVENT_DESTROYED, 0, 0 );
 		slot.bOccupied = false;
 		++slot.nGeneration;
 		slot.snapshot = {};
 		slot.native = {};
 	}
-	return SIR_WINDOW_OK;
+	return SIRWindowResult::SIR_WINDOW_OK;
 }
 
 void SIRWindowSystem::onDriverEvent( void *pContext, const sirWindowBackendEvent_t& event ) noexcept
 {
-	SIRWindowSystem *pSystem = ( SIRWindowSystem * )pContext;
-	if ( pSystem->requireOwner() != SIR_WINDOW_OK ) {
+	SIRWindowSystem *pSystem = static_cast<SIRWindowSystem *>(pContext);
+	if ( pSystem->requireOwner() != SIRWindowResult::SIR_WINDOW_OK ) {
 		// Native display callbacks cannot publish state from a foreign lane.
 		// Report the broken backend contract to the owner pump without racing
 		// against its snapshot and event-sequence fields.
-		pSystem->m_bForeignThreadEvent.store( true, SIR_MEMORY_ORDER_RELEASE );
+		pSystem->m_bForeignThreadEvent.store( true, std::memory_order_release );
 		return;
 	}
 	if ( event.nSlot >= SIR_WINDOW_MAX_WINDOWS || !pSystem->m_Slots[event.nSlot].bOccupied ||
@@ -473,16 +476,16 @@ void SIRWindowSystem::onDriverEvent( void *pContext, const sirWindowBackendEvent
 		return;
 	}
 	sirWindowSlot_t& slot = pSystem->m_Slots[event.nSlot];
-	if ( event.eKind == SIR_WINDOW_EVENT_CLOSE_REQUESTED ) {
-		( void )pSystem->requestClose( slot.snapshot.hWindow );
+	if ( event.eKind == SIRWindowEventKind::SIR_WINDOW_EVENT_CLOSE_REQUESTED ) {
+		static_cast<void>(pSystem->requestClose( slot.snapshot.hWindow ));
 		return;
 	}
 	SIRScopedLock<SIRMutex> guard( pSystem->m_SnapshotMutex );
 	if ( slot.snapshot.bCloseRequested &&
-	     ( event.eKind == SIR_WINDOW_EVENT_READY || event.eKind == SIR_WINDOW_EVENT_SHOWN || event.eKind == SIR_WINDOW_EVENT_RESTORED ) ) {
+	     ( event.eKind == SIRWindowEventKind::SIR_WINDOW_EVENT_READY || event.eKind == SIRWindowEventKind::SIR_WINDOW_EVENT_SHOWN || event.eKind == SIRWindowEventKind::SIR_WINDOW_EVENT_RESTORED ) ) {
 		return;
 	}
-	if ( event.eKind == SIR_WINDOW_EVENT_READY ) {
+	if ( event.eKind == SIRWindowEventKind::SIR_WINDOW_EVENT_READY ) {
 		if ( event.nWidth == 0 || event.nHeight == 0 ) {
 			return;
 		}
@@ -493,7 +496,7 @@ void SIRWindowSystem::onDriverEvent( void *pContext, const sirWindowBackendEvent
 		slot.snapshot.nHeight = event.nHeight;
 		slot.snapshot.bVisible = true;
 		slot.snapshot.bReady = true;
-	} else if ( event.eKind == SIR_WINDOW_EVENT_RESIZED ) {
+	} else if ( event.eKind == SIRWindowEventKind::SIR_WINDOW_EVENT_RESIZED ) {
 		if ( slot.snapshot.nWidth == event.nWidth && slot.snapshot.nHeight == event.nHeight ) {
 			return;
 		}
@@ -502,31 +505,31 @@ void SIRWindowSystem::onDriverEvent( void *pContext, const sirWindowBackendEvent
 		slot.snapshot.bReady = event.nWidth != 0 && event.nHeight != 0 && slot.snapshot.bVisible && !slot.snapshot.bMinimized &&
 		                       !slot.snapshot.bCloseRequested;
 		++slot.snapshot.nMetricsRevision;
-	} else if ( event.eKind == SIR_WINDOW_EVENT_FOCUS_GAINED ) {
+	} else if ( event.eKind == SIRWindowEventKind::SIR_WINDOW_EVENT_FOCUS_GAINED ) {
 		slot.snapshot.bFocused = true;
-	} else if ( event.eKind == SIR_WINDOW_EVENT_FOCUS_LOST ) {
+	} else if ( event.eKind == SIRWindowEventKind::SIR_WINDOW_EVENT_FOCUS_LOST ) {
 		slot.snapshot.bFocused = false;
-	} else if ( event.eKind == SIR_WINDOW_EVENT_DPI_CHANGED ) {
+	} else if ( event.eKind == SIRWindowEventKind::SIR_WINDOW_EVENT_DPI_CHANGED ) {
 		if ( event.nWidth == 0 || slot.snapshot.nDpi == event.nWidth ) {
 			return;
 		}
 		slot.snapshot.nDpi = event.nWidth;
 		++slot.snapshot.nMetricsRevision;
-	} else if ( event.eKind == SIR_WINDOW_EVENT_SHOWN ) {
+	} else if ( event.eKind == SIRWindowEventKind::SIR_WINDOW_EVENT_SHOWN ) {
 		slot.snapshot.bVisible = true;
 		slot.snapshot.bReady =
 		    !slot.snapshot.bMinimized && !slot.snapshot.bCloseRequested && slot.snapshot.nWidth != 0 && slot.snapshot.nHeight != 0;
-	} else if ( event.eKind == SIR_WINDOW_EVENT_HIDDEN ) {
+	} else if ( event.eKind == SIRWindowEventKind::SIR_WINDOW_EVENT_HIDDEN ) {
 		slot.snapshot.bVisible = false;
 		slot.snapshot.bReady = false;
-	} else if ( event.eKind == SIR_WINDOW_EVENT_MINIMIZED ) {
+	} else if ( event.eKind == SIRWindowEventKind::SIR_WINDOW_EVENT_MINIMIZED ) {
 		slot.snapshot.bMinimized = true;
 		slot.snapshot.bReady = false;
-	} else if ( event.eKind == SIR_WINDOW_EVENT_RESTORED ) {
+	} else if ( event.eKind == SIRWindowEventKind::SIR_WINDOW_EVENT_RESTORED ) {
 		slot.snapshot.bMinimized = false;
 		slot.snapshot.bReady =
 		    slot.snapshot.bVisible && !slot.snapshot.bCloseRequested && slot.snapshot.nWidth != 0 && slot.snapshot.nHeight != 0;
-	} else if ( event.eKind == SIR_WINDOW_EVENT_DISPLAY_CHANGED ) {
+	} else if ( event.eKind == SIRWindowEventKind::SIR_WINDOW_EVENT_DISPLAY_CHANGED ) {
 		// Native display topology changes invalidate presentation constraints,
 		// including present modes and color formats with unchanged dimensions.
 		if ( event.nWidth != 0 && event.nHeight != 0 ) {
@@ -534,7 +537,7 @@ void SIRWindowSystem::onDriverEvent( void *pContext, const sirWindowBackendEvent
 			slot.snapshot.nHeight = event.nHeight;
 		}
 		++slot.snapshot.nMetricsRevision;
-	} else if ( event.eKind == SIR_WINDOW_EVENT_LOST ) {
+	} else if ( event.eKind == SIRWindowEventKind::SIR_WINDOW_EVENT_LOST ) {
 		// The OS handle is no longer borrowable even while a GPU lease
 		// continues to pin its retirement bookkeeping. Invalidate the
 		// published native identity and presentation revision immediately.
@@ -551,32 +554,32 @@ void SIRWindowSystem::onDriverEvent( void *pContext, const sirWindowBackendEvent
 	pSystem->pushEvent( slot.snapshot.hWindow, event.eKind, event.nWidth, event.nHeight );
 }
 
-sirWindowResult_t SIRWindowSystem::pumpEvents( uint32_t nBudget ) noexcept
+SIRWindowResult SIRWindowSystem::pumpEvents( uint32_t nBudget ) noexcept
 {
-	const sirWindowResult_t eOwner = requireOwner();
-	if ( eOwner != SIR_WINDOW_OK ) {
+	const SIRWindowResult eOwner = requireOwner();
+	if ( eOwner != SIRWindowResult::SIR_WINDOW_OK ) {
 		return eOwner;
 	}
 	if ( nBudget == 0 ) {
-		return SIR_WINDOW_INVALID_ARGUMENT;
+		return SIRWindowResult::SIR_WINDOW_INVALID_ARGUMENT;
 	}
 	processReleasedLeases();
 	processRequests();
-	const sirWindowResult_t eResult = m_pDriver->pumpEvents( nBudget, onDriverEvent, this );
-	if ( m_bForeignThreadEvent.exchange( false, SIR_MEMORY_ORDER_ACQUIRE_RELEASE ) ) {
-		return SIR_WINDOW_WRONG_THREAD;
+	const SIRWindowResult eResult = m_pDriver->pumpEvents( nBudget, onDriverEvent, this );
+	if ( m_bForeignThreadEvent.exchange( false, std::memory_order_acq_rel ) ) {
+		return SIRWindowResult::SIR_WINDOW_WRONG_THREAD;
 	}
 	return eResult;
 }
 
-sirWindowResult_t SIRWindowSystem::readEvents( sirWindowEventRead_t *pRead ) noexcept
+SIRWindowResult SIRWindowSystem::readEvents( sirWindowEventRead_t *pRead ) noexcept
 {
-	const sirWindowResult_t eOwner = requireOwner();
-	if ( eOwner != SIR_WINDOW_OK ) {
+	const SIRWindowResult eOwner = requireOwner();
+	if ( eOwner != SIRWindowResult::SIR_WINDOW_OK ) {
 		return eOwner;
 	}
 	if ( pRead == nullptr || ( pRead->nCapacity != 0 && pRead->pEvents == nullptr ) || pRead->nAfterSequence > m_nEventSequence ) {
-		return SIR_WINDOW_INVALID_ARGUMENT;
+		return SIRWindowResult::SIR_WINDOW_INVALID_ARGUMENT;
 	}
 	pRead->nCount = 0;
 	const uint64_t nOldest = m_nEventSequence > SIR_WINDOW_EVENT_CAPACITY ? m_nEventSequence - SIR_WINDOW_EVENT_CAPACITY + 1 : 1;
@@ -588,84 +591,84 @@ sirWindowResult_t SIRWindowSystem::readEvents( sirWindowEventRead_t *pRead ) noe
 	if ( pRead->nCount != 0 ) {
 		pRead->nAfterSequence = pRead->pEvents[pRead->nCount - 1].nSequence;
 	}
-	return pRead->bLost ? SIR_WINDOW_EVENTS_LOST : SIR_WINDOW_OK;
+	return pRead->bLost ? SIRWindowResult::SIR_WINDOW_EVENTS_LOST : SIRWindowResult::SIR_WINDOW_OK;
 }
 
-sirWindowResult_t SIRWindowSystem::querySnapshot( sirWindowHandle_t hWindow, sirWindowSnapshot_t *pSnapshot ) const noexcept
+SIRWindowResult SIRWindowSystem::querySnapshot( sirWindowHandle_t hWindow, sirWindowSnapshot_t *pSnapshot ) const noexcept
 {
 	SIRScopedLock<SIRMutex> guard( m_SnapshotMutex );
 	if ( !m_bInitialized ) {
-		return SIR_WINDOW_STOPPED;
+		return SIRWindowResult::SIR_WINDOW_STOPPED;
 	}
 	if ( pSnapshot == nullptr ) {
-		return SIR_WINDOW_INVALID_ARGUMENT;
+		return SIRWindowResult::SIR_WINDOW_INVALID_ARGUMENT;
 	}
-	const sirWindowResult_t eValid = validate( hWindow );
-	if ( eValid != SIR_WINDOW_OK ) {
+	const SIRWindowResult eValid = validate( hWindow );
+	if ( eValid != SIRWindowResult::SIR_WINDOW_OK ) {
 		return eValid;
 	}
 	*pSnapshot = m_Slots[hWindow.nSlot].snapshot;
-	return SIR_WINDOW_OK;
+	return SIRWindowResult::SIR_WINDOW_OK;
 }
 
-sirWindowResult_t SIRWindowSystem::acquireNativeLease( sirWindowHandle_t hWindow, sirWindowNativeLease_t *pLease,
+SIRWindowResult SIRWindowSystem::acquireNativeLease( sirWindowHandle_t hWindow, sirWindowNativeLease_t *pLease,
                                                        sirWindowNativeView_t *pView ) noexcept
 {
-	const sirWindowResult_t eOwner = requireOwner();
-	if ( eOwner != SIR_WINDOW_OK ) {
+	const SIRWindowResult eOwner = requireOwner();
+	if ( eOwner != SIRWindowResult::SIR_WINDOW_OK ) {
 		return eOwner;
 	}
 	if ( pLease == nullptr || pView == nullptr ) {
-		return SIR_WINDOW_INVALID_ARGUMENT;
+		return SIRWindowResult::SIR_WINDOW_INVALID_ARGUMENT;
 	}
-	const sirWindowResult_t eValid = validate( hWindow );
-	if ( eValid != SIR_WINDOW_OK ) {
+	const SIRWindowResult eValid = validate( hWindow );
+	if ( eValid != SIRWindowResult::SIR_WINDOW_OK ) {
 		return eValid;
 	}
 	sirWindowSlot_t& slot = m_Slots[hWindow.nSlot];
 	if ( !slot.snapshot.bReady || slot.snapshot.bCloseRequested ) {
-		return SIR_WINDOW_NOT_READY;
+		return SIRWindowResult::SIR_WINDOW_NOT_READY;
 	}
 	processReleasedLeases();
 	for ( uint32_t i = 0; i < SIR_WINDOW_MAX_LEASES; ++i ) {
 		sirWindowLeaseEntry_t& lease = m_Leases[i];
-		if ( lease.nState.load( SIR_MEMORY_ORDER_ACQUIRE ) != 0 ) {
+		if ( lease.nState.load( std::memory_order_acquire ) != 0 ) {
 			continue;
 		}
 		if ( m_nLeaseSerial == UINT64_MAX ) {
-			return SIR_WINDOW_OUT_OF_CAPACITY;
+			return SIRWindowResult::SIR_WINDOW_OUT_OF_CAPACITY;
 		}
 		const uint64_t nToken = ++m_nLeaseSerial;
-		lease.nToken.store( nToken, SIR_MEMORY_ORDER_RELAXED );
-		lease.nEpoch.store( m_nEpoch, SIR_MEMORY_ORDER_RELAXED );
-		lease.nSlot.store( hWindow.nSlot, SIR_MEMORY_ORDER_RELAXED );
-		lease.nGeneration.store( hWindow.nGeneration, SIR_MEMORY_ORDER_RELAXED );
-		lease.nState.store( 1, SIR_MEMORY_ORDER_RELEASE );
+		lease.nToken.store( nToken, std::memory_order_relaxed );
+		lease.nEpoch.store( m_nEpoch, std::memory_order_relaxed );
+		lease.nSlot.store( hWindow.nSlot, std::memory_order_relaxed );
+		lease.nGeneration.store( hWindow.nGeneration, std::memory_order_relaxed );
+		lease.nState.store( 1, std::memory_order_release );
 		++slot.nLeaseCount;
 		*pLease = { nToken, m_nEpoch, hWindow.nSlot, hWindow.nGeneration };
 		*pView = slot.native;
-		return SIR_WINDOW_OK;
+		return SIRWindowResult::SIR_WINDOW_OK;
 	}
-	return SIR_WINDOW_OUT_OF_CAPACITY;
+	return SIRWindowResult::SIR_WINDOW_OUT_OF_CAPACITY;
 }
 
-sirWindowResult_t SIRWindowSystem::releaseNativeLease( sirWindowNativeLease_t hLease ) noexcept
+SIRWindowResult SIRWindowSystem::releaseNativeLease( sirWindowNativeLease_t hLease ) noexcept
 {
 	if ( hLease.nToken == 0 || hLease.nGeneration == 0 || hLease.nSlot >= SIR_WINDOW_MAX_WINDOWS ) {
-		return SIR_WINDOW_INVALID_HANDLE;
+		return SIRWindowResult::SIR_WINDOW_INVALID_HANDLE;
 	}
 	for ( uint32_t i = 0; i < SIR_WINDOW_MAX_LEASES; ++i ) {
 		sirWindowLeaseEntry_t& lease = m_Leases[i];
-		if ( lease.nState.load( SIR_MEMORY_ORDER_ACQUIRE ) != 1 || lease.nToken.load( SIR_MEMORY_ORDER_RELAXED ) != hLease.nToken ||
-		     lease.nEpoch.load( SIR_MEMORY_ORDER_RELAXED ) != hLease.nSystemEpoch ||
-		     lease.nSlot.load( SIR_MEMORY_ORDER_RELAXED ) != hLease.nSlot ||
-		     lease.nGeneration.load( SIR_MEMORY_ORDER_RELAXED ) != hLease.nGeneration ) {
+		if ( lease.nState.load( std::memory_order_acquire ) != 1 || lease.nToken.load( std::memory_order_relaxed ) != hLease.nToken ||
+		     lease.nEpoch.load( std::memory_order_relaxed ) != hLease.nSystemEpoch ||
+		     lease.nSlot.load( std::memory_order_relaxed ) != hLease.nSlot ||
+		     lease.nGeneration.load( std::memory_order_relaxed ) != hLease.nGeneration ) {
 			continue;
 		}
 		uint8_t nExpected = 1;
-		return lease.nState.compareExchangeStrong( nExpected, 2, SIR_MEMORY_ORDER_RELEASE, SIR_MEMORY_ORDER_RELAXED )
-		           ? SIR_WINDOW_OK
-				   : SIR_WINDOW_INVALID_HANDLE;
+		return lease.nState.compare_exchange_strong( nExpected, 2, std::memory_order_release, std::memory_order_relaxed )
+		           ? SIRWindowResult::SIR_WINDOW_OK
+				   : SIRWindowResult::SIR_WINDOW_INVALID_HANDLE;
 	}
-	return SIR_WINDOW_INVALID_HANDLE;
+	return SIRWindowResult::SIR_WINDOW_INVALID_HANDLE;
 }

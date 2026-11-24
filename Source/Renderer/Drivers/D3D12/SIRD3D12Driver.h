@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRD3D12DRIVER_H__
-#define __SIRENGINE_SIRD3D12DRIVER_H__
+#ifndef __SIR_D3_D12_DRIVER_H__
+#define __SIR_D3_D12_DRIVER_H__
 
 #include <Core/SIRPCH.h>
 
@@ -51,54 +51,54 @@ public:
 
 	SIRD3D12RenderingDevice& operator=( const SIRD3D12RenderingDevice& ) = delete;
 
-	sirGraphicsBackend_t getBackend( void ) const noexcept override;
+	SIRGraphicsBackend getBackend( void ) const noexcept override;
 	uint32_t getDeviceGeneration( void ) const noexcept override;
 
-	sirGraphicsResult_t initialize( bool bSoftware, const sirGraphicsDeviceCreateDesc_t& desc,
+	SIRGraphicsResult initialize( bool bSoftware, const sirGraphicsDeviceCreateDesc_t& desc,
 	                                const sirD3D12NativeDeviceConfig_t& nativeConfig,
 	                                const sirD3D12SealedPoolConfig_t *pSealedPools ) noexcept;
 	// Native-only cache persistence, keeping the shared rendering ABI unchanged.
-	sirGraphicsResult_t loadNativePipelineCache( const void *pData, uint64_t nBytes ) noexcept;
-	sirGraphicsResult_t serializeNativePipelineCache( void *pData, uint64_t *pBytes ) const noexcept;
-	sirGraphicsResult_t queryNativePipelineCacheStats( sirD3D12PipelineCacheStats_t *pStats ) const noexcept;
+	SIRGraphicsResult loadNativePipelineCache( const void *pData, uint64_t nBytes ) noexcept;
+	SIRGraphicsResult serializeNativePipelineCache( void *pData, uint64_t *pBytes ) const noexcept;
+	SIRGraphicsResult queryNativePipelineCacheStats( sirD3D12PipelineCacheStats_t *pStats ) const noexcept;
 	// Native-only snapshot for debug tools and hardware test harnesses.
-	sirGraphicsResult_t queryNativeDiagnostics( sirD3D12DiagnosticSnapshot_t *pSnapshot ) noexcept;
-	sirGraphicsResult_t queryNativeAdapterInfo( sirD3D12AdapterInfo_t *pInfo ) const noexcept;
+	SIRGraphicsResult queryNativeDiagnostics( sirD3D12DiagnosticSnapshot_t *pSnapshot ) noexcept;
+	SIRGraphicsResult queryNativeAdapterInfo( sirD3D12AdapterInfo_t *pInfo ) const noexcept;
 
-	sirGraphicsResult_t queryCapabilities( sirGraphicsCapabilities_t *pCapabilities ) const noexcept override;
-	sirGraphicsResult_t queryPipelineModelCaps( sirGraphicsPipelineModel_t eModel,
+	SIRGraphicsResult queryCapabilities( sirGraphicsCapabilities_t *pCapabilities ) const noexcept override;
+	SIRGraphicsResult queryPipelineModelCaps( SIRGraphicsPipelineModel eModel,
 	                                            sirGraphicsABIPipelineModelCaps_t *pCaps ) const noexcept override;
-	sirGraphicsResult_t queryMemoryBudget( sirGraphicsMemoryBudget_t *pBudget ) const noexcept override;
+	SIRGraphicsResult queryMemoryBudget( sirGraphicsMemoryBudget_t *pBudget ) const noexcept override;
 
-	sirGraphicsResult_t createBuffer( const sirGraphicsBufferDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept override;
-	sirGraphicsResult_t createTexture( const sirGraphicsTextureDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept override;
-	sirGraphicsResult_t createView( const sirGraphicsViewDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept override;
-	sirGraphicsResult_t createSampler( const sirGraphicsSamplerDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept override;
-	sirGraphicsResult_t createPipeline( const sirGraphicsPipelineDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept override;
-	sirGraphicsResult_t createBindingSet( sirGraphicsHandle_t hPipeline, uint32_t nSetIndex,
+	SIRGraphicsResult createBuffer( const sirGraphicsBufferDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept override;
+	SIRGraphicsResult createTexture( const sirGraphicsTextureDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept override;
+	SIRGraphicsResult createView( const sirGraphicsViewDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept override;
+	SIRGraphicsResult createSampler( const sirGraphicsSamplerDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept override;
+	SIRGraphicsResult createPipeline( const sirGraphicsPipelineDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept override;
+	SIRGraphicsResult createBindingSet( sirGraphicsHandle_t hPipeline, uint32_t nSetIndex,
 	                                      sirGraphicsHandle_t *pHandle ) noexcept override;
-	sirGraphicsResult_t updateBindings( sirGraphicsHandle_t hSet, const sirGraphicsDescriptorWrite_t *pWrites,
+	SIRGraphicsResult updateBindings( sirGraphicsHandle_t hSet, const sirGraphicsDescriptorWrite_t *pWrites,
 	                                    uint32_t nWriteCount ) noexcept override;
-	sirGraphicsResult_t mapBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffsetBytes, uint64_t nBytes,
+	SIRGraphicsResult mapBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffsetBytes, uint64_t nBytes,
 	                               sirGraphicsMappedBuffer_t *pMapped ) noexcept override;
-	sirGraphicsResult_t unmapBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffsetBytes, uint64_t nBytes ) noexcept override;
-	sirGraphicsResult_t flushBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffsetBytes, uint64_t nBytes ) noexcept override;
-	sirGraphicsResult_t invalidateBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffsetBytes, uint64_t nBytes ) noexcept override;
+	SIRGraphicsResult unmapBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffsetBytes, uint64_t nBytes ) noexcept override;
+	SIRGraphicsResult flushBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffsetBytes, uint64_t nBytes ) noexcept override;
+	SIRGraphicsResult invalidateBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffsetBytes, uint64_t nBytes ) noexcept override;
 
-	sirGraphicsResult_t acquireCommands( sirGraphicsQueue_t eQueue, SIRGraphicsCommandList **ppCommands ) noexcept override;
-	sirGraphicsResult_t submit( sirGraphicsQueue_t eQueue, const sirGraphicsSubmission_t& submission,
+	SIRGraphicsResult acquireCommands( SIRGraphicsQueue eQueue, SIRGraphicsCommandList **ppCommands ) noexcept override;
+	SIRGraphicsResult submit( SIRGraphicsQueue eQueue, const sirGraphicsSubmission_t& submission,
 	                            sirGraphicsCompletion_t *pCompletion ) noexcept override;
-	sirGraphicsResult_t poll( const sirGraphicsCompletion_t& completion, bool *pCompleted ) noexcept override;
-	sirGraphicsResult_t wait( const sirGraphicsCompletion_t& completion, uint64_t nTimeoutNanoseconds ) noexcept override;
-	sirGraphicsResult_t retireResource( sirGraphicsHandle_t hResource, const sirGraphicsCompletionSet_t& completion ) noexcept override;
+	SIRGraphicsResult poll( const sirGraphicsCompletion_t& completion, bool *pCompleted ) noexcept override;
+	SIRGraphicsResult wait( const sirGraphicsCompletion_t& completion, uint64_t nTimeoutNanoseconds ) noexcept override;
+	SIRGraphicsResult retireResource( sirGraphicsHandle_t hResource, const sirGraphicsCompletionSet_t& completion ) noexcept override;
 
-	sirGraphicsResult_t createSurface( const sirGraphicsNativeSurface_t& native, const sirGraphicsPresentDesc_t& present,
+	SIRGraphicsResult createSurface( const sirGraphicsNativeSurface_t& native, const sirGraphicsPresentDesc_t& present,
 	                                   sirGraphicsHandle_t *pSurface ) noexcept override;
-	sirGraphicsResult_t resizeSurface( sirGraphicsHandle_t hSurface, const sirGraphicsNativeSurface_t& native,
+	SIRGraphicsResult resizeSurface( sirGraphicsHandle_t hSurface, const sirGraphicsNativeSurface_t& native,
 	                                   const sirGraphicsPresentDesc_t& present ) noexcept override;
-	sirGraphicsResult_t acquireSurfaceImage( sirGraphicsHandle_t hSurface, sirGraphicsSurfaceImage_t *pImage ) noexcept override;
-	sirGraphicsResult_t present( const sirGraphicsSurfaceImage_t& image, const sirGraphicsCompletion_t& renderComplete ) noexcept override;
-	sirGraphicsResult_t shutdown( void ) noexcept override;
+	SIRGraphicsResult acquireSurfaceImage( sirGraphicsHandle_t hSurface, sirGraphicsSurfaceImage_t *pImage ) noexcept override;
+	SIRGraphicsResult present( const sirGraphicsSurfaceImage_t& image, const sirGraphicsCompletion_t& renderComplete ) noexcept override;
+	SIRGraphicsResult shutdown( void ) noexcept override;
 
 protected:
 private:
@@ -122,28 +122,28 @@ public:
 
 	SIRD3D12Driver& operator=( const SIRD3D12Driver& ) = delete;
 
-	sirGraphicsBackend_t getBackend( void ) const noexcept override;
+	SIRGraphicsBackend getBackend( void ) const noexcept override;
 
-	sirGraphicsResult_t getAdapterCount( uint32_t *pCount ) const noexcept override;
-	sirGraphicsResult_t queryAdapter( uint32_t nAdapterIndex, sirGraphicsAdapterInfo_t *pInfo ) const noexcept override;
-	sirGraphicsResult_t createDevice( const sirGraphicsDeviceCreateDesc_t& desc, SIRRenderingDevice **ppDevice ) noexcept override;
+	SIRGraphicsResult getAdapterCount( uint32_t *pCount ) const noexcept override;
+	SIRGraphicsResult queryAdapter( uint32_t nAdapterIndex, sirGraphicsAdapterInfo_t *pInfo ) const noexcept override;
+	SIRGraphicsResult createDevice( const sirGraphicsDeviceCreateDesc_t& desc, SIRRenderingDevice **ppDevice ) noexcept override;
 	// Native explicit-memory path; the shared rendering-device ABI remains unchanged.
-	sirGraphicsResult_t createSealedDevice( const sirGraphicsDeviceCreateDesc_t& desc, const sirD3D12SealedPoolConfig_t& pools,
+	SIRGraphicsResult createSealedDevice( const sirGraphicsDeviceCreateDesc_t& desc, const sirD3D12SealedPoolConfig_t& pools,
 	                                        SIRRenderingDevice **ppDevice ) noexcept;
-	sirGraphicsResult_t createDeviceWithConfig( const sirGraphicsDeviceCreateDesc_t& desc, const sirD3D12NativeDeviceConfig_t& nativeConfig,
+	SIRGraphicsResult createDeviceWithConfig( const sirGraphicsDeviceCreateDesc_t& desc, const sirD3D12NativeDeviceConfig_t& nativeConfig,
 	                                            SIRRenderingDevice **ppDevice ) noexcept;
-	sirGraphicsResult_t createSealedDeviceWithConfig( const sirGraphicsDeviceCreateDesc_t& desc, const sirD3D12SealedPoolConfig_t& pools,
+	SIRGraphicsResult createSealedDeviceWithConfig( const sirGraphicsDeviceCreateDesc_t& desc, const sirD3D12SealedPoolConfig_t& pools,
 	                                                  const sirD3D12NativeDeviceConfig_t& nativeConfig,
 	                                                  SIRRenderingDevice **ppDevice ) noexcept;
-	sirGraphicsResult_t destroyDevice( SIRRenderingDevice *pDevice ) noexcept override;
+	SIRGraphicsResult destroyDevice( SIRRenderingDevice *pDevice ) noexcept override;
 
 protected:
 private:
 	SIRD3D12RenderingDevice m_Device;
 	bool m_bDeviceActive = false;
 
-	sirGraphicsResult_t createDeviceInternal( const sirGraphicsDeviceCreateDesc_t& desc, const sirD3D12NativeDeviceConfig_t& nativeConfig,
+	SIRGraphicsResult createDeviceInternal( const sirGraphicsDeviceCreateDesc_t& desc, const sirD3D12NativeDeviceConfig_t& nativeConfig,
 	                                          const sirD3D12SealedPoolConfig_t *pSealedPools, SIRRenderingDevice **ppDevice ) noexcept;
 };
 
-#endif // __SIRENGINE_SIRD3D12DRIVER_H__
+#endif // __SIR_D3_D12_DRIVER_H__

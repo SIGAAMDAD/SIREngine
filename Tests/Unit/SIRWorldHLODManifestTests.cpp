@@ -87,10 +87,10 @@ int main( void )
 	uint32_t nDemands = 0;
 	sirWorldHLODInput_t cutInput = { szNodes, szResident, szErrors, 3, 3, 2.0f };
 	sirWorldHLODOutput_t cutOutput = { szCutScratch, 3, szSelected, 3, &nSelected, szDemands, 3, &nDemands };
-	SIR_HLOD_CHECK( sirWorldHLODPlan( cutInput, cutOutput ) == SIR_WORLD_HLOD_OK );
+	SIR_HLOD_CHECK( sirWorldHLODPlan( cutInput, cutOutput ) == SIRWorldHLODResult::SIR_WORLD_HLOD_OK );
 	SIR_HLOD_CHECK( nSelected == 2 && szSelected[0] == 1 && szSelected[1] == 2 && nDemands == 0 );
 	szResident[1].bReady = false;
-	SIR_HLOD_CHECK( sirWorldHLODPlan( cutInput, cutOutput ) == SIR_WORLD_HLOD_OK );
+	SIR_HLOD_CHECK( sirWorldHLODPlan( cutInput, cutOutput ) == SIRWorldHLODResult::SIR_WORLD_HLOD_OK );
 	SIR_HLOD_CHECK( nSelected == 1 && szSelected[0] == 0 && nDemands == 1 && szDemands[0].nNodeIndex == 1 );
 
 	// Wire format is deterministic and independent of in-memory struct padding.

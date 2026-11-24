@@ -34,7 +34,7 @@ This Source Code Form is subject to the terms of the Mozilla Public License, v2.
 #include <random>
 #include <vector>
 #include <Core/Platform/SIRThread.h>
-#include <Core/Platform/SIRAtomic.h>
+#include <atomic>
 #include <stdexcept>
 
 #define SIR_ASSERT( b )                                                                                                                    \
@@ -518,9 +518,9 @@ static void testTiming( const sirContainerAllocator_t *pAllocator )
 struct sirQueueThreadContext_t
 {
 	SIRBatchMpmcQueue<uint32_t> *pQueue;
-	SIRAtomic<uint32_t> *pCounter;
-	SIRAtomic<uint32_t> *pDuplicates;
-	SIRAtomic<uint32_t> *pszSeen;
+	std::atomic<uint32_t> *pCounter;
+	std::atomic<uint32_t> *pDuplicates;
+	std::atomic<uint32_t> *pszSeen;
 	uint32_t iWorker;
 	uint32_t nItems;
 };
@@ -531,7 +531,7 @@ static void queueProducer( void *pContext )
 	for ( uint32_t iIndex = pWorker->iWorker; iIndex < pWorker->nItems; iIndex += 4 ) {
 		while ( pWorker->pQueue->tryEnqueue( iIndex ) != SIR_CONTAINER_OK ) {
 		}
-		pWorker->pCounter->fetchAdd( 1 );
+		pWorker->pCounter->fetch_add( 1 );
 	}
 }
 
@@ -544,19 +544,19 @@ static void queueConsumer( void *pContext )
 			continue;
 		}
 		if ( nValue >= pWorker->nItems ) {
-			pWorker->pDuplicates->fetchAdd( 1 );
-		} else if ( pWorker->pszSeen[nValue].fetchAdd( 1 ) != 0 ) {
-			pWorker->pDuplicates->fetchAdd( 1 );
+			pWorker->pDuplicates->fetch_add( 1 );
+		} else if ( pWorker->pszSeen[nValue].fetch_add( 1 ) != 0 ) {
+			pWorker->pDuplicates->fetch_add( 1 );
 		}
-		pWorker->pCounter->fetchAdd( 1 );
+		pWorker->pCounter->fetch_add( 1 );
 	}
 }
 
 struct sirReadThreadContext_t
 {
 	SIRReadMostlyMap<uint32_t, uint32_t> *pSnapshots;
-	SIRAtomic<bool> *pStop;
-	SIRAtomic<uint32_t> *pErrors;
+	std::atomic<bool> *pStop;
+	std::atomic<uint32_t> *pErrors;
 };
 
 static void snapshotReader( void *pContext )
@@ -567,9 +567,9 @@ static void snapshotReader( void *pContext )
 		for ( uint32_t iIndex = 0; iIndex < 20; ++iIndex ) {
 			const uint32_t *pValue = guard.find( iIndex );
 			if ( pValue == nullptr ) {
-				pWorker->pErrors->fetchAdd( 1 );
+				pWorker->pErrors->fetch_add( 1 );
 			} else if ( *pValue != iIndex + 10 && *pValue != iIndex + 20 ) {
-				pWorker->pErrors->fetchAdd( 1 );
+				pWorker->pErrors->fetch_add( 1 );
 			}
 		}
 	}
@@ -578,9 +578,9 @@ static void snapshotReader( void *pContext )
 struct sirBatchThreadContext_t
 {
 	SIRBatchMpmcQueue<uint32_t> *pQueue;
-	SIRAtomic<uint32_t> *pCounter;
-	SIRAtomic<uint32_t> *pDuplicates;
-	SIRAtomic<uint32_t> *pszSeen;
+	std::atomic<uint32_t> *pCounter;
+	std::atomic<uint32_t> *pDuplicates;
+	std::atomic<uint32_t> *pszSeen;
 	uint32_t nItems;
 };
 
@@ -589,7 +589,7 @@ static void batchProducer( void *pContext )
 	sirBatchThreadContext_t *pWorker = ( sirBatchThreadContext_t * )pContext;
 	constexpr uint32_t BATCH_SIZE = 8;
 	for ( ;; ) {
-		const uint32_t iFirst = pWorker->pCounter->fetchAdd( BATCH_SIZE );
+		const uint32_t iFirst = pWorker->pCounter->fetch_add( BATCH_SIZE );
 		if ( iFirst >= pWorker->nItems ) {
 			break;
 		}
@@ -614,12 +614,12 @@ static void batchConsumer( void *pContext )
 		for ( uint32_t iIndex = 0; iIndex < BATCH_SIZE; ++iIndex ) {
 			const uint32_t nValue = szValues[iIndex];
 			if ( nValue >= pWorker->nItems ) {
-				pWorker->pDuplicates->fetchAdd( 1 );
-			} else if ( pWorker->pszSeen[nValue].fetchAdd( 1 ) != 0 ) {
-				pWorker->pDuplicates->fetchAdd( 1 );
+				pWorker->pDuplicates->fetch_add( 1 );
+			} else if ( pWorker->pszSeen[nValue].fetch_add( 1 ) != 0 ) {
+				pWorker->pDuplicates->fetch_add( 1 );
 			}
 		}
-		pWorker->pCounter->fetchAdd( BATCH_SIZE );
+		pWorker->pCounter->fetch_add( BATCH_SIZE );
 	}
 }
 
@@ -639,10 +639,10 @@ static void testConcurrent( const sirContainerAllocator_t *pAllocator )
 	SIR_ASSERT( queue.tryDequeueBatch( szOutput, 4 ) == SIR_CONTAINER_OK );
 	SIR_ASSERT( szOutput[0] == 11 && szOutput[3] == 19 );
 
-	SIRAtomic<uint32_t> nProduced( 0 );
-	SIRAtomic<uint32_t> nConsumed( 0 );
-	SIRAtomic<uint32_t> nDuplicates( 0 );
-	SIRAtomic<uint32_t> szSeen[COUNT];
+	std::atomic<uint32_t> nProduced( 0 );
+	std::atomic<uint32_t> nConsumed( 0 );
+	std::atomic<uint32_t> nDuplicates( 0 );
+	std::atomic<uint32_t> szSeen[COUNT];
 	for ( uint32_t iIndex = 0; iIndex < COUNT; ++iIndex ) {
 		szSeen[iIndex].store( 0 );
 	}
@@ -670,8 +670,8 @@ static void testConcurrent( const sirContainerAllocator_t *pAllocator )
 		szEntries[iIndex] = { iIndex, iIndex + 10 };
 	}
 	SIR_ASSERT( snapshots.tryPublish( szEntries, 20 ) == SIR_CONTAINER_OK );
-	SIRAtomic<bool> bStop( false );
-	SIRAtomic<uint32_t> nErrors( 0 );
+	std::atomic<bool> bStop( false );
+	std::atomic<uint32_t> nErrors( 0 );
 	sirReadThreadContext_t szReaders[4]{};
 	for ( uint32_t iWorker = 0; iWorker < 4; ++iWorker ) {
 		szReaders[iWorker] = { &snapshots, &bStop, &nErrors };
@@ -689,10 +689,10 @@ static void testConcurrent( const sirContainerAllocator_t *pAllocator )
 
 	SIRBatchMpmcQueue<uint32_t> batched( pAllocator );
 	SIR_ASSERT( batched.tryInitialize( 64 ) == SIR_CONTAINER_OK );
-	SIRAtomic<uint32_t> nNextProduce( 0 );
-	SIRAtomic<uint32_t> nNextConsumed( 0 );
-	SIRAtomic<uint32_t> nDuplicateBatch( 0 );
-	SIRAtomic<uint32_t> szBatchSeen[BATCH_COUNT];
+	std::atomic<uint32_t> nNextProduce( 0 );
+	std::atomic<uint32_t> nNextConsumed( 0 );
+	std::atomic<uint32_t> nDuplicateBatch( 0 );
+	std::atomic<uint32_t> szBatchSeen[BATCH_COUNT];
 	for ( uint32_t iIndex = 0; iIndex < BATCH_COUNT; ++iIndex ) {
 		szBatchSeen[iIndex].store( 0 );
 	}

@@ -13,10 +13,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRRENDERACCELERATIONSTRUCTURE_H__
-#define __SIRENGINE_SIRRENDERACCELERATIONSTRUCTURE_H__
+#ifndef __SIR_RENDER_ACCELERATION_STRUCTURE_H__
+#define __SIR_RENDER_ACCELERATION_STRUCTURE_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -50,12 +50,12 @@ public:
 	{
 		return m_hStructure.nGeneration != 0 && m_hStructure.nDeviceGeneration != 0 &&
 		       m_hStructure.eType == SIR_RENDER_HANDLE_ACCELERATION_STRUCTURE && m_hBacking.nGeneration != 0 &&
-		       m_hBacking.nDeviceGeneration == m_hStructure.nDeviceGeneration && m_hBacking.eType == SIR_GRAPHICS_HANDLE_BUFFER;
+		       m_hBacking.nDeviceGeneration == m_hStructure.nDeviceGeneration && m_hBacking.eType == SIRGraphicsHandleType::SIR_GRAPHICS_HANDLE_BUFFER;
 	}
 
 private:
-	sirGraphicsHandle_t m_hStructure = {};
-	sirGraphicsHandle_t m_hBacking = {};
+	sirGraphicsHandle_t m_hStructure {};
+	sirGraphicsHandle_t m_hBacking {};
 };
 
-#endif // __SIRENGINE_SIRRENDERACCELERATIONSTRUCTURE_H__
+#endif // __SIR_RENDER_ACCELERATION_STRUCTURE_H__

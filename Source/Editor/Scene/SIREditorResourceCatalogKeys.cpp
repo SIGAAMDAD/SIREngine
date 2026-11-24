@@ -22,13 +22,13 @@ bool sirEditorCollectCatalogKeys( SIRResourceCatalog& catalog, sirEditorResource
 		return false;
 	}
 	uint32_t nCount = 0;
-	if ( catalog.buildLoadOrder( pBuffer->pOrderScratch, pBuffer->nCapacity, &nCount ) != SIR_RESOURCE_CATALOG_OK ||
+	if ( catalog.buildLoadOrder( pBuffer->pOrderScratch, pBuffer->nCapacity, &nCount ) != SIRResourceCatalogResult::SIR_RESOURCE_CATALOG_OK ||
 	     nCount != catalog.getResourceCount() ) {
 		return false;
 	}
 	for ( uint32_t i = 0; i < nCount; ++i ) {
-		sirResourceEntry_t entry = {};
-		if ( catalog.findResource( pBuffer->pOrderScratch[i], &entry ) != SIR_RESOURCE_CATALOG_OK || entry.nTypeId == 0 ) {
+		sirResourceEntry_t entry {};
+		if ( catalog.findResource( pBuffer->pOrderScratch[i], &entry ) != SIRResourceCatalogResult::SIR_RESOURCE_CATALOG_OK || entry.nTypeId == 0 ) {
 			return false;
 		}
 		pBuffer->pKeys[i] = { entry.nId, entry.nTypeId };

@@ -16,37 +16,37 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Editor/Scene/SIREditorFileSave.h>
 #include <Core/Platform/SIRPlatformFileSystem.h>
 
-static sirEditorFileSaveResult_t sirEditorMapFileResult( sirPlatformAtomicResult_t eResult ) noexcept
+static SIREditorFileSaveResult sirEditorMapFileResult( SIRPlatformAtomicResult eResult ) noexcept
 {
 	switch ( eResult ) {
-	case SIR_ATOMIC_SAVE_OK:
-		return SIR_EDITOR_FILE_SAVE_OK;
-	case SIR_ATOMIC_SAVE_INVALID_ARGUMENT:
-		return SIR_EDITOR_FILE_SAVE_INVALID_ARGUMENT;
-	case SIR_ATOMIC_SAVE_INVALID_PATH:
-		return SIR_EDITOR_FILE_SAVE_INVALID_PATH;
-	case SIR_ATOMIC_SAVE_TEMP_EXISTS:
-		return SIR_EDITOR_FILE_SAVE_TEMP_EXISTS;
-	case SIR_ATOMIC_SAVE_IO_ERROR:
-		return SIR_EDITOR_FILE_SAVE_IO_ERROR;
-	case SIR_ATOMIC_SAVE_REPLACE_FAILED:
-		return SIR_EDITOR_FILE_SAVE_REPLACE_FAILED;
-	case SIR_ATOMIC_SAVE_COMMITTED_NOT_DURABLE:
-		return SIR_EDITOR_FILE_SAVE_COMMITTED_NOT_DURABLE;
-	case SIR_ATOMIC_SAVE_CONFLICT:
-		return SIR_EDITOR_FILE_SAVE_CONFLICT;
+	case SIRPlatformAtomicResult::SIR_ATOMIC_SAVE_OK:
+		return SIREditorFileSaveResult::SIR_EDITOR_FILE_SAVE_OK;
+	case SIRPlatformAtomicResult::SIR_ATOMIC_SAVE_INVALID_ARGUMENT:
+		return SIREditorFileSaveResult::SIR_EDITOR_FILE_SAVE_INVALID_ARGUMENT;
+	case SIRPlatformAtomicResult::SIR_ATOMIC_SAVE_INVALID_PATH:
+		return SIREditorFileSaveResult::SIR_EDITOR_FILE_SAVE_INVALID_PATH;
+	case SIRPlatformAtomicResult::SIR_ATOMIC_SAVE_TEMP_EXISTS:
+		return SIREditorFileSaveResult::SIR_EDITOR_FILE_SAVE_TEMP_EXISTS;
+	case SIRPlatformAtomicResult::SIR_ATOMIC_SAVE_IO_ERROR:
+		return SIREditorFileSaveResult::SIR_EDITOR_FILE_SAVE_IO_ERROR;
+	case SIRPlatformAtomicResult::SIR_ATOMIC_SAVE_REPLACE_FAILED:
+		return SIREditorFileSaveResult::SIR_EDITOR_FILE_SAVE_REPLACE_FAILED;
+	case SIRPlatformAtomicResult::SIR_ATOMIC_SAVE_COMMITTED_NOT_DURABLE:
+		return SIREditorFileSaveResult::SIR_EDITOR_FILE_SAVE_COMMITTED_NOT_DURABLE;
+	case SIRPlatformAtomicResult::SIR_ATOMIC_SAVE_CONFLICT:
+		return SIREditorFileSaveResult::SIR_EDITOR_FILE_SAVE_CONFLICT;
 	default:
-		return SIR_EDITOR_FILE_SAVE_IO_ERROR;
+		return SIREditorFileSaveResult::SIR_EDITOR_FILE_SAVE_IO_ERROR;
 	}
 }
 
-sirEditorFileSaveResult_t sirEditorWriteFileAtomically( const sirEditorFileWriteRequest_t& request ) noexcept
+SIREditorFileSaveResult sirEditorWriteFileAtomically( const sirEditorFileWriteRequest_t& request ) noexcept
 {
 	static constexpr size_t MAX_EDITOR_SAVE_BYTES = 32ULL * 1024ULL * 1024ULL;
 	if ( request.nBytes > MAX_EDITOR_SAVE_BYTES || request.nExpectedBytes > MAX_EDITOR_SAVE_BYTES ) {
-		return SIR_EDITOR_FILE_SAVE_INVALID_ARGUMENT;
+		return SIREditorFileSaveResult::SIR_EDITOR_FILE_SAVE_INVALID_ARGUMENT;
 	}
-	sirFileSystemAtomicWriteRequest_t platform = {};
+	sirFileSystemAtomicWriteRequest_t platform {};
 	platform.pszDestination = request.pszDestination;
 	platform.pszTemporary = request.pszTemporary;
 	platform.pBytes = request.pBytes;
@@ -56,59 +56,59 @@ sirEditorFileSaveResult_t sirEditorWriteFileAtomically( const sirEditorFileWrite
 	return sirEditorMapFileResult( SIRPlatformFileSystem::writeAtomically( platform ) );
 }
 
-sirEditorFileSaveResult_t sirEditorSaveBoundScene( const sirEditorSceneSaveRequest_t& request ) noexcept
+SIREditorFileSaveResult sirEditorSaveBoundScene( const sirEditorSceneSaveRequest_t& request ) noexcept
 {
 	if ( request.pBridge == nullptr || request.pSourceScene == nullptr || request.pszScratch == nullptr || request.nScratchCapacity == 0 ) {
-		return SIR_EDITOR_FILE_SAVE_INVALID_ARGUMENT;
+		return SIREditorFileSaveResult::SIR_EDITOR_FILE_SAVE_INVALID_ARGUMENT;
 	}
 	const sirEditorTextSceneIndex_t& source = *request.pSourceScene;
 	if ( request.pBridge->pDocument == nullptr || source.storage.pNodes == nullptr || source.nNodeCount == 0 ||
 	     source.nNodeCount > source.storage.nNodeCapacity ) {
-		return SIR_EDITOR_FILE_SAVE_INVALID_ARGUMENT;
+		return SIREditorFileSaveResult::SIR_EDITOR_FILE_SAVE_INVALID_ARGUMENT;
 	}
 	uint32_t nAuthoredNodes = 0;
 	uint64_t nRevision = 0;
-	const sirEditorResult_t eCount = request.pBridge->pDocument->copySnapshot( nullptr, 0, &nAuthoredNodes, &nRevision );
-	if ( eCount != SIR_EDITOR_OUT_OF_CAPACITY && eCount != SIR_EDITOR_OK ) {
-		return SIR_EDITOR_FILE_SAVE_SERIALIZATION_FAILED;
+	const SIREditorResult eCount = request.pBridge->pDocument->copySnapshot( nullptr, 0, &nAuthoredNodes, &nRevision );
+	if ( eCount != SIREditorResult::SIR_EDITOR_OUT_OF_CAPACITY && eCount != SIREditorResult::SIR_EDITOR_OK ) {
+		return SIREditorFileSaveResult::SIR_EDITOR_FILE_SAVE_SERIALIZATION_FAILED;
 	}
 	if ( nAuthoredNodes != source.nNodeCount ) {
-		return SIR_EDITOR_FILE_SAVE_UNSUPPORTED_EDIT;
+		return SIREditorFileSaveResult::SIR_EDITOR_FILE_SAVE_UNSUPPORTED_EDIT;
 	}
 	for ( uint32_t iNode = 0; iNode < source.nNodeCount; ++iNode ) {
 		const sirEditorNode_t& original = source.storage.pNodes[iNode].node;
-		sirEditorNode_t current = {};
-		if ( request.pBridge->pDocument->findNode( original.nId, &current ) != SIR_EDITOR_OK || current.nId != original.nId ||
+		sirEditorNode_t current {};
+		if ( request.pBridge->pDocument->findNode( original.nId, &current ) != SIREditorResult::SIR_EDITOR_OK || current.nId != original.nId ||
 		     current.nTypeId != original.nTypeId || current.nParentId != original.nParentId || current.nFlags != original.nFlags ||
 		     original.nGeneration == UINT32_MAX || current.nGeneration != original.nGeneration + 1 ) {
-			return SIR_EDITOR_FILE_SAVE_UNSUPPORTED_EDIT;
+			return SIREditorFileSaveResult::SIR_EDITOR_FILE_SAVE_UNSUPPORTED_EDIT;
 		}
 	}
 	// Only authored properties represented by this scalar binding table
 	// can be persisted. Added/unbound properties require the full writer.
 	uint32_t nAuthoredProperties = 0;
-	const sirEditorResult_t eProperties = request.pBridge->pDocument->copyPropertySnapshot( nullptr, 0, &nAuthoredProperties );
-	if ( eProperties != SIR_EDITOR_OUT_OF_CAPACITY && eProperties != SIR_EDITOR_OK ) {
-		return SIR_EDITOR_FILE_SAVE_SERIALIZATION_FAILED;
+	const SIREditorResult eProperties = request.pBridge->pDocument->copyPropertySnapshot( nullptr, 0, &nAuthoredProperties );
+	if ( eProperties != SIREditorResult::SIR_EDITOR_OUT_OF_CAPACITY && eProperties != SIREditorResult::SIR_EDITOR_OK ) {
+		return SIREditorFileSaveResult::SIR_EDITOR_FILE_SAVE_SERIALIZATION_FAILED;
 	}
 	if ( nAuthoredProperties != request.pBridge->nBindingCount ) {
-		return SIR_EDITOR_FILE_SAVE_UNSUPPORTED_EDIT;
+		return SIREditorFileSaveResult::SIR_EDITOR_FILE_SAVE_UNSUPPORTED_EDIT;
 	}
 	size_t nOutputBytes = 0;
-	if ( sirEditorExportBoundScalars( *request.pBridge, nullptr, 0, &nOutputBytes ) != SIR_EDITOR_SCALAR_BRIDGE_OK ) {
-		return SIR_EDITOR_FILE_SAVE_SERIALIZATION_FAILED;
+	if ( sirEditorExportBoundScalars( *request.pBridge, nullptr, 0, &nOutputBytes ) != SIREditorScalarBridgeResult::SIR_EDITOR_SCALAR_BRIDGE_OK ) {
+		return SIREditorFileSaveResult::SIR_EDITOR_FILE_SAVE_SERIALIZATION_FAILED;
 	}
 	if ( nOutputBytes == 0 || request.nScratchCapacity <= nOutputBytes ) {
-		return SIR_EDITOR_FILE_SAVE_OUT_OF_CAPACITY;
+		return SIREditorFileSaveResult::SIR_EDITOR_FILE_SAVE_OUT_OF_CAPACITY;
 	}
 	if ( sirEditorExportBoundScalars( *request.pBridge, request.pszScratch, request.nScratchCapacity, &nOutputBytes ) !=
-	     SIR_EDITOR_SCALAR_BRIDGE_OK ) {
-		return SIR_EDITOR_FILE_SAVE_SERIALIZATION_FAILED;
+	     SIREditorScalarBridgeResult::SIR_EDITOR_SCALAR_BRIDGE_OK ) {
+		return SIREditorFileSaveResult::SIR_EDITOR_FILE_SAVE_SERIALIZATION_FAILED;
 	}
 	sirEditorFileWriteRequest_t write = { request.pszDestination, request.pszTemporary, request.pszScratch, nOutputBytes };
 	if ( request.bRejectExternalChanges ) {
 		if ( request.pBridge->pszSource == nullptr || request.pBridge->nSourceBytes == 0 ) {
-			return SIR_EDITOR_FILE_SAVE_INVALID_ARGUMENT;
+			return SIREditorFileSaveResult::SIR_EDITOR_FILE_SAVE_INVALID_ARGUMENT;
 		}
 		write.pExpectedBytes = request.pBridge->pszSource;
 		write.nExpectedBytes = request.pBridge->nSourceBytes;

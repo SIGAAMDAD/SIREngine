@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRTERRAINREGIONPERSISTENCE_H__
-#define __SIRENGINE_SIRTERRAINREGIONPERSISTENCE_H__
+#ifndef __SIR_TERRAINREGIONPERSISTENCE_H__
+#define __SIR_TERRAINREGIONPERSISTENCE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -27,8 +27,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Platform/SIRPlatformFile.h>
 #include <Terrain/Data/SIRTerrainRegionBundle.h>
 
-typedef enum sirTerrainPersistenceResult_e : uint8_t
-{
+enum class SIRTerrainPersistenceResult : uint8_t {
 	SIR_TERRAIN_PERSISTENCE_SUCCESS = 0,
 	SIR_TERRAIN_PERSISTENCE_INVALID_ARGUMENT,
 	SIR_TERRAIN_PERSISTENCE_INVALID_BUNDLE,
@@ -36,7 +35,7 @@ typedef enum sirTerrainPersistenceResult_e : uint8_t
 	SIR_TERRAIN_PERSISTENCE_NOT_FOUND,
 	SIR_TERRAIN_PERSISTENCE_STAGING_EXISTS,
 	SIR_TERRAIN_PERSISTENCE_IO_ERROR
-} sirTerrainPersistenceResult_t;
+};
 
 // Terrain/editor persistence only: Core/Platform owns OS handles and atomic
 // rename semantics. Caller owns the cooked payload and readback storage.
@@ -44,13 +43,13 @@ typedef enum sirTerrainPersistenceResult_e : uint8_t
 class SIRTerrainRegionPersistence final
 {
 public:
-	static sirTerrainPersistenceResult_t saveAtomic( const char *pszDestination, const char *pszStaging,
+	static SIRTerrainPersistenceResult saveAtomic( const char *pszDestination, const char *pszStaging,
 	                                                 sirTerrainConstByteSpan_t packed ) noexcept;
-	static sirTerrainPersistenceResult_t load( const char *pszPath, sirTerrainMutableByteSpan_t storage, sirTerrainRegionBundleView_t& view,
+	static SIRTerrainPersistenceResult load( const char *pszPath, sirTerrainMutableByteSpan_t storage, sirTerrainRegionBundleView_t& view,
 	                                           size_t& nLoaded ) noexcept;
 
 protected:
 private:
 };
 
-#endif // __SIRENGINE_SIRTERRAINREGIONPERSISTENCE_H__
+#endif // __SIR_TERRAINREGIONPERSISTENCE_H__

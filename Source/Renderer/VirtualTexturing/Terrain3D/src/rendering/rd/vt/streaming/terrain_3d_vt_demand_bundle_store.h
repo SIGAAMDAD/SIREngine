@@ -40,8 +40,7 @@ public:
 	t3dVTDemandBundleStats_t stats() const;
 
 private:
-	enum State : uint8_t
-	{
+	enum class SIRState : uint8_t {
 		FREE,
 		QUEUED,
 		LOADING,
@@ -55,7 +54,7 @@ private:
 		uint32_t nPriority = 0u;
 		uint64_t nAge = 0u;
 		uint64_t nEpoch = 0u;
-		State state = FREE;
+		SIRState state = FREE;
 	};
 	void workerMain();
 	int32_t selectQueuedLocked() const;

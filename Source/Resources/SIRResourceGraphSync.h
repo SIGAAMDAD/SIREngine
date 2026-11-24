@@ -8,8 +8,16 @@ License, v2. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIRRESOURCEGRAPHSYNC_H__
-#define __SIRENGINE_SIRRESOURCEGRAPHSYNC_H__
+#ifndef __SIR_RESOURCE_GRAPH_SYNC_H__
+#define __SIR_RESOURCE_GRAPH_SYNC_H__
+
+#include <Core/SIRPCH.h>
+
+// clang-format off
+#ifdef SIR_PRAGMA_ONCE_SUPPORTED
+	#pragma once
+#endif
+// clang-format on
 
 #include <atomic>
 #include <Core/Platform/SIRSync.h>

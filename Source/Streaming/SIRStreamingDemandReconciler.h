@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSTREAMINGDEMANDRECONCILER_H__
-#define __SIRENGINE_SIRSTREAMINGDEMANDRECONCILER_H__
+#ifndef __SIR_STREAMINGDEMANDRECONCILER_H__
+#define __SIR_STREAMINGDEMANDRECONCILER_H__
 
 #include <Core/SIRPCH.h>
 
@@ -54,7 +54,7 @@ private:
 	uint32_t findEntry( const sirStreamingUnitKey_t& key ) const noexcept;
 	void clearEntry( uint32_t iEntry ) noexcept;
 	void pruneReleased( void ) noexcept;
-	sirStreamingResult_t validateSet( const sirStreamingDemand_t *pDemands, uint32_t nDemandCount, uint32_t nRequestEpoch ) const noexcept;
+	SIRStreamingResult validateSet( const sirStreamingDemand_t *pDemands, uint32_t nDemandCount, uint32_t nRequestEpoch ) const noexcept;
 	void retireMissing( const sirStreamingDemand_t *pDemands, uint32_t nDemandCount, sirStreamingReconcileStats_t& stats ) noexcept;
 	void refreshCurrent( const sirStreamingDemand_t *pDemands, uint32_t nDemandCount, sirStreamingReconcileStats_t& stats ) noexcept;
 	void submitMissing( const sirStreamingDemand_t *pDemands, uint32_t nDemandCount, sirStreamingReconcileStats_t& stats ) noexcept;
@@ -65,22 +65,22 @@ public:
 	SIRStreamingDemandReconciler& operator=( const SIRStreamingDemandReconciler& ) = delete;
 
 	static uint64_t requiredBytes( uint32_t nCapacity ) noexcept;
-	sirStreamingResult_t initialize( SIRStreamingCoordinator *pCoordinator, void *pStorage, uint64_t nStorageBytes, uint32_t nCapacity,
+	SIRStreamingResult initialize( SIRStreamingCoordinator *pCoordinator, void *pStorage, uint64_t nStorageBytes, uint32_t nCapacity,
 	                                 uint64_t nConsumerId, uint32_t nConsumerGeneration ) noexcept;
 	// Refuse destruction of live, possibly provider-pinned tickets.
-	sirStreamingResult_t shutdown( void ) noexcept;
+	SIRStreamingResult shutdown( void ) noexcept;
 
 	// An epoch contains the entire desired set for this consumer. Duplicate keys,
 	// invalid demand, capacity errors and stale epochs are rejected before edits.
 	// A provider-pinned cancellation is deferred until the owner retires it.
 	// Every nonfatal deferred operation is counted; subsequent epochs retry it.
-	sirStreamingResult_t reconcile( const sirStreamingDemand_t *pDemands, uint32_t nDemandCount, uint32_t nRequestEpoch,
+	SIRStreamingResult reconcile( const sirStreamingDemand_t *pDemands, uint32_t nDemandCount, uint32_t nRequestEpoch,
 	                                sirStreamingReconcileStats_t *pStats ) noexcept;
 
 	// GRDG resource owners use this to obtain a ticket and query the actual
 	// coordinator stage. No provider completion is inferred by this class.
-	sirStreamingResult_t findTicket( const sirStreamingUnitKey_t& key, sirStreamingTicket_t *pTicket ) const noexcept;
+	SIRStreamingResult findTicket( const sirStreamingUnitKey_t& key, sirStreamingTicket_t *pTicket ) const noexcept;
 	uint32_t getTrackedCount( void ) const noexcept;
 };
 
-#endif // __SIRENGINE_SIRSTREAMINGDEMANDRECONCILER_H__
+#endif // __SIR_STREAMINGDEMANDRECONCILER_H__

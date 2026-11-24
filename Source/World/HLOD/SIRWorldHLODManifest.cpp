@@ -22,36 +22,36 @@ static_assert( sizeof( float ) == sizeof( uint32_t ), "HLOD cooked data requires
 
 static uint16_t sirHLODRead16( const uint8_t *pBytes ) noexcept
 {
-	return ( uint16_t )pBytes[0] | ( uint16_t )( ( uint16_t )pBytes[1] << 8 );
+	return static_cast<uint16_t>(pBytes[0]) | ( uint16_t )( static_cast<uint16_t>(pBytes[1]) << 8 );
 }
 
 static uint32_t sirHLODRead32( const uint8_t *pBytes ) noexcept
 {
-	return ( uint32_t )pBytes[0] | ( ( uint32_t )pBytes[1] << 8 ) | ( ( uint32_t )pBytes[2] << 16 ) | ( ( uint32_t )pBytes[3] << 24 );
+	return static_cast<uint32_t>(pBytes[0]) | ( static_cast<uint32_t>(pBytes[1]) << 8 ) | ( static_cast<uint32_t>(pBytes[2]) << 16 ) | ( static_cast<uint32_t>(pBytes[3]) << 24 );
 }
 
 static uint64_t sirHLODRead64( const uint8_t *pBytes ) noexcept
 {
-	return ( uint64_t )sirHLODRead32( pBytes ) | ( ( uint64_t )sirHLODRead32( pBytes + 4 ) << 32 );
+	return static_cast<uint64_t>( sirHLODRead32(  pBytes  ) ) | ( static_cast<uint64_t>( sirHLODRead32(  pBytes + 4  ) ) << 32 );
 }
 
 static void sirHLODWrite16( uint8_t *pBytes, uint16_t nValue ) noexcept
 {
-	pBytes[0] = ( uint8_t )nValue;
-	pBytes[1] = ( uint8_t )( nValue >> 8 );
+	pBytes[0] = static_cast<uint8_t>(nValue);
+	pBytes[1] = static_cast<uint8_t>( nValue >> 8 );
 }
 
 static void sirHLODWrite32( uint8_t *pBytes, uint32_t nValue ) noexcept
 {
 	for ( uint32_t iByte = 0; iByte < 4; ++iByte ) {
-		pBytes[iByte] = ( uint8_t )( nValue >> ( 8 * iByte ) );
+		pBytes[iByte] = static_cast<uint8_t>(  nValue >> ( 8 * iByte )  );
 	}
 }
 
 static void sirHLODWrite64( uint8_t *pBytes, uint64_t nValue ) noexcept
 {
-	sirHLODWrite32( pBytes, ( uint32_t )nValue );
-	sirHLODWrite32( pBytes + 4, ( uint32_t )( nValue >> 32 ) );
+	sirHLODWrite32( pBytes, static_cast<uint32_t>(nValue) );
+	sirHLODWrite32( pBytes + 4, static_cast<uint32_t>( nValue >> 32 ) );
 }
 
 static float sirHLODReadFloat( const uint8_t *pBytes ) noexcept
@@ -117,7 +117,7 @@ static bool sirHLODContains( const sirWorldHLODManifestNode_t& parent, const sir
 
 static sirWorldHLODManifestNode_t sirHLODDecodeNode( const uint8_t *pData ) noexcept
 {
-	sirWorldHLODManifestNode_t record = {};
+	sirWorldHLODManifestNode_t record {};
 	record.node.keyGeometry.m_nAssetId = sirHLODRead64( pData );
 	record.node.keyGeometry.m_nTypeId = sirHLODRead32( pData + 8 );
 	record.node.keyGeometry.m_nVariantId = sirHLODRead32( pData + 12 );
@@ -157,87 +157,87 @@ typedef struct sirHLODAccessor_s
 static sirWorldHLODManifestNode_t sirHLODGetNode( const sirHLODAccessor_t& accessor, uint32_t iNode ) noexcept
 {
 	return accessor.pNodes != nullptr ? accessor.pNodes[iNode]
-	                                  : sirHLODDecodeNode( accessor.pEncoded + ( uint64_t )iNode * SIR_WORLD_HLOD_MANIFEST_NODE_BYTES );
+	                                  : sirHLODDecodeNode( accessor.pEncoded + static_cast<uint64_t>(iNode) * SIR_WORLD_HLOD_MANIFEST_NODE_BYTES );
 }
 
-static sirWorldHLODManifestResult_t sirHLODValidateTree( const sirHLODAccessor_t& accessor, uint32_t nCount,
+static SIRWorldHLODManifestResult sirHLODValidateTree( const sirHLODAccessor_t& accessor, uint32_t nCount,
                                                          sirWorldHLODScratch_t *pScratch ) noexcept
 {
 	memset( pScratch, 0, sizeof( sirWorldHLODScratch_t ) * nCount );
 	for ( uint32_t iNode = 0; iNode < nCount; ++iNode ) {
 		const sirWorldHLODManifestNode_t record = sirHLODGetNode( accessor, iNode );
 		if ( !sirHLODValidNode( record, iNode, nCount ) ) {
-			return SIR_WORLD_HLOD_MANIFEST_INVALID_HIERARCHY;
+			return SIRWorldHLODManifestResult::SIR_WORLD_HLOD_MANIFEST_INVALID_HIERARCHY;
 		}
 		const uint32_t nFirstChild = record.node.nFirstChild;
 		for ( uint32_t iChild = nFirstChild; iChild < nFirstChild + record.node.nChildCount; ++iChild ) {
 			if ( ++pScratch[iChild].nParentReferences != 1 ) {
-				return SIR_WORLD_HLOD_MANIFEST_INVALID_HIERARCHY;
+				return SIRWorldHLODManifestResult::SIR_WORLD_HLOD_MANIFEST_INVALID_HIERARCHY;
 			}
 		}
 	}
 	if ( pScratch[0].nParentReferences != 0 ) {
-		return SIR_WORLD_HLOD_MANIFEST_INVALID_HIERARCHY;
+		return SIRWorldHLODManifestResult::SIR_WORLD_HLOD_MANIFEST_INVALID_HIERARCHY;
 	}
 	for ( uint32_t iNode = 1; iNode < nCount; ++iNode ) {
 		if ( pScratch[iNode].nParentReferences != 1 ) {
-			return SIR_WORLD_HLOD_MANIFEST_INVALID_HIERARCHY;
+			return SIRWorldHLODManifestResult::SIR_WORLD_HLOD_MANIFEST_INVALID_HIERARCHY;
 		}
 	}
 	for ( uint32_t iNode = 0; iNode < nCount; ++iNode ) {
 		const sirWorldHLODManifestNode_t parent = sirHLODGetNode( accessor, iNode );
 		for ( uint32_t iChild = parent.node.nFirstChild; iChild < parent.node.nFirstChild + parent.node.nChildCount; ++iChild ) {
 			if ( !sirHLODContains( parent, sirHLODGetNode( accessor, iChild ) ) ) {
-				return SIR_WORLD_HLOD_MANIFEST_INVALID_HIERARCHY;
+				return SIRWorldHLODManifestResult::SIR_WORLD_HLOD_MANIFEST_INVALID_HIERARCHY;
 			}
 		}
 	}
-	return SIR_WORLD_HLOD_MANIFEST_OK;
+	return SIRWorldHLODManifestResult::SIR_WORLD_HLOD_MANIFEST_OK;
 }
 
-sirWorldHLODManifestResult_t sirWorldHLODReadManifest( const sirWorldHLODManifestRead_t& input,
+SIRWorldHLODManifestResult sirWorldHLODReadManifest( const sirWorldHLODManifestRead_t& input,
                                                        sirWorldHLODManifestDecode_t& output ) noexcept
 {
 	if ( input.pBytes == nullptr || output.pNodes == nullptr || output.pBounds == nullptr || output.pGeometricErrors == nullptr ||
 	     output.pScratch == nullptr || output.pnDecoded == nullptr || input.nBytes < SIR_WORLD_HLOD_MANIFEST_HEADER_BYTES ||
 	     !sirHLODValidIdentity( input.expected ) || input.nMaxNodes == 0 ) {
-		return SIR_WORLD_HLOD_MANIFEST_INVALID_ARGUMENT;
+		return SIRWorldHLODManifestResult::SIR_WORLD_HLOD_MANIFEST_INVALID_ARGUMENT;
 	}
 	const uint8_t *pData = input.pBytes;
 	if ( sirHLODRead32( pData ) != SIR_WORLD_HLOD_MANIFEST_MAGIC || sirHLODRead16( pData + 4 ) != SIR_WORLD_HLOD_MANIFEST_VERSION ||
 	     sirHLODRead16( pData + 6 ) != SIR_WORLD_HLOD_MANIFEST_HEADER_BYTES ||
 	     sirHLODRead32( pData + 8 ) != SIR_WORLD_HLOD_MANIFEST_NODE_BYTES ) {
-		return SIR_WORLD_HLOD_MANIFEST_INVALID_FORMAT;
+		return SIRWorldHLODManifestResult::SIR_WORLD_HLOD_MANIFEST_INVALID_FORMAT;
 	}
 	const uint32_t nCount = sirHLODRead32( pData + 12 );
-	if ( nCount == 0 || ( uint64_t )nCount > ( UINT64_MAX - SIR_WORLD_HLOD_MANIFEST_HEADER_BYTES ) / SIR_WORLD_HLOD_MANIFEST_NODE_BYTES ||
-	     input.nBytes != SIR_WORLD_HLOD_MANIFEST_HEADER_BYTES + ( uint64_t )nCount * SIR_WORLD_HLOD_MANIFEST_NODE_BYTES ) {
-		return SIR_WORLD_HLOD_MANIFEST_INVALID_FORMAT;
+	if ( nCount == 0 || static_cast<uint64_t>(nCount) > ( UINT64_MAX - SIR_WORLD_HLOD_MANIFEST_HEADER_BYTES ) / SIR_WORLD_HLOD_MANIFEST_NODE_BYTES ||
+	     input.nBytes != SIR_WORLD_HLOD_MANIFEST_HEADER_BYTES + static_cast<uint64_t>(nCount) * SIR_WORLD_HLOD_MANIFEST_NODE_BYTES ) {
+		return SIRWorldHLODManifestResult::SIR_WORLD_HLOD_MANIFEST_INVALID_FORMAT;
 	}
 	if ( sirHLODRead64( pData + 16 ) != input.expected.nWorldId || sirHLODRead64( pData + 24 ) != input.expected.nSourceHashLo ||
 	     sirHLODRead64( pData + 32 ) != input.expected.nSourceHashHi ) {
-		return SIR_WORLD_HLOD_MANIFEST_STALE_SOURCE;
+		return SIRWorldHLODManifestResult::SIR_WORLD_HLOD_MANIFEST_STALE_SOURCE;
 	}
 	if ( nCount > input.nMaxNodes || nCount > output.nNodeCapacity || nCount > output.nScratchCapacity ||
-	     ( size_t )nCount > SIZE_MAX / sizeof( sirWorldHLODScratch_t ) ) {
-		return SIR_WORLD_HLOD_MANIFEST_CAPACITY;
+	     static_cast<size_t>(nCount) > SIZE_MAX / sizeof( sirWorldHLODScratch_t ) ) {
+		return SIRWorldHLODManifestResult::SIR_WORLD_HLOD_MANIFEST_CAPACITY;
 	}
 	const uint8_t *pRecords = pData + SIR_WORLD_HLOD_MANIFEST_HEADER_BYTES;
 	if ( sirHLODRead64( pData + 40 ) != sirHLODChecksum( pRecords, input.nBytes - SIR_WORLD_HLOD_MANIFEST_HEADER_BYTES ) ) {
-		return SIR_WORLD_HLOD_MANIFEST_INVALID_FORMAT;
+		return SIRWorldHLODManifestResult::SIR_WORLD_HLOD_MANIFEST_INVALID_FORMAT;
 	}
 	for ( uint32_t iNode = 0; iNode < nCount; ++iNode ) {
-		if ( sirHLODRead32( pRecords + ( uint64_t )iNode * SIR_WORLD_HLOD_MANIFEST_NODE_BYTES + 60 ) != 0 ) {
-			return SIR_WORLD_HLOD_MANIFEST_INVALID_FORMAT;
+		if ( sirHLODRead32( pRecords + static_cast<uint64_t>(iNode) * SIR_WORLD_HLOD_MANIFEST_NODE_BYTES + 60 ) != 0 ) {
+			return SIRWorldHLODManifestResult::SIR_WORLD_HLOD_MANIFEST_INVALID_FORMAT;
 		}
 	}
 	const sirHLODAccessor_t accessor = { nullptr, pRecords };
-	const sirWorldHLODManifestResult_t eResult = sirHLODValidateTree( accessor, nCount, output.pScratch );
-	if ( eResult != SIR_WORLD_HLOD_MANIFEST_OK ) {
+	const SIRWorldHLODManifestResult eResult = sirHLODValidateTree( accessor, nCount, output.pScratch );
+	if ( eResult != SIRWorldHLODManifestResult::SIR_WORLD_HLOD_MANIFEST_OK ) {
 		return eResult;
 	}
 	for ( uint32_t iNode = 0; iNode < nCount; ++iNode ) {
-		const sirWorldHLODManifestNode_t record = sirHLODDecodeNode( pRecords + ( uint64_t )iNode * SIR_WORLD_HLOD_MANIFEST_NODE_BYTES );
+		const sirWorldHLODManifestNode_t record = sirHLODDecodeNode( pRecords + static_cast<uint64_t>(iNode) * SIR_WORLD_HLOD_MANIFEST_NODE_BYTES );
 		output.pNodes[iNode] = record.node;
 		for ( uint32_t iAxis = 0; iAxis < 3; ++iAxis ) {
 			output.pBounds[iNode].fMinimum[iAxis] = record.fMinimum[iAxis];
@@ -246,31 +246,31 @@ sirWorldHLODManifestResult_t sirWorldHLODReadManifest( const sirWorldHLODManifes
 		output.pGeometricErrors[iNode] = record.fGeometricError;
 	}
 	*output.pnDecoded = nCount;
-	return SIR_WORLD_HLOD_MANIFEST_OK;
+	return SIRWorldHLODManifestResult::SIR_WORLD_HLOD_MANIFEST_OK;
 }
 
-sirWorldHLODManifestResult_t sirWorldHLODWriteManifest( const sirWorldHLODManifestWrite_t& input,
+SIRWorldHLODManifestResult sirWorldHLODWriteManifest( const sirWorldHLODManifestWrite_t& input,
                                                         sirWorldHLODManifestEncode_t& output ) noexcept
 {
 	if ( input.pNodes == nullptr || output.pBytes == nullptr || output.pScratch == nullptr || output.pnWritten == nullptr ||
 	     input.nNodeCount == 0 || !sirHLODValidIdentity( input.identity ) ) {
-		return SIR_WORLD_HLOD_MANIFEST_INVALID_ARGUMENT;
+		return SIRWorldHLODManifestResult::SIR_WORLD_HLOD_MANIFEST_INVALID_ARGUMENT;
 	}
-	if ( input.nNodeCount > output.nScratchCapacity || ( size_t )input.nNodeCount > SIZE_MAX / sizeof( sirWorldHLODScratch_t ) ||
-	     ( uint64_t )input.nNodeCount > ( UINT64_MAX - SIR_WORLD_HLOD_MANIFEST_HEADER_BYTES ) / SIR_WORLD_HLOD_MANIFEST_NODE_BYTES ||
-	     output.nCapacity < SIR_WORLD_HLOD_MANIFEST_HEADER_BYTES + ( uint64_t )input.nNodeCount * SIR_WORLD_HLOD_MANIFEST_NODE_BYTES ) {
-		return SIR_WORLD_HLOD_MANIFEST_CAPACITY;
+	if ( input.nNodeCount > output.nScratchCapacity || static_cast<size_t>(input.nNodeCount) > SIZE_MAX / sizeof( sirWorldHLODScratch_t ) ||
+	     static_cast<uint64_t>(input.nNodeCount) > ( UINT64_MAX - SIR_WORLD_HLOD_MANIFEST_HEADER_BYTES ) / SIR_WORLD_HLOD_MANIFEST_NODE_BYTES ||
+	     output.nCapacity < SIR_WORLD_HLOD_MANIFEST_HEADER_BYTES + static_cast<uint64_t>(input.nNodeCount) * SIR_WORLD_HLOD_MANIFEST_NODE_BYTES ) {
+		return SIRWorldHLODManifestResult::SIR_WORLD_HLOD_MANIFEST_CAPACITY;
 	}
 	const sirHLODAccessor_t accessor = { input.pNodes, nullptr };
-	const sirWorldHLODManifestResult_t eResult = sirHLODValidateTree( accessor, input.nNodeCount, output.pScratch );
-	if ( eResult != SIR_WORLD_HLOD_MANIFEST_OK ) {
+	const SIRWorldHLODManifestResult eResult = sirHLODValidateTree( accessor, input.nNodeCount, output.pScratch );
+	if ( eResult != SIRWorldHLODManifestResult::SIR_WORLD_HLOD_MANIFEST_OK ) {
 		return eResult;
 	}
 	uint8_t *pData = output.pBytes;
-	const uint64_t nBytes = SIR_WORLD_HLOD_MANIFEST_HEADER_BYTES + ( uint64_t )input.nNodeCount * SIR_WORLD_HLOD_MANIFEST_NODE_BYTES;
+	const uint64_t nBytes = SIR_WORLD_HLOD_MANIFEST_HEADER_BYTES + static_cast<uint64_t>(input.nNodeCount) * SIR_WORLD_HLOD_MANIFEST_NODE_BYTES;
 	sirHLODWrite32( pData, SIR_WORLD_HLOD_MANIFEST_MAGIC );
 	sirHLODWrite16( pData + 4, SIR_WORLD_HLOD_MANIFEST_VERSION );
-	sirHLODWrite16( pData + 6, ( uint16_t )SIR_WORLD_HLOD_MANIFEST_HEADER_BYTES );
+	sirHLODWrite16( pData + 6, static_cast<uint16_t>(SIR_WORLD_HLOD_MANIFEST_HEADER_BYTES) );
 	sirHLODWrite32( pData + 8, SIR_WORLD_HLOD_MANIFEST_NODE_BYTES );
 	sirHLODWrite32( pData + 12, input.nNodeCount );
 	sirHLODWrite64( pData + 16, input.identity.nWorldId );
@@ -278,9 +278,9 @@ sirWorldHLODManifestResult_t sirWorldHLODWriteManifest( const sirWorldHLODManife
 	sirHLODWrite64( pData + 32, input.identity.nSourceHashHi );
 	uint8_t *pRecords = pData + SIR_WORLD_HLOD_MANIFEST_HEADER_BYTES;
 	for ( uint32_t iNode = 0; iNode < input.nNodeCount; ++iNode ) {
-		sirHLODEncodeNode( pRecords + ( uint64_t )iNode * SIR_WORLD_HLOD_MANIFEST_NODE_BYTES, input.pNodes[iNode] );
+		sirHLODEncodeNode( pRecords + static_cast<uint64_t>(iNode) * SIR_WORLD_HLOD_MANIFEST_NODE_BYTES, input.pNodes[iNode] );
 	}
 	sirHLODWrite64( pData + 40, sirHLODChecksum( pRecords, nBytes - SIR_WORLD_HLOD_MANIFEST_HEADER_BYTES ) );
 	*output.pnWritten = nBytes;
-	return SIR_WORLD_HLOD_MANIFEST_OK;
+	return SIRWorldHLODManifestResult::SIR_WORLD_HLOD_MANIFEST_OK;
 }

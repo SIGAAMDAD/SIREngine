@@ -13,10 +13,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRRENDERQUERYPOOL_H__
-#define __SIRENGINE_SIRRENDERQUERYPOOL_H__
+#ifndef __SIR_RENDERQUERYPOOL_H__
+#define __SIR_RENDERQUERYPOOL_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -46,7 +46,7 @@ public:
 	}
 
 private:
-	sirGraphicsHandle_t m_hHandle = {};
+	sirGraphicsHandle_t m_hHandle {};
 };
 
-#endif // __SIRENGINE_SIRRENDERQUERYPOOL_H__
+#endif // __SIR_RENDERQUERYPOOL_H__

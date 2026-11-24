@@ -55,7 +55,7 @@ static void sirEditorPrintSceneNodes( const SIREditorSceneWorkspace& workspace )
 			}
 		}
 		const uint32_t nIndent = nDepth < 32 ? nDepth : 32;
-		printf( "%*s%.*s (line %u, id %llu)\n", ( int )( nIndent * 2 ), "", ( int )entry.nNameLength, pszSource + entry.nNameOffset,
+		printf( "%*s%.*s (line %u, id %llu)\n", static_cast<int>( nIndent * 2 ), "", static_cast<int>(entry.nNameLength), pszSource + entry.nNameOffset,
 		        entry.nSourceLine, ( unsigned long long )entry.node.nId );
 	}
 }
@@ -67,11 +67,11 @@ static void sirEditorPrintResources( const SIREditorSceneWorkspace& workspace ) 
 	puts( "Resources:" );
 	for ( uint32_t iResource = 0; iResource < index.nCount; ++iResource ) {
 		const sirEditorTextResource_t& resource = index.pResources[iResource];
-		const char *pszKind = resource.eKind == SIR_EDITOR_RESOURCE_EXTERNAL ? "external" : "embedded";
-		printf( "  [%s] %.*s : %.*s", pszKind, ( int )resource.nIdLength, pszSource + resource.nIdOffset, ( int )resource.nTypeLength,
+		const char *pszKind = resource.eKind == SIREditorTextResourceKind::SIR_EDITOR_RESOURCE_EXTERNAL ? "external" : "embedded";
+		printf( "  [%s] %.*s : %.*s", pszKind, static_cast<int>(resource.nIdLength), pszSource + resource.nIdOffset, static_cast<int>(resource.nTypeLength),
 		        pszSource + resource.nTypeOffset );
 		if ( resource.nPathLength != 0 ) {
-			printf( " -> %.*s", ( int )resource.nPathLength, pszSource + resource.nPathOffset );
+			printf( " -> %.*s", static_cast<int>(resource.nPathLength), pszSource + resource.nPathOffset );
 		}
 		printf( " (line %u)\n", resource.nSourceLine );
 	}
@@ -86,7 +86,7 @@ static int sirEditorInspectScene( const char *pszPath ) noexcept
 		fputs( "SIREditor: cannot initialize editor memory domain\n", stderr );
 		return 3;
 	}
-	SIRMemorySegment *pSegment = memory.createSegment( "EditorScene", 384 * N_MIB, 240 * N_MIB, SIR_MEMORY_DOMAIN_EDITOR );
+	SIRMemorySegment *pSegment = memory.createSegment( "EditorScene", 384 * N_MIB, 240 * N_MIB, SIRMemoryDomain::SIR_MEMORY_DOMAIN_EDITOR );
 	if ( pSegment == nullptr ) {
 		fputs( "SIREditor: cannot reserve editor workspace segment\n", stderr );
 		return 3;
@@ -97,9 +97,9 @@ static int sirEditorInspectScene( const char *pszPath ) noexcept
 		fputs( "SIREditor: cannot initialize scene workspace\n", stderr );
 		return 3;
 	}
-	const sirEditorWorkspaceResult_t eResult = workspace.openTextFile( pszPath );
-	if ( eResult != SIR_EDITOR_WORKSPACE_OK ) {
-		fprintf( stderr, "SIREditor: cannot inspect scene (code %u, line %u)\n", ( unsigned )eResult, workspace.getErrorLine() );
+	const SIREditorWorkspaceResult eResult = workspace.openTextFile( pszPath );
+	if ( eResult != SIREditorWorkspaceResult::SIR_EDITOR_WORKSPACE_OK ) {
+		fprintf( stderr, "SIREditor: cannot inspect scene (code %u, line %u)\n", static_cast<unsigned>(eResult), workspace.getErrorLine() );
 		return 2;
 	}
 
@@ -115,8 +115,8 @@ static int sirEditorInspectScene( const char *pszPath ) noexcept
 
 static bool sirEditorHeadlessFrame( uint64_t nFrame, void *pContext ) noexcept
 {
-	( void )nFrame;
-	( void )pContext;
+	static_cast<void>(nFrame);
+	static_cast<void>(pContext);
 	return true;
 }
 
@@ -127,10 +127,10 @@ static bool sirEditorParseFrameCount( const char *pszCount, uint64_t *pOutFrames
 	}
 	uint64_t nFrames = 0;
 	for ( const char *pChar = pszCount; *pChar != '\0'; ++pChar ) {
-		if ( *pChar < '0' || *pChar > '9' || nFrames > ( UINT64_MAX - ( uint64_t )( *pChar - '0' ) ) / 10 ) {
+		if ( *pChar < '0' || *pChar > '9' || nFrames > ( UINT64_MAX - static_cast<uint64_t>( *pChar - '0' ) ) / 10 ) {
 			return false;
 		}
-		nFrames = nFrames * 10 + ( uint64_t )( *pChar - '0' );
+		nFrames = nFrames * 10 + static_cast<uint64_t>( *pChar - '0' );
 	}
 	if ( nFrames == 0 ) {
 		return false;
@@ -146,11 +146,11 @@ static int sirEditorRunHeadless( const char *pszCount ) noexcept
 		return 2;
 	}
 	SIREditorApplication app;
-	if ( app.initialize( sirEditorHeadlessFrame, nullptr ) != SIR_EDITOR_APP_OK ) {
+	if ( app.initialize( sirEditorHeadlessFrame, nullptr ) != SIREditorApplicationResult::SIR_EDITOR_APP_OK ) {
 		return 3;
 	}
-	const sirEditorApplicationResult_t eResult = app.run( nFrames );
-	if ( eResult != SIR_EDITOR_APP_OK ) {
+	const SIREditorApplicationResult eResult = app.run( nFrames );
+	if ( eResult != SIREditorApplicationResult::SIR_EDITOR_APP_OK ) {
 		app.shutdown();
 		return 3;
 	}
@@ -167,14 +167,14 @@ typedef struct sirEditorSceneRunContext_s
 
 static bool sirEditorSceneFrame( uint64_t nFrame, void *pContext ) noexcept
 {
-	( void )nFrame;
-	sirEditorSceneRunContext_t *pState = ( sirEditorSceneRunContext_t * )pContext;
+	static_cast<void>(nFrame);
+	sirEditorSceneRunContext_t *pState = static_cast<sirEditorSceneRunContext_t *>(pContext);
 	if ( !pState->pWorkspace->isOpen() ) {
 		return false;
 	}
 	const SIREditorSceneDocument& document = pState->pWorkspace->getDocument();
 	if ( pState->pWorkflow->getLastKnownRevision() != document.getRevision() ) {
-		return pState->pWorkflow->synchronize() == SIR_EDITOR_OK;
+		return pState->pWorkflow->synchronize() == SIREditorResult::SIR_EDITOR_OK;
 	}
 	return pState->pWorkspace->getHierarchy().isCurrent( document );
 }
@@ -191,7 +191,7 @@ static int sirEditorRunHeadlessScene( const char *pszPath, const char *pszCount 
 	if ( !memory.init( config ) ) {
 		return 3;
 	}
-	SIRMemorySegment *pSegment = memory.createSegment( "EditorScene", 384 * N_MIB, 240 * N_MIB, SIR_MEMORY_DOMAIN_EDITOR );
+	SIRMemorySegment *pSegment = memory.createSegment( "EditorScene", 384 * N_MIB, 240 * N_MIB, SIRMemoryDomain::SIR_MEMORY_DOMAIN_EDITOR );
 	if ( pSegment == nullptr ) {
 		memory.shutdown();
 		return 3;
@@ -201,27 +201,27 @@ static int sirEditorRunHeadlessScene( const char *pszPath, const char *pszCount 
 		memory.shutdown();
 		return 3;
 	}
-	if ( workspace.openTextFile( pszPath ) != SIR_EDITOR_WORKSPACE_OK ) {
+	if ( workspace.openTextFile( pszPath ) != SIREditorWorkspaceResult::SIR_EDITOR_WORKSPACE_OK ) {
 		workspace.shutdown();
 		memory.shutdown();
 		return 2;
 	}
 	SIREditorWorkflow workflow;
-	if ( workflow.initialize( &workspace.getDocument(), &workspace.getHierarchy() ) != SIR_EDITOR_OK ) {
+	if ( workflow.initialize( &workspace.getDocument(), &workspace.getHierarchy() ) != SIREditorResult::SIR_EDITOR_OK ) {
 		workspace.shutdown();
 		memory.shutdown();
 		return 3;
 	}
 	SIREditorApplication app;
 	sirEditorSceneRunContext_t context = { &workspace, &workflow };
-	if ( app.initialize( sirEditorSceneFrame, &context ) != SIR_EDITOR_APP_OK ) {
+	if ( app.initialize( sirEditorSceneFrame, &context ) != SIREditorApplicationResult::SIR_EDITOR_APP_OK ) {
 		workflow.shutdown();
 		workspace.shutdown();
 		memory.shutdown();
 		return 3;
 	}
-	const sirEditorApplicationResult_t eResult = app.run( nFrames );
-	if ( eResult == SIR_EDITOR_APP_OK ) {
+	const SIREditorApplicationResult eResult = app.run( nFrames );
+	if ( eResult == SIREditorApplicationResult::SIR_EDITOR_APP_OK ) {
 		printf( "SIREditor scene frames: %llu, nodes: %u, resources: %u\n", ( unsigned long long )app.getFrameCount(),
 		        workspace.getSceneIndex().nNodeCount, workspace.getResourceIndex().nCount );
 	}
@@ -229,7 +229,7 @@ static int sirEditorRunHeadlessScene( const char *pszPath, const char *pszCount 
 	workflow.shutdown();
 	workspace.shutdown();
 	memory.shutdown();
-	return eResult == SIR_EDITOR_APP_OK ? 0 : 3;
+	return eResult == SIREditorApplicationResult::SIR_EDITOR_APP_OK ? 0 : 3;
 }
 
 int main( int nArgs, char **pszArgs )

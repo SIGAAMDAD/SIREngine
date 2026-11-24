@@ -12,8 +12,8 @@ express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIRPLATFORMCONTEXT_H__
-#define __SIRENGINE_SIRPLATFORMCONTEXT_H__
+#ifndef __SIR_PLATFORMCONTEXT_H__
+#define __SIR_PLATFORMCONTEXT_H__
 
 #include <Core/SIRPCH.h>
 
@@ -23,11 +23,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-typedef enum sirPlatformKind_e : uint32_t
-{
+enum class SIRPlatformKind : uint32_t {
 	SIR_PLATFORM_WINDOWS = 1,
 	SIR_PLATFORM_LINUX = 2
-} sirPlatformKind_t;
+};
 
 typedef struct sirWindowsPlatformContext_s
 {
@@ -54,19 +53,18 @@ typedef union sirPlatformNativeContext_u
 typedef struct sirPlatformContext_s
 {
 	uint32_t nAbiVersion;
-	sirPlatformKind_t ePlatform;
+	SIRPlatformKind ePlatform;
 	uint64_t nCapabilities;
 	sirPlatformNativeContext_t native;
 } sirPlatformContext_t;
 
 // Device identity has no ownership or native pointer. A zero native ID denotes
 // an unspecified/default endpoint; providers resolve and own concrete devices.
-typedef enum sirPlatformDeviceBackend_e : uint32_t
-{
+enum class SIRPlatformDeviceBackend : uint32_t {
 	SIR_PLATFORM_DEVICE_NONE = 0,
 	SIR_PLATFORM_DEVICE_FMOD = 0x10000000,
 	SIR_PLATFORM_DEVICE_INPUT_BASE = 0x20000000
-} sirPlatformDeviceBackend_t;
+};
 
 typedef struct sirPlatformDeviceIdentity_s
 {
@@ -89,4 +87,4 @@ static_assert( sizeof( sirPlatformContext_t ) == 32, "Platform context ABI" );
 static_assert( sizeof( sirPlatformDeviceIdentity_t ) == 32, "Platform device identity ABI" );
 static_assert( __is_trivially_copyable( sirPlatformContext_t ), "Platform context must be a POD" );
 
-#endif // __SIRENGINE_SIRPLATFORMCONTEXT_H__
+#endif // __SIR_PLATFORMCONTEXT_H__

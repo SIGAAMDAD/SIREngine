@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRWORLDHLOD_H__
-#define __SIRENGINE_SIRWORLDHLOD_H__
+#ifndef __SIR_WORLD_HLOD_H__
+#define __SIR_WORLD_HLOD_H__
 
 #include <Core/SIRPCH.h>
 
@@ -95,23 +95,33 @@ typedef struct sirWorldHLODOutput_s
 	uint32_t *pnDemandCount;
 } sirWorldHLODOutput_t;
 
-typedef enum sirWorldHLODResult_e : uint8_t
+enum class SIRWorldHLODResult : uint8_t
 {
 	SIR_WORLD_HLOD_OK = 0,
 	SIR_WORLD_HLOD_INVALID_ARGUMENT = 1,
 	SIR_WORLD_HLOD_INVALID_HIERARCHY = 2,
 	SIR_WORLD_HLOD_NO_RESIDENT_CUT = 3,
 	SIR_WORLD_HLOD_CAPACITY = 4
-} sirWorldHLODResult_t;
+};
+
+class SIRWorldHLOD
+{
+public:
+	constexpr SIRWorldHLOD( void ) noexcept;
+	~SIRWorldHLOD() noexcept;
+
+	SIRWorldHLODResult plan( const sirWorldHLODInput_t& rInput );
+private:
+};
 
 // Returns one coherent cut: a parent or its complete resident child cover, never both.
 // Uncovered desired children become bounded demands. Output counts and arrays remain
 // unchanged on failure; scratch may change. All input/output spans must not overlap.
 // Caller must provide immutable residency for the duration of the call.
-sirWorldHLODResult_t sirWorldHLODPlan( const sirWorldHLODInput_t& input, sirWorldHLODOutput_t& output ) noexcept;
+SIRWorldHLODResult sirWorldHLODPlan( const sirWorldHLODInput_t& input, sirWorldHLODOutput_t& output ) noexcept;
 // Historical state only affects desired refinement. Resident-parent fallback
 // and atomic demand/output guarantees are identical to sirWorldHLODPlan.
-sirWorldHLODResult_t sirWorldHLODPlanHysteretic( const sirWorldHLODInput_t& input, const sirWorldHLODHistory_t& history,
+SIRWorldHLODResult sirWorldHLODPlanHysteretic( const sirWorldHLODInput_t& input, const sirWorldHLODHistory_t& history,
                                                  sirWorldHLODOutput_t& output ) noexcept;
 
-#endif // __SIRENGINE_SIRWORLDHLOD_H__
+#endif // __SIR_WORLDHLOD_H__

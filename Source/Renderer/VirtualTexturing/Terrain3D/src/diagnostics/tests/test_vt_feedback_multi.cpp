@@ -15,7 +15,7 @@ static bool lookup( void *pUser, uint32_t nPage, uint32_t& rParent, uint16_t& rM
 {
 	if ( nPage >= 8u )
 		return false;
-	const Page_t *const pages = ( const Page_t * )pUser;
+	const Page_t *const pages = static_cast<const Page_t *>(pUser);
 	rParent = pages[nPage].m_nParent;
 	rMip = pages[nPage].m_nMip;
 	return true;
@@ -80,7 +80,7 @@ int main()
 	words[23u] = 2u;
 	const size_t bytes = params.m_nSlotStrideWords * 4u;
 	const auto reduce = [&]() -> bool {
-		return t3d_vt_feedback_multi_reduce_capture( ( const uint8_t * )words, bytes, params, 101u, 7u, 3u, 4u, 0x1122334455667788ull,
+		return t3d_vt_feedback_multi_reduce_capture( reinterpret_cast<const uint8_t *>(words), bytes, params, 101u, 7u, 3u, 4u, 0x1122334455667788ull,
 		                                             reducer, lookup, pages, policy, stats );
 	};
 	assert( reduce() );
@@ -88,9 +88,9 @@ int main()
 	assert( frequency( reducer, 2u ) == 15u && frequency( reducer, 3u ) == 5u );
 	assert( frequency( reducer, 1u ) == 20u && frequency( reducer, 0u ) == 20u );
 	assert( frequency( reducer, 6u ) == 2u );
-	assert( !t3d_vt_feedback_multi_reduce_capture( ( const uint8_t * )words, bytes - 4u, params, 101u, 7u, 3u, 4u, 0x1122334455667788ull,
+	assert( !t3d_vt_feedback_multi_reduce_capture( reinterpret_cast<const uint8_t *>(words), bytes - 4u, params, 101u, 7u, 3u, 4u, 0x1122334455667788ull,
 	                                               reducer, lookup, pages, policy, stats ) );
-	assert( !t3d_vt_feedback_multi_reduce_capture( ( const uint8_t * )words, bytes, params, 101u, 8u, 3u, 4u, 0x1122334455667788ull,
+	assert( !t3d_vt_feedback_multi_reduce_capture( reinterpret_cast<const uint8_t *>(words), bytes, params, 101u, 8u, 3u, 4u, 0x1122334455667788ull,
 	                                               reducer, lookup, pages, policy, stats ) );
 	words[18u] = 1u; // first cell overflow: reject the entire capture
 	assert( !reduce() );
@@ -109,7 +109,7 @@ int main()
 
 	// Legacy v2 must still accept exactly one word per cell unchanged.
 	const uint32_t legacyWords[3] = { 2u, 2u, 3u };
-	assert( reducer.reduce( ( const uint8_t * )legacyWords, 3u, 8u, lookup, pages, policy, stats ) );
+	assert( reducer.reduce( reinterpret_cast<const uint8_t *>(legacyWords), 3u, 8u, lookup, pages, policy, stats ) );
 	assert( stats.m_nValidSamples == 3u && stats.m_nDirectUniquePages == 2u );
 	delete[] words;
 	return 0;

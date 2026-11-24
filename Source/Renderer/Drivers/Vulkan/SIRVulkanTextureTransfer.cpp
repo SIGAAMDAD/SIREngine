@@ -15,7 +15,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Renderer/Drivers/Vulkan/SIRVulkanDevice.h>
 
-sirVulkanResult_t SIRVulkanDevice::submitBufferImageCopy( sirVulkanBuffer_t *pBuffer, sirVulkanImage_t *pImage,
+SIRVulkanResult SIRVulkanDevice::submitBufferImageCopy( sirVulkanBuffer_t *pBuffer, sirVulkanImage_t *pImage,
                                                           const sirVulkanTextureTransfer_t& transfer,
                                                           sirVulkanCompletion_t *pCompletion ) noexcept
 {
@@ -23,43 +23,43 @@ sirVulkanResult_t SIRVulkanDevice::submitBufferImageCopy( sirVulkanBuffer_t *pBu
 		*pCompletion = {};
 	}
 	if ( !m_bReady || m_bDeviceLost ) {
-		return SIR_VULKAN_INVALID_STATE;
+		return SIRVulkanResult::SIR_VULKAN_INVALID_STATE;
 	}
 	if ( pBuffer == nullptr || pImage == nullptr || pCompletion == nullptr || pBuffer->hBuffer == VK_NULL_HANDLE ||
 	     pImage->hImage == VK_NULL_HANDLE || pBuffer->pOwnerAllocator != m_Allocator || pImage->pOwnerAllocator != m_Allocator ||
 	     pBuffer->nDeviceSerial != m_nDeviceSerial || pImage->nDeviceSerial != m_nDeviceSerial || m_nLastTransferValue == UINT64_MAX ) {
-		return SIR_VULKAN_INVALID_ARGUMENT;
+		return SIRVulkanResult::SIR_VULKAN_INVALID_ARGUMENT;
 	}
 	const bool bUpload = transfer.bBufferToImage;
 	const VkImageAspectFlags nAspect = sirVulkanImageAspectMask( pImage->eFormat );
 	// Depth/stencil formats with two aspects require independent plane copies.
 	// The current transfer contract describes one tightly packed plane only.
 	if ( nAspect != VK_IMAGE_ASPECT_COLOR_BIT && nAspect != VK_IMAGE_ASPECT_DEPTH_BIT ) {
-		return SIR_VULKAN_API_UNSUPPORTED;
+		return SIRVulkanResult::SIR_VULKAN_API_UNSUPPORTED;
 	}
 	if ( bUpload &&
 	     ( ( pBuffer->nUsage & VK_BUFFER_USAGE_TRANSFER_SRC_BIT ) == 0 || ( pImage->nUsage & VK_IMAGE_USAGE_TRANSFER_DST_BIT ) == 0 ) ) {
-		return SIR_VULKAN_INVALID_ARGUMENT;
+		return SIRVulkanResult::SIR_VULKAN_INVALID_ARGUMENT;
 	}
 	if ( !bUpload &&
 	     ( ( pBuffer->nUsage & VK_BUFFER_USAGE_TRANSFER_DST_BIT ) == 0 || ( pImage->nUsage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT ) == 0 ) ) {
-		return SIR_VULKAN_INVALID_ARGUMENT;
+		return SIRVulkanResult::SIR_VULKAN_INVALID_ARGUMENT;
 	}
-	const sirVulkanResult_t eValidation = sirVulkanValidateTextureTransfer( pBuffer, pImage, transfer );
-	if ( eValidation != SIR_VULKAN_SUCCESS ) {
+	const SIRVulkanResult eValidation = sirVulkanValidateTextureTransfer( pBuffer, pImage, transfer );
+	if ( eValidation != SIRVulkanResult::SIR_VULKAN_SUCCESS ) {
 		return eValidation;
 	}
 	VkImageLayout eOld = VK_IMAGE_LAYOUT_UNDEFINED;
 	if ( !sirVulkanGetSubresourceLayout( pImage, transfer.nMip, transfer.nLayer, &eOld ) ||
 	     ( !bUpload && eOld == VK_IMAGE_LAYOUT_UNDEFINED ) ) {
-		return SIR_VULKAN_INVALID_ARGUMENT;
+		return SIRVulkanResult::SIR_VULKAN_INVALID_ARGUMENT;
 	}
 
 	uint64_t nCompleted = 0;
 	const VkResult ePoll = m_pfnGetSemaphoreCounterValue( m_Device, m_TransferTimeline, &nCompleted );
 	if ( ePoll != VK_SUCCESS ) {
 		m_bDeviceLost = ePoll == VK_ERROR_DEVICE_LOST;
-		return SIR_VULKAN_NATIVE_FAILURE;
+		return SIRVulkanResult::SIR_VULKAN_NATIVE_FAILURE;
 	}
 	sirVulkanTransferSlot_t *pSlot = nullptr;
 	for ( uint32_t iCheck = 0; iCheck < SIR_VULKAN_TRANSFER_SLOT_COUNT; ++iCheck ) {
@@ -71,28 +71,28 @@ sirVulkanResult_t SIRVulkanDevice::submitBufferImageCopy( sirVulkanBuffer_t *pBu
 		}
 	}
 	if ( pSlot == nullptr ) {
-		return SIR_VULKAN_BUSY;
+		return SIRVulkanResult::SIR_VULKAN_BUSY;
 	}
 	const VkResult eReset = m_pfnResetCommandBuffer( pSlot->hCommandBuffer, 0 );
 	if ( eReset != VK_SUCCESS ) {
 		m_bDeviceLost = eReset == VK_ERROR_DEVICE_LOST;
-		return SIR_VULKAN_NATIVE_FAILURE;
+		return SIRVulkanResult::SIR_VULKAN_NATIVE_FAILURE;
 	}
 
-	VkCommandBufferBeginInfo begin = {};
+	VkCommandBufferBeginInfo begin {};
 	begin.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 	const VkResult eBegin = m_pfnBeginCommandBuffer( pSlot->hCommandBuffer, &begin );
 	if ( eBegin != VK_SUCCESS ) {
 		m_bDeviceLost = eBegin == VK_ERROR_DEVICE_LOST;
-		return SIR_VULKAN_NATIVE_FAILURE;
+		return SIRVulkanResult::SIR_VULKAN_NATIVE_FAILURE;
 	}
 
 	const VkImageLayout eTransfer = bUpload ? VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL : VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-	VkImageMemoryBarrier2 before = {};
+	VkImageMemoryBarrier2 before {};
 	before.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
-	( void )sirVulkanImageAccessScope( eOld, &before.srcStageMask, &before.srcAccessMask );
-	( void )sirVulkanImageAccessScope( eTransfer, &before.dstStageMask, &before.dstAccessMask );
+	static_cast<void>(sirVulkanImageAccessScope( eOld, &before.srcStageMask, &before.srcAccessMask ));
+	static_cast<void>(sirVulkanImageAccessScope( eTransfer, &before.dstStageMask, &before.dstAccessMask ));
 	before.oldLayout = eOld;
 	before.newLayout = eTransfer;
 	before.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -104,13 +104,13 @@ sirVulkanResult_t SIRVulkanDevice::submitBufferImageCopy( sirVulkanBuffer_t *pBu
 	before.subresourceRange.baseArrayLayer = transfer.nLayer;
 	before.subresourceRange.layerCount = 1;
 
-	VkMemoryBarrier2 host = {};
+	VkMemoryBarrier2 host {};
 	host.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2;
 	host.srcStageMask = VK_PIPELINE_STAGE_2_HOST_BIT;
 	host.srcAccessMask = VK_ACCESS_2_HOST_WRITE_BIT;
 	host.dstStageMask = VK_PIPELINE_STAGE_2_COPY_BIT;
 	host.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
-	VkDependencyInfo dependency = {};
+	VkDependencyInfo dependency {};
 	dependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
 	dependency.imageMemoryBarrierCount = 1;
 	dependency.pImageMemoryBarriers = &before;
@@ -120,7 +120,7 @@ sirVulkanResult_t SIRVulkanDevice::submitBufferImageCopy( sirVulkanBuffer_t *pBu
 	}
 	m_pfnCmdPipelineBarrier2( pSlot->hCommandBuffer, &dependency );
 
-	VkBufferImageCopy2 region = {};
+	VkBufferImageCopy2 region {};
 	region.sType = VK_STRUCTURE_TYPE_BUFFER_IMAGE_COPY_2;
 	region.bufferOffset = transfer.nBufferOffset;
 	region.bufferRowLength = transfer.nBufferRowLength;
@@ -132,7 +132,7 @@ sirVulkanResult_t SIRVulkanDevice::submitBufferImageCopy( sirVulkanBuffer_t *pBu
 	region.imageOffset = transfer.offset;
 	region.imageExtent = transfer.extent;
 	if ( bUpload ) {
-		VkCopyBufferToImageInfo2 info = {};
+		VkCopyBufferToImageInfo2 info {};
 		info.sType = VK_STRUCTURE_TYPE_COPY_BUFFER_TO_IMAGE_INFO_2;
 		info.srcBuffer = pBuffer->hBuffer;
 		info.dstImage = pImage->hImage;
@@ -141,7 +141,7 @@ sirVulkanResult_t SIRVulkanDevice::submitBufferImageCopy( sirVulkanBuffer_t *pBu
 		info.pRegions = &region;
 		m_pfnCmdCopyBufferToImage2( pSlot->hCommandBuffer, &info );
 	} else {
-		VkCopyImageToBufferInfo2 info = {};
+		VkCopyImageToBufferInfo2 info {};
 		info.sType = VK_STRUCTURE_TYPE_COPY_IMAGE_TO_BUFFER_INFO_2;
 		info.srcImage = pImage->hImage;
 		info.srcImageLayout = eTransfer;
@@ -153,8 +153,8 @@ sirVulkanResult_t SIRVulkanDevice::submitBufferImageCopy( sirVulkanBuffer_t *pBu
 
 	const VkImageLayout eFinal = bUpload ? sirVulkanUploadFinalLayout( pImage, transfer ) : eOld;
 	VkImageMemoryBarrier2 after = before;
-	( void )sirVulkanImageAccessScope( eTransfer, &after.srcStageMask, &after.srcAccessMask );
-	( void )sirVulkanImageAccessScope( eFinal, &after.dstStageMask, &after.dstAccessMask );
+	static_cast<void>(sirVulkanImageAccessScope( eTransfer, &after.srcStageMask, &after.srcAccessMask ));
+	static_cast<void>(sirVulkanImageAccessScope( eFinal, &after.dstStageMask, &after.dstAccessMask ));
 	after.oldLayout = eTransfer;
 	after.newLayout = eFinal;
 	dependency.memoryBarrierCount = 0;
@@ -164,19 +164,19 @@ sirVulkanResult_t SIRVulkanDevice::submitBufferImageCopy( sirVulkanBuffer_t *pBu
 	const VkResult eEnd = m_pfnEndCommandBuffer( pSlot->hCommandBuffer );
 	if ( eEnd != VK_SUCCESS ) {
 		m_bDeviceLost = eEnd == VK_ERROR_DEVICE_LOST;
-		return SIR_VULKAN_NATIVE_FAILURE;
+		return SIRVulkanResult::SIR_VULKAN_NATIVE_FAILURE;
 	}
 
 	const uint64_t nNext = m_nLastTransferValue + 1;
-	VkCommandBufferSubmitInfo command = {};
+	VkCommandBufferSubmitInfo command {};
 	command.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
 	command.commandBuffer = pSlot->hCommandBuffer;
-	VkSemaphoreSubmitInfo signal = {};
+	VkSemaphoreSubmitInfo signal {};
 	signal.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
 	signal.semaphore = m_TransferTimeline;
 	signal.value = nNext;
 	signal.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-	VkSubmitInfo2 submission = {};
+	VkSubmitInfo2 submission {};
 	submission.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
 	submission.commandBufferInfoCount = 1;
 	submission.pCommandBufferInfos = &command;
@@ -185,7 +185,7 @@ sirVulkanResult_t SIRVulkanDevice::submitBufferImageCopy( sirVulkanBuffer_t *pBu
 	const VkResult eSubmit = m_pfnQueueSubmit2( m_GraphicsQueue, 1, &submission, VK_NULL_HANDLE );
 	if ( eSubmit != VK_SUCCESS ) {
 		m_bDeviceLost = eSubmit == VK_ERROR_DEVICE_LOST;
-		return SIR_VULKAN_NATIVE_FAILURE;
+		return SIRVulkanResult::SIR_VULKAN_NATIVE_FAILURE;
 	}
 	m_nLastTransferValue = nNext;
 	pSlot->nLastValue = nNext;
@@ -193,12 +193,12 @@ sirVulkanResult_t SIRVulkanDevice::submitBufferImageCopy( sirVulkanBuffer_t *pBu
 	pImage->nLastGpuUse = nNext;
 	// The single owner queue serializes submissions. Publish the final layout
 	// only after vkQueueSubmit2 succeeds, never on recording/submit failure.
-	( void )sirVulkanSetSubresourceLayout( pImage, transfer.nMip, transfer.nLayer, eFinal );
+	static_cast<void>(sirVulkanSetSubresourceLayout( pImage, transfer.nMip, transfer.nLayer, eFinal ));
 	if ( bUpload && sirVulkanTransferCoversSubresource( pImage, transfer ) ) {
 		const uint32_t nIndex = transfer.nLayer * pImage->nMips + transfer.nMip;
 		pImage->szUploadedSubresources[nIndex / 64] |= 1ULL << ( nIndex % 64 );
 	}
 	pCompletion->nDeviceSerial = m_nDeviceSerial;
 	pCompletion->nValue = nNext;
-	return SIR_VULKAN_SUCCESS;
+	return SIRVulkanResult::SIR_VULKAN_SUCCESS;
 }

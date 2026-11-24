@@ -13,10 +13,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRINPUTFRAMESTATE_H__
-#define __SIRENGINE_SIRINPUTFRAMESTATE_H__
+#ifndef __SIR_INPUTFRAMESTATE_H__
+#define __SIR_INPUTFRAMESTATE_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -34,13 +34,13 @@ class SIRInputFrameState
 public:
 	SIRInputFrameState( void ) noexcept;
 	bool begin( uint64_t nTick ) noexcept;
-	bool postDevice( sirInputDeviceId_t id, sirInputDeviceClass_t eClass, sirInputSignal_t eSignal,
+	bool postDevice( sirInputDeviceId_t id, SIRInputDeviceClass eClass, SIRInputSignal eSignal,
 	                 const sirInputTimestamp_t& time ) noexcept;
-	bool postChanges( sirInputDeviceId_t id, sirInputDeviceClass_t eClass, const sirInputControlChange_t *pChanges, uint32_t nCount,
+	bool postChanges( sirInputDeviceId_t id, SIRInputDeviceClass eClass, const sirInputControlChange_t *pChanges, uint32_t nCount,
 	                  const sirInputTimestamp_t& time ) noexcept;
-	bool postResyncChanges( sirInputDeviceId_t id, sirInputDeviceClass_t eClass, const sirInputControlChange_t *pChanges,
+	bool postResyncChanges( sirInputDeviceId_t id, SIRInputDeviceClass eClass, const sirInputControlChange_t *pChanges,
 	                        uint32_t nCount ) noexcept;
-	bool postPointer( sirInputDeviceId_t id, sirInputDeviceClass_t eClass, sirInputSignal_t eSignal, uint16_t nControl, int32_t nX,
+	bool postPointer( sirInputDeviceId_t id, SIRInputDeviceClass eClass, SIRInputSignal eSignal, uint16_t nControl, int32_t nX,
 	                  int32_t nY, const sirInputTimestamp_t& time ) noexcept;
 	void clearDevice( sirInputDeviceId_t id ) noexcept;
 	bool publish( const SIRInputDeviceRegistry& registry ) noexcept;
@@ -73,4 +73,4 @@ private:
 	bool m_bTimingMetricsEnabled;
 };
 
-#endif // __SIRENGINE_SIRINPUTFRAMESTATE_H__
+#endif // __SIR_INPUTFRAMESTATE_H__

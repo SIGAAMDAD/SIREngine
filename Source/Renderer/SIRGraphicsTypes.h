@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRGRAPHICSTYPES_H__
-#define __SIRENGINE_SIRGRAPHICSTYPES_H__
+#ifndef __SIR_GRAPHICSTYPES_H__
+#define __SIR_GRAPHICSTYPES_H__
 
 #include <Core/SIRPCH.h>
 
@@ -26,8 +26,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 // Driver-neutral contract. No D3D, Vulkan, OpenGL, DXGI, SDL, or GRDG types.
 // Explicit capability results govern APIs with no compute/descriptor support.
-typedef enum sirGraphicsBackend_e : uint32_t
-{
+enum class SIRGraphicsBackend : uint32_t {
 	SIR_GRAPHICS_BACKEND_AUTO = 0,
 	SIR_GRAPHICS_BACKEND_VULKAN = 1,
 	SIR_GRAPHICS_BACKEND_D3D12 = 2,
@@ -37,10 +36,9 @@ typedef enum sirGraphicsBackend_e : uint32_t
 	SIR_GRAPHICS_BACKEND_D3D8 = 6,
 	SIR_GRAPHICS_BACKEND_D3D7 = 7,
 	SIR_GRAPHICS_BACKEND_OPENGL = 8
-} sirGraphicsBackend_t;
+};
 
-typedef enum sirGraphicsResult_e : uint32_t
-{
+enum class SIRGraphicsResult : uint32_t {
 	SIR_GRAPHICS_SUCCESS = 0,
 	SIR_GRAPHICS_INVALID_ARGUMENT = 1,
 	SIR_GRAPHICS_INVALID_HANDLE = 2,
@@ -53,10 +51,9 @@ typedef enum sirGraphicsResult_e : uint32_t
 	SIR_GRAPHICS_DEVICE_LOST = 9,
 	SIR_GRAPHICS_DRIVER_ERROR = 10,
 	SIR_GRAPHICS_VERSION_MISMATCH = 11
-} sirGraphicsResult_t;
+};
 
-typedef enum sirGraphicsFeature_e : uint64_t
-{
+enum class SIRGraphicsFeature : uint64_t {
 	SIR_GRAPHICS_FEATURE_GRAPHICS = 1ULL << 0,
 	SIR_GRAPHICS_FEATURE_COMPUTE = 1ULL << 1,
 	SIR_GRAPHICS_FEATURE_ASYNC_COMPUTE = 1ULL << 2,
@@ -78,18 +75,16 @@ typedef enum sirGraphicsFeature_e : uint64_t
 	SIR_GRAPHICS_FEATURE_HDR_OUTPUT = 1ULL << 17,
 	SIR_GRAPHICS_FEATURE_FIXED_FUNCTION = 1ULL << 18,
 	SIR_GRAPHICS_FEATURE_PRESENT = 1ULL << 19
-} sirGraphicsFeature_t;
+};
 
-typedef enum sirGraphicsQueue_e : uint32_t
-{
+enum class SIRGraphicsQueue : uint32_t {
 	SIR_GRAPHICS_QUEUE_DIRECT = 0,
 	SIR_GRAPHICS_QUEUE_COMPUTE = 1,
 	SIR_GRAPHICS_QUEUE_COPY = 2,
 	SIR_GRAPHICS_QUEUE_COUNT = 3
-} sirGraphicsQueue_t;
+};
 
-typedef enum sirGraphicsHandleType_e : uint32_t
-{
+enum class SIRGraphicsHandleType : uint32_t {
 	SIR_GRAPHICS_HANDLE_NONE = 0,
 	SIR_GRAPHICS_HANDLE_BUFFER = 1,
 	SIR_GRAPHICS_HANDLE_TEXTURE = 2,
@@ -98,19 +93,17 @@ typedef enum sirGraphicsHandleType_e : uint32_t
 	SIR_GRAPHICS_HANDLE_PIPELINE = 5,
 	SIR_GRAPHICS_HANDLE_BINDING_SET = 6,
 	SIR_GRAPHICS_HANDLE_SURFACE = 7
-} sirGraphicsHandleType_t;
+};
 
-typedef enum sirGraphicsMemoryClass_e : uint32_t
-{
+enum class SIRGraphicsMemoryClass : uint32_t {
 	SIR_GRAPHICS_MEMORY_GPU_LOCAL = 0,
 	SIR_GRAPHICS_MEMORY_CPU_UPLOAD = 1,
 	SIR_GRAPHICS_MEMORY_CPU_READBACK = 2,
 	SIR_GRAPHICS_MEMORY_GPU_UPLOAD = 3,
 	SIR_GRAPHICS_MEMORY_TRANSIENT = 4
-} sirGraphicsMemoryClass_t;
+};
 
-typedef enum sirGraphicsUsage_e : uint32_t
-{
+enum class SIRGraphicsUsage : uint32_t {
 	SIR_GRAPHICS_USAGE_VERTEX = 1U << 0,
 	SIR_GRAPHICS_USAGE_INDEX = 1U << 1,
 	SIR_GRAPHICS_USAGE_CONSTANT = 1U << 2,
@@ -121,10 +114,9 @@ typedef enum sirGraphicsUsage_e : uint32_t
 	SIR_GRAPHICS_USAGE_COPY_SOURCE = 1U << 7,
 	SIR_GRAPHICS_USAGE_COPY_DESTINATION = 1U << 8,
 	SIR_GRAPHICS_USAGE_INDIRECT = 1U << 9
-} sirGraphicsUsage_t;
+};
 
-typedef enum sirGraphicsFormat_e : uint32_t
-{
+enum class SIRGraphicsFormat : uint32_t {
 	SIR_GRAPHICS_FORMAT_UNKNOWN = 0,
 	SIR_GRAPHICS_FORMAT_RGBA8_UNORM = 1,
 	SIR_GRAPHICS_FORMAT_BGRA8_UNORM = 2,
@@ -144,18 +136,16 @@ typedef enum sirGraphicsFormat_e : uint32_t
 	SIR_GRAPHICS_FORMAT_BC3_UNORM = 16,
 	SIR_GRAPHICS_FORMAT_BC5_UNORM = 17,
 	SIR_GRAPHICS_FORMAT_BC7_UNORM = 18
-} sirGraphicsFormat_t;
+};
 
-typedef enum sirGraphicsTextureDimension_e : uint32_t
-{
+enum class SIRGraphicsTextureDimension : uint32_t {
 	SIR_GRAPHICS_TEXTURE_1D = 1,
 	SIR_GRAPHICS_TEXTURE_2D = 2,
 	SIR_GRAPHICS_TEXTURE_3D = 3,
 	SIR_GRAPHICS_TEXTURE_CUBE = 4
-} sirGraphicsTextureDimension_t;
+};
 
-typedef enum sirGraphicsState_e : uint32_t
-{
+enum class SIRGraphicsState : uint32_t {
 	SIR_GRAPHICS_STATE_UNDEFINED = 0,
 	SIR_GRAPHICS_STATE_COMMON = 1,
 	SIR_GRAPHICS_STATE_VERTEX_INDEX = 2,
@@ -168,52 +158,46 @@ typedef enum sirGraphicsState_e : uint32_t
 	SIR_GRAPHICS_STATE_COPY_SOURCE = 9,
 	SIR_GRAPHICS_STATE_COPY_DESTINATION = 10,
 	SIR_GRAPHICS_STATE_PRESENT = 11
-} sirGraphicsState_t;
+};
 
-typedef enum sirGraphicsBarrierType_e : uint32_t
-{
+enum class SIRGraphicsBarrierType : uint32_t {
 	SIR_GRAPHICS_BARRIER_TRANSITION = 0,
 	SIR_GRAPHICS_BARRIER_UAV = 1,
 	SIR_GRAPHICS_BARRIER_ALIAS = 2
-} sirGraphicsBarrierType_t;
+};
 
-typedef enum sirGraphicsShaderFormat_e : uint32_t
-{
+enum class SIRGraphicsShaderFormat : uint32_t {
 	SIR_GRAPHICS_SHADER_DXIL = 1,
 	SIR_GRAPHICS_SHADER_SPIRV = 2,
 	SIR_GRAPHICS_SHADER_GLSL = 3,
 	SIR_GRAPHICS_SHADER_DXBC = 4,
 	SIR_GRAPHICS_SHADER_FIXED_FUNCTION = 5,
 	SIR_GRAPHICS_SHADER_D3D_LEGACY_TOKENS = 6
-} sirGraphicsShaderFormat_t;
+};
 
 // Pipeline era and API execution style are independent capability axes.
 // Values are stable within the still-unreleased shared graphics ABI v1.
-typedef enum sirGraphicsPipelineModel_e : uint32_t
-{
+enum class SIRGraphicsPipelineModel : uint32_t {
 	SIR_GRAPHICS_PIPELINE_MODEL_MODERN = 1,
 	SIR_GRAPHICS_PIPELINE_MODEL_PROGRAMMABLE = 2,
 	SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION = 3
-} sirGraphicsPipelineModel_t;
+};
 
-typedef enum sirGraphicsExecutionModel_e : uint32_t
-{
+enum class SIRGraphicsExecutionModel : uint32_t {
 	SIR_GRAPHICS_EXECUTION_EXPLICIT = 1,
 	SIR_GRAPHICS_EXECUTION_STATEFUL_SERIAL = 2
-} sirGraphicsExecutionModel_t;
+};
 
-typedef enum sirGraphicsFixedFeature_e : uint32_t
-{
+enum class SIRGraphicsFixedFeature : uint32_t {
 	SIR_GRAPHICS_FIXED_TRANSFORM = 1U << 0,
 	SIR_GRAPHICS_FIXED_LIGHTING = 1U << 1,
 	SIR_GRAPHICS_FIXED_FOG = 1U << 2,
 	SIR_GRAPHICS_FIXED_ALPHA_TEST = 1U << 3,
 	SIR_GRAPHICS_FIXED_CPU_TRANSFORM = 1U << 4,
 	SIR_GRAPHICS_FIXED_TEXCOORD_GEN = 1U << 5
-} sirGraphicsFixedFeature_t;
+};
 
-typedef enum sirGraphicsFixedTextureOp_e : uint32_t
-{
+enum class SIRGraphicsFixedTextureOp : uint32_t {
 	SIR_GRAPHICS_FIXED_OP_DISABLE = 0,
 	SIR_GRAPHICS_FIXED_OP_SELECT = 1,
 	SIR_GRAPHICS_FIXED_OP_MODULATE = 2,
@@ -221,42 +205,37 @@ typedef enum sirGraphicsFixedTextureOp_e : uint32_t
 	SIR_GRAPHICS_FIXED_OP_SUBTRACT = 4,
 	SIR_GRAPHICS_FIXED_OP_INTERPOLATE = 5,
 	SIR_GRAPHICS_FIXED_OP_DOT3 = 6
-} sirGraphicsFixedTextureOp_t;
+};
 
-typedef enum sirGraphicsFixedTextureArg_e : uint32_t
-{
+enum class SIRGraphicsFixedTextureArg : uint32_t {
 	SIR_GRAPHICS_FIXED_ARG_TEXTURE = 0,
 	SIR_GRAPHICS_FIXED_ARG_CURRENT = 1,
 	SIR_GRAPHICS_FIXED_ARG_DIFFUSE = 2,
 	SIR_GRAPHICS_FIXED_ARG_CONSTANT = 3
-} sirGraphicsFixedTextureArg_t;
+};
 
-typedef enum sirGraphicsFixedFogMode_e : uint32_t
-{
+enum class SIRGraphicsFixedFogMode : uint32_t {
 	SIR_GRAPHICS_FIXED_FOG_NONE = 0,
 	SIR_GRAPHICS_FIXED_FOG_LINEAR = 1,
 	SIR_GRAPHICS_FIXED_FOG_EXP = 2,
 	SIR_GRAPHICS_FIXED_FOG_EXP2 = 3
-} sirGraphicsFixedFogMode_t;
+};
 
-typedef enum sirGraphicsPipelineType_e : uint32_t
-{
+enum class SIRGraphicsPipelineType : uint32_t {
 	SIR_GRAPHICS_PIPELINE_GRAPHICS = 0,
 	SIR_GRAPHICS_PIPELINE_COMPUTE = 1,
 	SIR_GRAPHICS_PIPELINE_FIXED_FUNCTION = 2
-} sirGraphicsPipelineType_t;
+};
 
-typedef enum sirGraphicsBindingType_e : uint32_t
-{
+enum class SIRGraphicsBindingType : uint32_t {
 	SIR_GRAPHICS_BINDING_CONSTANT_BUFFER = 0,
 	SIR_GRAPHICS_BINDING_SAMPLED_TEXTURE = 1,
 	SIR_GRAPHICS_BINDING_STORAGE_BUFFER = 2,
 	SIR_GRAPHICS_BINDING_STORAGE_TEXTURE = 3,
 	SIR_GRAPHICS_BINDING_SAMPLER = 4
-} sirGraphicsBindingType_t;
+};
 
-typedef enum sirGraphicsShaderStage_e : uint32_t
-{
+enum class SIRGraphicsShaderStage : uint32_t {
 	SIR_GRAPHICS_STAGE_VERTEX = 1U << 0,
 	SIR_GRAPHICS_STAGE_FRAGMENT = 1U << 1,
 	SIR_GRAPHICS_STAGE_COMPUTE = 1U << 2,
@@ -265,43 +244,38 @@ typedef enum sirGraphicsShaderStage_e : uint32_t
 	SIR_GRAPHICS_STAGE_TESS_EVALUATION = 1U << 5,
 	SIR_GRAPHICS_STAGE_MESH = 1U << 6,
 	SIR_GRAPHICS_STAGE_TASK = 1U << 7
-} sirGraphicsShaderStage_t;
+};
 
-typedef enum sirGraphicsTopology_e : uint32_t
-{
+enum class SIRGraphicsTopology : uint32_t {
 	SIR_GRAPHICS_TOPOLOGY_POINTS = 0,
 	SIR_GRAPHICS_TOPOLOGY_LINES = 1,
 	SIR_GRAPHICS_TOPOLOGY_LINE_STRIP = 2,
 	SIR_GRAPHICS_TOPOLOGY_TRIANGLES = 3,
 	SIR_GRAPHICS_TOPOLOGY_TRIANGLE_STRIP = 4,
 	SIR_GRAPHICS_TOPOLOGY_PATCHES = 5
-} sirGraphicsTopology_t;
+};
 
-typedef enum sirGraphicsCullMode_e : uint32_t
-{
+enum class SIRGraphicsCullMode : uint32_t {
 	SIR_GRAPHICS_CULL_NONE = 0,
 	SIR_GRAPHICS_CULL_FRONT = 1,
 	SIR_GRAPHICS_CULL_BACK = 2
-} sirGraphicsCullMode_t;
+};
 
-typedef enum sirGraphicsSamplerFilter_e : uint32_t
-{
+enum class SIRGraphicsSamplerFilter : uint32_t {
 	SIR_GRAPHICS_FILTER_NEAREST = 0,
 	SIR_GRAPHICS_FILTER_LINEAR = 1,
 	SIR_GRAPHICS_FILTER_TRILINEAR = 2,
 	SIR_GRAPHICS_FILTER_ANISOTROPIC = 3
-} sirGraphicsSamplerFilter_t;
+};
 
-typedef enum sirGraphicsAddressMode_e : uint32_t
-{
+enum class SIRGraphicsAddressMode : uint32_t {
 	SIR_GRAPHICS_ADDRESS_REPEAT = 0,
 	SIR_GRAPHICS_ADDRESS_MIRROR = 1,
 	SIR_GRAPHICS_ADDRESS_CLAMP = 2,
 	SIR_GRAPHICS_ADDRESS_BORDER = 3
-} sirGraphicsAddressMode_t;
+};
 
-typedef enum sirGraphicsCompareOp_e : uint32_t
-{
+enum class SIRGraphicsCompareOp : uint32_t {
 	SIR_GRAPHICS_COMPARE_NEVER = 0,
 	SIR_GRAPHICS_COMPARE_LESS = 1,
 	SIR_GRAPHICS_COMPARE_EQUAL = 2,
@@ -310,10 +284,9 @@ typedef enum sirGraphicsCompareOp_e : uint32_t
 	SIR_GRAPHICS_COMPARE_NOT_EQUAL = 5,
 	SIR_GRAPHICS_COMPARE_GREATER_EQUAL = 6,
 	SIR_GRAPHICS_COMPARE_ALWAYS = 7
-} sirGraphicsCompareOp_t;
+};
 
-typedef enum sirGraphicsBlendFactor_e : uint32_t
-{
+enum class SIRGraphicsBlendFactor : uint32_t {
 	SIR_GRAPHICS_BLEND_ZERO = 0,
 	SIR_GRAPHICS_BLEND_ONE = 1,
 	SIR_GRAPHICS_BLEND_SRC_COLOR = 2,
@@ -324,30 +297,27 @@ typedef enum sirGraphicsBlendFactor_e : uint32_t
 	SIR_GRAPHICS_BLEND_ONE_MINUS_SRC_ALPHA = 7,
 	SIR_GRAPHICS_BLEND_DST_ALPHA = 8,
 	SIR_GRAPHICS_BLEND_ONE_MINUS_DST_ALPHA = 9
-} sirGraphicsBlendFactor_t;
+};
 
-typedef enum sirGraphicsBlendOp_e : uint32_t
-{
+enum class SIRGraphicsBlendOp : uint32_t {
 	SIR_GRAPHICS_BLEND_ADD = 0,
 	SIR_GRAPHICS_BLEND_SUBTRACT = 1,
 	SIR_GRAPHICS_BLEND_REVERSE_SUBTRACT = 2,
 	SIR_GRAPHICS_BLEND_MIN = 3,
 	SIR_GRAPHICS_BLEND_MAX = 4
-} sirGraphicsBlendOp_t;
+};
 
-typedef enum sirGraphicsSurfacePlatform_e : uint32_t
-{
+enum class SIRGraphicsSurfacePlatform : uint32_t {
 	SIR_GRAPHICS_SURFACE_WIN32 = 1,
 	SIR_GRAPHICS_SURFACE_X11 = 2,
 	SIR_GRAPHICS_SURFACE_WAYLAND = 3
-} sirGraphicsSurfacePlatform_t;
+};
 
-typedef enum sirGraphicsPresentMode_e : uint32_t
-{
+enum class SIRGraphicsPresentMode : uint32_t {
 	SIR_GRAPHICS_PRESENT_FIFO = 0,
 	SIR_GRAPHICS_PRESENT_IMMEDIATE = 1,
 	SIR_GRAPHICS_PRESENT_MAILBOX = 2
-} sirGraphicsPresentMode_t;
+};
 
 typedef struct sirGraphicsVersion_s
 {
@@ -370,13 +340,13 @@ typedef struct sirGraphicsHandle_s
 	uint32_t nSlot;
 	uint32_t nGeneration;
 	uint32_t nDeviceGeneration;
-	sirGraphicsHandleType_t eType;
+	SIRGraphicsHandleType eType;
 } sirGraphicsHandle_t;
 
 typedef struct sirGraphicsCompletion_s
 {
 	uint32_t nDeviceGeneration;
-	sirGraphicsQueue_t eQueue;
+	SIRGraphicsQueue eQueue;
 	uint64_t nValue;
 } sirGraphicsCompletion_t;
 
@@ -384,12 +354,12 @@ typedef struct sirGraphicsCompletionSet_s
 {
 	uint32_t nDeviceGeneration;
 	uint32_t nQueueMask;
-	uint64_t szQueueValues[SIR_GRAPHICS_QUEUE_COUNT];
+	uint64_t szQueueValues[SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT];
 } sirGraphicsCompletionSet_t;
 
 typedef struct sirGraphicsCapabilities_s
 {
-	sirGraphicsBackend_t eBackend;
+	SIRGraphicsBackend eBackend;
 	sirGraphicsVersion_t nApiVersion;
 	uint64_t nFeatureMask;
 	uint32_t nQueueMask;
@@ -445,7 +415,7 @@ typedef struct sirGraphicsBufferDesc_s
 	uint64_t nSizeBytes;
 	uint64_t nAlignmentBytes;
 	uint32_t nUsage;
-	sirGraphicsMemoryClass_t eMemory;
+	SIRGraphicsMemoryClass eMemory;
 } sirGraphicsBufferDesc_t;
 
 typedef struct sirGraphicsTextureDesc_s
@@ -457,15 +427,15 @@ typedef struct sirGraphicsTextureDesc_s
 	uint32_t nMipLevels;
 	uint32_t nSampleCount;
 	uint32_t nUsage;
-	sirGraphicsTextureDimension_t eDimension;
-	sirGraphicsFormat_t eFormat;
-	sirGraphicsMemoryClass_t eMemory;
+	SIRGraphicsTextureDimension eDimension;
+	SIRGraphicsFormat eFormat;
+	SIRGraphicsMemoryClass eMemory;
 } sirGraphicsTextureDesc_t;
 
 typedef struct sirGraphicsViewDesc_s
 {
 	sirGraphicsHandle_t hResource;
-	sirGraphicsFormat_t eFormat;
+	SIRGraphicsFormat eFormat;
 	uint32_t nBaseMip;
 	uint32_t nMipLevels;
 	uint32_t nBaseLayer;
@@ -478,10 +448,10 @@ typedef struct sirGraphicsViewDesc_s
 
 typedef struct sirGraphicsSamplerDesc_s
 {
-	sirGraphicsSamplerFilter_t eFilter;
-	sirGraphicsAddressMode_t eAddressU;
-	sirGraphicsAddressMode_t eAddressV;
-	sirGraphicsAddressMode_t eAddressW;
+	SIRGraphicsSamplerFilter eFilter;
+	SIRGraphicsAddressMode eAddressU;
+	SIRGraphicsAddressMode eAddressV;
+	SIRGraphicsAddressMode eAddressW;
 	float fMaximumAnisotropy;
 	float fMinimumLod;
 	float fMaximumLod;
@@ -489,7 +459,7 @@ typedef struct sirGraphicsSamplerDesc_s
 
 typedef struct sirGraphicsShaderCode_s
 {
-	sirGraphicsShaderFormat_t eFormat;
+	SIRGraphicsShaderFormat eFormat;
 	const void *pBytes;
 	uint64_t nByteCount;
 	uint64_t nContentHash;
@@ -502,7 +472,7 @@ typedef struct sirGraphicsBindingDesc_s
 	uint32_t nSpace;
 	uint32_t nArrayCount;
 	uint32_t nShaderStageMask;
-	sirGraphicsBindingType_t eType;
+	SIRGraphicsBindingType eType;
 } sirGraphicsBindingDesc_t;
 
 typedef struct sirGraphicsVertexAttribute_s
@@ -511,24 +481,24 @@ typedef struct sirGraphicsVertexAttribute_s
 	uint32_t nBufferSlot;
 	uint32_t nOffsetBytes;
 	uint32_t nStrideBytes;
-	sirGraphicsFormat_t eFormat;
+	SIRGraphicsFormat eFormat;
 } sirGraphicsVertexAttribute_t;
 
 typedef struct sirGraphicsBlendState_s
 {
-	sirGraphicsBlendFactor_t eSourceColor;
-	sirGraphicsBlendFactor_t eDestinationColor;
-	sirGraphicsBlendOp_t eColorOperation;
-	sirGraphicsBlendFactor_t eSourceAlpha;
-	sirGraphicsBlendFactor_t eDestinationAlpha;
-	sirGraphicsBlendOp_t eAlphaOperation;
+	SIRGraphicsBlendFactor eSourceColor;
+	SIRGraphicsBlendFactor eDestinationColor;
+	SIRGraphicsBlendOp eColorOperation;
+	SIRGraphicsBlendFactor eSourceAlpha;
+	SIRGraphicsBlendFactor eDestinationAlpha;
+	SIRGraphicsBlendOp eAlphaOperation;
 	uint32_t nColorWriteMask;
 	bool bEnabled;
 } sirGraphicsBlendState_t;
 
 typedef struct sirGraphicsPipelineDesc_s
 {
-	sirGraphicsPipelineType_t eType;
+	SIRGraphicsPipelineType eType;
 	sirGraphicsShaderCode_t vertexShader;
 	sirGraphicsShaderCode_t pixelShader;
 	sirGraphicsShaderCode_t computeShader;
@@ -537,16 +507,16 @@ typedef struct sirGraphicsPipelineDesc_s
 	uint32_t nBindingCount;
 	uint32_t nAttributeCount;
 	uint32_t nColorFormatCount;
-	sirGraphicsFormat_t szColorFormats[8];
-	sirGraphicsFormat_t eDepthFormat;
+	SIRGraphicsFormat szColorFormats[8];
+	SIRGraphicsFormat eDepthFormat;
 	uint32_t nSampleCount;
-	sirGraphicsTopology_t eTopology;
-	sirGraphicsCullMode_t eCullMode;
-	sirGraphicsCompareOp_t eDepthCompare;
+	SIRGraphicsTopology eTopology;
+	SIRGraphicsCullMode eCullMode;
+	SIRGraphicsCompareOp eDepthCompare;
 	sirGraphicsBlendState_t szBlendStates[8];
 	bool bDepthTest;
 	bool bDepthWrite;
-	sirGraphicsPipelineModel_t eModel;
+	SIRGraphicsPipelineModel eModel;
 	const sirGraphicsABIModernRecipe_t *pModern;
 	const sirGraphicsABIProgrammableRecipe_t *pProgrammable;
 	const sirGraphicsABIFixedRecipe_t *pFixed;
@@ -563,11 +533,11 @@ typedef struct sirGraphicsDescriptorWrite_s
 
 typedef struct sirGraphicsBarrier_s
 {
-	sirGraphicsBarrierType_t eType;
+	SIRGraphicsBarrierType eType;
 	sirGraphicsHandle_t hResource;
 	sirGraphicsHandle_t hAliasedResource;
-	sirGraphicsState_t eBefore;
-	sirGraphicsState_t eAfter;
+	SIRGraphicsState eBefore;
+	SIRGraphicsState eAfter;
 	uint32_t nBaseMip;
 	uint32_t nMipCount;
 	uint32_t nBaseLayer;
@@ -649,7 +619,7 @@ typedef struct sirGraphicsMappedBuffer_s
 
 typedef struct sirGraphicsNativeSurface_s
 {
-	sirGraphicsSurfacePlatform_t ePlatform;
+	SIRGraphicsSurfacePlatform ePlatform;
 	void *pWindow;
 	void *pDisplayOrInstance;
 	uint64_t nWindowGeneration;
@@ -660,8 +630,8 @@ typedef struct sirGraphicsPresentDesc_s
 	uint32_t nWidth;
 	uint32_t nHeight;
 	uint32_t nBackbufferCount;
-	sirGraphicsFormat_t eFormat;
-	sirGraphicsPresentMode_t eMode;
+	SIRGraphicsFormat eFormat;
+	SIRGraphicsPresentMode eMode;
 	bool bAllowTearing;
 	bool bHdr;
 } sirGraphicsPresentDesc_t;
@@ -681,4 +651,4 @@ static_assert( sizeof( sirGraphicsHandle_t ) == 16, "portable GPU resource handl
 static_assert( sizeof( sirGraphicsCompletion_t ) == 16, "portable GPU fence tokens must occupy 16 bytes" );
 static_assert( sizeof( sirGraphicsViewDesc_t ) == 56, "portable graphics view descriptors must occupy 56 bytes" );
 
-#endif // __SIRENGINE_SIRGRAPHICSTYPES_H__
+#endif // __SIR_GRAPHICSTYPES_H__

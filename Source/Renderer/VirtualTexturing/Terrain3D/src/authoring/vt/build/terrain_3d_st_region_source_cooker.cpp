@@ -36,20 +36,20 @@ bool Terrain3DStRegionSourceCooker::cookCold( const t3dStAuthoredRegionSource_t 
 		sourceSignature = t3dStCookHash( sourceSignature, r.m_pControlRF, 128u * 128u * 4u );
 		sourceSignature = t3dStCookHash( sourceSignature, r.m_pColorRgba8, 128u * 128u * 4u );
 		uint64_t recipeSignature = UINT64_C( 0x5354303656523031 );
-		recipeSignature = t3dStCookHash( recipeSignature, ( const uint8_t * )&nVtPackageGeneration, sizeof( nVtPackageGeneration ) );
-		recipeSignature = t3dStCookHash( recipeSignature, ( const uint8_t * )&r.m_nComposedGeneration, sizeof( r.m_nComposedGeneration ) );
-		t3dStVhmCookInput_t height = {};
+		recipeSignature = t3dStCookHash( recipeSignature, static_cast<const uint8_t *>(&nVtPackageGeneration), sizeof( nVtPackageGeneration ) );
+		recipeSignature = t3dStCookHash( recipeSignature, static_cast<const uint8_t *>(&r.m_nComposedGeneration), sizeof( r.m_nComposedGeneration ) );
+		t3dStVhmCookInput_t height {};
 		height.m_nRegionIndex = r.m_nRegionIndex;
 		height.m_nGeneration = r.m_nComposedGeneration;
 		height.m_nSourceSignature = sourceSignature;
 		height.m_nRecipeSignature = recipeSignature;
-		const int x = ( int )( r.m_nRegionIndex & 31u );
-		const int y = ( int )( r.m_nRegionIndex >> 5u );
+		const int x = static_cast<int>( r.m_nRegionIndex & 31u );
+		const int y = static_cast<int>( r.m_nRegionIndex >> 5u );
 		for ( int dz = -1; dz <= 1; ++dz ) {
 			for ( int dx = -1; dx <= 1; ++dx ) {
 				if ( x + dx < 0 || x + dx >= 32 || y + dz < 0 || y + dz >= 32 )
 					continue;
-				const uint32_t neighbor = ( uint32_t )( ( y + dz ) * 32 + x + dx );
+				const uint32_t neighbor = static_cast<uint32_t>(  ( y + dz ) * 32 + x + dx  );
 				const t3dStAuthoredRegionSource_t *pNeighbor = indexed[neighbor];
 				if ( pNeighbor != nullptr ) {
 					// All neighbors are from the same authored cold snapshot and
@@ -63,7 +63,7 @@ bool Terrain3DStRegionSourceCooker::cookCold( const t3dStAuthoredRegionSource_t 
 		}
 		if ( !Terrain3DVhmCooker::cookRegionCold( height, vhm[i] ) )
 			return false;
-		t3dStCutoutCookInput_t cutout = {};
+		t3dStCutoutCookInput_t cutout {};
 		cutout.m_pControlLe = r.m_pControlRF;
 		cutout.m_pColorRgba8 = r.m_pColorRgba8;
 		cutout.m_nRegionIndex = r.m_nRegionIndex;

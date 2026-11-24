@@ -21,27 +21,27 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <sys/stat.h>
 #include <unistd.h>
 
-static sirFileResult_t sirRootErrorLinux( int nError ) noexcept
+static SIRFileResult sirRootErrorLinux( int nError ) noexcept
 {
 	switch ( nError ) {
 	case ENOENT:
-		return SIR_FILE_NOT_FOUND;
+		return SIRFileResult::SIR_FILE_NOT_FOUND;
 	case EACCES:
 	case EPERM:
 	case ELOOP:
 	case ENOTDIR:
 	case EISDIR:
-		return SIR_FILE_ACCESS_DENIED;
+		return SIRFileResult::SIR_FILE_ACCESS_DENIED;
 	case ENAMETOOLONG:
-		return SIR_FILE_OUT_OF_RANGE;
+		return SIRFileResult::SIR_FILE_OUT_OF_RANGE;
 	case EMFILE:
 	case ENFILE:
 	case ENOMEM:
-		return SIR_FILE_NO_SPACE;
+		return SIRFileResult::SIR_FILE_NO_SPACE;
 	case EINVAL:
-		return SIR_FILE_INVALID_ARGUMENT;
+		return SIRFileResult::SIR_FILE_INVALID_ARGUMENT;
 	default:
-		return SIR_FILE_IO_ERROR;
+		return SIRFileResult::SIR_FILE_IO_ERROR;
 	}
 }
 
@@ -51,7 +51,7 @@ SIRPlatformRootDirectory::SIRPlatformRootDirectory( void ) noexcept : m_nNativeD
 
 SIRPlatformRootDirectory::~SIRPlatformRootDirectory( void ) noexcept
 {
-	( void )close();
+	static_cast<void>(close());
 }
 
 bool SIRPlatformRootDirectory::isOpen( void ) const noexcept
@@ -59,29 +59,29 @@ bool SIRPlatformRootDirectory::isOpen( void ) const noexcept
 	return m_nNativeDirectory != UINTPTR_MAX;
 }
 
-sirFileResult_t SIRPlatformRootDirectory::openRoot( const char *pszRootPath ) noexcept
+SIRFileResult SIRPlatformRootDirectory::openRoot( const char *pszRootPath ) noexcept
 {
 	if ( isOpen() || pszRootPath == nullptr || pszRootPath[0] == '\0' ) {
-		return SIR_FILE_INVALID_ARGUMENT;
+		return SIRFileResult::SIR_FILE_INVALID_ARGUMENT;
 	}
 	const int nRoot = ::open( pszRootPath, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC );
 	if ( nRoot < 0 ) {
 		return sirRootErrorLinux( errno );
 	}
-	m_nNativeDirectory = ( uintptr_t )nRoot;
-	return SIR_FILE_OK;
+	m_nNativeDirectory = static_cast<uintptr_t>(nRoot);
+	return SIRFileResult::SIR_FILE_OK;
 }
 
-sirFileResult_t SIRPlatformRootDirectory::openRead( const char *pszRelativePath, SIRPlatformFile *pFile ) const noexcept
+SIRFileResult SIRPlatformRootDirectory::openRead( const char *pszRelativePath, SIRPlatformFile *pFile ) const noexcept
 {
 	if ( pFile == nullptr || pFile->isOpen() || !validRelative( pszRelativePath ) ) {
-		return SIR_FILE_INVALID_ARGUMENT;
+		return SIRFileResult::SIR_FILE_INVALID_ARGUMENT;
 	}
 	if ( !isOpen() ) {
-		return SIR_FILE_CLOSED;
+		return SIRFileResult::SIR_FILE_CLOSED;
 	}
 
-	const int nRoot = ( int )m_nNativeDirectory;
+	const int nRoot = static_cast<int>(m_nNativeDirectory);
 	int nParent = nRoot;
 	uint32_t nStart = 0;
 	for ( uint32_t i = 0;; ++i ) {
@@ -104,29 +104,29 @@ sirFileResult_t SIRPlatformRootDirectory::openRead( const char *pszRelativePath,
 		if ( nChild < 0 ) {
 			return sirRootErrorLinux( nError );
 		}
-		struct stat metadata = {};
+		struct stat metadata {};
 		if ( ::fstat( nChild, &metadata ) != 0 || ( bFinal ? !S_ISREG( metadata.st_mode ) : !S_ISDIR( metadata.st_mode ) ) ||
 		     ( bFinal && metadata.st_size < 0 ) ) {
 			( void )::close( nChild );
-			return SIR_FILE_ACCESS_DENIED;
+			return SIRFileResult::SIR_FILE_ACCESS_DENIED;
 		}
 		if ( bFinal ) {
-			pFile->m_nNativeHandle = ( uintptr_t )nChild;
-			pFile->m_nFlags = SIR_FILE_OPEN_READ;
+			pFile->m_nNativeHandle = static_cast<uintptr_t>(nChild);
+			pFile->m_nFlags = static_cast<uint32_t>( SIRFileOpenFlag::SIR_FILE_OPEN_READ );
 			pFile->m_nCursor = 0;
-			return SIR_FILE_OK;
+			return SIRFileResult::SIR_FILE_OK;
 		}
 		nParent = nChild;
 		nStart = i + 1;
 	}
 }
 
-sirFileResult_t SIRPlatformRootDirectory::close( void ) noexcept
+SIRFileResult SIRPlatformRootDirectory::close( void ) noexcept
 {
 	if ( !isOpen() ) {
-		return SIR_FILE_OK;
+		return SIRFileResult::SIR_FILE_OK;
 	}
-	const int nRoot = ( int )m_nNativeDirectory;
+	const int nRoot = static_cast<int>(m_nNativeDirectory);
 	m_nNativeDirectory = UINTPTR_MAX;
-	return ::close( nRoot ) == 0 ? SIR_FILE_OK : sirRootErrorLinux( errno );
+	return ::close( nRoot ) == 0 ? SIRFileResult::SIR_FILE_OK : sirRootErrorLinux( errno );
 }

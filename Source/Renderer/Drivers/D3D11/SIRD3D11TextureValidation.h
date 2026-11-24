@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRD3D11TEXTUREVALIDATION_H__
-#define __SIRENGINE_SIRD3D11TEXTUREVALIDATION_H__
+#ifndef __SIR_D3_D11_TEXTUREVALIDATION_H__
+#define __SIR_D3_D11_TEXTUREVALIDATION_H__
 
 #include <Core/SIRPCH.h>
 
@@ -37,8 +37,8 @@ typedef struct sirD3D11TexturePlan_s
 
 // D3D11-owned admission and logical capacity accounting. The driver checks
 // hardware/format support separately before creating a native COM resource.
-sirGraphicsResult_t sirD3D11PlanTexture( const sirGraphicsTextureDesc_t *pDesc, const sirD3D11FormatSupport_t *pSupport,
+SIRGraphicsResult sirD3D11PlanTexture( const sirGraphicsTextureDesc_t *pDesc, const sirD3D11FormatSupport_t *pSupport,
                                          uint64_t nCommittedBytes, uint64_t nBudgetBytes, sirD3D11TexturePlan_t *pPlan ) noexcept;
-sirGraphicsResult_t sirD3D11ValidateTextureView( const sirGraphicsViewDesc_t *pView, const sirGraphicsTextureDesc_t *pTexture ) noexcept;
+SIRGraphicsResult sirD3D11ValidateTextureView( const sirGraphicsViewDesc_t *pView, const sirGraphicsTextureDesc_t *pTexture ) noexcept;
 
-#endif // __SIRENGINE_SIRD3D11TEXTUREVALIDATION_H__
+#endif // __SIR_D3_D11_TEXTUREVALIDATION_H__

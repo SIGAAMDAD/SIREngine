@@ -14,8 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRMEMORYCOLDPAGESTAGER_H__
-#define __SIRENGINE_SIRMEMORYCOLDPAGESTAGER_H__
+#ifndef __SIR_MEMORYCOLDPAGESTAGER_H__
+#define __SIR_MEMORYCOLDPAGESTAGER_H__
 
 #include <Core/SIRPCH.h>
 
@@ -62,4 +62,4 @@ private:
 	SIRMemoryManager *m_pManager;
 };
 
-#endif // __SIRENGINE_SIRMEMORYCOLDPAGESTAGER_H__
+#endif // __SIR_MEMORYCOLDPAGESTAGER_H__

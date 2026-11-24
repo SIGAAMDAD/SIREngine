@@ -37,7 +37,7 @@ static bool sirInputUpdateWinCursor( HWND hWindow, bool bCapture, bool *pCapture
 	if ( hWindow == nullptr ) {
 		return false;
 	}
-	RECT bounds = {};
+	RECT bounds {};
 	POINT origin = { 0, 0 };
 	if ( !GetClientRect( hWindow, &bounds ) || !ClientToScreen( hWindow, &origin ) ) {
 		return false;
@@ -53,14 +53,14 @@ static bool sirInputUpdateWinCursor( HWND hWindow, bool bCapture, bool *pCapture
 static LRESULT CALLBACK sirInputNativeWindowProc( HWND hWindow, UINT nMessage, WPARAM nWParam, LPARAM nLParam )
 {
 	if ( nMessage == WM_NCCREATE ) {
-		const CREATESTRUCTW *pCreate = ( const CREATESTRUCTW * )nLParam;
-		SetWindowLongPtrW( hWindow, GWLP_USERDATA, ( LONG_PTR )pCreate->lpCreateParams );
-		( ( SIRInputWindow * )pCreate->lpCreateParams )->adoptNativeWindow( ( uintptr_t )hWindow );
+		const CREATESTRUCTW *pCreate = static_cast<const CREATESTRUCTW *>(nLParam);
+		SetWindowLongPtrW( hWindow, GWLP_USERDATA, static_cast<LONG_PTR>(pCreate->lpCreateParams) );
+		static_cast<SIRInputWindow *>(pCreate->lpCreateParams)->adoptNativeWindow( static_cast<uintptr_t>(hWindow) );
 	}
 
-	SIRInputWindow *pWindow = ( SIRInputWindow * )GetWindowLongPtrW( hWindow, GWLP_USERDATA );
+	SIRInputWindow *pWindow = static_cast<SIRInputWindow *>(GetWindowLongPtrW( hWindow, GWLP_USERDATA ));
 	if ( pWindow != nullptr ) {
-		return ( LRESULT )pWindow->dispatchNativeMessage( nMessage, ( uintptr_t )nWParam, ( intptr_t )nLParam );
+		return static_cast<LRESULT>(pWindow->dispatchNativeMessage( nMessage, static_cast<uintptr_t>(nWParam), static_cast<intptr_t>(nLParam) ));
 	}
 	return DefWindowProcW( hWindow, nMessage, nWParam, nLParam );
 }
@@ -68,7 +68,7 @@ static LRESULT CALLBACK sirInputNativeWindowProc( HWND hWindow, UINT nMessage, W
 SIRInputWindow::SIRInputWindow( void ) noexcept
     : m_pInput( nullptr ), m_pDesktop( nullptr ), m_pDisplay( nullptr ), m_nWindow( 0 ), m_bOpen( false ), m_bAttached( false ),
       m_bRegistered( false ), m_bFocusLost( false ), m_bFocused( false ), m_bCursorCaptured( false ),
-      m_eCursorMode( SIR_INPUT_CURSOR_FREE ), m_pInputMethod( nullptr ), m_pInputContext( nullptr ), m_nInvisibleCursor( 0 )
+      m_eCursorMode( SIRInputCursorMode::SIR_INPUT_CURSOR_FREE ), m_pInputMethod( nullptr ), m_pInputContext( nullptr ), m_nInvisibleCursor( 0 )
 {
 }
 
@@ -79,11 +79,11 @@ SIRInputWindow::~SIRInputWindow( void )
 
 bool SIRInputWindow::open( SIRInputService& input, SIRInputBackend& desktop ) noexcept
 {
-	if ( m_pInput != nullptr || m_nWindow != 0 || desktop.id() != SIR_INPUT_WIN_RAW ) {
+	if ( m_pInput != nullptr || m_nWindow != 0 || desktop.id() != SIRInputBackendId::SIR_INPUT_WIN_RAW ) {
 		return false;
 	}
 
-	WNDCLASSW windowClass = {};
+	WNDCLASSW windowClass {};
 	windowClass.lpfnWndProc = sirInputNativeWindowProc;
 	windowClass.hCursor = LoadCursorA( nullptr, IDC_ARROW );
 	windowClass.hInstance = GetModuleHandleW( nullptr );
@@ -101,7 +101,7 @@ bool SIRInputWindow::open( SIRInputService& input, SIRInputBackend& desktop ) no
 		return false;
 	}
 
-	m_nWindow = ( uintptr_t )hWindow;
+	m_nWindow = static_cast<uintptr_t>(hWindow);
 	SIRWindowsRawBackend& raw = ( SIRWindowsRawBackend& )desktop;
 	if ( !raw.attachWindow( hWindow ) ) {
 		close();
@@ -128,7 +128,7 @@ void SIRInputWindow::adoptNativeWindow( uintptr_t nWindow ) noexcept
 
 intptr_t SIRInputWindow::dispatchNativeMessage( uint32_t nMessage, uintptr_t nWParam, intptr_t nLParam ) noexcept
 {
-	HWND hWindow = ( HWND )m_nWindow;
+	HWND hWindow = static_cast<HWND>(m_nWindow);
 	if ( nMessage == WM_CLOSE ) {
 		if ( hWindow != nullptr ) {
 			DestroyWindow( hWindow );
@@ -136,7 +136,7 @@ intptr_t SIRInputWindow::dispatchNativeMessage( uint32_t nMessage, uintptr_t nWP
 		return 0;
 	}
 	if ( nMessage == WM_DESTROY ) {
-		( void )sirInputUpdateWinCursor( hWindow, false, &m_bCursorCaptured );
+		static_cast<void>(sirInputUpdateWinCursor( hWindow, false, &m_bCursorCaptured ));
 		m_bFocused = false;
 		m_bOpen = false;
 		return 0;
@@ -144,29 +144,29 @@ intptr_t SIRInputWindow::dispatchNativeMessage( uint32_t nMessage, uintptr_t nWP
 	if ( nMessage == WM_NCDESTROY ) {
 		SetWindowLongPtrW( hWindow, GWLP_USERDATA, 0 );
 		m_nWindow = 0;
-		return ( intptr_t )DefWindowProcW( hWindow, nMessage, ( WPARAM )nWParam, ( LPARAM )nLParam );
+		return static_cast<intptr_t>(DefWindowProcW( hWindow, nMessage, static_cast<WPARAM>(nWParam), static_cast<LPARAM>(nLParam) ));
 	}
-	if ( nMessage == WM_SETCURSOR && m_eCursorMode != SIR_INPUT_CURSOR_FREE && LOWORD( nLParam ) == HTCLIENT ) {
+	if ( nMessage == WM_SETCURSOR && m_eCursorMode != SIRInputCursorMode::SIR_INPUT_CURSOR_FREE && LOWORD( nLParam ) == HTCLIENT ) {
 		SetCursor( nullptr );
 		return TRUE;
 	}
 	if ( ( nMessage == WM_SIZE || nMessage == WM_MOVE ) && m_bCursorCaptured ) {
-		( void )sirInputUpdateWinCursor( hWindow, true, &m_bCursorCaptured );
+		static_cast<void>(sirInputUpdateWinCursor( hWindow, true, &m_bCursorCaptured ));
 	}
 	if ( m_pInput != nullptr && m_pDesktop != nullptr ) {
 		if ( nMessage == WM_SETFOCUS ) {
 			m_bFocused = true;
 			m_pInput->text().setFocused( true );
 			m_pInput->setHapticsPaused( false );
-			if ( m_eCursorMode == SIR_INPUT_CURSOR_CAPTURED ) {
-				( void )sirInputUpdateWinCursor( hWindow, true, &m_bCursorCaptured );
+			if ( m_eCursorMode == SIRInputCursorMode::SIR_INPUT_CURSOR_CAPTURED ) {
+				static_cast<void>(sirInputUpdateWinCursor( hWindow, true, &m_bCursorCaptured ));
 			}
 		}
 		if ( nMessage == WM_KILLFOCUS ) {
 			m_bFocused = false;
 			m_pInput->text().setFocused( false );
 			m_pInput->setHapticsPaused( true );
-			( void )sirInputUpdateWinCursor( hWindow, false, &m_bCursorCaptured );
+			static_cast<void>(sirInputUpdateWinCursor( hWindow, false, &m_bCursorCaptured ));
 			m_bFocusLost = true;
 		}
 		if ( nMessage == WM_IME_STARTCOMPOSITION || nMessage == WM_IME_ENDCOMPOSITION ) {
@@ -176,30 +176,31 @@ intptr_t SIRInputWindow::dispatchNativeMessage( uint32_t nMessage, uintptr_t nWP
 			HIMC hContext = ImmGetContext( hWindow );
 			if ( hContext != nullptr ) {
 				const LONG nLength = ImmGetCompositionStringW( hContext, GCS_COMPSTR, nullptr, 0 );
-				if ( nLength >= 0 && ( uint32_t )nLength <= 2 * SIR_INPUT_PREEDIT_CAPACITY &&
-				     ( nLength % ( LONG )sizeof( uint16_t ) ) == 0 ) {
-					uint16_t szUnits[SIR_INPUT_PREEDIT_CAPACITY] = {};
+				if ( nLength >= 0 && static_cast<uint32_t>(nLength) <= 2 * SIR_INPUT_PREEDIT_CAPACITY &&
+				     ( nLength % static_cast<LONG>(sizeof( uint16_t ) ) == 0 )) {
+					uint16_t szUnits[SIR_INPUT_PREEDIT_CAPACITY];
+					memset( szUnits, 0, sizeof( szUnits ) );
 					const LONG nRead = nLength != 0 ? ImmGetCompositionStringW( hContext, GCS_COMPSTR, szUnits, nLength ) : 0;
 					const LONG nCaretUnits = ImmGetCompositionStringW( hContext, GCS_CURSORPOS, nullptr, 0 );
 					uint32_t nCaret = 0;
-					const uint32_t nUnits = ( uint32_t )nLength / sizeof( uint16_t );
-					const uint32_t nLimit = nCaretUnits < 0 ? 0 : ( uint32_t )nCaretUnits > nUnits ? nUnits : ( uint32_t )nCaretUnits;
+					const uint32_t nUnits = static_cast<uint32_t>(nLength) / sizeof( uint16_t );
+					const uint32_t nLimit = nCaretUnits < 0 ? 0 : static_cast<uint32_t>(nCaretUnits) > nUnits ? nUnits : static_cast<uint32_t>(nCaretUnits);
 					for ( uint32_t i = 0; i < nLimit; ++i ) {
 						if ( szUnits[i] < 0xdc00 || szUnits[i] > 0xdfff ) {
 							++nCaret;
 						}
 					}
 					if ( nRead == nLength ) {
-						( void )m_pInput->text().setPreeditUtf16( szUnits, nUnits, nCaret, 0 );
+						static_cast<void>(m_pInput->text().setPreeditUtf16( szUnits, nUnits, nCaret, 0 ));
 					}
 				}
 				ImmReleaseContext( hWindow, hContext );
 			}
 		}
 		if ( nMessage == WM_CHAR ) {
-			const uint16_t nUnit = ( uint16_t )nWParam;
+			const uint16_t nUnit = static_cast<uint16_t>(nWParam);
 			if ( nUnit >= 32 || nUnit == 10 || nUnit == 13 || nUnit == 9 ) {
-				( void )m_pInput->text().appendUtf16( nUnit );
+				static_cast<void>(m_pInput->text().appendUtf16( nUnit ));
 			}
 			return 0;
 		}
@@ -207,17 +208,17 @@ intptr_t SIRInputWindow::dispatchNativeMessage( uint32_t nMessage, uintptr_t nWP
 			if ( nWParam == UNICODE_NOCHAR ) {
 				return TRUE;
 			}
-			( void )m_pInput->text().appendCodepoint( ( uint32_t )nWParam );
+			static_cast<void>(m_pInput->text().appendCodepoint( static_cast<uint32_t>(nWParam) ));
 			return 0;
 		}
 		if ( nMessage == WM_INPUT || nMessage == WM_INPUT_DEVICE_CHANGE ) {
-			( ( SIRWindowsRawBackend * )m_pDesktop )->processMessage( *m_pInput, nMessage, nWParam, nLParam );
+			static_cast<SIRWindowsRawBackend *>(m_pDesktop)->processMessage( *m_pInput, nMessage, nWParam, nLParam );
 			if ( nMessage == WM_INPUT_DEVICE_CHANGE ) {
 				return 0;
 			}
 		}
 	}
-	return ( intptr_t )DefWindowProcW( hWindow, nMessage, ( WPARAM )nWParam, ( LPARAM )nLParam );
+	return static_cast<intptr_t>(DefWindowProcW( hWindow, nMessage, static_cast<WPARAM>(nWParam), static_cast<LPARAM>(nLParam) ));
 }
 
 bool SIRInputWindow::pump( SIRInputService& input ) noexcept
@@ -226,32 +227,32 @@ bool SIRInputWindow::pump( SIRInputService& input ) noexcept
 		return false;
 	}
 
-	MSG message = {};
-	while ( m_bOpen && PeekMessageW( &message, ( HWND )m_nWindow, 0, 0, PM_REMOVE ) ) {
+	MSG message {};
+	while ( m_bOpen && PeekMessageW( &message, static_cast<HWND>(m_nWindow), 0, 0, PM_REMOVE ) ) {
 		TranslateMessage( &message );
 		DispatchMessageW( &message );
 	}
 	if ( m_bFocusLost ) {
 		m_bFocusLost = false;
-		( void )input.loseBackendState( SIR_INPUT_WIN_RAW );
+		static_cast<void>(input.loseBackendState( SIRInputBackendId::SIR_INPUT_WIN_RAW ));
 	}
 	return m_bOpen;
 }
 
-bool SIRInputWindow::setCursorMode( sirInputCursorMode_t eMode ) noexcept
+bool SIRInputWindow::setCursorMode( SIRInputCursorMode eMode ) noexcept
 {
-	if ( eMode > SIR_INPUT_CURSOR_CAPTURED || !m_bOpen ) {
+	if ( eMode > SIRInputCursorMode::SIR_INPUT_CURSOR_CAPTURED || !m_bOpen ) {
 		return false;
 	}
-	const bool bCapture = m_bFocused && eMode == SIR_INPUT_CURSOR_CAPTURED;
-	if ( !sirInputUpdateWinCursor( ( HWND )m_nWindow, bCapture, &m_bCursorCaptured ) ) {
+	const bool bCapture = m_bFocused && eMode == SIRInputCursorMode::SIR_INPUT_CURSOR_CAPTURED;
+	if ( !sirInputUpdateWinCursor( static_cast<HWND>(m_nWindow), bCapture, &m_bCursorCaptured ) ) {
 		return false;
 	}
 	m_eCursorMode = eMode;
 	return true;
 }
 
-sirInputCursorMode_t SIRInputWindow::cursorMode( void ) const noexcept
+SIRInputCursorMode SIRInputWindow::cursorMode( void ) const noexcept
 {
 	return m_eCursorMode;
 }
@@ -275,9 +276,9 @@ bool SIRInputWindow::isOpen( void ) const noexcept
 
 void SIRInputWindow::close( void ) noexcept
 {
-	( void )sirInputUpdateWinCursor( ( HWND )m_nWindow, false, &m_bCursorCaptured );
+	static_cast<void>(sirInputUpdateWinCursor( static_cast<HWND>(m_nWindow), false, &m_bCursorCaptured ));
 	if ( m_nWindow != 0 ) {
-		DestroyWindow( ( HWND )m_nWindow );
+		DestroyWindow( static_cast<HWND>(m_nWindow) );
 		m_nWindow = 0;
 	}
 	if ( m_bRegistered ) {
@@ -286,7 +287,7 @@ void SIRInputWindow::close( void ) noexcept
 	m_bRegistered = false;
 	m_bFocusLost = false;
 	m_bFocused = false;
-	m_eCursorMode = SIR_INPUT_CURSOR_FREE;
+	m_eCursorMode = SIRInputCursorMode::SIR_INPUT_CURSOR_FREE;
 	m_bOpen = false;
 	m_bAttached = false;
 	m_pInput = nullptr;

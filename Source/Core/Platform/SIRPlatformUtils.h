@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRPLATFORMUTILS_H__
-#define __SIRENGINE_SIRPLATFORMUTILS_H__
+#ifndef __SIR_PLATFORMUTILS_H__
+#define __SIR_PLATFORMUTILS_H__
 
 #include <Core/SIRPCH.h>
 
@@ -42,7 +42,7 @@ public:
 	static bool commitVirtualMemory( void *pAddress, size_t nBytes ) noexcept;
 	static bool decommitVirtualMemory( void *pAddress, size_t nBytes ) noexcept;
 	static bool releaseVirtualMemory( void *pAddress, size_t nBytes ) noexcept;
-	static bool protectVirtualMemory( void *pAddress, size_t nBytes, sirMemoryProtection_t eProtection ) noexcept;
+	static bool protectVirtualMemory( void *pAddress, size_t nBytes, SIRMemoryProtection eProtection ) noexcept;
 	static void *allocatePages( size_t nBytes ) noexcept;
 	static bool freePages( void *pAddress, size_t nBytes ) noexcept;
 
@@ -58,4 +58,4 @@ public:
 	static void sleepThread( uint32_t nMilliseconds ) noexcept;
 };
 
-#endif // __SIRENGINE_SIRPLATFORMUTILS_H__
+#endif // __SIR_PLATFORMUTILS_H__

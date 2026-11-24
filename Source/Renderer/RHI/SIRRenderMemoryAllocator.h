@@ -13,10 +13,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRRENDERMEMORYALLOCATOR_H__
-#define __SIRENGINE_SIRRENDERMEMORYALLOCATOR_H__
+#ifndef __SIR_RENDERMEMORYALLOCATOR_H__
+#define __SIR_RENDERMEMORYALLOCATOR_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -32,15 +32,15 @@ of merchantability, fitness for a particular purpose and noninfringement.
 class SIRRenderMemoryAllocator
 {
 public:
-	virtual sirGraphicsResult_t queryBufferRequirements( const sirGraphicsBufferDesc_t& desc,
+	virtual SIRGraphicsResult queryBufferRequirements( const sirGraphicsBufferDesc_t& desc,
 	                                                     sirRenderMemoryRequirements_t *pInfo ) const noexcept = 0;
-	virtual sirGraphicsResult_t queryTextureRequirements( const sirGraphicsTextureDesc_t& desc,
+	virtual SIRGraphicsResult queryTextureRequirements( const sirGraphicsTextureDesc_t& desc,
 	                                                      sirRenderMemoryRequirements_t *pInfo ) const noexcept = 0;
-	virtual sirGraphicsResult_t queryResourceResidency( sirGraphicsHandle_t hResource, sirRenderMemoryStatus_t *pInfo ) const noexcept = 0;
-	virtual sirGraphicsResult_t queryBudget( sirGraphicsMemoryBudget_t *pBudget ) const noexcept = 0;
+	virtual SIRGraphicsResult queryResourceResidency( sirGraphicsHandle_t hResource, sirRenderMemoryStatus_t *pInfo ) const noexcept = 0;
+	virtual SIRGraphicsResult queryBudget( sirGraphicsMemoryBudget_t *pBudget ) const noexcept = 0;
 
 protected:
 	virtual ~SIRRenderMemoryAllocator( void ) noexcept = default;
 };
 
-#endif // __SIRENGINE_SIRRENDERMEMORYALLOCATOR_H__
+#endif // __SIR_RENDERMEMORYALLOCATOR_H__

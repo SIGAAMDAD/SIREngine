@@ -67,16 +67,16 @@ static bool t3d_vt_pack_runtime_raw_clusters_only( const t3dVTPackBaselineView_t
 
 #define T3D_VT_RUNTIME_ADD( count, type )                                                                                                  \
 	do {                                                                                                                                   \
-		if ( ( uint64_t )( count ) > ( UINT64_MAX - nBytes ) / sizeof( type ) ) {                                                          \
+		if ( static_cast<uint64_t>( count ) > ( UINT64_MAX - nBytes ) / sizeof( type ) ) {                                                          \
 			return false;                                                                                                                  \
 		}                                                                                                                                  \
-		nBytes = t3dAlignUpOrZero<uint64_t>( nBytes, 64u ) + ( uint64_t )( count ) * sizeof( type );                                       \
+		nBytes = t3dAlignUpOrZero<uint64_t>( nBytes, 64u ) + static_cast<uint64_t>(count * sizeof(  type  ));                                       \
 	} while ( 0 )
 
 #define T3D_VT_RUNTIME_TAKE( field, count, type )                                                                                          \
 	do {                                                                                                                                   \
-		Candidate.field = ( type * )( pBase + nOffset );                                                                                   \
-		nOffset = t3dAlignUpOrZero<uint64_t>( nOffset + ( uint64_t )( count ) * sizeof( type ), 64u );                                     \
+		Candidate.field = static_cast<type *>( pBase + nOffset );                                                                                   \
+		nOffset = t3dAlignUpOrZero<uint64_t>( nOffset + static_cast<uint64_t>(count * sizeof(  type  )), 64u );                                     \
 	} while ( 0 )
 
 static bool t3d_vt_pack_runtime_open_cold( const void *const pPackage, const uint64_t nPackageBytes,
@@ -115,16 +115,16 @@ static bool t3d_vt_pack_runtime_open_cold( const void *const pPackage, const uin
 		return false;
 	}
 
-	void *const pBlock = rAllocator.pAllocate( rAllocator.pUser, ( size_t )nBytes, 64u );
+	void *const pBlock = rAllocator.pAllocate( rAllocator.pUser, static_cast<size_t>(nBytes), 64u );
 	if ( pBlock == NULL ) {
 		return false;
 	}
-	memset( pBlock, 0, ( size_t )nBytes );
+	memset( pBlock, 0, static_cast<size_t>(nBytes) );
 	t3dVTPackRuntimeStorage_t Candidate;
 	t3d_vt_pack_runtime_clear( Candidate );
 	Candidate.pOwnedBlock = pBlock;
 	Candidate.nOwnedBytes = nBytes;
-	uint8_t *const pBase = ( uint8_t * )pBlock;
+	uint8_t *const pBase = static_cast<uint8_t *>(pBlock);
 	uint64_t nOffset = 0u;
 	Candidate.pPackageBytes = pBase;
 	Candidate.nPackageBytes = bMetadataOnly ? Header.m_nPackageBytes : nPackageBytes;
@@ -132,7 +132,7 @@ static bool t3d_vt_pack_runtime_open_cold( const void *const pPackage, const uin
 	if ( pFileSource != NULL ) {
 		pFileSource->nGeneration = Header.m_nPackageGeneration;
 	}
-	memcpy( Candidate.pPackageBytes, pPackage, ( size_t )nPackageBytes );
+	memcpy( Candidate.pPackageBytes, pPackage, static_cast<size_t>(nPackageBytes) );
 	nOffset = t3dAlignUpOrZero<uint64_t>( nPackageBytes, 64u );
 	if ( !( bMetadataOnly
 	            ? t3d_vt_pack_open_metadata_view( Candidate.pPackageBytes, nPackageBytes, Header.m_nPackageBytes, Candidate.PackViewV1 )
@@ -169,14 +169,15 @@ static bool t3d_vt_pack_runtime_open_cold( const void *const pPackage, const uin
 	// Two 64x32 COMPOSED roots share one V1 128x64 tail slot. Retain the
 	// original 64-row alignment so resource planning, shader coordinates and
 	// the existing RD tail uploader need no ABI or descriptor changes.
-	uint32_t nFamilyTailHalfSlots[T3D_VT_PHYSICAL_FORMAT_COUNT] = {};
+	uint32_t nFamilyTailHalfSlots[T3D_VT_PHYSICAL_FORMAT_COUNT];
+	memset( nFamilyTailHalfSlots, 0, sizeof( nFamilyTailHalfSlots ) );
 	for ( uint32_t iAllocation = 0u; iAllocation < Header.m_nAllocationCount; ++iAllocation ) {
 		const t3dVTPackAllocationRecord_t& SourceAllocation = Candidate.PackViewV1.m_pAllocations[iAllocation];
-		const t3dVTConsumer_t Consumer = ( t3dVTConsumer_t )SourceAllocation.m_nConsumer;
+		const t3dVTConsumer_t Consumer = static_cast<t3dVTConsumer_t>(SourceAllocation.m_nConsumer);
 		const uint32_t nRuntimeBase = t3d_vt_runtime_allocation_base( iAllocation );
 		for ( uint32_t iChannel = 0u; iChannel < T3D_VT_LOGICAL_CHANNEL_COUNT; ++iChannel ) {
 			uint32_t nSlot = T3D_VT_INVALID_SLOT;
-			if ( !t3d_vt_runtime_slot_for_channel( Consumer, ( t3dVTLogicalChannel_t )iChannel, nSlot ) ) {
+			if ( !t3d_vt_runtime_slot_for_channel( Consumer, static_cast<t3dVTLogicalChannel_t>(iChannel), nSlot ) ) {
 				continue;
 			}
 			const uint32_t nRuntimeId = nRuntimeBase + nSlot;
@@ -223,14 +224,14 @@ static bool t3d_vt_pack_runtime_open_cold( const void *const pPackage, const uin
 			Legacy.nMip0HeightPages = SourceChannel.m_nMip0HeightPages;
 			Legacy.nMipCount = SourceChannel.m_nMipCount;
 			Legacy.nChannel =
-			    ( uint16_t )t3d_vt_logical_channel_physical_family( ( t3dVTLogicalChannel_t )iChannel, SourceChannel.m_nFlags );
+			    static_cast<uint16_t>(t3d_vt_logical_channel_physical_family( static_cast<t3dVTLogicalChannel_t>(iChannel), SourceChannel.m_nFlags ));
 			Legacy.nFlags = SourceChannel.m_nFlags;
 			Legacy.nRootPage = SourceChannel.m_nPageCount != 0u ? SourceChannel.m_nBaseVirtualPage + SourceChannel.m_nPageCount - 1u : 0u;
 			Legacy.nReserved1 = SourceAllocation.m_nContentId;
 
 			t3dVTTailMetadata_t& RuntimeTail = Candidate.pRuntimeTails[nRuntimeId];
 			const uint32_t nFamily =
-			    ( uint32_t )t3d_vt_logical_channel_physical_family( ( t3dVTLogicalChannel_t )iChannel, SourceChannel.m_nFlags );
+			    static_cast<uint32_t>(t3d_vt_logical_channel_physical_family( static_cast<t3dVTLogicalChannel_t>(iChannel), SourceChannel.m_nFlags ));
 			// Pack only COMPOSED chains which fit the left/right half. Other
 			// consumers retain their full 128x64 layout and a half-slot gap
 			// is deliberately skipped before them to prevent any overlap.
@@ -264,9 +265,9 @@ static bool t3d_vt_pack_runtime_open_cold( const void *const pPackage, const uin
 			rAllocator.pFree( rAllocator.pUser, pBlock );
 			return false;
 		}
-		const t3dVTConsumer_t Consumer = ( t3dVTConsumer_t )Candidate.PackViewV1.m_pAllocations[SourcePage.m_nAllocationId].m_nConsumer;
+		const t3dVTConsumer_t Consumer = static_cast<t3dVTConsumer_t>(Candidate.PackViewV1.m_pAllocations)[SourcePage.m_nAllocationId].m_nConsumer;
 		uint32_t nSlot = T3D_VT_INVALID_SLOT;
-		if ( !t3d_vt_runtime_slot_for_channel( Consumer, ( t3dVTLogicalChannel_t )SourcePage.m_nChannel, nSlot ) ) {
+		if ( !t3d_vt_runtime_slot_for_channel( Consumer, static_cast<t3dVTLogicalChannel_t>(SourcePage.m_nChannel), nSlot ) ) {
 			rAllocator.pFree( rAllocator.pUser, pBlock );
 			return false;
 		}
@@ -276,7 +277,7 @@ static bool t3d_vt_pack_runtime_open_cold( const void *const pPackage, const uin
 		RuntimePage.nAllocationId = t3d_vt_runtime_allocation_base( SourcePage.m_nAllocationId ) + nSlot;
 		RuntimePage.nPayloadId = SourcePage.m_nPayloadId;
 		RuntimePage.nMip = SourcePage.m_nMip;
-		RuntimePage.nChannel = ( uint16_t )Candidate.PackViewV1.m_pPayloads[SourcePage.m_nPayloadId].m_nFormat;
+		RuntimePage.nChannel = static_cast<uint16_t>(Candidate.PackViewV1.m_pPayloads[SourcePage.m_nPayloadId].m_nFormat);
 		RuntimePage.nFlags = SourcePage.m_nFlags;
 		RuntimePage.nGeneration = SourcePage.m_nGeneration;
 		RuntimePage.nReserved1 = SourcePage.m_nContentId;
@@ -295,7 +296,7 @@ static bool t3d_vt_pack_runtime_open_cold( const void *const pPackage, const uin
 		RuntimePayload.nOffset = nPayloadOffset;
 		RuntimePayload.nBytes = Payload.m_nDecodedBytes;
 		RuntimePayload.nChannel = Payload.m_nFormat;
-		RuntimePayload.nContentId = ( uint32_t )( Payload.m_nContentSignature ^ ( Payload.m_nContentSignature >> 32u ) );
+		RuntimePayload.nContentId = static_cast<uint32_t>(  Payload.m_nContentSignature ^ ( Payload.m_nContentSignature >> 32u )  );
 		RuntimePayload.nChecksum = Payload.m_nChecksum;
 		t3dVTPayloadRecord_t& LegacyPayload = Candidate.pLegacyPayloads[iPayload];
 		LegacyPayload.nOffset = nPayloadOffset;
@@ -345,8 +346,8 @@ static bool t3d_vt_pack_runtime_find_quality_view( const t3dVTDatabaseView_t& rD
 	while ( nLow < nHigh ) {
 		const uint32_t nMid = nLow + ( nHigh - nLow ) / 2u;
 		const t3dVTPackQualityView_t& View = rDatabase.pV1QualityViews[nMid];
-		const uint64_t nKey = ( ( uint64_t )View.m_nAllocationId << 8u ) | View.m_nProfile;
-		const uint64_t nWanted = ( ( uint64_t )nAllocationId << 8u ) | nProfile;
+		const uint64_t nKey = ( static_cast<uint64_t>(View.m_nAllocationId) << 8u ) | View.m_nProfile;
+		const uint64_t nWanted = ( static_cast<uint64_t>(nAllocationId) << 8u ) | nProfile;
 		if ( nKey < nWanted )
 			nLow = nMid + 1u;
 		else
@@ -392,7 +393,7 @@ bool t3d_vt_pack_runtime_apply_quality_profile( const t3dVTDatabaseView_t& rData
 		++rStats.nAllocationsByResolvedProfile[nResolvedProfile];
 		if ( nResolvedProfile != nRequestedProfile )
 			++rStats.nFallbackAllocationCount;
-		const t3dVTConsumer_t Consumer = ( t3dVTConsumer_t )Source.m_nConsumer;
+		const t3dVTConsumer_t Consumer = static_cast<t3dVTConsumer_t>(Source.m_nConsumer);
 		for ( uint32_t nSlot = 0u; nSlot < T3D_VT_RUNTIME_CHANNELS_PER_ALLOCATION; ++nSlot ) {
 			t3dVTLogicalChannel_t Channel = T3D_VT_LOGICAL_CHANNEL_ALBEDO;
 			if ( !t3d_vt_logical_channel_for_runtime_slot( Consumer, nSlot, Channel ) ) {
@@ -409,7 +410,7 @@ bool t3d_vt_pack_runtime_apply_quality_profile( const t3dVTDatabaseView_t& rData
 			if ( nBaseMip == T3D_VT_PACK_INVALID_MIP || nBaseMip > nMaxMip || nMaxMip >= Runtime.m_nMipCount || nBaseMip > 0x0fu ) {
 				return false;
 			}
-			Runtime.m_nFlags |= ( uint16_t )( nBaseMip << T3D_VT_ALLOCATION_QUALITY_BASE_MIP_SHIFT );
+			Runtime.m_nFlags |= static_cast<uint16_t>( nBaseMip << T3D_VT_ALLOCATION_QUALITY_BASE_MIP_SHIFT );
 		}
 	}
 	return true;
@@ -438,13 +439,13 @@ bool t3d_vt_pack_runtime_open_file_cold( const godot::String& rPath, const t3dVT
 	if ( rStorage.pOwnedBlock != NULL ) {
 		return false;
 	}
-	t3dVTFileSource_s *const pSource = new ( std::nothrow ) t3dVTFileSource_s();
+	t3dVTFileSource_s *const pSource = new static_cast<std::nothrow>(t3dVTFileSource_s());
 	if ( pSource == NULL ) {
 		return false;
 	}
 	godot::PackedByteArray metadata;
 	if ( !t3d_vt_file_source_open_cold( rPath, *pSource, metadata, false ) ||
-	     !t3d_vt_pack_runtime_open_cold( metadata.ptr(), ( uint64_t )metadata.size(), rAllocator, rStorage, true, pSource ) ) {
+	     !t3d_vt_pack_runtime_open_cold( metadata.ptr(), static_cast<uint64_t>(metadata.size(), rAllocator, rStorage, true, pSource ) )) {
 		t3d_vt_file_source_close( *pSource );
 		delete pSource;
 		return false;
@@ -542,8 +543,8 @@ bool t3d_vt_pack_runtime_copy_tail_mip_chain( const t3dVTDatabaseView_t& rDataba
 	const uint32_t nSourceBlockY = T3D_VT_PAGE_GUTTER / nBlockHeight;
 	const uint32_t nDestinationBlockX = Tail.m_nAtlasX / nBlockWidth;
 	const uint32_t nDestinationBlockY = Tail.m_nAtlasY / nBlockHeight;
-	const uint64_t nRequiredSourceBytes = ( uint64_t )nSourceBlocksWide * nSourceBlocksHigh * nBlockBytes;
-	const uint64_t nRequiredDestinationBytes = ( uint64_t )nDestinationBlocksWide * nDestinationBlocksHigh * nBlockBytes;
+	const uint64_t nRequiredSourceBytes = static_cast<uint64_t>(nSourceBlocksWide) * nSourceBlocksHigh * nBlockBytes;
+	const uint64_t nRequiredDestinationBytes = static_cast<uint64_t>(nDestinationBlocksWide) * nDestinationBlocksHigh * nBlockBytes;
 	if ( nRequiredSourceBytes != Payload.nBytes || nRequiredDestinationBytes != nDestinationBytes ||
 	     nSourceBlockX + nCopyBlocksWide > nSourceBlocksWide || nSourceBlockY + nCopyBlocksHigh > nSourceBlocksHigh ||
 	     nDestinationBlockX + nCopyBlocksWide > nDestinationBlocksWide || nDestinationBlockY + nCopyBlocksHigh > nDestinationBlocksHigh ) {
@@ -554,17 +555,17 @@ bool t3d_vt_pack_runtime_copy_tail_mip_chain( const t3dVTDatabaseView_t& rDataba
 	if ( rDatabase.pPayloadData == NULL ) {
 		if ( Payload.nBytes > sizeof( scratch ) ||
 		     !t3d_vt_file_source_read_payload( *const_cast<t3dVTFileSource_s *>( rDatabase.pFileSource ), Payload.nOffset, scratch,
-		                                       ( uint32_t )Payload.nBytes ) ||
+		                                       static_cast<uint32_t>(Payload.nBytes) ) ||
 		     t3d_vt_pack_checksum32( scratch, Payload.nBytes ) != Payload.nChecksum ) {
 			return false;
 		}
 	}
-	const uint64_t nRowBytes = ( uint64_t )nCopyBlocksWide * nBlockBytes;
+	const uint64_t nRowBytes = static_cast<uint64_t>(nCopyBlocksWide) * nBlockBytes;
 	for ( uint32_t iRow = 0u; iRow < nCopyBlocksHigh; ++iRow ) {
-		const uint64_t nSourceOffset = ( ( uint64_t )( nSourceBlockY + iRow ) * nSourceBlocksWide + nSourceBlockX ) * nBlockBytes;
+		const uint64_t nSourceOffset = ( static_cast<uint64_t>( nSourceBlockY + iRow ) * nSourceBlocksWide + nSourceBlockX ) * nBlockBytes;
 		const uint64_t nDestinationOffset =
-		    ( ( uint64_t )( nDestinationBlockY + iRow ) * nDestinationBlocksWide + nDestinationBlockX ) * nBlockBytes;
-		memcpy( pDestination + nDestinationOffset, pSource + nSourceOffset, ( size_t )nRowBytes );
+		    ( static_cast<uint64_t>( nDestinationBlockY + iRow ) * nDestinationBlocksWide + nDestinationBlockX ) * nBlockBytes;
+		memcpy( pDestination + nDestinationOffset, pSource + nSourceOffset, static_cast<size_t>(nRowBytes) );
 	}
 	return true;
 }

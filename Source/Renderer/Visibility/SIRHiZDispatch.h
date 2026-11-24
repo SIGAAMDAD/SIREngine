@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRHIZDISPATCH_H__
-#define __SIRENGINE_SIRHIZDISPATCH_H__
+#ifndef __SIR_HIZDISPATCH_H__
+#define __SIR_HIZDISPATCH_H__
 
 #include <Core/SIRPCH.h>
 
@@ -54,7 +54,7 @@ typedef struct sirHiZDepthInput_s
 {
 	sirGraphicsTextureDesc_t texture;
 	sirGraphicsRect_t viewport;
-	sirVisibilityDepthConvention_t eConvention;
+	SIRVisibilityDepthConvention eConvention;
 } sirHiZDepthInput_t;
 
 typedef struct sirHiZDispatchPlan_s
@@ -70,10 +70,10 @@ typedef struct sirHiZDispatchPlan_s
 // Multisampled depth returns UNSUPPORTED until the device supplies an explicit
 // reverse-Z conservative resolve (min across samples) into a single-sample
 // view. Invalid input leaves the caller's plan untouched.
-sirGraphicsResult_t sirHiZPlanDispatches( const sirHiZLayout_t& layout, const sirHiZDepthInput_t& depth,
+SIRGraphicsResult sirHiZPlanDispatches( const sirHiZLayout_t& layout, const sirHiZDepthInput_t& depth,
                                           sirHiZDispatchPlan_t *pPlan ) noexcept;
 
 static_assert( sizeof( sirHiZShaderParameters_t ) == 32, "Hi-Z HLSL b0 layout changed" );
 static_assert( offsetof( sirHiZShaderParameters_t, nSourceOriginX ) == 16, "Hi-Z shader origin offset changed" );
 
-#endif // __SIRENGINE_SIRHIZDISPATCH_H__
+#endif // __SIR_HIZDISPATCH_H__

@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRINPUTTEXT_H__
-#define __SIRENGINE_SIRINPUTTEXT_H__
+#ifndef __SIR_INPUTTEXT_H__
+#define __SIR_INPUTTEXT_H__
 
 #include <Core/SIRPCH.h>
 
@@ -73,4 +73,4 @@ private:
 	bool m_bCollecting;
 };
 
-#endif // __SIRENGINE_SIRINPUTTEXT_H__
+#endif // __SIR_INPUTTEXT_H__

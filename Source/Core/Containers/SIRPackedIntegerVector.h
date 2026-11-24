@@ -1,6 +1,6 @@
 /* SIREngine MPLv2 - sealed fixed-bit-width integer vector. */
-#ifndef __SIRENGINE_SIRPACKEDINTEGERVECTOR_H__
-#define __SIRENGINE_SIRPACKEDINTEGERVECTOR_H__
+#ifndef __SIR_PACKEDINTEGERVECTOR_H__
+#define __SIR_PACKEDINTEGERVECTOR_H__
 #include <Core/SIRPCH.h>
 #include <Core/Containers/SIRVector.h>
 #include <stdint.h>
@@ -19,7 +19,7 @@ public:
 			return 0;
 		}
 		const uint64_t nWords = ( nCount * nBits + 63 ) / 64;
-		return nWords > UINT32_MAX ? 0 : ( uint32_t )nWords;
+		return nWords > UINT32_MAX ? 0 : static_cast<uint32_t>(nWords);
 	}
 	static uint32_t read32( const uint8_t *pBytes ) noexcept
 	{
@@ -27,18 +27,18 @@ public:
 	}
 	static uint64_t read64( const uint8_t *pBytes ) noexcept
 	{
-		return ( uint64_t )read32( pBytes ) | ( ( uint64_t )read32( pBytes + 4 ) << 32 );
+		return static_cast<uint64_t>(read32( pBytes )) | ( static_cast<uint64_t>(read32( pBytes + 4 )) << 32 );
 	}
 	static void write32( uint8_t *pBytes, uint32_t nValue ) noexcept
 	{
 		for ( uint32_t i = 0; i < 4; ++i ) {
-			pBytes[i] = ( uint8_t )( nValue >> ( i * 8 ) );
+			pBytes[i] = static_cast<uint8_t>(  nValue >> ( i * 8 )  );
 		}
 	}
 	static void write64( uint8_t *pBytes, uint64_t nValue ) noexcept
 	{
-		write32( pBytes, ( uint32_t )nValue );
-		write32( pBytes + 4, ( uint32_t )( nValue >> 32 ) );
+		write32( pBytes, static_cast<uint32_t>(nValue) );
+		write32( pBytes + 4, static_cast<uint32_t>( nValue >> 32 ) );
 	}
 };
 
@@ -51,25 +51,25 @@ private:
 
 public:
 	SIRPackedIntegerReadView( void ) noexcept = default;
-	static sirContainerResult_t tryDecode( const uint8_t *pBytes, uint64_t nBytes, SIRPackedIntegerReadView *pView ) noexcept
+	static SIRContainerResult tryDecode( const uint8_t *pBytes, uint64_t nBytes, SIRPackedIntegerReadView *pView ) noexcept
 	{
 		if ( pBytes == nullptr || pView == nullptr || nBytes < SIRPackedIntegerEncoding::HEADER_BYTES ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		if ( SIRPackedIntegerEncoding::read32( pBytes ) != SIRPackedIntegerEncoding::MAGIC || pBytes[4] != 1 || pBytes[5] == 0 ||
 		     pBytes[5] > 64 || pBytes[6] != 0 || pBytes[7] != 0 ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		const uint32_t nCount = SIRPackedIntegerEncoding::read32( pBytes + 8 );
 		const uint32_t nWords = SIRPackedIntegerEncoding::read32( pBytes + 12 );
 		if ( nWords != SIRPackedIntegerEncoding::countWords( nCount, pBytes[5] ) ||
-		     nBytes != ( uint64_t )SIRPackedIntegerEncoding::HEADER_BYTES + ( uint64_t )nWords * 8 ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+		     nBytes != static_cast<uint64_t>(SIRPackedIntegerEncoding::HEADER_BYTES) + static_cast<uint64_t>(nWords) * 8 ) {
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		pView->m_pWords = pBytes + SIRPackedIntegerEncoding::HEADER_BYTES;
 		pView->m_nCount = nCount;
 		pView->m_nBits = pBytes[5];
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 	uint32_t getSize( void ) const noexcept
 	{
@@ -84,9 +84,9 @@ public:
 		if ( iIndex >= m_nCount || pValue == nullptr || m_pWords == nullptr ) {
 			return false;
 		}
-		const uint64_t nBitOffset = ( uint64_t )iIndex * m_nBits;
+		const uint64_t nBitOffset = static_cast<uint64_t>(iIndex) * m_nBits;
 		const uint64_t nWord = nBitOffset / 64;
-		const uint32_t nShift = ( uint32_t )( nBitOffset & 63 );
+		const uint32_t nShift = static_cast<uint32_t>( nBitOffset & 63 );
 		uint64_t nValue = SIRPackedIntegerEncoding::read64( m_pWords + nWord * 8 ) >> nShift;
 		if ( m_nBits > 64 - nShift ) {
 			nValue |= SIRPackedIntegerEncoding::read64( m_pWords + ( nWord + 1 ) * 8 ) << ( 64 - nShift );
@@ -126,35 +126,35 @@ public:
 		return m_nBits;
 	}
 
-	sirContainerResult_t tryInitialize( uint8_t nBits, uint32_t nReserveCount = 0 )
+	SIRContainerResult tryInitialize( uint8_t nBits, uint32_t nReserveCount = 0 )
 	{
 		if ( m_nBits != 0 || nBits == 0 || nBits > 64 ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		const uint32_t nWords = SIRPackedIntegerEncoding::countWords( nReserveCount, nBits );
-		const sirContainerResult_t eResult = m_Words.tryReserve( nWords );
-		if ( eResult == SIR_CONTAINER_OK ) {
+		const SIRContainerResult eResult = m_Words.tryReserve( nWords );
+		if ( eResult == SIRContainerResult::SIR_CONTAINER_OK ) {
 			m_nBits = nBits;
 		}
 		return eResult;
 	}
-	sirContainerResult_t tryAppend( uint64_t nValue )
+	SIRContainerResult tryAppend( uint64_t nValue )
 	{
 		if ( m_nBits == 0 || m_bSealed || m_nCount == UINT32_MAX ) {
-			return SIR_CONTAINER_CLOSED;
+			return SIRContainerResult::SIR_CONTAINER_CLOSED;
 		}
 		if ( m_nBits != 64 && nValue > ( ( uint64_t( 1 ) << m_nBits ) - 1 ) ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
-		const uint64_t nBitOffset = ( uint64_t )m_nCount * m_nBits;
-		const uint32_t iWord = ( uint32_t )( nBitOffset >> 6 );
-		const uint32_t nShift = ( uint32_t )( nBitOffset & 63 );
-		const uint32_t nNeeded = SIRPackedIntegerEncoding::countWords( ( uint64_t )m_nCount + 1, m_nBits );
+		const uint64_t nBitOffset = static_cast<uint64_t>(m_nCount) * m_nBits;
+		const uint32_t iWord = static_cast<uint32_t>( nBitOffset >> 6 );
+		const uint32_t nShift = static_cast<uint32_t>( nBitOffset & 63 );
+		const uint32_t nNeeded = SIRPackedIntegerEncoding::countWords( static_cast<uint64_t>(m_nCount) + 1, m_nBits );
 		if ( nNeeded == 0 ) {
-			return SIR_CONTAINER_SIZE_OVERFLOW;
+			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
-		const sirContainerResult_t eResult = m_Words.tryResize( nNeeded );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		const SIRContainerResult eResult = m_Words.tryResize( nNeeded );
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		m_Words[iWord] |= nValue << nShift;
@@ -162,16 +162,16 @@ public:
 			m_Words[iWord + 1] |= nValue >> ( 64 - nShift );
 		}
 		++m_nCount;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 	bool tryGet( uint32_t iIndex, uint64_t *pValue ) const noexcept
 	{
 		if ( iIndex >= m_nCount || pValue == nullptr ) {
 			return false;
 		}
-		const uint64_t nBitOffset = ( uint64_t )iIndex * m_nBits;
-		const uint32_t iWord = ( uint32_t )( nBitOffset >> 6 );
-		const uint32_t nShift = ( uint32_t )( nBitOffset & 63 );
+		const uint64_t nBitOffset = static_cast<uint64_t>(iIndex) * m_nBits;
+		const uint32_t iWord = static_cast<uint32_t>( nBitOffset >> 6 );
+		const uint32_t nShift = static_cast<uint32_t>( nBitOffset & 63 );
 		uint64_t nValue = m_Words[iWord] >> nShift;
 		if ( m_nBits > 64 - nShift ) {
 			nValue |= m_Words[iWord + 1] << ( 64 - nShift );
@@ -182,22 +182,22 @@ public:
 		*pValue = nValue;
 		return true;
 	}
-	sirContainerResult_t seal( void ) noexcept
+	SIRContainerResult seal( void ) noexcept
 	{
 		if ( m_nBits == 0 || m_bSealed ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		m_bSealed = true;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 	uint64_t getEncodedBytes( void ) const noexcept
 	{
-		return SIRPackedIntegerEncoding::HEADER_BYTES + ( uint64_t )m_Words.getSize() * 8;
+		return SIRPackedIntegerEncoding::HEADER_BYTES + static_cast<uint64_t>(m_Words.getSize()) * 8;
 	}
-	sirContainerResult_t tryEncode( uint8_t *pBytes, uint64_t nBytes ) const noexcept
+	SIRContainerResult tryEncode( uint8_t *pBytes, uint64_t nBytes ) const noexcept
 	{
 		if ( !m_bSealed || pBytes == nullptr || nBytes != getEncodedBytes() ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		SIRPackedIntegerEncoding::write32( pBytes, SIRPackedIntegerEncoding::MAGIC );
 		pBytes[4] = 1;
@@ -207,10 +207,10 @@ public:
 		SIRPackedIntegerEncoding::write32( pBytes + 8, m_nCount );
 		SIRPackedIntegerEncoding::write32( pBytes + 12, m_Words.getSize() );
 		for ( uint32_t i = 0; i < m_Words.getSize(); ++i ) {
-			SIRPackedIntegerEncoding::write64( pBytes + SIRPackedIntegerEncoding::HEADER_BYTES + ( uint64_t )i * 8, m_Words[i] );
+			SIRPackedIntegerEncoding::write64( pBytes + SIRPackedIntegerEncoding::HEADER_BYTES + static_cast<uint64_t>(i) * 8, m_Words[i] );
 		}
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 };
 
-#endif // __SIRENGINE_SIRPACKEDINTEGERVECTOR_H__
+#endif // __SIR_PACKEDINTEGERVECTOR_H__

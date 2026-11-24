@@ -12,8 +12,8 @@ express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIRANIMATIONSAMPLINGJOBS_H__
-#define __SIRENGINE_SIRANIMATIONSAMPLINGJOBS_H__
+#ifndef __SIR_ANIMATIONSAMPLINGJOBS_H__
+#define __SIR_ANIMATIONSAMPLINGJOBS_H__
 
 #include <Core/SIRPCH.h>
 // clang-format off
@@ -24,7 +24,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include "SIRAnimationSampler.h"
 #include <Core/Jobs/SIRTaskTypes.h>
-#include <Core/Platform/SIRAtomic.h>
+#include <atomic>
 
 class SIRTaskScheduler;
 
@@ -34,9 +34,9 @@ typedef struct sirAnimationSamplingJob_s
 	sirAnimationSampleOptions_t options;
 	sirAnimationSampleScratch_t scratch;
 	sirAnimationMutablePose_t pose;
-	const SIRAtomic<uint32_t> *pCancellationGeneration;
+	const std::atomic<uint32_t> *pCancellationGeneration;
 	uint32_t nExpectedGeneration;
-	sirAnimationCookResult_t eResult;
+	SIRAnimationCookResult eResult;
 } sirAnimationSamplingJob_t;
 
 typedef struct sirAnimationSamplingBatch_s
@@ -52,11 +52,11 @@ class SIRAnimationSamplingJobs
 public:
 	SIRAnimationSamplingJobs( void ) noexcept = delete;
 
-	static sirTaskResult_t execute( void *pContext, sirTaskHandle_t task ) noexcept;
+	static SIRTaskResult execute( void *pContext, sirTaskHandle_t task ) noexcept;
 	static bool submitBatch( SIRTaskScheduler& scheduler, const sirAnimationSamplingBatch_t& batch ) noexcept;
 
 protected:
 private:
 };
 
-#endif // __SIRENGINE_SIRANIMATIONSAMPLINGJOBS_H__
+#endif // __SIR_ANIMATIONSAMPLINGJOBS_H__

@@ -13,10 +13,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRRENDERALL_H__
-#define __SIRENGINE_SIRRENDERALL_H__
+#ifndef __SIR_RENDER_ALL_H__
+#define __SIR_RENDER_ALL_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -45,4 +45,4 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 // Optional convenience include for standalone syntax validation.
 
-#endif // __SIRENGINE_SIRRENDERALL_H__
+#endif // __SIR_RENDER_ALL_H__

@@ -16,7 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/Memory/Allocators/SIRPoolAllocator.h>
 #include <Core/Memory/SIRMemoryManager.h>
-#include <Core/Memory/SIRMemoryUtils.h>
+#include <Core/SIRMath.h>
 #include <Core/Memory/SIRMemorySegment.h>
 
 #include <cstring>
@@ -44,8 +44,8 @@ bool SIRPoolAllocator::init( SIRMemorySegment *pSegment, uint32_t nObjectBytes, 
 
 	uint64_t nStride = 0;
 	const uint64_t nMinimumSlot = nObjectBytes > sizeof( uint32_t ) ? nObjectBytes : sizeof( uint32_t );
-	if ( !SIR_IS_POWER_OF_TWO( nAlignment ) || ( uint64_t )( nAlignment ) > UINTPTR_MAX ||
-	     ( uint64_t )( nMinimumSlot ) > UINTPTR_MAX - ( ( uint64_t )( nAlignment )-1 ) ) {
+	if ( !SIR_IS_POWER_OF_TWO( nAlignment ) || static_cast<uint64_t>( nAlignment ) > UINTPTR_MAX ||
+	     static_cast<uint64_t>( nMinimumSlot ) > UINTPTR_MAX - ( static_cast<uint64_t>( nAlignment )-1 ) ) {
 		return false;
 	}
 	nStride = SIR_ALIGN_UP( nMinimumSlot, nAlignment );
@@ -53,10 +53,10 @@ bool SIRPoolAllocator::init( SIRMemorySegment *pSegment, uint32_t nObjectBytes, 
 		return false;
 	}
 
-	const uintptr_t nBaseAddress = ( ( uintptr_t )( pSegment->getBase() ) );
+	const uintptr_t nBaseAddress = reinterpret_cast<uintptr_t>(pSegment->getBase());
 	uint64_t nAlignedAddress = 0;
-	if ( !SIR_IS_POWER_OF_TWO( nAlignment ) || ( uint64_t )( nAlignment ) > UINTPTR_MAX ||
-	     ( uint64_t )( nBaseAddress ) > UINTPTR_MAX - ( ( uint64_t )( nAlignment )-1 ) ) {
+	if ( !SIR_IS_POWER_OF_TWO( nAlignment ) || static_cast<uint64_t>( nAlignment ) > UINTPTR_MAX ||
+	     static_cast<uint64_t>( nBaseAddress ) > UINTPTR_MAX - ( static_cast<uint64_t>( nAlignment )-1 ) ) {
 		return false;
 	}
 	nAlignedAddress = SIR_ALIGN_UP( nBaseAddress, nAlignment );
@@ -78,8 +78,8 @@ bool SIRPoolAllocator::init( SIRMemorySegment *pSegment, uint32_t nObjectBytes, 
 	}
 
 	uint64_t nIncrement = 0;
-	if ( !SIR_IS_POWER_OF_TWO( nPageSize ) || ( uint64_t )( nPageSize ) > UINTPTR_MAX ||
-	     ( uint64_t )( nCommitIncrementBytes != 0 ? nCommitIncrementBytes : nPageSize ) > UINTPTR_MAX - ( ( uint64_t )( nPageSize )-1 ) ) {
+	if ( !SIR_IS_POWER_OF_TWO( nPageSize ) || static_cast<uint64_t>( nPageSize ) > UINTPTR_MAX ||
+	     static_cast<uint64_t>( nCommitIncrementBytes != 0 ? nCommitIncrementBytes : nPageSize ) > UINTPTR_MAX - ( static_cast<uint64_t>( nPageSize )-1 ) ) {
 		return false;
 	}
 	nIncrement = SIR_ALIGN_UP( nCommitIncrementBytes != 0 ? nCommitIncrementBytes : nPageSize, nPageSize );
@@ -92,7 +92,7 @@ bool SIRPoolAllocator::init( SIRMemorySegment *pSegment, uint32_t nObjectBytes, 
 		return false;
 	}
 
-	uint64_t *pLiveBits = ( ( uint64_t * )( pManager->allocateMetadata( nWords * sizeof( uint64_t ), alignof( uint64_t ) ) ) );
+	uint64_t *pLiveBits = static_cast<uint64_t *>(  pManager->allocateMetadata( nWords * sizeof( uint64_t ), alignof( uint64_t ) )  );
 	if ( pLiveBits == nullptr ) {
 		return false;
 	}
@@ -100,7 +100,7 @@ bool SIRPoolAllocator::init( SIRMemorySegment *pSegment, uint32_t nObjectBytes, 
 	m_nLiveBitmapWords = nWords;
 
 	m_pSegment = pSegment;
-	m_pBase = ( ( uint8_t * )( ( ( uintptr_t )( nAlignedAddress ) ) ) );
+	m_pBase = ( ( uint8_t * )static_cast<uintptr_t>( nAlignedAddress ) );
 	if ( SIR_IS_POWER_OF_TWO( nStride ) ) {
 		uint32_t nShift = 0;
 		for ( uint64_t nPower = nStride; nPower > 1; nPower >>= 1 ) {
@@ -115,8 +115,8 @@ bool SIRPoolAllocator::init( SIRMemorySegment *pSegment, uint32_t nObjectBytes, 
 	m_nCommittedPrefixBytes = 0;
 	m_nCommitIncrementBytes = nIncrement;
 	m_nObjectBytes = nObjectBytes;
-	m_nSlotStride = ( ( uint32_t )( nStride ) );
-	m_nCapacitySlots = ( ( uint32_t )( nCount ) );
+	m_nSlotStride = static_cast<uint32_t>( nStride );
+	m_nCapacitySlots = static_cast<uint32_t>( nCount );
 	m_nFreshIndex = 0;
 	m_nFreeHead = SIR_POOL_INVALID_SLOT;
 	m_nLiveCount = 0;
@@ -125,7 +125,7 @@ bool SIRPoolAllocator::init( SIRMemorySegment *pSegment, uint32_t nObjectBytes, 
 
 uint8_t *SIRPoolAllocator::slotAddress( uint32_t nIndex ) const
 {
-	return m_pBase + ( ( uint64_t )( nIndex ) ) * m_nSlotStride;
+	return m_pBase + static_cast<uint64_t>( nIndex ) * m_nSlotStride;
 }
 
 bool SIRPoolAllocator::commitToSlotCount( uint32_t nSlots )
@@ -137,8 +137,8 @@ bool SIRPoolAllocator::commitToSlotCount( uint32_t nSlots )
 		return true;
 	}
 
-	const uint64_t nFirstOffset = ( ( uint64_t )( m_pBase - ( ( uint8_t * )( m_pSegment->getBase() ) ) ) );
-	const uint64_t nRequestedEnd = nFirstOffset + ( ( uint64_t )( nSlots ) ) * m_nSlotStride;
+	const uint64_t nFirstOffset = static_cast<uint64_t>(  m_pBase - ( ( uint8_t * )( m_pSegment->getBase() ) )  );
+	const uint64_t nRequestedEnd = nFirstOffset + static_cast<uint64_t>( nSlots ) * m_nSlotStride;
 	if ( nRequestedEnd <= m_nCommittedPrefixBytes ) {
 		return true;
 	}
@@ -161,8 +161,8 @@ bool SIRPoolAllocator::commitToSlotCount( uint32_t nSlots )
 
 	const uint64_t nCapacity = m_pSegment->getReservedBytes();
 	if ( nTarget > nCapacity ) {
-		if ( !SIR_IS_POWER_OF_TWO( m_pSegment->getPageSize() ) || ( uint64_t )( m_pSegment->getPageSize() ) > UINTPTR_MAX ||
-		     ( uint64_t )( nRequestedEnd ) > UINTPTR_MAX - ( ( uint64_t )( m_pSegment->getPageSize() ) - 1 ) ) {
+		if ( !SIR_IS_POWER_OF_TWO( m_pSegment->getPageSize() ) || static_cast<uint64_t>(  m_pSegment->getPageSize()  ) > UINTPTR_MAX ||
+		     static_cast<uint64_t>( nRequestedEnd ) > UINTPTR_MAX - ( ( uint64_t )( m_pSegment->getPageSize() ) - 1 ) ) {
 			return false;
 		}
 		nTarget = SIR_ALIGN_UP( nRequestedEnd, m_pSegment->getPageSize() );
@@ -209,8 +209,8 @@ bool SIRPoolAllocator::free( void *pMemory )
 		return false;
 	}
 
-	const uintptr_t nAddress = ( ( uintptr_t )( pMemory ) );
-	const uintptr_t nFirstAddress = ( ( uintptr_t )( m_pBase ) );
+	const uintptr_t nAddress = reinterpret_cast<uintptr_t>(pMemory);
+	const uintptr_t nFirstAddress = reinterpret_cast<uintptr_t>(m_pBase);
 	if ( nAddress < nFirstAddress ) {
 		return false;
 	}
@@ -218,7 +218,7 @@ bool SIRPoolAllocator::free( void *pMemory )
 	const uint64_t nOffset = nAddress - nFirstAddress;
 	uint64_t nIndex = 0;
 	if ( ( m_nStrideMagic & ( 1ull << 63 ) ) != 0 ) {
-		const uint32_t nShift = ( ( uint32_t )( m_nStrideMagic & 63 ) );
+		const uint32_t nShift = static_cast<uint32_t>( m_nStrideMagic & 63 );
 		if ( ( nOffset & ( m_nSlotStride - 1 ) ) != 0 ) {
 			return false;
 		}
@@ -245,7 +245,7 @@ bool SIRPoolAllocator::free( void *pMemory )
 	if ( nIndex >= m_nFreshIndex ) {
 		return false;
 	}
-	const uint32_t nSlot = ( ( uint32_t )( nIndex ) );
+	const uint32_t nSlot = static_cast<uint32_t>( nIndex );
 	const uint64_t nMask = 1ull << ( nSlot % 64 );
 	uint64_t& nWord = m_pLiveBits[nSlot / 64];
 	if ( ( nWord & nMask ) == 0 ) {
@@ -279,7 +279,7 @@ bool SIRPoolAllocator::reset( bool bDecommit )
 
 	m_nFreshIndex = 0;
 	m_nFreeHead = SIR_POOL_INVALID_SLOT;
-	std::memset( m_pLiveBits, 0, ( ( size_t )( m_nLiveBitmapWords * sizeof( uint64_t ) ) ) );
+	std::memset( m_pLiveBits, 0, ( static_cast<size_t>(  m_nLiveBitmapWords * sizeof( uint64_t )  ) ) );
 	return true;
 }
 

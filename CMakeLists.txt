@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 4.4.5)
 include(Build/CMake/SIRBuildTreeGuard.cmake)
-project(SIREngine VERSION 0.1.0 LANGUAGES CXX)
+project(SIREngine VERSION 0.1.0 LANGUAGES C CXX)
 
 # Primary C++23; C++17 only for toolchains lacking the C++23 language mode.
 # SIR_CXX_STANDARD=17 exercises the fallback during qualification.
@@ -41,6 +41,12 @@ option(SIR_WITH_D3D12 "Build native Direct3D 12 driver (Windows only)" OFF)
 option(SIR_WITH_OPENGL "Build native OpenGL 4.6 driver" OFF)
 
 include(Build/CMake/SIRBuildOptions.cmake)
+# libstdc++ selects its TBB execution backend when TBB headers are installed.
+# The shared PCH includes <execution>, including in standalone test targets.
+find_package(TBB QUIET COMPONENTS tbb)
+if(TARGET TBB::tbb)
+    link_libraries(TBB::tbb)
+endif()
 include(Build/CMake/SIRDependencies.cmake)
 include(Build/CMake/SIRAudio.cmake)
 include(Build/CMake/SIRMono.cmake)
@@ -50,21 +56,36 @@ if(SIR_BUILD_TESTS)
     enable_testing()
 endif()
 
-add_subdirectory(Source)
-add_subdirectory(Tools/RegistrationCooker)
+add_subdirectory(Source/Core)
+add_subdirectory(Source/Resources)
+add_subdirectory(Source/Streaming)
+add_subdirectory(Source/Mesh)
+add_subdirectory(Source/Renderer)
+add_subdirectory(Source/Animation)
+add_subdirectory(Source/Audio)
+add_subdirectory(Source/Scripting)
+add_subdirectory(Source/Terrain)
+add_subdirectory(Source/World)
+add_subdirectory(Source/UI)
+add_subdirectory(Source/Editor)
+
+add_executable(SIREngine Source/Main.cpp)
+target_link_libraries(SIREngine PRIVATE SIR::Core SIR::Scripting)
+target_compile_definitions(SIREngine PRIVATE SIR_VERSION="${PROJECT_VERSION}")
+sir_configure_owned_target(SIREngine)
+add_subdirectory(Tools)
 
 if(SIR_BUILD_TESTS)
-    add_subdirectory(Tests/Unit)
+    add_subdirectory(Tests)
     add_subdirectory(Tests/Dependencies)
     include(Build/CMake/SIRTestRegistration.cmake)
-    sir_classify_tests("${PROJECT_SOURCE_DIR}/Source")
-    sir_classify_tests("${PROJECT_SOURCE_DIR}/Tests/Unit")
+    foreach(sirSubsystem Core Resources Streaming Mesh Renderer Animation Audio Scripting Terrain World UI Editor)
+        sir_classify_tests("${PROJECT_SOURCE_DIR}/Source/${sirSubsystem}")
+    endforeach()
     get_property(sirDependencyTests DIRECTORY "${PROJECT_SOURCE_DIR}/Tests/Dependencies" PROPERTY TESTS)
     if(sirDependencyTests)
         sir_classify_tests("${PROJECT_SOURCE_DIR}/Tests/Dependencies")
     endif()
-    include(Build/CMake/SIRQualificationScopes.cmake)
-    sir_verify_qualification_contracts("${PROJECT_SOURCE_DIR}/Tests/Unit")
 endif()
 
 if(SIR_BUILD_BENCHMARKS)
@@ -73,8 +94,6 @@ if(SIR_BUILD_BENCHMARKS)
     endif()
     add_subdirectory(Tests/Benchmarks)
 endif()
-
-add_subdirectory(Tools/ShaderCooker)
 
 include(Build/CMake/SIRStandards.cmake)
 

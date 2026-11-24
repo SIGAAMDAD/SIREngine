@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRGLHANDLEPOOL_H__
-#define __SIRENGINE_SIRGLHANDLEPOOL_H__
+#ifndef __SIR_GLHANDLEPOOL_H__
+#define __SIR_GLHANDLEPOOL_H__
 
 #include <Core/SIRPCH.h>
 
@@ -29,10 +29,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 typedef struct sirGLNativeResource_s
 {
 	uint32_t nName;
-	sirGraphicsHandleType_t eType;
+	SIRGraphicsHandleType eType;
 	uint64_t nRequestedBytes;
 	uint32_t nInternalFormat;
-	sirGraphicsFormat_t eFormat;
+	SIRGraphicsFormat eFormat;
 	uint32_t nMipLevels;
 	uint32_t nUsage;
 	sirGraphicsHandle_t hParent;
@@ -57,13 +57,13 @@ typedef struct sirGLHandlePool_s
 	uint32_t nDeviceGeneration;
 } sirGLHandlePool_t;
 
-sirGraphicsResult_t sirGLHandlePoolInit( sirGLHandlePool_t *pPool, const sirGraphicsABIHost_t *pHost, uint32_t nDeviceGeneration,
+SIRGraphicsResult sirGLHandlePoolInit( sirGLHandlePool_t *pPool, const sirGraphicsABIHost_t *pHost, uint32_t nDeviceGeneration,
                                          uint32_t nCapacity ) noexcept;
-sirGraphicsResult_t sirGLHandlePoolInsert( sirGLHandlePool_t *pPool, const sirGLNativeResource_t *pResource,
+SIRGraphicsResult sirGLHandlePoolInsert( sirGLHandlePool_t *pPool, const sirGLNativeResource_t *pResource,
                                            sirGraphicsHandle_t *pHandle ) noexcept;
-sirGraphicsResult_t sirGLHandlePoolFind( const sirGLHandlePool_t *pPool, sirGraphicsHandle_t hHandle,
+SIRGraphicsResult sirGLHandlePoolFind( const sirGLHandlePool_t *pPool, sirGraphicsHandle_t hHandle,
                                          sirGLNativeResource_t *pResource ) noexcept;
-sirGraphicsResult_t sirGLHandlePoolTake( sirGLHandlePool_t *pPool, sirGraphicsHandle_t hHandle, sirGLNativeResource_t *pResource ) noexcept;
-sirGraphicsResult_t sirGLHandlePoolShutdown( sirGLHandlePool_t *pPool ) noexcept;
+SIRGraphicsResult sirGLHandlePoolTake( sirGLHandlePool_t *pPool, sirGraphicsHandle_t hHandle, sirGLNativeResource_t *pResource ) noexcept;
+SIRGraphicsResult sirGLHandlePoolShutdown( sirGLHandlePool_t *pPool ) noexcept;
 
-#endif // __SIRENGINE_SIRGLHANDLEPOOL_H__
+#endif // __SIR_GLHANDLEPOOL_H__

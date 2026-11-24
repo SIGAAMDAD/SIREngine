@@ -14,8 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRCOMPACTBUCKETALLOCATOR_H__
-#define __SIRENGINE_SIRCOMPACTBUCKETALLOCATOR_H__
+#ifndef __SIR_COMPACTBUCKETALLOCATOR_H__
+#define __SIR_COMPACTBUCKETALLOCATOR_H__
 
 #include <Core/SIRPCH.h>
 
@@ -26,7 +26,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <Core/Platform/SIRSync.h>
-#include <Core/Platform/SIRAtomic.h>
+#include <atomic>
 #include <cstdint>
 
 class SIRMemorySegment;
@@ -47,20 +47,20 @@ constexpr uint32_t SIR_BUCKET_NONE = UINT32_MAX;
 
 typedef struct sirBucketSlab_s
 {
-	SIRAtomic<uint32_t> nClass;
-	SIRAtomic<uint32_t> nFresh;
-	SIRAtomic<uint32_t> nAccessGate;
-	SIRAtomic<uint32_t> nSeat;
-	SIRAtomic<uint32_t> nSeatGeneration;
+	std::atomic<uint32_t> nClass;
+	std::atomic<uint32_t> nFresh;
+	std::atomic<uint32_t> nAccessGate;
+	std::atomic<uint32_t> nSeat;
+	std::atomic<uint32_t> nSeatGeneration;
 	uint32_t nLive;
 	uint32_t nFreeHead;
 	uint32_t nNeutralNext;
 	uint32_t nLastClass;
 	uint32_t nPartialNext;
 	uint32_t nPartialPrev;
-	SIRAtomic<uint32_t> nEpoch;
-	SIRAtomic<uint64_t> *pStates;
-	SIRAtomic<uint64_t> *pDirtyStateWords;
+	std::atomic<uint32_t> nEpoch;
+	std::atomic<uint64_t> *pStates;
+	std::atomic<uint64_t> *pDirtyStateWords;
 	bool bInPartial;
 	bool bCommitted;
 	bool bWarmRetained;
@@ -78,25 +78,25 @@ typedef struct sirBucketStatePage_s
 
 typedef struct sirBucketDirectory_s
 {
-	SIRAtomic<sirBucketSlab_t *> pDescriptor;
-	SIRAtomic<uint32_t> nReaders;
-	SIRAtomic<uint32_t> nEpoch;
+	std::atomic<sirBucketSlab_t *> pDescriptor;
+	std::atomic<uint32_t> nReaders;
+	std::atomic<uint32_t> nEpoch;
 	sirBucketDirectory_s( void );
 } sirBucketDirectory_t;
 
 typedef struct alignas( 64 ) sirBucketInbox_s
 {
-	SIRAtomic<uint64_t> *pDirtySlabWords;
-	SIRAtomic<uint64_t> *pDirtyGroupWords;
+	std::atomic<uint64_t> *pDirtySlabWords;
+	std::atomic<uint64_t> *pDirtyGroupWords;
 	sirBucketInbox_s( void );
 } sirBucketInbox_t;
 
 typedef struct sirBucketSeat_s
 {
-	SIRAtomic<uintptr_t> nOwnerToken;
-	SIRAtomic<uint32_t> nGeneration;
-	SIRAtomic<uint32_t> nOrphan;
-	SIRAtomic<uint64_t> nLive;
+	std::atomic<uintptr_t> nOwnerToken;
+	std::atomic<uint32_t> nGeneration;
+	std::atomic<uint32_t> nOrphan;
+	std::atomic<uint64_t> nLive;
 	uint64_t nLiveOwner;    // Single-writer live count while the seat is attached.
 	uint32_t nWarmRetained; // Owner-only number of empty live-class slabs retained.
 	uint32_t *pActive;
@@ -168,8 +168,8 @@ private:
 	uint32_t getSlotCapacity( uint32_t nClass ) const;
 	uint32_t loadState( uint32_t nSlab, uint32_t nSlot ) const;
 	bool claimState( uint32_t nSlab, uint32_t nSlot, uint32_t nExpected, uint32_t nDesired );
-	SIRAtomic<uint64_t> *allocateStateBlock( void );
-	void releaseStateBlock( SIRAtomic<uint64_t> *pBlock );
+	std::atomic<uint64_t> *allocateStateBlock( void );
+	void releaseStateBlock( std::atomic<uint64_t> *pBlock );
 
 	SIRCompactBucketAllocator *m_pRegistryNext;
 	SIRMemorySegment *m_pSegment;
@@ -177,7 +177,7 @@ private:
 	sirBucketDirectory_t *m_pDirectory;
 	sirBucketSeat_t *m_pSeats;
 	sirBucketInbox_t *m_pRemoteInboxes;
-	SIRAtomic<uint64_t> *m_pFreeStateBlocks;
+	std::atomic<uint64_t> *m_pFreeStateBlocks;
 	sirBucketStatePage_t *m_pStatePages;
 	uint32_t m_nStateBlockStride;
 	uint32_t m_nStateSlotsPerPage;
@@ -201,11 +201,11 @@ private:
 	uint32_t m_nMaximumSlots;
 	uint32_t m_nSeatCount;
 	uint32_t m_nWarmPerSeat;
-	SIRAtomic<uint32_t> m_nNextDormant;
-	SIRAtomic<uint32_t> m_nOrphanCount;
+	std::atomic<uint32_t> m_nNextDormant;
+	std::atomic<uint32_t> m_nOrphanCount;
 	uint32_t m_nNeutralHead;
 	SIRMutex m_ColdMutex;
 	SIRMutex m_OrphanMutex;
 };
 
-#endif // __SIRENGINE_SIRCOMPACTBUCKETALLOCATOR_H__
+#endif // __SIR_COMPACTBUCKETALLOCATOR_H__

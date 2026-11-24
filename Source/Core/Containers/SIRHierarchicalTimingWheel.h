@@ -44,13 +44,13 @@ private:
 	void link( uint32_t iTimer ) noexcept
 	{
 		const uint32_t iLevel = level( m_timers[iTimer].nDeadline );
-		const uint32_t iBucket = ( uint32_t )( ( m_timers[iTimer].nDeadline >> ( iLevel * 8 ) ) & 255 );
+		const uint32_t iBucket = static_cast<uint32_t>(  ( m_timers[iTimer].nDeadline >> ( iLevel * 8 ) ) & 255  );
 		m_timers[iTimer].nNext = m_heads[iLevel][iBucket];
 		m_heads[iLevel][iBucket] = iTimer;
 	}
 	void cascade( uint32_t iLevel ) noexcept
 	{
-		const uint32_t iBucket = ( uint32_t )( ( m_nCurrent >> ( iLevel * 8 ) ) & 255 );
+		const uint32_t iBucket = static_cast<uint32_t>(  ( m_nCurrent >> ( iLevel * 8 ) ) & 255  );
 		uint32_t iTimer = m_heads[iLevel][iBucket];
 		m_heads[iLevel][iBucket] = UINT32_MAX;
 		while ( iTimer != UINT32_MAX ) {
@@ -83,15 +83,15 @@ public:
 			}
 		}
 	}
-	sirContainerResult_t trySchedule( uint64_t nDeadline, uint64_t nPayload, Handle *pHandle )
+	SIRContainerResult trySchedule( uint64_t nDeadline, uint64_t nPayload, Handle *pHandle )
 	{
 		if ( pHandle == nullptr || nDeadline < m_nCurrent || nDeadline - m_nCurrent >= ( 1ull << 32 ) ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		uint32_t iTimer = m_nFree;
 		if ( iTimer == UINT32_MAX ) {
-			sirContainerResult_t eResult = m_timers.tryEmplaceBack();
-			if ( eResult != SIR_CONTAINER_OK ) {
+			SIRContainerResult eResult = m_timers.tryEmplaceBack();
+			if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 				return eResult;
 			}
 			iTimer = m_timers.getSize() - 1;
@@ -105,7 +105,7 @@ public:
 		link( iTimer );
 		++m_nActive;
 		*pHandle = { iTimer, timer.nGeneration };
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 	bool cancel( Handle handle ) noexcept
 	{
@@ -136,7 +136,7 @@ public:
 				}
 				cascade( 1 );
 			}
-			const uint32_t iBucket = ( uint32_t )( m_nCurrent & 255 );
+			const uint32_t iBucket = static_cast<uint32_t>( m_nCurrent & 255 );
 			while ( m_heads[0][iBucket] != UINT32_MAX ) {
 				const uint32_t iTimer = m_heads[0][iBucket];
 				Timer& timer = m_timers[iTimer];

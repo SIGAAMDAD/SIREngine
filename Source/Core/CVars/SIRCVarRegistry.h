@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRCVARREGISTRY_H__
-#define __SIRENGINE_SIRCVARREGISTRY_H__
+#ifndef __SIR_CVARREGISTRY_H__
+#define __SIR_CVARREGISTRY_H__
 
 #include <Core/Registration/SIRRegistrationCatalog.h>
 #include <Core/SIRPCH.h>
@@ -36,7 +36,7 @@ typedef struct sirCVarValue_s
 
 typedef struct sirCVarOrigin_s
 {
-	sirCVarSource_t eSource;
+	SIRCVarSource eSource;
 	uint32_t nIssuerId;
 	uint32_t nCapabilities;
 	bool bInitializing;
@@ -61,7 +61,7 @@ typedef struct sirCVarOverride_s
 	uint64_t nPendingSerial;
 	uint32_t nSlot;
 	uint32_t nIssuerId;
-	sirCVarSource_t eSource;
+	SIRCVarSource eSource;
 	bool bActive;
 	bool bApplied;
 	bool bPending;
@@ -76,8 +76,8 @@ typedef struct sirCVarSlot_s
 	uint32_t nFlags;
 	uint32_t nSinkGroup;
 	uint32_t nBankIndex;
-	sirCVarType_t eType;
-	sirCVarApplyPhase_t ePhase;
+	SIRCVarType eType;
+	SIRCVarApplyPhase ePhase;
 	bool bActive;
 } sirCVarSlot_t;
 
@@ -122,7 +122,7 @@ typedef struct sirCVarDefinition_s
 	sirRegistrationHandle_t registration;
 	sirCVarValue_t defaultValue;
 	uint32_t nSinkGroup;
-	sirCVarApplyPhase_t ePhase;
+	SIRCVarApplyPhase ePhase;
 } sirCVarDefinition_t;
 
 typedef struct sirCVarCookedSource_s
@@ -130,11 +130,11 @@ typedef struct sirCVarCookedSource_s
 	const uint8_t *pBytes;
 	size_t nBytes;
 	uint32_t nSinkGroup;
-	sirCVarApplyPhase_t ePhase;
+	SIRCVarApplyPhase ePhase;
 } sirCVarCookedSource_t;
 
 // Validated SIRC v1 default payload is borrowed until the registry unbinds.
-sirRegistrationResult_t sirCVarDefinitionFromCooked( const SIRRegistrationCatalog& registration, sirRegistrationHandle_t handle,
+SIRRegistrationResult sirCVarDefinitionFromCooked( const SIRRegistrationCatalog& registration, sirRegistrationHandle_t handle,
                                                      const sirCVarCookedSource_t& source, sirCVarDefinition_t *pOutput ) noexcept;
 
 typedef void ( *sirCVarGroupSink_t )( void *pContext, uint32_t nGroup, uint64_t nRevision ) noexcept;
@@ -152,32 +152,32 @@ public:
 	uint32_t getCount( void ) const noexcept;
 	uint32_t getPendingEvents( void ) const noexcept;
 	uint64_t getRevision( void ) const noexcept;
-	sirRegistrationResult_t getValue( sirCVarHandle_t handle, uint32_t nCapabilities, sirCVarValue_t *pValue ) const noexcept;
+	SIRRegistrationResult getValue( sirCVarHandle_t handle, uint32_t nCapabilities, sirCVarValue_t *pValue ) const noexcept;
 
-	sirRegistrationResult_t initialize( SIRRegistrationCatalog& registration, const sirCVarStorage_t& storage ) noexcept;
-	sirRegistrationResult_t bind( const sirCVarDefinition_t& definition, sirCVarHandle_t *pHandle ) noexcept;
-	sirRegistrationResult_t unbind( sirCVarHandle_t handle ) noexcept;
-	sirRegistrationResult_t prepareBatch( const sirCVarWrite_t *pWrites, uint32_t nCount, uint64_t *pToken ) noexcept;
-	sirRegistrationResult_t commitBatch( uint64_t nToken ) noexcept;
-	sirRegistrationResult_t cancelBatch( uint64_t nToken ) noexcept;
-	sirRegistrationResult_t applyLatched( sirCVarApplyPhase_t ePhase ) noexcept;
-	sirRegistrationResult_t peekEvent( const sirCVarEvent_t **ppEvent ) const noexcept;
-	sirRegistrationResult_t popEvent( void ) noexcept;
+	SIRRegistrationResult initialize( SIRRegistrationCatalog& registration, const sirCVarStorage_t& storage ) noexcept;
+	SIRRegistrationResult bind( const sirCVarDefinition_t& definition, sirCVarHandle_t *pHandle ) noexcept;
+	SIRRegistrationResult unbind( sirCVarHandle_t handle ) noexcept;
+	SIRRegistrationResult prepareBatch( const sirCVarWrite_t *pWrites, uint32_t nCount, uint64_t *pToken ) noexcept;
+	SIRRegistrationResult commitBatch( uint64_t nToken ) noexcept;
+	SIRRegistrationResult cancelBatch( uint64_t nToken ) noexcept;
+	SIRRegistrationResult applyLatched( SIRCVarApplyPhase ePhase ) noexcept;
+	SIRRegistrationResult peekEvent( const sirCVarEvent_t **ppEvent ) const noexcept;
+	SIRRegistrationResult popEvent( void ) noexcept;
 	uint32_t pumpGroups( sirCVarGroupSink_t pfnSink, void *pContext ) noexcept;
 	void shutdown( void ) noexcept;
 
 protected:
 private:
-	sirRegistrationResult_t validateHandle( sirCVarHandle_t handle, const sirCVarSlot_t **ppSlot ) const noexcept;
-	sirRegistrationResult_t validateWrite( const sirCVarWrite_t& write, const sirCVarSlot_t **ppSlot ) const noexcept;
-	sirRegistrationResult_t applyStagedWrite( const sirCVarWrite_t& write, uint32_t iWrite ) noexcept;
-	sirRegistrationResult_t reserveEvents( void ) noexcept;
+	SIRRegistrationResult validateHandle( sirCVarHandle_t handle, const sirCVarSlot_t **ppSlot ) const noexcept;
+	SIRRegistrationResult validateWrite( const sirCVarWrite_t& write, const sirCVarSlot_t **ppSlot ) const noexcept;
+	SIRRegistrationResult applyStagedWrite( const sirCVarWrite_t& write, uint32_t iWrite ) noexcept;
+	SIRRegistrationResult reserveEvents( void ) noexcept;
 	int32_t selectWinner( uint32_t iSlot, const sirCVarOverride_t *pOverrides ) const noexcept;
 	sirCVarValue_t selectValue( uint32_t iSlot, const sirCVarOverride_t *pOverrides ) const noexcept;
 	void copyEvents( void ) noexcept;
 	void publishOverrides( void ) noexcept;
 	void publishBanks( void ) noexcept;
-	bool sameValue( const sirCVarValue_t& a, const sirCVarValue_t& b, sirCVarType_t eType ) const noexcept;
+	bool sameValue( const sirCVarValue_t& a, const sirCVarValue_t& b, SIRCVarType eType ) const noexcept;
 	bool ownerThread( void ) const noexcept;
 
 	SIRRegistrationCatalog *m_pRegistration;
@@ -198,4 +198,4 @@ private:
 	bool m_bPumping;
 };
 
-#endif // __SIRENGINE_SIRCVARREGISTRY_H__
+#endif // __SIR_CVARREGISTRY_H__

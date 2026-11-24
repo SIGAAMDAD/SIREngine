@@ -23,7 +23,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 bool SIRCPUInfo::queryTopology( sirCPUInfo_t *pInfo ) noexcept
 {
 	const DWORD nLogical = GetActiveProcessorCount( ALL_PROCESSOR_GROUPS );
-	pInfo->nLogicalProcessorCount = ( uint32_t )nLogical;
+	pInfo->nLogicalProcessorCount = static_cast<uint32_t>(nLogical);
 	DWORD nBytes = 0;
 	GetLogicalProcessorInformationEx( RelationProcessorCore, nullptr, &nBytes );
 	if ( nBytes == 0 || nBytes > 16 * 1024 * 1024 ) {
@@ -34,12 +34,12 @@ bool SIRCPUInfo::queryTopology( sirCPUInfo_t *pInfo ) noexcept
 		return nLogical > 0;
 	}
 	DWORD nWritten = nBytes;
-	if ( GetLogicalProcessorInformationEx( RelationProcessorCore, ( PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX )pBuffer, &nWritten ) ) {
+	if ( GetLogicalProcessorInformationEx( RelationProcessorCore, static_cast<PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX>(pBuffer), &nWritten ) ) {
 		DWORD nOffset = 0;
 		uint32_t nPhysical = 0;
 		while ( nOffset < nWritten ) {
 			const PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX pRecord =
-			    ( PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX )( ( uint8_t * )pBuffer + nOffset );
+			    ( PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX )( static_cast<uint8_t *>(pBuffer) + nOffset );
 			if ( pRecord->Size < sizeof( DWORD ) * 2 || pRecord->Size > nWritten - nOffset ) {
 				nPhysical = 0;
 				break;

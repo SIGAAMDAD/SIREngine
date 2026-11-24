@@ -19,36 +19,36 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 uint16_t sirPackRead16( const uint8_t *pBytes ) noexcept
 {
-	return ( uint16_t )( ( uint16_t )pBytes[0] | ( ( uint16_t )pBytes[1] << 8 ) );
+	return ( uint16_t )( static_cast<uint16_t>(pBytes[0]) | ( static_cast<uint16_t>(pBytes[1]) << 8 ) );
 }
 
 uint32_t sirPackRead32( const uint8_t *pBytes ) noexcept
 {
-	return ( uint32_t )pBytes[0] | ( ( uint32_t )pBytes[1] << 8 ) | ( ( uint32_t )pBytes[2] << 16 ) | ( ( uint32_t )pBytes[3] << 24 );
+	return static_cast<uint32_t>(pBytes[0]) | ( static_cast<uint32_t>(pBytes[1]) << 8 ) | ( static_cast<uint32_t>(pBytes[2]) << 16 ) | ( static_cast<uint32_t>(pBytes[3]) << 24 );
 }
 
 uint64_t sirPackRead64( const uint8_t *pBytes ) noexcept
 {
-	return ( uint64_t )sirPackRead32( pBytes ) | ( ( uint64_t )sirPackRead32( pBytes + 4 ) << 32 );
+	return static_cast<uint64_t>(sirPackRead32( pBytes )) | ( static_cast<uint64_t>(sirPackRead32( pBytes + 4 )) << 32 );
 }
 
 void sirPackWrite16( uint8_t *pBytes, uint16_t nValue ) noexcept
 {
-	pBytes[0] = ( uint8_t )nValue;
-	pBytes[1] = ( uint8_t )( nValue >> 8 );
+	pBytes[0] = static_cast<uint8_t>(nValue);
+	pBytes[1] = static_cast<uint8_t>( nValue >> 8 );
 }
 
 void sirPackWrite32( uint8_t *pBytes, uint32_t nValue ) noexcept
 {
 	for ( uint32_t i = 0; i < 4; ++i ) {
-		pBytes[i] = ( uint8_t )( nValue >> ( 8 * i ) );
+		pBytes[i] = static_cast<uint8_t>(  nValue >> ( 8 * i )  );
 	}
 }
 
 void sirPackWrite64( uint8_t *pBytes, uint64_t nValue ) noexcept
 {
-	sirPackWrite32( pBytes, ( uint32_t )nValue );
-	sirPackWrite32( pBytes + 4, ( uint32_t )( nValue >> 32 ) );
+	sirPackWrite32( pBytes, static_cast<uint32_t>(nValue) );
+	sirPackWrite32( pBytes + 4, static_cast<uint32_t>( nValue >> 32 ) );
 }
 
 typedef struct sirPackHashState_s
@@ -74,10 +74,11 @@ static void sirPackHashBlock( sirPackHashState_t *pState, const uint8_t *pBlock 
 	    0xa2bfe8a1U, 0xa81a664bU, 0xc24b8b70U, 0xc76c51a3U, 0xd192e819U, 0xd6990624U, 0xf40e3585U, 0x106aa070U, 0x19a4c116U, 0x1e376c08U,
 	    0x2748774cU, 0x34b0bcb5U, 0x391c0cb3U, 0x4ed8aa4aU, 0x5b9cca4fU, 0x682e6ff3U, 0x748f82eeU, 0x78a5636fU, 0x84c87814U, 0x8cc70208U,
 	    0x90befffaU, 0xa4506cebU, 0xbef9a3f7U, 0xc67178f2U };
-	uint32_t nW[64] = {};
+	uint32_t nW[64];
+	memset( nW, 0, sizeof( nW ) );
 	for ( uint32_t i = 0; i < 16; ++i ) {
-		nW[i] = ( ( uint32_t )pBlock[4 * i] << 24 ) | ( ( uint32_t )pBlock[4 * i + 1] << 16 ) | ( ( uint32_t )pBlock[4 * i + 2] << 8 ) |
-		        ( uint32_t )pBlock[4 * i + 3];
+		nW[i] = ( static_cast<uint32_t>(pBlock[4 * i]) << 24 ) | ( static_cast<uint32_t>(pBlock[4 * i + 1]) << 16 ) | ( static_cast<uint32_t>(pBlock[4 * i + 2]) << 8 ) |
+		        static_cast<uint32_t>(pBlock[4 * i + 3]);
 	}
 	for ( uint32_t i = 16; i < 64; ++i ) {
 		const uint32_t nS0 = sirPackRotR( nW[i - 15], 7 ) ^ sirPackRotR( nW[i - 15], 18 ) ^ ( nW[i - 15] >> 3 );
@@ -133,7 +134,7 @@ static void sirPackHashUpdate( sirPackHashState_t *pState, const uint8_t *pBytes
 			continue;
 		}
 		const uint32_t nRoom = 64 - pState->nBuffered;
-		const uint32_t nCount = nBytes < nRoom ? ( uint32_t )nBytes : nRoom;
+		const uint32_t nCount = nBytes < nRoom ? static_cast<uint32_t>(nBytes) : nRoom;
 		memcpy( pState->szBlock + pState->nBuffered, pBytes, nCount );
 		pBytes += nCount;
 		nBytes -= nCount;
@@ -148,20 +149,22 @@ static void sirPackHashUpdate( sirPackHashState_t *pState, const uint8_t *pBytes
 static void sirPackHashFinish( sirPackHashState_t *pState, uint8_t *pDigest ) noexcept
 {
 	const uint64_t nBits = pState->nTotal * 8;
-	uint8_t szPadding[128] = {};
+	uint8_t szPadding[128];
+	memset( szPadding, 0, sizeof( szPadding ) );
 	szPadding[0] = 0x80;
 	const uint32_t nPadding = pState->nBuffered < 56 ? 56 - pState->nBuffered : 120 - pState->nBuffered;
 	sirPackHashUpdate( pState, szPadding, nPadding );
-	uint8_t szLength[8] = {};
+	uint8_t szLength[8];
+	memset( szLength, 0, sizeof( szLength ) );
 	for ( uint32_t i = 0; i < 8; ++i ) {
-		szLength[7 - i] = ( uint8_t )( nBits >> ( 8 * i ) );
+		szLength[7 - i] = static_cast<uint8_t>(  nBits >> ( 8 * i )  );
 	}
 	sirPackHashUpdate( pState, szLength, 8 );
 	for ( uint32_t i = 0; i < 8; ++i ) {
-		pDigest[4 * i] = ( uint8_t )( pState->nState[i] >> 24 );
-		pDigest[4 * i + 1] = ( uint8_t )( pState->nState[i] >> 16 );
-		pDigest[4 * i + 2] = ( uint8_t )( pState->nState[i] >> 8 );
-		pDigest[4 * i + 3] = ( uint8_t )pState->nState[i];
+		pDigest[4 * i] = static_cast<uint8_t>( pState->nState[i] >> 24 );
+		pDigest[4 * i + 1] = static_cast<uint8_t>( pState->nState[i] >> 16 );
+		pDigest[4 * i + 2] = static_cast<uint8_t>( pState->nState[i] >> 8 );
+		pDigest[4 * i + 3] = static_cast<uint8_t>(pState->nState[i]);
 	}
 }
 
@@ -170,7 +173,7 @@ void sirPackSha256( const uint8_t *pBytes, uint64_t nBytes, uint8_t *pDigest ) n
 	if ( pDigest == nullptr || ( pBytes == nullptr && nBytes != 0 ) ) {
 		return;
 	}
-	sirPackHashState_t state = {};
+	sirPackHashState_t state {};
 	sirPackHashInit( &state );
 	if ( nBytes != 0 ) {
 		sirPackHashUpdate( &state, pBytes, nBytes );
@@ -184,7 +187,7 @@ void sirPackCatalogDigest( const uint8_t *pBytes, uint64_t nBytes, uint8_t *pDig
 		return;
 	}
 	static constexpr uint8_t s_szZeroDigest[32] = {};
-	sirPackHashState_t state = {};
+	sirPackHashState_t state {};
 	sirPackHashInit( &state );
 	sirPackHashUpdate( &state, pBytes, 88 );
 	sirPackHashUpdate( &state, s_szZeroDigest, 32 );

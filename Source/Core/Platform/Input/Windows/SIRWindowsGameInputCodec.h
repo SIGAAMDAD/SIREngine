@@ -13,10 +13,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRWINDOWSGAMEINPUTCODEC_H__
-#define __SIRENGINE_SIRWINDOWSGAMEINPUTCODEC_H__
+#ifndef __SIR_WINDOWSGAMEINPUTCODEC_H__
+#define __SIR_WINDOWSGAMEINPUTCODEC_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -40,7 +40,7 @@ typedef struct sirGameInputRawGamepad_s
 typedef struct sirGameInputDecodedGamepad_s
 {
 	uint32_t nButtons;
-	int32_t nAxes[SIR_INPUT_AXIS_COUNT];
+	int32_t nAxes[SIRInputAxisCode::SIR_INPUT_AXIS_COUNT];
 	bool bValid;
 } sirGameInputDecodedGamepad_t;
 
@@ -56,4 +56,4 @@ public:
 	                    uint32_t *pCount ) noexcept;
 };
 
-#endif // __SIRENGINE_SIRWINDOWSGAMEINPUTCODEC_H__
+#endif // __SIR_WINDOWSGAMEINPUTCODEC_H__

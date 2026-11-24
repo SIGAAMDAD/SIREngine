@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRTASKFENCETRACKER_H__
-#define __SIRENGINE_SIRTASKFENCETRACKER_H__
+#ifndef __SIR_TASKFENCETRACKER_H__
+#define __SIR_TASKFENCETRACKER_H__
 
 #include <Core/SIRPCH.h>
 
@@ -50,7 +50,7 @@ public:
 
 	// Must run on the provider thread. Metadata is retained in the SIR domain
 	// until its manager is shut down; no hidden heap fallback.
-	bool init( SIRMemoryManager *pMemory, SIRTaskScheduler *pScheduler, sirTaskExecutor_t eProvider, uint32_t nCapacity ) noexcept;
+	bool init( SIRMemoryManager *pMemory, SIRTaskScheduler *pScheduler, SIRTaskExecutor eProvider, uint32_t nCapacity ) noexcept;
 	// Refuses teardown while a provider still owns any tracked native work.
 	bool shutdown( void ) noexcept;
 	bool hasCapacity( void ) const noexcept;
@@ -67,19 +67,19 @@ public:
 	// Call after observing native fence advancement, at the provider safe
 	// point (never from a realtime callback). Acknowledgement makes dependent
 	// tasks runnable only after pfnFinalize has returned true.
-	bool advanceCompleted( uint64_t nCompletedFence, sirTaskResult_t eResult, uint32_t *pnAcknowledged ) noexcept;
+	bool advanceCompleted( uint64_t nCompletedFence, SIRTaskResult eResult, uint32_t *pnAcknowledged ) noexcept;
 	// Device-loss path. Valid only AFTER all native work has been quiesced;
 	// invokes finalizers before failing remaining deferred tasks.
 	bool failQuiesced( uint32_t *pnAcknowledged ) noexcept;
 
 private:
 	bool isOwner( void ) const noexcept;
-	bool drain( uint64_t nCompletedFence, sirTaskResult_t eResult, uint32_t *pnAcknowledged ) noexcept;
+	bool drain( uint64_t nCompletedFence, SIRTaskResult eResult, uint32_t *pnAcknowledged ) noexcept;
 
 	SIRTaskScheduler *m_pScheduler;
 	sirTaskFenceRecord_t *m_pRecords;
 	std::thread::id m_OwnerThread;
-	sirTaskExecutor_t m_eProvider;
+	SIRTaskExecutor m_eProvider;
 	uint64_t m_nLastTrackedFence;
 	uint64_t m_nCompletedFence;
 	uint32_t m_nCapacity;
@@ -90,4 +90,4 @@ private:
 	bool m_bEverInitialized;
 };
 
-#endif // __SIRENGINE_SIRTASKFENCETRACKER_H__
+#endif // __SIR_TASKFENCETRACKER_H__

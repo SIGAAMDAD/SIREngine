@@ -24,17 +24,17 @@ public:
 	explicit SIRAoSoABlockVector( const sirContainerAllocator_t *pAllocator ) : m_blocks( pAllocator )
 	{
 	}
-	sirContainerResult_t tryEmplaceBack( const A& first, const B& second )
+	SIRContainerResult tryEmplaceBack( const A& first, const B& second )
 	{
 		if ( m_nSize == UINT32_MAX ) {
-			return SIR_CONTAINER_SIZE_OVERFLOW;
+			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
 		// Stage before growing m_blocks: inputs may alias an existing column.
 		A stagedFirst( first );
 		B stagedSecond( second );
 		if ( m_nSize % LANES == 0 ) {
-			const sirContainerResult_t eResult = m_blocks.tryEmplaceBack();
-			if ( eResult != SIR_CONTAINER_OK ) {
+			const SIRContainerResult eResult = m_blocks.tryEmplaceBack();
+			if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 				return eResult;
 			}
 		}
@@ -42,7 +42,7 @@ public:
 		block.szFirst[m_nSize % LANES] = stagedFirst;
 		block.szSecond[m_nSize % LANES] = stagedSecond;
 		++m_nSize;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 	A *tryGetFirst( uint32_t iIndex ) noexcept
 	{

@@ -13,10 +13,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRRENDERSHADERBINDINGTABLE_H__
-#define __SIRENGINE_SIRRENDERSHADERBINDINGTABLE_H__
+#ifndef __SIR_RENDERSHADERBINDINGTABLE_H__
+#define __SIR_RENDERSHADERBINDINGTABLE_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -43,11 +43,11 @@ public:
 	bool isValid( void ) const noexcept
 	{
 		return m_Desc.hBackingBuffer.nGeneration != 0 && m_Desc.hBackingBuffer.nDeviceGeneration != 0 &&
-		       m_Desc.hBackingBuffer.eType == SIR_GRAPHICS_HANDLE_BUFFER && m_Desc.rayGeneration.nSizeBytes != 0;
+		       m_Desc.hBackingBuffer.eType == SIRGraphicsHandleType::SIR_GRAPHICS_HANDLE_BUFFER && m_Desc.rayGeneration.nSizeBytes != 0;
 	}
 
 private:
-	sirRenderShaderBindingTableDesc_t m_Desc = {};
+	sirRenderShaderBindingTableDesc_t m_Desc {};
 };
 
-#endif // __SIRENGINE_SIRRENDERSHADERBINDINGTABLE_H__
+#endif // __SIR_RENDERSHADERBINDINGTABLE_H__

@@ -38,7 +38,7 @@ typedef struct sirTaskGraphAccessRecord_s
 	uint32_t nPass;
 	uint32_t nNext;
 	uint32_t nPrev;
-	sirTaskGraphAccessMode_t eMode;
+	SIRTaskGraphAccessMode eMode;
 } sirTaskGraphAccessRecord_t;
 
 typedef struct sirTaskGraphResourceBucket_s
@@ -67,16 +67,16 @@ static void sirGraphAppendFootprint( uint64_t *pnBytes, uint32_t nCount ) noexce
 	static_assert( alignof( T ) <= UINT16_MAX, "Task graph alignment grew beyond the footprint bound" );
 	const uint64_t nAlignment = alignof( T );
 	const uint64_t nAligned = ( *pnBytes + nAlignment - 1 ) & ~( nAlignment - 1 );
-	*pnBytes = nAligned + ( uint64_t )nCount * sizeof( T );
+	*pnBytes = nAligned + static_cast<uint64_t>(nCount * sizeof(  T  ));
 }
 
 template <typename T>
 static T *sirGraphCarveArray( uint8_t **ppMemory, uint32_t nCount ) noexcept
 {
 	const uintptr_t nAlignment = alignof( T );
-	const uintptr_t nAddress = ( ( uintptr_t )*ppMemory + nAlignment - 1 ) & ~( nAlignment - 1 );
-	*ppMemory = ( uint8_t * )( nAddress + ( uintptr_t )nCount * sizeof( T ) );
-	return ( T * )nAddress;
+	const uintptr_t nAddress = ( reinterpret_cast<uintptr_t>(*ppMemory) + nAlignment - 1 ) & ~( nAlignment - 1 );
+	*ppMemory = ( uint8_t * )( nAddress + static_cast<uintptr_t>(nCount * sizeof(  T  )) );
+	return reinterpret_cast<T *>(nAddress);
 }
 
 SIRTaskGraph::SIRTaskGraph( void ) noexcept
@@ -129,11 +129,11 @@ bool SIRTaskGraph::init( SIRMemoryManager *pMemory, const sirTaskGraphConfig_t& 
 	sirGraphAppendFootprint<sirTaskBatchTask_t>( &nStorageBytes, config.nPassCapacity );
 	sirGraphAppendFootprint<sirTaskBatchEdge_t>( &nStorageBytes, config.nEdgeCapacity );
 	sirGraphAppendFootprint<sirTaskHandle_t>( &nStorageBytes, config.nPassCapacity );
-	void *pStorage = pMemory->allocateMetadata( nStorageBytes, alignof( max_align_t ), SIR_MEMORY_DOMAIN_CORE );
+	void *pStorage = pMemory->allocateMetadata( nStorageBytes, alignof( max_align_t ), SIRMemoryDomain::SIR_MEMORY_DOMAIN_CORE );
 	if ( pStorage == nullptr ) {
 		return false;
 	}
-	uint8_t *pCursor = ( uint8_t * )pStorage;
+	uint8_t *pCursor = static_cast<uint8_t *>(pStorage);
 	m_pPasses = sirGraphCarveArray<sirTaskGraphPassRecord_t>( &pCursor, config.nPassCapacity );
 	m_pAccesses = sirGraphCarveArray<sirTaskGraphAccessRecord_t>( &pCursor, config.nAccessCapacity );
 	m_pBuckets = sirGraphCarveArray<sirTaskGraphResourceBucket_t>( &pCursor, nBuckets );
@@ -173,15 +173,15 @@ bool SIRTaskGraph::reset( void ) noexcept
 bool SIRTaskGraph::addPass( const sirTaskGraphPass_t& pass, const sirTaskGraphAccess_t *pAccesses, uint32_t nAccesses,
                             uint32_t *pnPassIndex ) noexcept
 {
-	if ( !m_bInitialized || m_bSubmitted || pnPassIndex == nullptr || pass.pFunction == nullptr || pass.eExecutor >= SIR_TASK_EXEC_COUNT ||
-	     pass.ePriority > SIR_TASK_PRIORITY_BACKGROUND || m_nPassCount == m_nPassCapacity ||
+	if ( !m_bInitialized || m_bSubmitted || pnPassIndex == nullptr || pass.pFunction == nullptr || pass.eExecutor >= SIRTaskExecutor::SIR_TASK_EXEC_COUNT ||
+	     pass.ePriority > SIRTaskPriority::SIR_TASK_PRIORITY_BACKGROUND || m_nPassCount == m_nPassCapacity ||
 	     nAccesses > m_nAccessCapacity - m_nAccessCount || ( nAccesses != 0 && pAccesses == nullptr ) ) {
 		return false;
 	}
 	for ( uint32_t iAccess = 0; iAccess < nAccesses; ++iAccess ) {
 		const sirTaskGraphAccess_t& access = pAccesses[iAccess];
 		if ( ( access.keyResource.nLow == 0 && access.keyResource.nHigh == 0 ) || access.nBytes == 0 ||
-		     access.nBytes > UINT64_MAX - access.nOffset || access.eMode > SIR_TASK_GRAPH_WRITE ) {
+		     access.nBytes > UINT64_MAX - access.nOffset || access.eMode > SIRTaskGraphAccessMode::SIR_TASK_GRAPH_WRITE ) {
 			return false;
 		}
 	}
@@ -213,7 +213,7 @@ bool SIRTaskGraph::addDependency( uint32_t nBefore, uint32_t nAfter ) noexcept
 uint32_t SIRTaskGraph::findResourceBucket( sirTaskGraphResourceKey_t keyResource ) noexcept
 {
 	const uint32_t nMask = m_nBucketCapacity - 1;
-	uint32_t nIndex = ( uint32_t )( sirGraphHashResource( keyResource ) ) & nMask;
+	uint32_t nIndex = static_cast<uint32_t>(  sirGraphHashResource( keyResource )  ) & nMask;
 	for ( ;; ) {
 		sirTaskGraphResourceBucket_t& bucket = m_pBuckets[nIndex];
 		if ( !bucket.bUsed ) {
@@ -254,10 +254,10 @@ bool SIRTaskGraph::appendEdge( uint32_t nBefore, uint32_t nAfter ) noexcept
 	return true;
 }
 
-sirTaskGraphStatus_t SIRTaskGraph::compile( void ) noexcept
+SIRTaskGraphStatus SIRTaskGraph::compile( void ) noexcept
 {
 	if ( !m_bInitialized || m_bSubmitted || m_nPassCount == 0 ) {
-		return SIR_TASK_GRAPH_INVALID;
+		return SIRTaskGraphStatus::SIR_TASK_GRAPH_INVALID;
 	}
 	m_bCompiled = false;
 	m_nEdgeCount = 0;
@@ -265,10 +265,10 @@ sirTaskGraphStatus_t SIRTaskGraph::compile( void ) noexcept
 		m_pFirstOut[iPass] = SIR_GRAPH_NONE;
 		m_pIndegrees[iPass] = 0;
 	}
-	memset( m_pBuckets, 0, ( size_t )m_nBucketCapacity * sizeof( sirTaskGraphResourceBucket_t ) );
+	memset( m_pBuckets, 0, static_cast<size_t>(m_nBucketCapacity * sizeof(  sirTaskGraphResourceBucket_t  )) );
 	for ( uint32_t i = 0; i < m_nExplicitEdgeCount; ++i ) {
 		if ( !appendEdge( m_pExplicitEdges[i].nBefore, m_pExplicitEdges[i].nAfter ) ) {
-			return SIR_TASK_GRAPH_CAPACITY;
+			return SIRTaskGraphStatus::SIR_TASK_GRAPH_CAPACITY;
 		}
 	}
 	for ( uint32_t iPass = 0; iPass < m_nPassCount; ++iPass ) {
@@ -283,14 +283,14 @@ sirTaskGraphStatus_t SIRTaskGraph::compile( void ) noexcept
 				const uint32_t nNext = earlier.nNext;
 				const bool bOverlap = overlaps( earlier, access );
 				if ( earlier.nPass != access.nPass && bOverlap &&
-				     ( earlier.eMode == SIR_TASK_GRAPH_WRITE || access.eMode == SIR_TASK_GRAPH_WRITE ) &&
+				     ( earlier.eMode == SIRTaskGraphAccessMode::SIR_TASK_GRAPH_WRITE || access.eMode == SIRTaskGraphAccessMode::SIR_TASK_GRAPH_WRITE ) &&
 				     !appendEdge( earlier.nPass, access.nPass ) ) {
-					return SIR_TASK_GRAPH_CAPACITY;
+					return SIRTaskGraphStatus::SIR_TASK_GRAPH_CAPACITY;
 				}
 				// Once a later writer covers the full old interval, future
 				// accesses need only order against this writer. Partial writes
 				// retain the uncovered prior interval conservatively.
-				if ( access.eMode == SIR_TASK_GRAPH_WRITE && earlier.nOffset >= access.nOffset && earlier.nEnd <= access.nEnd ) {
+				if ( access.eMode == SIRTaskGraphAccessMode::SIR_TASK_GRAPH_WRITE && earlier.nOffset >= access.nOffset && earlier.nEnd <= access.nEnd ) {
 					if ( earlier.nPrev == SIR_GRAPH_NONE ) {
 						bucket.nHead = earlier.nNext;
 					} else {
@@ -331,10 +331,10 @@ sirTaskGraphStatus_t SIRTaskGraph::compile( void ) noexcept
 		}
 	}
 	if ( nProcessed != m_nPassCount ) {
-		return SIR_TASK_GRAPH_CYCLE;
+		return SIRTaskGraphStatus::SIR_TASK_GRAPH_CYCLE;
 	}
 	m_bCompiled = true;
-	return SIR_TASK_GRAPH_OK;
+	return SIRTaskGraphStatus::SIR_TASK_GRAPH_OK;
 }
 
 uint32_t SIRTaskGraph::getPassCount( void ) const noexcept
@@ -401,24 +401,24 @@ bool SIRTaskGraph::queryExecution( sirTaskGraphExecutionSummary_t *pSummary ) co
 	if ( !m_bSubmitted || m_pScheduler == nullptr || pSummary == nullptr ) {
 		return false;
 	}
-	sirTaskGraphExecutionSummary_t summary = {};
+	sirTaskGraphExecutionSummary_t summary {};
 	summary.nTotal = m_nPassCount;
 	for ( uint32_t iPass = 0; iPass < m_nPassCount; ++iPass ) {
 		const sirTaskHandle_t task = m_pBatchHandles[iPass];
 		switch ( m_pScheduler->getState( task ) ) {
-		case SIR_TASK_COMPLETED:
+		case SIRTaskState::SIR_TASK_COMPLETED:
 			++summary.nSucceeded;
 			break;
-		case SIR_TASK_FAILED:
+		case SIRTaskState::SIR_TASK_FAILED:
 			++summary.nFailed;
 			break;
-		case SIR_TASK_CANCELLED:
+		case SIRTaskState::SIR_TASK_CANCELLED:
 			++summary.nCancelled;
 			break;
-		case SIR_TASK_BLOCKED:
-		case SIR_TASK_QUEUED:
-		case SIR_TASK_RUNNING:
-		case SIR_TASK_AWAITING_PROVIDER:
+		case SIRTaskState::SIR_TASK_BLOCKED:
+		case SIRTaskState::SIR_TASK_QUEUED:
+		case SIRTaskState::SIR_TASK_RUNNING:
+		case SIRTaskState::SIR_TASK_AWAITING_PROVIDER:
 			++summary.nPending;
 			break;
 		default:
@@ -426,13 +426,13 @@ bool SIRTaskGraph::queryExecution( sirTaskGraphExecutionSummary_t *pSummary ) co
 		}
 	}
 	if ( summary.nPending != 0 ) {
-		summary.eState = SIR_TASK_GRAPH_EXEC_PENDING;
+		summary.eState = SIRTaskGraphExecutionState::SIR_TASK_GRAPH_EXEC_PENDING;
 	} else if ( summary.nFailed != 0 ) {
-		summary.eState = SIR_TASK_GRAPH_EXEC_FAILED;
+		summary.eState = SIRTaskGraphExecutionState::SIR_TASK_GRAPH_EXEC_FAILED;
 	} else if ( summary.nCancelled != 0 ) {
-		summary.eState = SIR_TASK_GRAPH_EXEC_CANCELLED;
+		summary.eState = SIRTaskGraphExecutionState::SIR_TASK_GRAPH_EXEC_CANCELLED;
 	} else {
-		summary.eState = SIR_TASK_GRAPH_EXEC_SUCCEEDED;
+		summary.eState = SIRTaskGraphExecutionState::SIR_TASK_GRAPH_EXEC_SUCCEEDED;
 	}
 	*pSummary = summary;
 	return true;
@@ -445,17 +445,17 @@ bool SIRTaskGraph::cancelExecution( void ) noexcept
 	}
 	for ( uint32_t iPass = 0; iPass < m_nPassCount; ++iPass ) {
 		const sirTaskHandle_t task = m_pBatchHandles[iPass];
-		const sirTaskState_t eState = m_pScheduler->getState( task );
-		if ( eState == SIR_TASK_COMPLETED || eState == SIR_TASK_FAILED || eState == SIR_TASK_CANCELLED ) {
+		const SIRTaskState eState = m_pScheduler->getState( task );
+		if ( eState == SIRTaskState::SIR_TASK_COMPLETED || eState == SIRTaskState::SIR_TASK_FAILED || eState == SIRTaskState::SIR_TASK_CANCELLED ) {
 			continue;
 		}
-		if ( eState == SIR_TASK_INVALID ) {
+		if ( eState == SIRTaskState::SIR_TASK_INVALID ) {
 			return false;
 		}
 		if ( !m_pScheduler->cancel( task ) ) {
 			// An already-finished task may race with the cancellation request.
-			const sirTaskState_t eNow = m_pScheduler->getState( task );
-			if ( eNow != SIR_TASK_COMPLETED && eNow != SIR_TASK_FAILED && eNow != SIR_TASK_CANCELLED ) {
+			const SIRTaskState eNow = m_pScheduler->getState( task );
+			if ( eNow != SIRTaskState::SIR_TASK_COMPLETED && eNow != SIRTaskState::SIR_TASK_FAILED && eNow != SIRTaskState::SIR_TASK_CANCELLED ) {
 				return false;
 			}
 		}
@@ -473,8 +473,8 @@ bool SIRTaskGraph::releaseSubmitted( void ) noexcept
 		if ( task.nGeneration == 0 ) {
 			continue;
 		}
-		const sirTaskState_t eState = m_pScheduler->getState( task );
-		if ( eState != SIR_TASK_COMPLETED && eState != SIR_TASK_FAILED && eState != SIR_TASK_CANCELLED ) {
+		const SIRTaskState eState = m_pScheduler->getState( task );
+		if ( eState != SIRTaskState::SIR_TASK_COMPLETED && eState != SIRTaskState::SIR_TASK_FAILED && eState != SIRTaskState::SIR_TASK_CANCELLED ) {
 			return false;
 		}
 	}

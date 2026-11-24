@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSCRIPTCACHEDPROGRAMSOURCE_H__
-#define __SIRENGINE_SIRSCRIPTCACHEDPROGRAMSOURCE_H__
+#ifndef __SIR_SCRIPTCACHEDPROGRAMSOURCE_H__
+#define __SIR_SCRIPTCACHEDPROGRAMSOURCE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -71,11 +71,11 @@ public:
 	SIRScriptCachedProgramSource( const SIRScriptCachedProgramSource& ) = delete;
 	SIRScriptCachedProgramSource& operator=( const SIRScriptCachedProgramSource& ) = delete;
 
-	sirScriptResult_t configure( SIRScriptArtifactCache *pCache, const sirScriptPayloadAllocatorAPI_t& allocator,
+	SIRScriptResult configure( SIRScriptArtifactCache *pCache, const sirScriptPayloadAllocatorAPI_t& allocator,
 	                             uint64_t nMaximumResidentBytes ) noexcept;
-	sirScriptResult_t registerArtifact( const sirScriptCachedArtifact_t& descriptor, sirScriptCachedEntryHandle_t *pHandle ) noexcept;
-	sirScriptResult_t unregisterArtifact( sirScriptCachedEntryHandle_t handle ) noexcept;
-	sirScriptResult_t shutdown( void ) noexcept;
+	SIRScriptResult registerArtifact( const sirScriptCachedArtifact_t& descriptor, sirScriptCachedEntryHandle_t *pHandle ) noexcept;
+	SIRScriptResult unregisterArtifact( sirScriptCachedEntryHandle_t handle ) noexcept;
+	SIRScriptResult shutdown( void ) noexcept;
 	sirScriptCachedSourceStats_t stats( void ) const noexcept;
 	sirScriptProgramSourceAPI_t makeProgramSourceAPI( void ) noexcept;
 
@@ -86,11 +86,11 @@ private:
 	static uint32_t nextGeneration( uint32_t nGeneration ) noexcept;
 	static bool validDescriptor( const sirScriptCachedArtifact_t& descriptor ) noexcept;
 	static bool sameDescriptor( const sirScriptCachedArtifact_t& a, const sirScriptCachedArtifact_t& b ) noexcept;
-	static sirScriptResult_t acquireThunk( void *pUser, uint64_t nBackendId, uint64_t nProgramId, uint64_t nRevision,
+	static SIRScriptResult acquireThunk( void *pUser, uint64_t nBackendId, uint64_t nProgramId, uint64_t nRevision,
 	                                       sirScriptProgramView_t *pView, uint64_t *pToken ) noexcept;
 	static void releaseThunk( void *pUser, uint64_t nToken ) noexcept;
 	bool isOwnerThread( void ) const noexcept;
-	sirScriptResult_t acquire( uint64_t nBackendId, uint64_t nProgramId, uint64_t nRevision, sirScriptProgramView_t *pView,
+	SIRScriptResult acquire( uint64_t nBackendId, uint64_t nProgramId, uint64_t nRevision, sirScriptProgramView_t *pView,
 	                           uint64_t *pToken ) noexcept;
 	void release( uint64_t nToken ) noexcept;
 	void releaseEntry( uint32_t iEntry ) noexcept;
@@ -106,4 +106,4 @@ private:
 	bool m_bInAllocator;
 };
 
-#endif // __SIRENGINE_SIRSCRIPTCACHEDPROGRAMSOURCE_H__
+#endif // __SIR_SCRIPTCACHEDPROGRAMSOURCE_H__

@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef SIRENGINE_SIRSOFTRESOURCEPTR_H
-#define SIRENGINE_SIRSOFTRESOURCEPTR_H
+#ifndef __SIR_SOFTRESOURCEPTR_H__
+#define __SIR_SOFTRESOURCEPTR_H__
 
 #include <Core/SIRPCH.h>
 
@@ -52,18 +52,18 @@ public:
 	SIRResourceResult find( const SIRResourceGraph& rGraph, const SIRResourceReadScope& rScope, SIRResourceHandle *pHandle ) const noexcept
 	{
 		if ( !isValid() || pHandle == nullptr ) {
-			return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+			return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 		}
 		return rGraph.find( rScope, m_Key, pHandle );
 	}
 	SIRResourceResult read( const SIRResourceGraph& rGraph, const SIRResourceReadScope& rScope, SIRResourceReadPtr<T> *pOut ) const noexcept
 	{
 		if ( pOut == nullptr ) {
-			return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+			return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 		}
-		SIRResourceHandle hResource = {};
+		SIRResourceHandle hResource {};
 		SIRResourceResult eResult = find( rGraph, rScope, &hResource );
-		if ( eResult == SIR_RESOURCE_RESULT_SUCCESS ) {
+		if ( eResult == SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ) {
 			eResult = pOut->acquire( rGraph, rScope, hResource );
 		}
 		return eResult;
@@ -71,15 +71,15 @@ public:
 	SIRResourceResult lock( SIRResourceGraph& rGraph, const SIRResourceReadScope& rScope, SIRResourcePtr<T> *pOut ) const noexcept
 	{
 		if ( pOut == nullptr ) {
-			return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+			return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 		}
-		SIRResourceHandle hResource = {};
+		SIRResourceHandle hResource {};
 		const SIRResourceResult eResult = find( rGraph, rScope, &hResource );
-		return eResult == SIR_RESOURCE_RESULT_SUCCESS ? SIRResourcePtr<T>::acquire( rGraph, hResource, pOut ) : eResult;
+		return eResult == SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ? SIRResourcePtr<T>::acquire( rGraph, hResource, pOut ) : eResult;
 	}
 
 private:
-	SIRResourceKey m_Key = {};
+	SIRResourceKey m_Key {};
 };
 
-#endif // SIRENGINE_SIRSOFTRESOURCEPTR_H
+#endif // __SIR_SOFTRESOURCEPTR_H__

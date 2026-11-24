@@ -45,24 +45,24 @@ uint32_t SIRMeshCollisionBVH::getReaderCount( void ) const noexcept
 	return m_nReaders;
 }
 
-sirMeshResult_t SIRMeshCollisionBVH::acquireReader( void ) noexcept
+SIRMeshResult SIRMeshCollisionBVH::acquireReader( void ) noexcept
 {
 	if ( !m_bReady )
-		return SIR_MESH_NOT_READY;
+		return SIRMeshResult::SIR_MESH_NOT_READY;
 	if ( m_nReaders == UINT32_MAX )
-		return SIR_MESH_OUT_OF_CAPACITY;
+		return SIRMeshResult::SIR_MESH_OUT_OF_CAPACITY;
 	++m_nReaders;
-	return SIR_MESH_OK;
+	return SIRMeshResult::SIR_MESH_OK;
 }
 
-sirMeshResult_t SIRMeshCollisionBVH::releaseReader( void ) noexcept
+SIRMeshResult SIRMeshCollisionBVH::releaseReader( void ) noexcept
 {
 	if ( !m_bReady )
-		return SIR_MESH_NOT_READY;
+		return SIRMeshResult::SIR_MESH_NOT_READY;
 	if ( m_nReaders == 0 )
-		return SIR_MESH_INVALID_ARGUMENT;
+		return SIRMeshResult::SIR_MESH_INVALID_ARGUMENT;
 	--m_nReaders;
-	return SIR_MESH_OK;
+	return SIRMeshResult::SIR_MESH_OK;
 }
 
 bool SIRMeshCollisionBVH::matchesSource( const SIRMeshCollisionSource& source ) const noexcept
@@ -70,22 +70,22 @@ bool SIRMeshCollisionBVH::matchesSource( const SIRMeshCollisionSource& source ) 
 	return m_bReady && m_pSource == &source;
 }
 
-sirMeshResult_t SIRMeshCollisionBVH::getBounds( float *pMinXYZ, float *pMaxXYZ ) const noexcept
+SIRMeshResult SIRMeshCollisionBVH::getBounds( float *pMinXYZ, float *pMaxXYZ ) const noexcept
 {
 	if ( !m_bReady )
-		return SIR_MESH_NOT_READY;
+		return SIRMeshResult::SIR_MESH_NOT_READY;
 	if ( pMinXYZ == nullptr || pMaxXYZ == nullptr )
-		return SIR_MESH_INVALID_ARGUMENT;
+		return SIRMeshResult::SIR_MESH_INVALID_ARGUMENT;
 	memcpy( pMinXYZ, m_pNodes[0].boundsMin, sizeof( m_pNodes[0].boundsMin ) );
 	memcpy( pMaxXYZ, m_pNodes[0].boundsMax, sizeof( m_pNodes[0].boundsMax ) );
-	return SIR_MESH_OK;
+	return SIRMeshResult::SIR_MESH_OK;
 }
 
 uint64_t SIRMeshCollisionBVH::requiredBytes( uint32_t nTriangles ) noexcept
 {
 	if ( nTriangles == 0 || nTriangles > UINT32_MAX / 2 )
 		return 0;
-	return ( uint64_t )nTriangles * ( sizeof( sirMeshBVHNode_t ) * 2 + sizeof( uint32_t ) );
+	return static_cast<uint64_t>(nTriangles) * ( sizeof( sirMeshBVHNode_t ) * 2 + sizeof( uint32_t ) );
 }
 
 uint32_t SIRMeshCollisionBVH::requiredAlignment( void ) noexcept
@@ -93,20 +93,20 @@ uint32_t SIRMeshCollisionBVH::requiredAlignment( void ) noexcept
 	return alignof( sirMeshBVHNode_t );
 }
 
-sirMeshResult_t SIRMeshCollisionBVH::initialize( SIRMeshCollisionSource& source, void *pStorage, uint64_t nStorageBytes ) noexcept
+SIRMeshResult SIRMeshCollisionBVH::initialize( SIRMeshCollisionSource& source, void *pStorage, uint64_t nStorageBytes ) noexcept
 {
 	if ( m_bReady )
-		return SIR_MESH_BUSY;
+		return SIRMeshResult::SIR_MESH_BUSY;
 	const uint32_t nTriangles = source.getTriangleCount();
 	const uint64_t bytes = requiredBytes( nTriangles );
-	if ( bytes == 0 || pStorage == nullptr || ( ( uintptr_t )pStorage % requiredAlignment() ) != 0 || nStorageBytes < bytes )
-		return SIR_MESH_INVALID_ARGUMENT;
-	const sirMeshResult_t borrowed = source.acquireInstance();
-	if ( borrowed != SIR_MESH_OK )
+	if ( bytes == 0 || pStorage == nullptr || ( reinterpret_cast<uintptr_t>(pStorage) % requiredAlignment() ) != 0 || nStorageBytes < bytes )
+		return SIRMeshResult::SIR_MESH_INVALID_ARGUMENT;
+	const SIRMeshResult borrowed = source.acquireInstance();
+	if ( borrowed != SIRMeshResult::SIR_MESH_OK )
 		return borrowed;
 	m_pSource = &source;
-	m_pNodes = ( sirMeshBVHNode_t * )pStorage;
-	m_pTriangleOrder = ( uint32_t * )( m_pNodes + 2ULL * nTriangles );
+	m_pNodes = static_cast<sirMeshBVHNode_t *>(pStorage);
+	m_pTriangleOrder = reinterpret_cast<uint32_t *>( m_pNodes + 2ULL * nTriangles );
 	m_nTriangleCount = nTriangles;
 	m_nNodeCount = 0;
 	m_nReaders = 0;
@@ -114,15 +114,15 @@ sirMeshResult_t SIRMeshCollisionBVH::initialize( SIRMeshCollisionSource& source,
 		m_pTriangleOrder[i] = i;
 	buildNode( 0, nTriangles, 0 );
 	m_bReady = true;
-	return SIR_MESH_OK;
+	return SIRMeshResult::SIR_MESH_OK;
 }
 
 float SIRMeshCollisionBVH::getCentroid( uint32_t nTriangle, uint32_t nAxis ) const noexcept
 {
-	sirMeshCollisionTriangle_t tri = {};
-	const sirMeshResult_t result = m_pSource->getTriangle( nTriangle, &tri );
-	assert( result == SIR_MESH_OK );
-	( void )result;
+	sirMeshCollisionTriangle_t tri {};
+	const SIRMeshResult result = m_pSource->getTriangle( nTriangle, &tri );
+	assert( result == SIRMeshResult::SIR_MESH_OK );
+	static_cast<void>(result);
 	return ( tri.positions[nAxis] + tri.positions[nAxis + 3] + tri.positions[nAxis + 6] ) / 3.0f;
 }
 
@@ -141,10 +141,10 @@ uint32_t SIRMeshCollisionBVH::buildNode( uint32_t nFirst, uint32_t nCount, uint3
 		node.boundsMax[a] = -INFINITY;
 	}
 	for ( uint32_t i = nFirst; i < nFirst + nCount; ++i ) {
-		sirMeshCollisionTriangle_t triangle = {};
-		const sirMeshResult_t result = m_pSource->getTriangle( m_pTriangleOrder[i], &triangle );
-		assert( result == SIR_MESH_OK );
-		( void )result;
+		sirMeshCollisionTriangle_t triangle {};
+		const SIRMeshResult result = m_pSource->getTriangle( m_pTriangleOrder[i], &triangle );
+		assert( result == SIRMeshResult::SIR_MESH_OK );
+		static_cast<void>(result);
 		for ( uint32_t axis = 0; axis < 3; ++axis ) {
 			for ( uint32_t corner = 0; corner < 3; ++corner ) {
 				const float value = triangle.positions[corner * 3 + axis];
@@ -235,9 +235,9 @@ bool SIRMeshCollisionBVH::raycastNode( uint32_t nNode, const sirMeshCollisionRay
 	for ( uint32_t i = node.nFirst; i < node.nFirst + node.nCount; ++i ) {
 		sirMeshCollisionRay_t candidate = ray;
 		candidate.fMaxDistance = pHit->fDistance;
-		sirMeshCollisionHit_t result = {};
-		const sirMeshResult_t rc = m_pSource->raycastTriangle( candidate, m_pTriangleOrder[i], &result );
-		if ( rc == SIR_MESH_OK ) {
+		sirMeshCollisionHit_t result {};
+		const SIRMeshResult rc = m_pSource->raycastTriangle( candidate, m_pTriangleOrder[i], &result );
+		if ( rc == SIRMeshResult::SIR_MESH_OK ) {
 			if ( result.fDistance < pHit->fDistance || ( result.fDistance == pHit->fDistance && result.nTriangle < pHit->nTriangle ) )
 				*pHit = result;
 			found = true;
@@ -246,41 +246,41 @@ bool SIRMeshCollisionBVH::raycastNode( uint32_t nNode, const sirMeshCollisionRay
 	return found;
 }
 
-sirMeshResult_t SIRMeshCollisionBVH::raycast( const sirMeshCollisionRay_t& ray, sirMeshCollisionHit_t *pHit ) const noexcept
+SIRMeshResult SIRMeshCollisionBVH::raycast( const sirMeshCollisionRay_t& ray, sirMeshCollisionHit_t *pHit ) const noexcept
 {
 	if ( !m_bReady )
-		return SIR_MESH_NOT_READY;
+		return SIRMeshResult::SIR_MESH_NOT_READY;
 	if ( pHit == nullptr || !std::isfinite( ray.fMaxDistance ) || ray.fMaxDistance <= 0.0f )
-		return SIR_MESH_INVALID_ARGUMENT;
+		return SIRMeshResult::SIR_MESH_INVALID_ARGUMENT;
 	float length = 0.0f;
 	for ( uint32_t i = 0; i < 3; ++i ) {
 		if ( !std::isfinite( ray.origin[i] ) || !std::isfinite( ray.direction[i] ) )
-			return SIR_MESH_INVALID_ARGUMENT;
+			return SIRMeshResult::SIR_MESH_INVALID_ARGUMENT;
 		length += ray.direction[i] * ray.direction[i];
 	}
 	if ( !std::isfinite( length ) || length <= 0.0f )
-		return SIR_MESH_INVALID_ARGUMENT;
+		return SIRMeshResult::SIR_MESH_INVALID_ARGUMENT;
 	sirMeshCollisionRay_t normalized = ray;
 	const float inverseLength = 1.0f / std::sqrt( length );
 	for ( uint32_t i = 0; i < 3; ++i )
 		normalized.direction[i] *= inverseLength;
-	sirMeshCollisionHit_t best = {};
+	sirMeshCollisionHit_t best {};
 	best.fDistance = ray.fMaxDistance;
 	best.nTriangle = UINT32_MAX;
 	if ( !raycastNode( 0, normalized, &best ) )
-		return SIR_MESH_NOT_FOUND;
+		return SIRMeshResult::SIR_MESH_NOT_FOUND;
 	*pHit = best;
-	return SIR_MESH_OK;
+	return SIRMeshResult::SIR_MESH_OK;
 }
 
-sirMeshResult_t SIRMeshCollisionBVH::shutdown( void ) noexcept
+SIRMeshResult SIRMeshCollisionBVH::shutdown( void ) noexcept
 {
 	if ( !m_bReady )
-		return SIR_MESH_NOT_READY;
+		return SIRMeshResult::SIR_MESH_NOT_READY;
 	if ( m_nReaders != 0 )
-		return SIR_MESH_BUSY;
-	const sirMeshResult_t result = m_pSource->releaseInstance();
-	if ( result != SIR_MESH_OK )
+		return SIRMeshResult::SIR_MESH_BUSY;
+	const SIRMeshResult result = m_pSource->releaseInstance();
+	if ( result != SIRMeshResult::SIR_MESH_OK )
 		return result;
 	m_pSource = nullptr;
 	m_pNodes = nullptr;
@@ -289,5 +289,5 @@ sirMeshResult_t SIRMeshCollisionBVH::shutdown( void ) noexcept
 	m_nTriangleCount = 0;
 	m_nReaders = 0;
 	m_bReady = false;
-	return SIR_MESH_OK;
+	return SIRMeshResult::SIR_MESH_OK;
 }

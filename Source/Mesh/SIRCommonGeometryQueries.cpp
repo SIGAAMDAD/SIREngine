@@ -87,68 +87,68 @@ static bool sirCommonRayTriangle( const sirMeshGeometryRead_t& rGeometry, uint32
 	return true;
 }
 
-sirCommonGeometryResult_t sirCommonGeometryTraceRay( const sirMeshGeometryRead_t& rGeometry, const sirCommonGeometryRay_t& rRay,
+SIRCommonGeometryResult sirCommonGeometryTraceRay( const sirMeshGeometryRead_t& rGeometry, const sirCommonGeometryRay_t& rRay,
                                                      sirCommonGeometryHit_t *pHit ) noexcept
 {
 	if ( pHit == nullptr || rGeometry.pPositionsXYZ == nullptr || rGeometry.pTriangleIndices == nullptr || rGeometry.nVertexCount == 0 ||
 	     rGeometry.nIndexCount == 0 || rGeometry.nIndexCount % 3 != 0 || rRay.fMaximumDistance <= 0.0f ||
 	     !isfinite( rRay.fMaximumDistance ) ) {
-		return SIR_COMMON_GEOMETRY_INVALID_ARGUMENT;
+		return SIRCommonGeometryResult::SIR_COMMON_GEOMETRY_INVALID_ARGUMENT;
 	}
 	float fSquaredDirection = 0.0f;
 	for ( uint32_t axis = 0; axis < 3; ++axis ) {
 		if ( !isfinite( rRay.szOrigin[axis] ) || !isfinite( rRay.szDirection[axis] ) ) {
-			return SIR_COMMON_GEOMETRY_INVALID_ARGUMENT;
+			return SIRCommonGeometryResult::SIR_COMMON_GEOMETRY_INVALID_ARGUMENT;
 		}
 		fSquaredDirection += rRay.szDirection[axis] * rRay.szDirection[axis];
 	}
 	if ( !( fSquaredDirection > 0.0f ) || !isfinite( fSquaredDirection ) ) {
-		return SIR_COMMON_GEOMETRY_INVALID_ARGUMENT;
+		return SIRCommonGeometryResult::SIR_COMMON_GEOMETRY_INVALID_ARGUMENT;
 	}
 	const uint32_t nTriangles = rGeometry.nIndexCount / 3;
 	if ( rGeometry.pStaticBVH == nullptr || rGeometry.nStaticBVHBytes == 0 ||
 	     rGeometry.nStaticBVHBytes % sizeof( sirCommonBVHNode_t ) != 0 ||
 	     rGeometry.nStaticBVHBytes / sizeof( sirCommonBVHNode_t ) > UINT32_MAX || rGeometry.pSurfaceMaterials == nullptr ||
-	     rGeometry.nSurfaceMaterialBytes < ( uint64_t )nTriangles * sizeof( uint32_t ) ) {
-		return SIR_COMMON_GEOMETRY_INVALID_BVH;
+	     rGeometry.nSurfaceMaterialBytes < static_cast<uint64_t>(nTriangles * sizeof(  uint32_t  )) ) {
+		return SIRCommonGeometryResult::SIR_COMMON_GEOMETRY_INVALID_BVH;
 	}
-	const uint32_t nNodeCount = ( uint32_t )( rGeometry.nStaticBVHBytes / sizeof( sirCommonBVHNode_t ) );
+	const uint32_t nNodeCount = static_cast<uint32_t>(  rGeometry.nStaticBVHBytes / sizeof( sirCommonBVHNode_t )  );
 	constexpr uint32_t MAX_STACK = 64;
 	uint32_t szStack[MAX_STACK] = { 0 };
 	uint32_t nStackCount = 1;
-	uint64_t nVisitsRemaining = ( uint64_t )nNodeCount * 2 + 1;
+	uint64_t nVisitsRemaining = static_cast<uint64_t>(nNodeCount) * 2 + 1;
 	float fNearest = rRay.fMaximumDistance;
 	bool bFound = false;
-	sirCommonGeometryHit_t result = {};
+	sirCommonGeometryHit_t result {};
 	while ( nStackCount != 0 ) {
 		if ( nVisitsRemaining-- == 0 ) {
-			return SIR_COMMON_GEOMETRY_INVALID_BVH;
+			return SIRCommonGeometryResult::SIR_COMMON_GEOMETRY_INVALID_BVH;
 		}
 		const uint32_t iNode = szStack[--nStackCount];
 		if ( iNode >= nNodeCount ) {
-			return SIR_COMMON_GEOMETRY_INVALID_BVH;
+			return SIRCommonGeometryResult::SIR_COMMON_GEOMETRY_INVALID_BVH;
 		}
-		sirCommonBVHNode_t node = {};
-		memcpy( &node, ( const uint8_t * )rGeometry.pStaticBVH + ( uint64_t )iNode * sizeof( node ), sizeof( node ) );
+		sirCommonBVHNode_t node {};
+		memcpy( &node, static_cast<const uint8_t *>(rGeometry.pStaticBVH) + static_cast<uint64_t>(iNode * sizeof(  node  )), sizeof( node ) );
 		for ( uint32_t i = 0; i < 3; ++i ) {
 			if ( !isfinite( node.szMinimum[i] ) || !isfinite( node.szMaximum[i] ) || node.szMinimum[i] > node.szMaximum[i] ) {
-				return SIR_COMMON_GEOMETRY_INVALID_BVH;
+				return SIRCommonGeometryResult::SIR_COMMON_GEOMETRY_INVALID_BVH;
 			}
 		}
 		if ( node.nTriangleCount == 0 ) {
 			if ( node.nLeftChild >= nNodeCount || node.nRightChild >= nNodeCount || node.nLeftChild == node.nRightChild ||
 			     node.nLeftChild == iNode || node.nRightChild == iNode ) {
-				return SIR_COMMON_GEOMETRY_INVALID_BVH;
+				return SIRCommonGeometryResult::SIR_COMMON_GEOMETRY_INVALID_BVH;
 			}
 		} else if ( node.nFirstTriangle >= nTriangles || node.nTriangleCount > nTriangles - node.nFirstTriangle ) {
-			return SIR_COMMON_GEOMETRY_INVALID_BVH;
+			return SIRCommonGeometryResult::SIR_COMMON_GEOMETRY_INVALID_BVH;
 		}
 		if ( !sirCommonRayBounds( node, rRay, fNearest ) ) {
 			continue;
 		}
 		if ( node.nTriangleCount == 0 ) {
 			if ( nStackCount + 2 > MAX_STACK ) {
-				return SIR_COMMON_GEOMETRY_OUT_OF_BUDGET;
+				return SIRCommonGeometryResult::SIR_COMMON_GEOMETRY_OUT_OF_BUDGET;
 			}
 			szStack[nStackCount++] = node.nRightChild;
 			szStack[nStackCount++] = node.nLeftChild;
@@ -157,9 +157,10 @@ sirCommonGeometryResult_t sirCommonGeometryTraceRay( const sirMeshGeometryRead_t
 		for ( uint32_t iTriangle = node.nFirstTriangle; iTriangle < node.nFirstTriangle + node.nTriangleCount; ++iTriangle ) {
 			const uint32_t *pIndices = rGeometry.pTriangleIndices + iTriangle * 3;
 			if ( pIndices[0] >= rGeometry.nVertexCount || pIndices[1] >= rGeometry.nVertexCount || pIndices[2] >= rGeometry.nVertexCount ) {
-				return SIR_COMMON_GEOMETRY_INVALID_BVH;
+				return SIRCommonGeometryResult::SIR_COMMON_GEOMETRY_INVALID_BVH;
 			}
-			float normal[3] = {};
+			float normal[3];
+			memset( normal, 0, sizeof( normal ) );
 			if ( !sirCommonRayTriangle( rGeometry, iTriangle, rRay, &fNearest, normal ) ) {
 				continue;
 			}
@@ -168,7 +169,7 @@ sirCommonGeometryResult_t sirCommonGeometryTraceRay( const sirMeshGeometryRead_t
 			result.nTriangle = iTriangle;
 			result.sourceKey = rGeometry.key;
 			memcpy( result.szNormal, normal, sizeof( normal ) );
-			memcpy( &result.nSurfaceMaterialId, ( const uint8_t * )rGeometry.pSurfaceMaterials + ( uint64_t )iTriangle * sizeof( uint32_t ),
+			memcpy( &result.nSurfaceMaterialId, static_cast<const uint8_t *>(rGeometry.pSurfaceMaterials) + static_cast<uint64_t>(iTriangle * sizeof(  uint32_t  )),
 			        sizeof( result.nSurfaceMaterialId ) );
 			for ( uint32_t axis = 0; axis < 3; ++axis ) {
 				result.szPosition[axis] = rRay.szOrigin[axis] + fNearest * rRay.szDirection[axis];
@@ -178,5 +179,5 @@ sirCommonGeometryResult_t sirCommonGeometryTraceRay( const sirMeshGeometryRead_t
 	if ( bFound ) {
 		*pHit = result;
 	}
-	return bFound ? SIR_COMMON_GEOMETRY_HIT : SIR_COMMON_GEOMETRY_MISS;
+	return bFound ? SIRCommonGeometryResult::SIR_COMMON_GEOMETRY_HIT : SIRCommonGeometryResult::SIR_COMMON_GEOMETRY_MISS;
 }

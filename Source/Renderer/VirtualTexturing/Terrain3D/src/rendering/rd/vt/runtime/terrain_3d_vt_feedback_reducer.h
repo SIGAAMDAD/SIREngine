@@ -60,7 +60,7 @@ public:
 		m_pCandidates = pCandidates;
 		m_nEpoch = m_nTouched = m_nSelected = 0u;
 		if ( pEpoch )
-			memset( pEpoch, 0, ( size_t )nCapacity * sizeof( uint32_t ) );
+			memset( pEpoch, 0, static_cast<size_t>(nCapacity * sizeof(  uint32_t  )) );
 	}
 	void resetCold()
 	{
@@ -111,7 +111,7 @@ public:
 		if ( !pCells || nCells > 240u * 136u )
 			return false;
 		for ( uint32_t i = 0u; i < nCells; ++i ) {
-			const uint8_t *const cell = pCells + ( size_t )i * sizeof( t3dVTFeedbackMultiRecord_t );
+			const uint8_t *const cell = pCells + static_cast<size_t>(i * sizeof(  t3dVTFeedbackMultiRecord_t  ));
 			uint32_t overflow = 0u;
 			memcpy( &overflow, cell + 8u * sizeof( uint32_t ), sizeof( overflow ) );
 			if ( overflow != 0u )
@@ -155,7 +155,7 @@ private:
 		     m_nCandidateCapacity == 0u )
 			return false;
 		if ( ++m_nEpoch == 0u ) {
-			memset( m_pEpoch, 0, ( size_t )m_nCapacity * sizeof( uint32_t ) );
+			memset( m_pEpoch, 0, static_cast<size_t>(m_nCapacity * sizeof(  uint32_t  )) );
 			m_nEpoch = 1u;
 		}
 		stats.m_nSamples = bMulti ? 0u : nWords;
@@ -163,10 +163,10 @@ private:
 			const uint32_t samples = bMulti ? T3D_VT_FEEDBACK_MULTI_PAGES : 1u;
 			for ( uint32_t j = 0u; j < samples; ++j ) {
 				uint32_t page = 0u, weight = 1u;
-				const uint8_t *const word = pWords + ( size_t )i * ( bMulti ? sizeof( t3dVTFeedbackMultiRecord_t ) : sizeof( uint32_t ) );
-				memcpy( &page, word + ( size_t )j * sizeof( uint32_t ), sizeof( page ) );
+				const uint8_t *const word = pWords + static_cast<size_t>(i) * ( bMulti ? sizeof( t3dVTFeedbackMultiRecord_t ) : sizeof( uint32_t ) );
+				memcpy( &page, word + static_cast<size_t>(j * sizeof(  uint32_t  )), sizeof( page ) );
 				if ( bMulti )
-					memcpy( &weight, word + ( size_t )( T3D_VT_FEEDBACK_MULTI_PAGES + j ) * sizeof( uint32_t ), sizeof( weight ) );
+					memcpy( &weight, word + static_cast<size_t>( T3D_VT_FEEDBACK_MULTI_PAGES + j ) * sizeof( uint32_t ), sizeof( weight ) );
 				if ( bMulti )
 					stats.m_nSamples = add( stats.m_nSamples, weight );
 				if ( page >= nPageCount || weight == 0u )

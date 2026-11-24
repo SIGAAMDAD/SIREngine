@@ -20,7 +20,7 @@ inline bool t3dVtUploadChannelViewValid( const uint32_t nResourceChannel, const 
                                          const uint32_t nBytes, const uint32_t nExpectedBytes, const int64_t nStagingBytes )
 {
 	return nResourceChannel < nChannelCount && pBytes != nullptr && nExpectedBytes != 0u && nBytes == nExpectedBytes &&
-	       nStagingBytes == ( int64_t )nExpectedBytes;
+	       nStagingBytes == static_cast<int64_t>(nExpectedBytes);
 }
 
 inline bool t3dVtUploadVictimCapacityValid( const uint32_t nPendingVictims, const uint32_t nPhysicalCapacity, const uint32_t nRetired )

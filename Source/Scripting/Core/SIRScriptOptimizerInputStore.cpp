@@ -17,7 +17,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Scripting/Core/SIRScriptSHA256.h>
 #include <Scripting/Core/SIRScriptOptimizationRecipe.h>
 
-#include <Core/Platform/SIRAtomic.h>
+#include <atomic>
 #include <stdio.h>
 #include <string.h>
 #if defined( _WIN32 )
@@ -32,19 +32,19 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 
 static constexpr uint8_t s_szInputMagic[8] = { 'S', 'I', 'R', 'I', 'N', 'P', '0', '1' };
-static SIRAtomic<uint64_t> s_nInputSerial( 1 );
+static std::atomic<uint64_t> s_nInputSerial( 1 );
 
 static void inputWrite32( uint8_t *pData, uint32_t nValue ) noexcept
 {
 	for ( uint32_t i = 0; i < 4; ++i ) {
-		pData[i] = ( uint8_t )( nValue >> ( i * 8 ) );
+		pData[i] = static_cast<uint8_t>(  nValue >> ( i * 8 )  );
 	}
 }
 
 static void inputWrite64( uint8_t *pData, uint64_t nValue ) noexcept
 {
 	for ( uint32_t i = 0; i < 8; ++i ) {
-		pData[i] = ( uint8_t )( nValue >> ( i * 8 ) );
+		pData[i] = static_cast<uint8_t>(  nValue >> ( i * 8 )  );
 	}
 }
 
@@ -52,7 +52,7 @@ static uint32_t inputRead32( const uint8_t *pData ) noexcept
 {
 	uint32_t nValue = 0;
 	for ( uint32_t i = 0; i < 4; ++i ) {
-		nValue |= ( uint32_t )pData[i] << ( i * 8 );
+		nValue |= static_cast<uint32_t>(pData[i]) << ( i * 8 );
 	}
 	return nValue;
 }
@@ -61,7 +61,7 @@ static uint64_t inputRead64( const uint8_t *pData ) noexcept
 {
 	uint64_t nValue = 0;
 	for ( uint32_t i = 0; i < 8; ++i ) {
-		nValue |= ( uint64_t )pData[i] << ( i * 8 );
+		nValue |= static_cast<uint64_t>(pData[i]) << ( i * 8 );
 	}
 	return nValue;
 }
@@ -104,7 +104,7 @@ static FILE *inputCreateExclusive( const char *pszPath ) noexcept
 	}
 	FILE *pFile = _fdopen( nFd, "wb" );
 	if ( pFile == nullptr ) {
-		( void )_close( nFd );
+		static_cast<void>(_close( nFd ));
 	}
 #else
 	const int nFd = open( pszPath, O_WRONLY | O_CREAT | O_EXCL, 0600 );
@@ -113,7 +113,7 @@ static FILE *inputCreateExclusive( const char *pszPath ) noexcept
 	}
 	FILE *pFile = fdopen( nFd, "wb" );
 	if ( pFile == nullptr ) {
-		( void )close( nFd );
+		static_cast<void>(close( nFd ));
 	}
 #endif
 	return pFile;
@@ -122,7 +122,7 @@ static FILE *inputCreateExclusive( const char *pszPath ) noexcept
 static bool inputCommit( const char *pszTemporary, const char *pszFinal, const char *pszRoot ) noexcept
 {
 #if defined( _WIN32 )
-	( void )pszRoot;
+	static_cast<void>(pszRoot);
 	return MoveFileExA( pszTemporary, pszFinal, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH ) != 0;
 #else
 	if ( rename( pszTemporary, pszFinal ) != 0 ) {
@@ -133,7 +133,7 @@ static bool inputCommit( const char *pszTemporary, const char *pszFinal, const c
 		return false;
 	}
 	const bool bSynced = fsync( nFd ) == 0;
-	( void )close( nFd );
+	static_cast<void>(close( nFd ));
 	return bSynced;
 #endif
 }
@@ -148,27 +148,27 @@ bool SIRScriptOptimizerInputStore::isOwnerThread( void ) const noexcept
 	return SIRThread::isCurrentThread( m_OwnerThread );
 }
 
-sirScriptResult_t SIRScriptOptimizerInputStore::configure( const char *pszRoot, uint64_t nMaximumInputBytes,
+SIRScriptResult SIRScriptOptimizerInputStore::configure( const char *pszRoot, uint64_t nMaximumInputBytes,
                                                            uint64_t nMaximumRecipeBytes ) noexcept
 {
 	if ( !isOwnerThread() ) {
-		return SIR_SCRIPT_BUSY;
+		return SIRScriptResult::SIR_SCRIPT_BUSY;
 	}
 	if ( m_nMaximumInputBytes != 0 ) {
-		return SIR_SCRIPT_WRONG_STATE;
+		return SIRScriptResult::SIR_SCRIPT_WRONG_STATE;
 	}
 	if ( pszRoot == nullptr || nMaximumInputBytes == 0 || nMaximumInputBytes > UINT32_MAX || nMaximumRecipeBytes == 0 ||
 	     nMaximumRecipeBytes > 65536 ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 	const size_t nLength = strlen( pszRoot );
 	if ( nLength == 0 || nLength >= MAX_PATH_BYTES - 150 ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 	memcpy( m_szRoot, pszRoot, nLength + 1 );
 	m_nMaximumInputBytes = nMaximumInputBytes;
 	m_nMaximumRecipeBytes = nMaximumRecipeBytes;
-	return SIR_SCRIPT_OK;
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
 bool SIRScriptOptimizerInputStore::formatPath( const sirScriptCacheKey_t& key, char szPath[MAX_PATH_BYTES] ) const noexcept
@@ -206,7 +206,7 @@ void SIRScriptOptimizerInputStore::encodeHeader( const sirScriptOptimizationRequ
 		inputWrite64( szHeader + 16 + 8 * i, szFields[i] );
 	}
 	memcpy( szHeader + 72, request.key.szDigest, 32 );
-	inputWrite32( szHeader + 104, ( uint32_t )request.eTier );
+	inputWrite32( szHeader + 104, static_cast<uint32_t>(request.eTier) );
 	inputWrite32( szHeader + 108, request.nFlags );
 	inputWrite64( szHeader + 112, request.nInputBytes );
 	inputWrite64( szHeader + 120, nRecipeBytes );
@@ -221,7 +221,8 @@ bool SIRScriptOptimizerInputStore::validHeader( const sirScriptOptimizationReque
 	if ( memcmp( szHeader, s_szInputMagic, 8 ) != 0 || inputRead32( szHeader + 8 ) != 1 || inputRead32( szHeader + 12 ) != HEADER_BYTES ) {
 		return false;
 	}
-	uint8_t szDigest[32] = {};
+	uint8_t szDigest[32];
+	memset( szDigest, 0, sizeof( szDigest ) );
 	SIRScriptSHA256::digest( szHeader, 192, szDigest );
 	if ( memcmp( szDigest, szHeader + 192, 32 ) != 0 ) {
 		return false;
@@ -236,7 +237,7 @@ bool SIRScriptOptimizerInputStore::validHeader( const sirScriptOptimizationReque
 	}
 	const uint64_t nRecipeBytes = inputRead64( szHeader + 120 );
 	if ( nRecipeBytes == 0 || nRecipeBytes > nMaximumRecipeBytes || memcmp( szHeader + 72, request.key.szDigest, 32 ) != 0 ||
-	     memcmp( szHeader + 128, request.key.szDigest, 32 ) != 0 || inputRead32( szHeader + 104 ) != ( uint32_t )request.eTier ||
+	     memcmp( szHeader + 128, request.key.szDigest, 32 ) != 0 || inputRead32( szHeader + 104 ) != static_cast<uint32_t>(request.eTier) ||
 	     inputRead32( szHeader + 108 ) != request.nFlags || inputRead64( szHeader + 112 ) != request.nInputBytes ) {
 		return false;
 	}
@@ -244,190 +245,206 @@ bool SIRScriptOptimizerInputStore::validHeader( const sirScriptOptimizationReque
 	return true;
 }
 
-sirScriptResult_t SIRScriptOptimizerInputStore::readHeader( const sirScriptOptimizationRequest_t& request, uint8_t szHeader[HEADER_BYTES],
+SIRScriptResult SIRScriptOptimizerInputStore::readHeader( const sirScriptOptimizationRequest_t& request, uint8_t szHeader[HEADER_BYTES],
                                                             uint64_t *pRecipeBytes ) const noexcept
 {
 	if ( !isOwnerThread() ) {
-		return SIR_SCRIPT_BUSY;
+		return SIRScriptResult::SIR_SCRIPT_BUSY;
 	}
-	uint8_t szWire[SIRScriptOptimizationProtocol::REQUEST_BYTES] = {};
+	uint8_t szWire[SIRScriptOptimizationProtocol::REQUEST_BYTES];
+	memset( szWire, 0, sizeof( szWire ) );
 	if ( m_nMaximumInputBytes == 0 || request.nInputBytes > m_nMaximumInputBytes ||
-	     SIRScriptOptimizationProtocol::encodeRequest( request, szWire ) != SIR_SCRIPT_OK ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+	     SIRScriptOptimizationProtocol::encodeRequest( request, szWire ) != SIRScriptResult::SIR_SCRIPT_OK ) {
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
-	char szPath[MAX_PATH_BYTES] = {};
+	char szPath[MAX_PATH_BYTES];
+	memset( szPath, 0, sizeof( szPath ) );
 	if ( !formatPath( request.key, szPath ) ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 	FILE *pFile = fopen( szPath, "rb" );
 	if ( pFile == nullptr ) {
-		return SIR_SCRIPT_NOT_FOUND;
+		return SIRScriptResult::SIR_SCRIPT_NOT_FOUND;
 	}
 	const bool bRead = fread( szHeader, 1, HEADER_BYTES, pFile ) == HEADER_BYTES;
-	( void )fclose( pFile );
-	return bRead && validHeader( request, szHeader, m_nMaximumRecipeBytes, pRecipeBytes ) ? SIR_SCRIPT_OK : SIR_SCRIPT_TYPE_MISMATCH;
+	static_cast<void>(fclose( pFile ));
+	return bRead && validHeader( request, szHeader, m_nMaximumRecipeBytes, pRecipeBytes ) ? SIRScriptResult::SIR_SCRIPT_OK : SIRScriptResult::SIR_SCRIPT_TYPE_MISMATCH;
 }
 
-sirScriptResult_t SIRScriptOptimizerInputStore::inspect( const sirScriptOptimizationRequest_t& request,
+SIRScriptResult SIRScriptOptimizerInputStore::inspect( const sirScriptOptimizationRequest_t& request,
                                                          uint64_t *pRecipeBytes ) const noexcept
 {
 	if ( pRecipeBytes == nullptr ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
-	uint8_t szHeader[HEADER_BYTES] = {};
+	uint8_t szHeader[HEADER_BYTES];
+	memset( szHeader, 0, sizeof( szHeader ) );
 	return readHeader( request, szHeader, pRecipeBytes );
 }
 
-sirScriptResult_t SIRScriptOptimizerInputStore::fetch( const sirScriptOptimizationRequest_t& request,
+SIRScriptResult SIRScriptOptimizerInputStore::fetch( const sirScriptOptimizationRequest_t& request,
                                                        sirScriptOptimizerInputBuffers_t *pBuffers ) const noexcept
 {
 	if ( !isOwnerThread() ) {
-		return SIR_SCRIPT_BUSY;
+		return SIRScriptResult::SIR_SCRIPT_BUSY;
 	}
 	if ( pBuffers == nullptr || pBuffers->pRecipe == nullptr || pBuffers->pInput == nullptr ||
 	     pBuffers->nInputCapacity < request.nInputBytes ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
-	uint8_t szHeader[HEADER_BYTES] = {};
+	uint8_t szHeader[HEADER_BYTES];
+	memset( szHeader, 0, sizeof( szHeader ) );
 	uint64_t nRecipeBytes = 0;
-	const sirScriptResult_t eHeader = readHeader( request, szHeader, &nRecipeBytes );
-	if ( eHeader != SIR_SCRIPT_OK ) {
+	const SIRScriptResult eHeader = readHeader( request, szHeader, &nRecipeBytes );
+	if ( eHeader != SIRScriptResult::SIR_SCRIPT_OK ) {
 		return eHeader;
 	}
 	if ( nRecipeBytes > pBuffers->nRecipeCapacity ) {
-		return SIR_SCRIPT_CAPACITY_EXCEEDED;
+		return SIRScriptResult::SIR_SCRIPT_CAPACITY_EXCEEDED;
 	}
-	char szPath[MAX_PATH_BYTES] = {};
+	char szPath[MAX_PATH_BYTES];
+	memset( szPath, 0, sizeof( szPath ) );
 	if ( !formatPath( request.key, szPath ) ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 	FILE *pFile = fopen( szPath, "rb" );
 	if ( pFile == nullptr ) {
-		return SIR_SCRIPT_NOT_FOUND;
+		return SIRScriptResult::SIR_SCRIPT_NOT_FOUND;
 	}
-	uint8_t szAgain[HEADER_BYTES] = {};
+	uint8_t szAgain[HEADER_BYTES];
+	memset( szAgain, 0, sizeof( szAgain ) );
 	uint64_t nAgain = 0;
 	const bool bHeader = fread( szAgain, 1, HEADER_BYTES, pFile ) == HEADER_BYTES &&
 	                     validHeader( request, szAgain, m_nMaximumRecipeBytes, &nAgain ) && nAgain == nRecipeBytes &&
 	                     memcmp( szHeader, szAgain, HEADER_BYTES ) == 0;
-	const bool bRead = bHeader && fread( pBuffers->pRecipe, 1, ( size_t )nRecipeBytes, pFile ) == nRecipeBytes &&
-	                   fread( pBuffers->pInput, 1, ( size_t )request.nInputBytes, pFile ) == request.nInputBytes;
+	const bool bRead = bHeader && fread( pBuffers->pRecipe, 1, static_cast<size_t>(nRecipeBytes), pFile ) == nRecipeBytes &&
+	                   fread( pBuffers->pInput, 1, static_cast<size_t>(request.nInputBytes), pFile ) == request.nInputBytes;
 	const bool bEOF = bRead && fgetc( pFile ) == EOF && !ferror( pFile );
-	( void )fclose( pFile );
+	static_cast<void>(fclose( pFile ));
 	if ( !bEOF ) {
-		return SIR_SCRIPT_TYPE_MISMATCH;
+		return SIRScriptResult::SIR_SCRIPT_TYPE_MISMATCH;
 	}
-	uint8_t szRecipeDigest[32] = {};
-	uint8_t szInputDigest[32] = {};
+	uint8_t szRecipeDigest[32];
+	memset( szRecipeDigest, 0, sizeof( szRecipeDigest ) );
+	uint8_t szInputDigest[32];
+	memset( szInputDigest, 0, sizeof( szInputDigest ) );
 	SIRScriptSHA256::digest( pBuffers->pRecipe, nRecipeBytes, szRecipeDigest );
 	SIRScriptSHA256::digest( pBuffers->pInput, request.nInputBytes, szInputDigest );
 	if ( memcmp( szRecipeDigest, szHeader + 128, 32 ) != 0 || memcmp( szInputDigest, szHeader + 160, 32 ) != 0 ||
-	     SIRScriptOptimizationRecipe::verify( request, pBuffers->pInput, pBuffers->pRecipe, nRecipeBytes ) != SIR_SCRIPT_OK ) {
-		return SIR_SCRIPT_TYPE_MISMATCH;
+	     SIRScriptOptimizationRecipe::verify( request, pBuffers->pInput, pBuffers->pRecipe, nRecipeBytes ) != SIRScriptResult::SIR_SCRIPT_OK ) {
+		return SIRScriptResult::SIR_SCRIPT_TYPE_MISMATCH;
 	}
 	pBuffers->nRecipeBytes = nRecipeBytes;
-	return SIR_SCRIPT_OK;
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
-sirScriptResult_t SIRScriptOptimizerInputStore::stage( const sirScriptOptimizationRequest_t& request, const void *pRecipe,
+SIRScriptResult SIRScriptOptimizerInputStore::stage( const sirScriptOptimizationRequest_t& request, const void *pRecipe,
                                                        uint64_t nRecipeBytes, const void *pInput ) noexcept
 {
 	if ( !isOwnerThread() ) {
-		return SIR_SCRIPT_BUSY;
+		return SIRScriptResult::SIR_SCRIPT_BUSY;
 	}
-	uint8_t szWire[SIRScriptOptimizationProtocol::REQUEST_BYTES] = {};
+	uint8_t szWire[SIRScriptOptimizationProtocol::REQUEST_BYTES];
+	memset( szWire, 0, sizeof( szWire ) );
 	if ( m_nMaximumInputBytes == 0 || pRecipe == nullptr || pInput == nullptr || nRecipeBytes == 0 ||
 	     nRecipeBytes > m_nMaximumRecipeBytes || request.nInputBytes > m_nMaximumInputBytes ||
-	     SIRScriptOptimizationProtocol::encodeRequest( request, szWire ) != SIR_SCRIPT_OK ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+	     SIRScriptOptimizationProtocol::encodeRequest( request, szWire ) != SIRScriptResult::SIR_SCRIPT_OK ) {
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
-	sirScriptCacheKey_t digest = {};
-	if ( SIRScriptArtifactCache::makeKey( pRecipe, nRecipeBytes, &digest ) != SIR_SCRIPT_OK ||
+	sirScriptCacheKey_t digest {};
+	if ( SIRScriptArtifactCache::makeKey( pRecipe, nRecipeBytes, &digest ) != SIRScriptResult::SIR_SCRIPT_OK ||
 	     memcmp( digest.szDigest, request.key.szDigest, 32 ) != 0 ||
-	     SIRScriptOptimizationRecipe::verify( request, pInput, pRecipe, nRecipeBytes ) != SIR_SCRIPT_OK ) {
-		return SIR_SCRIPT_TYPE_MISMATCH;
+	     SIRScriptOptimizationRecipe::verify( request, pInput, pRecipe, nRecipeBytes ) != SIRScriptResult::SIR_SCRIPT_OK ) {
+		return SIRScriptResult::SIR_SCRIPT_TYPE_MISMATCH;
 	}
-	uint8_t szInputDigest[32] = {};
+	uint8_t szInputDigest[32];
+	memset( szInputDigest, 0, sizeof( szInputDigest ) );
 	SIRScriptSHA256::digest( pInput, request.nInputBytes, szInputDigest );
-	uint8_t szHeader[HEADER_BYTES] = {};
+	uint8_t szHeader[HEADER_BYTES];
+	memset( szHeader, 0, sizeof( szHeader ) );
 	encodeHeader( request, nRecipeBytes, szInputDigest, szHeader );
-	char szFinal[MAX_PATH_BYTES] = {};
+	char szFinal[MAX_PATH_BYTES];
+	memset( szFinal, 0, sizeof( szFinal ) );
 	if ( !formatPath( request.key, szFinal ) ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 	FILE *pExisting = fopen( szFinal, "rb" );
 	if ( pExisting != nullptr ) {
-		uint8_t szOld[HEADER_BYTES] = {};
+		uint8_t szOld[HEADER_BYTES];
+		memset( szOld, 0, sizeof( szOld ) );
 		const bool bOldHeader = fread( szOld, 1, HEADER_BYTES, pExisting ) == HEADER_BYTES;
 		bool bEqual = bOldHeader && memcmp( szOld, szHeader, HEADER_BYTES ) == 0;
-		uint8_t szScratch[4096] = {};
-		const uint8_t *pRecipeBytes = ( const uint8_t * )pRecipe;
-		const uint8_t *pInputBytes = ( const uint8_t * )pInput;
+		uint8_t szScratch[4096];
+		memset( szScratch, 0, sizeof( szScratch ) );
+		const uint8_t *pRecipeBytes = static_cast<const uint8_t *>(pRecipe);
+		const uint8_t *pInputBytes = static_cast<const uint8_t *>(pInput);
 		for ( uint64_t nOffset = 0; bEqual && nOffset < nRecipeBytes; ) {
-			const size_t nCount = ( size_t )( nRecipeBytes - nOffset < sizeof( szScratch ) ? nRecipeBytes - nOffset : sizeof( szScratch ) );
+			const size_t nCount = static_cast<size_t>(  nRecipeBytes - nOffset < sizeof( szScratch ) ? nRecipeBytes - nOffset : sizeof( szScratch )  );
 			bEqual = fread( szScratch, 1, nCount, pExisting ) == nCount && memcmp( szScratch, pRecipeBytes + nOffset, nCount ) == 0;
 			nOffset += nCount;
 		}
 		for ( uint64_t nOffset = 0; bEqual && nOffset < request.nInputBytes; ) {
 			const size_t nCount =
-			    ( size_t )( request.nInputBytes - nOffset < sizeof( szScratch ) ? request.nInputBytes - nOffset : sizeof( szScratch ) );
+			    static_cast<size_t>(  request.nInputBytes - nOffset < sizeof( szScratch ) ? request.nInputBytes - nOffset : sizeof( szScratch )  );
 			bEqual = fread( szScratch, 1, nCount, pExisting ) == nCount && memcmp( szScratch, pInputBytes + nOffset, nCount ) == 0;
 			nOffset += nCount;
 		}
 		if ( bEqual ) {
 			bEqual = fgetc( pExisting ) == EOF && !ferror( pExisting );
 		}
-		( void )fclose( pExisting );
+		static_cast<void>(fclose( pExisting ));
 		if ( bEqual ) {
-			return SIR_SCRIPT_DUPLICATE;
+			return SIRScriptResult::SIR_SCRIPT_DUPLICATE;
 		}
 		if ( bOldHeader && memcmp( szOld, szHeader, HEADER_BYTES ) == 0 ) {
 			// A well-formed descriptor with damaged contents is recoverable.
 		} else if ( bOldHeader ) {
 			uint64_t nRecipeOld = 0;
 			if ( validHeader( request, szOld, m_nMaximumRecipeBytes, &nRecipeOld ) ) {
-				return SIR_SCRIPT_TYPE_MISMATCH;
+				return SIRScriptResult::SIR_SCRIPT_TYPE_MISMATCH;
 			}
 			// Different artifact identity under the same canonical recipe key is a conflict.
 			if ( memcmp( szOld, s_szInputMagic, 8 ) == 0 && memcmp( szOld + 72, request.key.szDigest, 32 ) == 0 ) {
-				return SIR_SCRIPT_TYPE_MISMATCH;
+				return SIRScriptResult::SIR_SCRIPT_TYPE_MISMATCH;
 			}
 		}
 	}
-	char szTemporary[MAX_PATH_BYTES] = {};
+	char szTemporary[MAX_PATH_BYTES];
+	memset( szTemporary, 0, sizeof( szTemporary ) );
 #if defined( _WIN32 )
-	const uint64_t nPID = ( uint64_t )_getpid();
+	const uint64_t nPID = static_cast<uint64_t>(_getpid());
 #else
-	const uint64_t nPID = ( uint64_t )getpid();
+	const uint64_t nPID = static_cast<uint64_t>(getpid());
 #endif
-	const uint64_t nSerial = s_nInputSerial.fetchAdd( 1, SIR_MEMORY_ORDER_RELAXED );
+	const uint64_t nSerial = s_nInputSerial.fetch_add( 1, std::memory_order_relaxed );
 	if ( snprintf( szTemporary, sizeof( szTemporary ), "%s.tmp.%llu.%llu", szFinal, ( unsigned long long )nPID,
-	               ( unsigned long long )nSerial ) >= ( int )sizeof( szTemporary ) ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+	               ( unsigned long long )nSerial ) >= static_cast<int>(sizeof( szTemporary ) )) {
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 	FILE *pFile = inputCreateExclusive( szTemporary );
 	if ( pFile == nullptr ) {
-		return SIR_SCRIPT_BACKEND_FAILURE;
+		return SIRScriptResult::SIR_SCRIPT_BACKEND_FAILURE;
 	}
 	const bool bWritten = inputDurableWrite( pFile, szHeader, HEADER_BYTES ) &&
-	                      inputDurableWrite( pFile, pRecipe, ( size_t )nRecipeBytes ) &&
-	                      inputDurableWrite( pFile, pInput, ( size_t )request.nInputBytes ) && inputSync( pFile );
+	                      inputDurableWrite( pFile, pRecipe, static_cast<size_t>(nRecipeBytes) ) &&
+	                      inputDurableWrite( pFile, pInput, static_cast<size_t>(request.nInputBytes) ) && inputSync( pFile );
 	const bool bClosed = fclose( pFile ) == 0;
 	if ( !bWritten || !bClosed || !inputCommit( szTemporary, szFinal, m_szRoot ) ) {
-		( void )remove( szTemporary );
-		return SIR_SCRIPT_BACKEND_FAILURE;
+		static_cast<void>(remove( szTemporary ));
+		return SIRScriptResult::SIR_SCRIPT_BACKEND_FAILURE;
 	}
-	return SIR_SCRIPT_OK;
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
-sirScriptResult_t SIRScriptOptimizerInputStore::erase( sirScriptCacheKey_t key ) noexcept
+SIRScriptResult SIRScriptOptimizerInputStore::erase( sirScriptCacheKey_t key ) noexcept
 {
 	if ( !isOwnerThread() ) {
-		return SIR_SCRIPT_BUSY;
+		return SIRScriptResult::SIR_SCRIPT_BUSY;
 	}
-	char szPath[MAX_PATH_BYTES] = {};
+	char szPath[MAX_PATH_BYTES];
+	memset( szPath, 0, sizeof( szPath ) );
 	if ( !formatPath( key, szPath ) ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
-	return remove( szPath ) == 0 ? SIR_SCRIPT_OK : SIR_SCRIPT_NOT_FOUND;
+	return remove( szPath ) == 0 ? SIRScriptResult::SIR_SCRIPT_OK : SIRScriptResult::SIR_SCRIPT_NOT_FOUND;
 }

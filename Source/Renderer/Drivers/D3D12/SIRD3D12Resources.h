@@ -15,8 +15,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRD3D12RESOURCES_H__
-#define __SIRENGINE_SIRD3D12RESOURCES_H__
+#ifndef __SIR_D3_D12_RESOURCES_H__
+#define __SIR_D3_D12_RESOURCES_H__
 
 #include <Core/SIRPCH.h>
 
@@ -52,10 +52,10 @@ typedef struct sirD3D12ResourceSlot_s
 	uint32_t nCommandReferences;
 	uint32_t iDescriptor;
 	sirGraphicsHandle_t hParent;
-	sirGraphicsHandleType_t eType;
-	sirGraphicsMemoryClass_t eMemory;
-	sirGraphicsTextureDimension_t eDimension;
-	sirGraphicsFormat_t eFormat;
+	SIRGraphicsHandleType eType;
+	SIRGraphicsMemoryClass eMemory;
+	SIRGraphicsTextureDimension eDimension;
+	SIRGraphicsFormat eFormat;
 	D3D12_DESCRIPTOR_HEAP_TYPE eDescriptorHeap;
 	bool bLive;
 	bool bRetiring;
@@ -85,9 +85,9 @@ private:
 	uint64_t m_nExternalBytes = 0;
 	uint64_t m_nPeakAllocatedBytes = 0;
 
-	sirGraphicsResult_t acquireSlot( sirGraphicsHandleType_t eType, uint32_t *pIndex, sirGraphicsHandle_t *pHandle ) noexcept;
-	sirD3D12ResourceSlot_t *findSlot( sirGraphicsHandle_t hHandle, sirGraphicsHandleType_t eType ) noexcept;
-	sirGraphicsResult_t reserveDescriptor( D3D12_DESCRIPTOR_HEAP_TYPE eHeap, uint32_t *pIndex, D3D12_CPU_DESCRIPTOR_HANDLE *pCpu ) noexcept;
+	SIRGraphicsResult acquireSlot( SIRGraphicsHandleType eType, uint32_t *pIndex, sirGraphicsHandle_t *pHandle ) noexcept;
+	sirD3D12ResourceSlot_t *findSlot( sirGraphicsHandle_t hHandle, SIRGraphicsHandleType eType ) noexcept;
+	SIRGraphicsResult reserveDescriptor( D3D12_DESCRIPTOR_HEAP_TYPE eHeap, uint32_t *pIndex, D3D12_CPU_DESCRIPTOR_HANDLE *pCpu ) noexcept;
 	void releaseSlot( uint32_t iSlot ) noexcept;
 	bool validateRange( const sirD3D12ResourceSlot_t& slot, uint64_t nOffset, uint64_t nBytes ) const noexcept;
 	bool pollRetirement( const sirD3D12CompletionSet_t& completion, bool *pCompleted ) noexcept;
@@ -103,32 +103,32 @@ public:
 	void collectRetired( void ) noexcept;
 	const sirD3D12ResourceSlot_t *querySlot( sirGraphicsHandle_t hHandle ) noexcept;
 	bool queryDescriptor( sirGraphicsHandle_t hView, D3D12_DESCRIPTOR_HEAP_TYPE eHeap, D3D12_CPU_DESCRIPTOR_HANDLE *pDescriptor ) noexcept;
-	sirGraphicsResult_t reserveDescriptorSpan( D3D12_DESCRIPTOR_HEAP_TYPE eHeap, uint32_t nCount, uint32_t *pIndex,
+	SIRGraphicsResult reserveDescriptorSpan( D3D12_DESCRIPTOR_HEAP_TYPE eHeap, uint32_t nCount, uint32_t *pIndex,
 	                                           D3D12_CPU_DESCRIPTOR_HANDLE *pCpu, D3D12_GPU_DESCRIPTOR_HANDLE *pGpu ) noexcept;
 	void releaseDescriptorSpan( D3D12_DESCRIPTOR_HEAP_TYPE eHeap, uint32_t iStart, uint32_t nCount ) noexcept;
 	ID3D12DescriptorHeap *getShaderVisibleHeap( D3D12_DESCRIPTOR_HEAP_TYPE eHeap ) noexcept;
-	sirGraphicsResult_t retainCommandReference( sirGraphicsHandle_t hHandle ) noexcept;
+	SIRGraphicsResult retainCommandReference( sirGraphicsHandle_t hHandle ) noexcept;
 	void releaseCommandReference( sirGraphicsHandle_t hHandle ) noexcept;
 	uint64_t getAllocatedBytes( void ) const noexcept;
 	uint64_t getExternalBytes( void ) const noexcept;
-	sirGraphicsResult_t importExternalTexture( ID3D12Resource *pResource, sirGraphicsFormat_t eFormat,
+	SIRGraphicsResult importExternalTexture( ID3D12Resource *pResource, SIRGraphicsFormat eFormat,
 	                                           sirGraphicsHandle_t *pHandle ) noexcept;
 	bool canReleaseExternalTexture( sirGraphicsHandle_t hTexture ) noexcept;
-	sirGraphicsResult_t releaseExternalTexture( sirGraphicsHandle_t hTexture ) noexcept;
+	SIRGraphicsResult releaseExternalTexture( sirGraphicsHandle_t hTexture ) noexcept;
 	uint64_t getPeakAllocatedBytes( void ) const noexcept;
 	uint64_t getMappedUploadBytes( void ) const noexcept;
 	uint64_t getMappedReadbackBytes( void ) const noexcept;
 
-	sirGraphicsResult_t createBuffer( const sirGraphicsBufferDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept;
-	sirGraphicsResult_t createTexture( const sirGraphicsTextureDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept;
-	sirGraphicsResult_t createView( const sirGraphicsViewDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept;
-	sirGraphicsResult_t createSampler( const sirGraphicsSamplerDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept;
-	sirGraphicsResult_t mapBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffset, uint64_t nBytes,
+	SIRGraphicsResult createBuffer( const sirGraphicsBufferDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept;
+	SIRGraphicsResult createTexture( const sirGraphicsTextureDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept;
+	SIRGraphicsResult createView( const sirGraphicsViewDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept;
+	SIRGraphicsResult createSampler( const sirGraphicsSamplerDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept;
+	SIRGraphicsResult mapBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffset, uint64_t nBytes,
 	                               sirGraphicsMappedBuffer_t *pMapped ) noexcept;
-	sirGraphicsResult_t unmapBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffset, uint64_t nBytes ) noexcept;
-	sirGraphicsResult_t flushBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffset, uint64_t nBytes ) noexcept;
-	sirGraphicsResult_t invalidateBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffset, uint64_t nBytes ) noexcept;
-	sirGraphicsResult_t retireResource( sirGraphicsHandle_t hHandle, const sirGraphicsCompletionSet_t& completion ) noexcept;
+	SIRGraphicsResult unmapBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffset, uint64_t nBytes ) noexcept;
+	SIRGraphicsResult flushBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffset, uint64_t nBytes ) noexcept;
+	SIRGraphicsResult invalidateBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffset, uint64_t nBytes ) noexcept;
+	SIRGraphicsResult retireResource( sirGraphicsHandle_t hHandle, const sirGraphicsCompletionSet_t& completion ) noexcept;
 };
 
-#endif // __SIRENGINE_SIRD3D12RESOURCES_H__
+#endif // __SIR_D3_D12_RESOURCES_H__

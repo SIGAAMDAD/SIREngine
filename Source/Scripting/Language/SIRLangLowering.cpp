@@ -19,10 +19,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <charconv>
 #include <cmath>
 
-static bool sirLangIsExecutableValue( sirLangValueKind_t eType ) noexcept
+static bool sirLangIsExecutableValue( SIRLangValueKind eType ) noexcept
 {
-	return eType == SIR_LANG_VALUE_BOOL || ( eType >= SIR_LANG_VALUE_I8 && eType <= SIR_LANG_VALUE_U64 ) || eType == SIR_LANG_VALUE_F32 ||
-	       eType == SIR_LANG_VALUE_F64;
+	return eType == SIRLangValueKind::SIR_LANG_VALUE_BOOL || ( eType >= SIRLangValueKind::SIR_LANG_VALUE_I8 && eType <= SIRLangValueKind::SIR_LANG_VALUE_U64 ) || eType == SIRLangValueKind::SIR_LANG_VALUE_F32 ||
+	       eType == SIRLangValueKind::SIR_LANG_VALUE_F64;
 }
 
 static bool sirLangHIRReference( const sirLangSemanticOutput_t *pSemantic, uint32_t iNode, uint32_t *pDeclaration ) noexcept
@@ -46,25 +46,25 @@ static const sirLangResolvedCall_t *sirLangHIRCall( const sirLangSignatureOutput
 	return nullptr;
 }
 
-sirLangLowerError_t SIRLangBuildHIR( const sirLangSyntaxTree_t *pTree, const sirLangSemanticOutput_t *pSemantic,
+SIRLangLowerError SIRLangBuildHIR( const sirLangSyntaxTree_t *pTree, const sirLangSemanticOutput_t *pSemantic,
                                      const sirLangSignatureOutput_t *pSignatures, sirLangHIRProgram_t *pOutput ) noexcept
 {
 	if ( pTree == nullptr || pSemantic == nullptr || pSignatures == nullptr || pOutput == nullptr || pOutput->pNodes == nullptr ||
 	     pTree->pNodes == nullptr || pTree->pTokens == nullptr || pTree->bTruncated || pSemantic->bTruncated || pSignatures->bTruncated ||
 	     pSemantic->nDiagnosticCount != 0 || pSignatures->nDiagnosticCount != 0 || pTree->nDiagnosticCount != 0 || pTree->nNodeCount == 0 ||
 	     pSignatures->pNodeTypes == nullptr || pSignatures->nNodeTypeCapacity < pTree->nNodeCount ) {
-		return SIR_LANG_LOWER_INVALID_INPUT;
+		return SIRLangLowerError::SIR_LANG_LOWER_INVALID_INPUT;
 	}
 	pOutput->nCount = 0;
 	pOutput->nAggregatedEffects = 0;
 	pOutput->bUsesUnsupportedEffects = false;
 	if ( pOutput->nCapacity < pTree->nNodeCount ) {
-		return SIR_LANG_LOWER_CAPACITY;
+		return SIRLangLowerError::SIR_LANG_LOWER_CAPACITY;
 	}
 	for ( uint32_t iNode = 0; iNode < pTree->nNodeCount; ++iNode ) {
 		const sirLangSyntaxNode_t& syntax = pTree->pNodes[iNode];
 		if ( syntax.nStartToken > syntax.nEndToken || syntax.nEndToken > pTree->nTokenCount ) {
-			return SIR_LANG_LOWER_INVALID_INPUT;
+			return SIRLangLowerError::SIR_LANG_LOWER_INVALID_INPUT;
 		}
 		sirLangHIRNode_t& hir = pOutput->pNodes[iNode];
 		hir = {};
@@ -72,13 +72,13 @@ sirLangLowerError_t SIRLangBuildHIR( const sirLangSyntaxTree_t *pTree, const sir
 		hir.iDeclarationNode = SIR_LANG_INVALID_INDEX;
 		hir.eSyntax = syntax.eKind;
 		hir.eType = pSignatures->pNodeTypes[iNode].eValue;
-		if ( syntax.eKind == SIR_LANG_SYNTAX_NAME || syntax.eKind == SIR_LANG_SYNTAX_MEMBER ) {
+		if ( syntax.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_NAME || syntax.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_MEMBER ) {
 			sirLangHIRReference( pSemantic, iNode, &hir.iDeclarationNode );
 		}
-		if ( syntax.eKind == SIR_LANG_SYNTAX_CALL ) {
+		if ( syntax.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_CALL ) {
 			const sirLangResolvedCall_t *pCall = sirLangHIRCall( pSignatures, iNode );
 			if ( pCall == nullptr ) {
-				return SIR_LANG_LOWER_UNRESOLVED;
+				return SIRLangLowerError::SIR_LANG_LOWER_UNRESOLVED;
 			}
 			hir.iDeclarationNode = pCall->iDeclarationNode;
 			hir.nResolvedFunctionId = pCall->nFunctionId;
@@ -86,19 +86,19 @@ sirLangLowerError_t SIRLangBuildHIR( const sirLangSyntaxTree_t *pTree, const sir
 		}
 		const uint32_t iLhs = syntax.nFirstChild;
 		const bool bWorldAssignment =
-		    syntax.eKind == SIR_LANG_SYNTAX_ASSIGNMENT && iLhs < pTree->nNodeCount && pTree->pNodes[iLhs].eKind == SIR_LANG_SYNTAX_MEMBER;
-		if ( syntax.eKind == SIR_LANG_SYNTAX_MUTATE || bWorldAssignment || syntax.eKind == SIR_LANG_SYNTAX_SPAWN ||
-		     syntax.eKind == SIR_LANG_SYNTAX_DESTROY || syntax.eKind == SIR_LANG_SYNTAX_EMIT || syntax.eKind == SIR_LANG_SYNTAX_AFTER ) {
-			hir.nEffects |= syntax.eKind == SIR_LANG_SYNTAX_EMIT || syntax.eKind == SIR_LANG_SYNTAX_AFTER ? SIR_LANG_EFFECT_EMIT
-			                                                                                              : SIR_LANG_EFFECT_STATE_WRITE;
+		    syntax.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_ASSIGNMENT && iLhs < pTree->nNodeCount && pTree->pNodes[iLhs].eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_MEMBER;
+		if ( syntax.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_MUTATE || bWorldAssignment || syntax.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_SPAWN ||
+		     syntax.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_DESTROY || syntax.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_EMIT || syntax.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_AFTER ) {
+			hir.nEffects |= syntax.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_EMIT || syntax.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_AFTER ? SIRLangCapabilityEffect::SIR_LANG_EFFECT_EMIT
+			                                                                                              : SIRLangCapabilityEffect::SIR_LANG_EFFECT_STATE_WRITE;
 		}
 		pOutput->nAggregatedEffects |= hir.nEffects;
-		if ( syntax.eKind == SIR_LANG_SYNTAX_ERROR ) {
-			return SIR_LANG_LOWER_INVALID_INPUT;
+		if ( syntax.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_ERROR ) {
+			return SIRLangLowerError::SIR_LANG_LOWER_INVALID_INPUT;
 		}
 		++pOutput->nCount;
 	}
-	return SIR_LANG_LOWER_OK;
+	return SIRLangLowerError::SIR_LANG_LOWER_OK;
 }
 
 typedef struct sirLangLowerState_s
@@ -141,9 +141,9 @@ static bool sirLangNodeText( const sirLangLowerState_t *pState, uint32_t iToken,
 	       memcmp( pState->pTree->source.pBytes + token.nOffset, pszText, nBytes ) == 0;
 }
 
-static sirLangLowerError_t sirLangError( sirLangLowerState_t *pState, sirLangLowerError_t eError, uint32_t iNode ) noexcept
+static SIRLangLowerError sirLangError( sirLangLowerState_t *pState, SIRLangLowerError eError, uint32_t iNode ) noexcept
 {
-	if ( pState->pOutput->eError == SIR_LANG_LOWER_OK ) {
+	if ( pState->pOutput->eError == SIRLangLowerError::SIR_LANG_LOWER_OK ) {
 		pState->pOutput->eError = eError;
 		pState->pOutput->iErrorNode = iNode;
 	}
@@ -154,7 +154,7 @@ static uint32_t sirLangEmit( sirLangLowerState_t *pState, const sirLangCIRInstru
 {
 	const uint32_t iInstruction = pState->pOutput->program.nInstructionCount;
 	if ( iInstruction >= pState->pOutput->nInstructionCapacity ) {
-		sirLangError( pState, SIR_LANG_LOWER_CAPACITY, instruction.iSourceNode );
+		sirLangError( pState, SIRLangLowerError::SIR_LANG_LOWER_CAPACITY, instruction.iSourceNode );
 		return SIR_LANG_INVALID_INDEX;
 	}
 	pState->pOutput->pInstructions[iInstruction] = instruction;
@@ -165,7 +165,7 @@ static uint32_t sirLangEmit( sirLangLowerState_t *pState, const sirLangCIRInstru
 static uint32_t sirLangNewRegister( sirLangLowerState_t *pState, uint32_t iNode ) noexcept
 {
 	if ( pState->nRegisters >= SIR_LANG_VM_MAX_REGISTERS ) {
-		sirLangError( pState, SIR_LANG_LOWER_CAPACITY, iNode );
+		sirLangError( pState, SIRLangLowerError::SIR_LANG_LOWER_CAPACITY, iNode );
 		return SIR_LANG_INVALID_INDEX;
 	}
 	return pState->nRegisters++;
@@ -221,24 +221,24 @@ static bool sirLangParseUnsigned( const uint8_t *pData, uint32_t nBytes, uint64_
 // Cook decimal float constants into the same IEEE payload used by GraphVM.
 // Requiring a fully consumed bounded token rejects trailing garbage and
 // platform NaN/infinity syntax before it can enter an executable revision.
-static bool sirLangParseFloatBits( const uint8_t *pData, uint32_t nBytes, sirLangValueKind_t eType, uint64_t *pBits ) noexcept
+static bool sirLangParseFloatBits( const uint8_t *pData, uint32_t nBytes, SIRLangValueKind eType, uint64_t *pBits ) noexcept
 {
 	if ( pData == nullptr || pBits == nullptr || nBytes == 0 || nBytes > 96 ||
-	     ( eType != SIR_LANG_VALUE_F32 && eType != SIR_LANG_VALUE_F64 ) ) {
+	     ( eType != SIRLangValueKind::SIR_LANG_VALUE_F32 && eType != SIRLangValueKind::SIR_LANG_VALUE_F64 ) ) {
 		return false;
 	}
 	uint32_t nDigits = nBytes;
 	if ( nBytes >= 3 && pData[nBytes - 3] == 'f' &&
-	     ( ( eType == SIR_LANG_VALUE_F32 && pData[nBytes - 2] == '3' && pData[nBytes - 1] == '2' ) ||
-	       ( eType == SIR_LANG_VALUE_F64 && pData[nBytes - 2] == '6' && pData[nBytes - 1] == '4' ) ) ) {
+	     ( ( eType == SIRLangValueKind::SIR_LANG_VALUE_F32 && pData[nBytes - 2] == '3' && pData[nBytes - 1] == '2' ) ||
+	       ( eType == SIRLangValueKind::SIR_LANG_VALUE_F64 && pData[nBytes - 2] == '6' && pData[nBytes - 1] == '4' ) ) ) {
 		nDigits -= 3;
 	}
 	if ( nDigits == 0 ) {
 		return false;
 	}
-	const char *pszBegin = ( const char * )pData;
+	const char *pszBegin = reinterpret_cast<const char *>(pData);
 	const char *pszEnd = pszBegin + nDigits;
-	if ( eType == SIR_LANG_VALUE_F32 ) {
+	if ( eType == SIRLangValueKind::SIR_LANG_VALUE_F32 ) {
 		float fValue = 0;
 		const std::from_chars_result parsed = std::from_chars( pszBegin, pszEnd, fValue, std::chars_format::general );
 		if ( parsed.ec != std::errc{} || parsed.ptr != pszEnd || !std::isfinite( fValue ) ) {
@@ -266,7 +266,7 @@ static bool sirLangEqualNodeToken( const sirLangLowerState_t *pState, uint32_t i
 static bool sirLangEnter( sirLangLowerState_t *pState, uint32_t iNode ) noexcept
 {
 	if ( pState->nDepth >= 128 ) {
-		sirLangError( pState, SIR_LANG_LOWER_DEPTH, iNode );
+		sirLangError( pState, SIRLangLowerError::SIR_LANG_LOWER_DEPTH, iNode );
 		return false;
 	}
 	++pState->nDepth;
@@ -276,50 +276,50 @@ static bool sirLangEnter( sirLangLowerState_t *pState, uint32_t iNode ) noexcept
 static uint32_t sirLangLowerExpression( sirLangLowerState_t *pState, uint32_t iNode ) noexcept;
 static void sirLangLowerStatement( sirLangLowerState_t *pState, uint32_t iNode ) noexcept;
 
-static sirLangValueKind_t sirLangRegisterType( const sirLangLowerState_t *pState, uint32_t iRegister ) noexcept
+static SIRLangValueKind sirLangRegisterType( const sirLangLowerState_t *pState, uint32_t iRegister ) noexcept
 {
 	const sirLangCIRFunction_t& function = pState->pOutput->pFunctions[pState->iFunction];
 	for ( uint32_t i = function.iFirstInstruction; i < pState->pOutput->program.nInstructionCount; ++i ) {
 		const sirLangCIRInstruction_t& ins = pState->pOutput->pInstructions[i];
-		if ( ins.iDestination == iRegister && ins.eOpcode != SIR_LANG_OP_RETURN && ins.eOpcode != SIR_LANG_OP_JUMP &&
-		     ins.eOpcode != SIR_LANG_OP_JUMP_FALSE ) {
+		if ( ins.iDestination == iRegister && ins.eOpcode != SIRLangOpcode::SIR_LANG_OP_RETURN && ins.eOpcode != SIRLangOpcode::SIR_LANG_OP_JUMP &&
+		     ins.eOpcode != SIRLangOpcode::SIR_LANG_OP_JUMP_FALSE ) {
 			return ins.eType;
 		}
 	}
-	return SIR_LANG_VALUE_UNKNOWN;
+	return SIRLangValueKind::SIR_LANG_VALUE_UNKNOWN;
 }
 
 static uint32_t sirLangLowerLiteral( sirLangLowerState_t *pState, uint32_t iNode ) noexcept
 {
 	const sirLangSyntaxNode_t& node = pState->pTree->pNodes[iNode];
 	const sirLangToken_t& token = pState->pTree->pTokens[node.nStartToken];
-	const sirLangValueKind_t eType = pState->pHIR->pNodes[iNode].eType;
+	const SIRLangValueKind eType = pState->pHIR->pNodes[iNode].eType;
 	if ( !sirLangIsExecutableValue( eType ) ) {
-		sirLangError( pState, SIR_LANG_LOWER_UNSUPPORTED, iNode );
+		sirLangError( pState, SIRLangLowerError::SIR_LANG_LOWER_UNSUPPORTED, iNode );
 		return SIR_LANG_INVALID_INDEX;
 	}
 	uint64_t nValue = 0;
-	if ( eType == SIR_LANG_VALUE_BOOL ) {
+	if ( eType == SIRLangValueKind::SIR_LANG_VALUE_BOOL ) {
 		if ( sirLangEqualNodeToken( pState, iNode, "true" ) || sirLangEqualNodeToken( pState, iNode, "ON" ) ) {
 			nValue = 1;
 		} else if ( !sirLangEqualNodeToken( pState, iNode, "false" ) && !sirLangEqualNodeToken( pState, iNode, "OFF" ) ) {
-			sirLangError( pState, SIR_LANG_LOWER_INVALID_LITERAL, iNode );
+			sirLangError( pState, SIRLangLowerError::SIR_LANG_LOWER_INVALID_LITERAL, iNode );
 			return SIR_LANG_INVALID_INDEX;
 		}
-	} else if ( eType == SIR_LANG_VALUE_F32 || eType == SIR_LANG_VALUE_F64 ) {
+	} else if ( eType == SIRLangValueKind::SIR_LANG_VALUE_F32 || eType == SIRLangValueKind::SIR_LANG_VALUE_F64 ) {
 		if ( !sirLangParseFloatBits( pState->pTree->source.pBytes + token.nOffset, token.nLength, eType, &nValue ) ) {
-			sirLangError( pState, SIR_LANG_LOWER_INVALID_LITERAL, iNode );
+			sirLangError( pState, SIRLangLowerError::SIR_LANG_LOWER_INVALID_LITERAL, iNode );
 			return SIR_LANG_INVALID_INDEX;
 		}
 	} else if ( !sirLangParseUnsigned( pState->pTree->source.pBytes + token.nOffset, token.nLength, &nValue ) ) {
-		sirLangError( pState, SIR_LANG_LOWER_INVALID_LITERAL, iNode );
+		sirLangError( pState, SIRLangLowerError::SIR_LANG_LOWER_INVALID_LITERAL, iNode );
 		return SIR_LANG_INVALID_INDEX;
 	}
 	const uint32_t iDest = sirLangNewRegister( pState, iNode );
 	if ( iDest == SIR_LANG_INVALID_INDEX ) {
 		return iDest;
 	}
-	sirLangEmit( pState, { SIR_LANG_OP_CONST, eType, 0, iDest, 0, 0, 0, nValue, iNode } );
+	sirLangEmit( pState, { SIRLangOpcode::SIR_LANG_OP_CONST, eType, 0, iDest, 0, 0, 0, nValue, iNode } );
 	return iDest;
 }
 
@@ -386,7 +386,7 @@ static uint32_t sirLangLowerCall( sirLangLowerState_t *pState, uint32_t iNode ) 
 {
 	const sirLangResolvedCall_t *pCall = sirLangFindCall( pState, iNode );
 	if ( pCall == nullptr ) {
-		sirLangError( pState, SIR_LANG_LOWER_UNRESOLVED, iNode );
+		sirLangError( pState, SIRLangLowerError::SIR_LANG_LOWER_UNRESOLVED, iNode );
 		return SIR_LANG_INVALID_INDEX;
 	}
 	const bool bExternal = pCall->iDeclarationNode == SIR_LANG_INVALID_INDEX;
@@ -403,49 +403,50 @@ static uint32_t sirLangLowerCall( sirLangLowerState_t *pState, uint32_t iNode ) 
 		iTarget = sirLangTargetIndex( pState, pCall->iDeclarationNode );
 	}
 	if ( iTarget == SIR_LANG_INVALID_INDEX ) {
-		sirLangError( pState, SIR_LANG_LOWER_UNRESOLVED, iNode );
+		sirLangError( pState, SIRLangLowerError::SIR_LANG_LOWER_UNRESOLVED, iNode );
 		return iTarget;
 	}
 	const uint32_t nExpected =
 	    bExternal ? pState->pOutput->pCapabilities[iTarget].nParameterCount : pState->pSignatures->pFunctions[iTarget].nParameterCount;
 	if ( nExpected > SIR_LANG_VM_MAX_PARAMETERS ) {
-		sirLangError( pState, SIR_LANG_LOWER_CAPACITY, iNode );
+		sirLangError( pState, SIRLangLowerError::SIR_LANG_LOWER_CAPACITY, iNode );
 		return SIR_LANG_INVALID_INDEX;
 	}
 	const uint32_t iCallee = sirLangFirstChild( pState, iNode );
-	uint32_t szArguments[SIR_LANG_VM_MAX_PARAMETERS] = {};
+	uint32_t szArguments[SIR_LANG_VM_MAX_PARAMETERS];
+	memset( szArguments, 0, sizeof( szArguments ) );
 	for ( uint32_t i = 0; i < SIR_LANG_VM_MAX_PARAMETERS; ++i ) {
 		szArguments[i] = SIR_LANG_INVALID_INDEX;
 	}
 	uint32_t nPositional = 0;
 	uint32_t nActual = 0;
 	for ( uint32_t iArg = sirLangNextChild( pState, iCallee ); iArg != SIR_LANG_INVALID_INDEX; iArg = sirLangNextChild( pState, iArg ) ) {
-		const bool bNamed = pState->pTree->pNodes[iArg].eKind == SIR_LANG_SYNTAX_NAMED_ARGUMENT;
+		const bool bNamed = pState->pTree->pNodes[iArg].eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_NAMED_ARGUMENT;
 		const uint32_t iParam =
 		    bNamed ? sirLangNamedArgumentIndex( pState, pState->pTree->pNodes[iArg].nStartToken, iTarget, bExternal ) : nPositional++;
 		if ( iParam >= nExpected || szArguments[iParam] != SIR_LANG_INVALID_INDEX ) {
-			sirLangError( pState, SIR_LANG_LOWER_UNRESOLVED, iArg );
+			sirLangError( pState, SIRLangLowerError::SIR_LANG_LOWER_UNRESOLVED, iArg );
 			return SIR_LANG_INVALID_INDEX;
 		}
 		const uint32_t iValue = bNamed ? sirLangFirstChild( pState, iArg ) : iArg;
 		szArguments[iParam] = sirLangLowerExpression( pState, iValue );
-		if ( pState->pOutput->eError != SIR_LANG_LOWER_OK ) {
+		if ( pState->pOutput->eError != SIRLangLowerError::SIR_LANG_LOWER_OK ) {
 			return SIR_LANG_INVALID_INDEX;
 		}
 		++nActual;
 	}
 	if ( nActual != nExpected ) {
-		sirLangError( pState, SIR_LANG_LOWER_UNRESOLVED, iNode );
+		sirLangError( pState, SIRLangLowerError::SIR_LANG_LOWER_UNRESOLVED, iNode );
 		return SIR_LANG_INVALID_INDEX;
 	}
 	const uint32_t iCallArg = pState->pOutput->program.nCallArgumentCount;
 	if ( iCallArg > pState->pOutput->nCallArgumentCapacity || nActual > pState->pOutput->nCallArgumentCapacity - iCallArg ) {
-		sirLangError( pState, SIR_LANG_LOWER_CAPACITY, iNode );
+		sirLangError( pState, SIRLangLowerError::SIR_LANG_LOWER_CAPACITY, iNode );
 		return SIR_LANG_INVALID_INDEX;
 	}
 	for ( uint32_t i = 0; i < nExpected; ++i ) {
 		if ( szArguments[i] == SIR_LANG_INVALID_INDEX ) {
-			sirLangError( pState, SIR_LANG_LOWER_UNRESOLVED, iNode );
+			sirLangError( pState, SIRLangLowerError::SIR_LANG_LOWER_UNRESOLVED, iNode );
 			return SIR_LANG_INVALID_INDEX;
 		}
 		pState->pOutput->pCallArguments[iCallArg + i] = szArguments[i];
@@ -455,8 +456,8 @@ static uint32_t sirLangLowerCall( sirLangLowerState_t *pState, uint32_t iNode ) 
 	if ( iDestination == SIR_LANG_INVALID_INDEX ) {
 		return iDestination;
 	}
-	const sirLangValueKind_t eType = pState->pHIR->pNodes[iNode].eType;
-	sirLangEmit( pState, { bExternal ? SIR_LANG_OP_CALL_NATIVE : SIR_LANG_OP_CALL, eType, 0, iDestination, iTarget, nExpected, iCallArg, 0,
+	const SIRLangValueKind eType = pState->pHIR->pNodes[iNode].eType;
+	sirLangEmit( pState, { bExternal ? SIRLangOpcode::SIR_LANG_OP_CALL_NATIVE : SIRLangOpcode::SIR_LANG_OP_CALL, eType, 0, iDestination, iTarget, nExpected, iCallArg, 0,
 	                       iNode } );
 	return iDestination;
 }
@@ -467,7 +468,7 @@ typedef struct sirLangBinaryModifiers_s
 	bool bNegate;
 } sirLangBinaryModifiers_t;
 
-static sirLangOpcode_t sirLangBinaryOp( const sirLangLowerState_t *pState, uint32_t iLeft, uint32_t iRight,
+static SIRLangOpcode sirLangBinaryOp( const sirLangLowerState_t *pState, uint32_t iLeft, uint32_t iRight,
                                         sirLangBinaryModifiers_t *pModifiers ) noexcept
 {
 	const uint32_t iStart = pState->pTree->pNodes[iLeft].nEndToken;
@@ -476,43 +477,43 @@ static sirLangOpcode_t sirLangBinaryOp( const sirLangLowerState_t *pState, uint3
 	pModifiers->bNegate = false;
 	for ( uint32_t iToken = iStart; iToken < iEnd; ++iToken ) {
 		if ( sirLangNodeText( pState, iToken, "+" ) ) {
-			return SIR_LANG_OP_ADD;
+			return SIRLangOpcode::SIR_LANG_OP_ADD;
 		}
 		if ( sirLangNodeText( pState, iToken, "-" ) ) {
-			return SIR_LANG_OP_SUBTRACT;
+			return SIRLangOpcode::SIR_LANG_OP_SUBTRACT;
 		}
 		if ( sirLangNodeText( pState, iToken, "*" ) ) {
-			return SIR_LANG_OP_MULTIPLY;
+			return SIRLangOpcode::SIR_LANG_OP_MULTIPLY;
 		}
 		if ( sirLangNodeText( pState, iToken, "/" ) ) {
-			return SIR_LANG_OP_DIVIDE;
+			return SIRLangOpcode::SIR_LANG_OP_DIVIDE;
 		}
 		if ( sirLangNodeText( pState, iToken, "and" ) ) {
-			return SIR_LANG_OP_AND;
+			return SIRLangOpcode::SIR_LANG_OP_AND;
 		}
 		if ( sirLangNodeText( pState, iToken, "or" ) ) {
-			return SIR_LANG_OP_OR;
+			return SIRLangOpcode::SIR_LANG_OP_OR;
 		}
 		if ( sirLangNodeText( pState, iToken, "xor" ) ) {
 			pModifiers->bNegate = true;
-			return SIR_LANG_OP_EQUAL;
+			return SIRLangOpcode::SIR_LANG_OP_EQUAL;
 		}
 		if ( sirLangNodeText( pState, iToken, "=" ) ) {
-			return SIR_LANG_OP_EQUAL;
+			return SIRLangOpcode::SIR_LANG_OP_EQUAL;
 		}
 		if ( sirLangNodeText( pState, iToken, "!" ) ) {
 			pModifiers->bNegate = true;
-			return SIR_LANG_OP_EQUAL;
+			return SIRLangOpcode::SIR_LANG_OP_EQUAL;
 		}
 		if ( sirLangNodeText( pState, iToken, "<" ) ) {
-			return iToken + 1 < iEnd && sirLangNodeText( pState, iToken + 1, "=" ) ? SIR_LANG_OP_LESS_EQUAL : SIR_LANG_OP_LESS;
+			return iToken + 1 < iEnd && sirLangNodeText( pState, iToken + 1, "=" ) ? SIRLangOpcode::SIR_LANG_OP_LESS_EQUAL : SIRLangOpcode::SIR_LANG_OP_LESS;
 		}
 		if ( sirLangNodeText( pState, iToken, ">" ) ) {
 			pModifiers->bReverse = true;
-			return iToken + 1 < iEnd && sirLangNodeText( pState, iToken + 1, "=" ) ? SIR_LANG_OP_LESS_EQUAL : SIR_LANG_OP_LESS;
+			return iToken + 1 < iEnd && sirLangNodeText( pState, iToken + 1, "=" ) ? SIRLangOpcode::SIR_LANG_OP_LESS_EQUAL : SIRLangOpcode::SIR_LANG_OP_LESS;
 		}
 	}
-	return SIR_LANG_OP_PHI;
+	return SIRLangOpcode::SIR_LANG_OP_PHI;
 }
 
 // Boolean operators are control flow: the RHS may contain a native call,
@@ -523,43 +524,43 @@ static uint32_t sirLangLowerLogical( sirLangLowerState_t *pState, uint32_t iNode
 	if ( iLeftValue == SIR_LANG_INVALID_INDEX ) {
 		return iLeftValue;
 	}
-	if ( sirLangRegisterType( pState, iLeftValue ) != SIR_LANG_VALUE_BOOL ) {
-		sirLangError( pState, SIR_LANG_LOWER_TYPE, iNode );
+	if ( sirLangRegisterType( pState, iLeftValue ) != SIRLangValueKind::SIR_LANG_VALUE_BOOL ) {
+		sirLangError( pState, SIRLangLowerError::SIR_LANG_LOWER_TYPE, iNode );
 		return SIR_LANG_INVALID_INDEX;
 	}
 
-	sirLangBinaryModifiers_t modifiers = {};
-	const sirLangOpcode_t eOpcode = sirLangBinaryOp( pState, iLeft, iRight, &modifiers );
-	if ( eOpcode != SIR_LANG_OP_AND && eOpcode != SIR_LANG_OP_OR ) {
-		sirLangError( pState, SIR_LANG_LOWER_UNSUPPORTED, iNode );
+	sirLangBinaryModifiers_t modifiers {};
+	const SIRLangOpcode eOpcode = sirLangBinaryOp( pState, iLeft, iRight, &modifiers );
+	if ( eOpcode != SIRLangOpcode::SIR_LANG_OP_AND && eOpcode != SIRLangOpcode::SIR_LANG_OP_OR ) {
+		sirLangError( pState, SIRLangLowerError::SIR_LANG_LOWER_UNSUPPORTED, iNode );
 		return SIR_LANG_INVALID_INDEX;
 	}
 
 	const uint32_t iBranch =
-	    sirLangEmit( pState, { SIR_LANG_OP_JUMP_FALSE, SIR_LANG_VALUE_VOID, 0, UINT32_MAX, iLeftValue, 0, 0, 0, iNode } );
+	    sirLangEmit( pState, { SIRLangOpcode::SIR_LANG_OP_JUMP_FALSE, SIRLangValueKind::SIR_LANG_VALUE_VOID, 0, UINT32_MAX, iLeftValue, 0, 0, 0, iNode } );
 	if ( iBranch == SIR_LANG_INVALID_INDEX ) {
 		return SIR_LANG_INVALID_INDEX;
 	}
 
 	// On a true LHS, 'and' evaluates its RHS while 'or' returns true.
 	uint32_t iTrueValue = SIR_LANG_INVALID_INDEX;
-	if ( eOpcode == SIR_LANG_OP_AND ) {
+	if ( eOpcode == SIRLangOpcode::SIR_LANG_OP_AND ) {
 		iTrueValue = sirLangLowerExpression( pState, iRight );
 	} else {
 		iTrueValue = sirLangNewRegister( pState, iNode );
 		if ( iTrueValue != SIR_LANG_INVALID_INDEX ) {
-			sirLangEmit( pState, { SIR_LANG_OP_CONST, SIR_LANG_VALUE_BOOL, 0, iTrueValue, 0, 0, 0, 1, iNode } );
+			sirLangEmit( pState, { SIRLangOpcode::SIR_LANG_OP_CONST, SIRLangValueKind::SIR_LANG_VALUE_BOOL, 0, iTrueValue, 0, 0, 0, 1, iNode } );
 		}
 	}
-	if ( iTrueValue == SIR_LANG_INVALID_INDEX || pState->pOutput->eError != SIR_LANG_LOWER_OK ) {
+	if ( iTrueValue == SIR_LANG_INVALID_INDEX || pState->pOutput->eError != SIRLangLowerError::SIR_LANG_LOWER_OK ) {
 		return SIR_LANG_INVALID_INDEX;
 	}
-	if ( sirLangRegisterType( pState, iTrueValue ) != SIR_LANG_VALUE_BOOL ) {
-		sirLangError( pState, SIR_LANG_LOWER_TYPE, iNode );
+	if ( sirLangRegisterType( pState, iTrueValue ) != SIRLangValueKind::SIR_LANG_VALUE_BOOL ) {
+		sirLangError( pState, SIRLangLowerError::SIR_LANG_LOWER_TYPE, iNode );
 		return SIR_LANG_INVALID_INDEX;
 	}
 
-	const uint32_t iTrueExit = sirLangEmit( pState, { SIR_LANG_OP_JUMP, SIR_LANG_VALUE_VOID, 0, UINT32_MAX, 0, 0, 0, 0, iNode } );
+	const uint32_t iTrueExit = sirLangEmit( pState, { SIRLangOpcode::SIR_LANG_OP_JUMP, SIRLangValueKind::SIR_LANG_VALUE_VOID, 0, UINT32_MAX, 0, 0, 0, 0, iNode } );
 	if ( iTrueExit == SIR_LANG_INVALID_INDEX ) {
 		return SIR_LANG_INVALID_INDEX;
 	}
@@ -567,26 +568,26 @@ static uint32_t sirLangLowerLogical( sirLangLowerState_t *pState, uint32_t iNode
 	// The false LHS skips RHS for 'and', evaluates RHS for 'or'.
 	pState->pOutput->pInstructions[iBranch].nAuxiliary = pState->pOutput->program.nInstructionCount;
 	uint32_t iFalseValue = SIR_LANG_INVALID_INDEX;
-	if ( eOpcode == SIR_LANG_OP_OR ) {
+	if ( eOpcode == SIRLangOpcode::SIR_LANG_OP_OR ) {
 		iFalseValue = sirLangLowerExpression( pState, iRight );
 	} else {
 		iFalseValue = sirLangNewRegister( pState, iNode );
 		if ( iFalseValue != SIR_LANG_INVALID_INDEX ) {
-			sirLangEmit( pState, { SIR_LANG_OP_CONST, SIR_LANG_VALUE_BOOL, 0, iFalseValue, 0, 0, 0, 0, iNode } );
+			sirLangEmit( pState, { SIRLangOpcode::SIR_LANG_OP_CONST, SIRLangValueKind::SIR_LANG_VALUE_BOOL, 0, iFalseValue, 0, 0, 0, 0, iNode } );
 		}
 	}
-	if ( iFalseValue == SIR_LANG_INVALID_INDEX || pState->pOutput->eError != SIR_LANG_LOWER_OK ) {
+	if ( iFalseValue == SIR_LANG_INVALID_INDEX || pState->pOutput->eError != SIRLangLowerError::SIR_LANG_LOWER_OK ) {
 		return SIR_LANG_INVALID_INDEX;
 	}
-	if ( sirLangRegisterType( pState, iFalseValue ) != SIR_LANG_VALUE_BOOL ) {
-		sirLangError( pState, SIR_LANG_LOWER_TYPE, iNode );
+	if ( sirLangRegisterType( pState, iFalseValue ) != SIRLangValueKind::SIR_LANG_VALUE_BOOL ) {
+		sirLangError( pState, SIRLangLowerError::SIR_LANG_LOWER_TYPE, iNode );
 		return SIR_LANG_INVALID_INDEX;
 	}
 
 	pState->pOutput->pInstructions[iTrueExit].nAuxiliary = pState->pOutput->program.nInstructionCount;
 	const uint32_t iPhi = sirLangNewRegister( pState, iNode );
 	if ( iPhi != SIR_LANG_INVALID_INDEX ) {
-		sirLangEmit( pState, { SIR_LANG_OP_PHI, SIR_LANG_VALUE_BOOL, 0, iPhi, iTrueValue, iFalseValue, iTrueExit, 0, iNode } );
+		sirLangEmit( pState, { SIRLangOpcode::SIR_LANG_OP_PHI, SIRLangValueKind::SIR_LANG_VALUE_BOOL, 0, iPhi, iTrueValue, iFalseValue, iTrueExit, 0, iNode } );
 	}
 	return iPhi;
 }
@@ -599,40 +600,40 @@ static uint32_t sirLangLowerExpression( sirLangLowerState_t *pState, uint32_t iN
 	const sirLangSyntaxNode_t& node = pState->pTree->pNodes[iNode];
 	uint32_t iValue = SIR_LANG_INVALID_INDEX;
 	switch ( node.eKind ) {
-	case SIR_LANG_SYNTAX_LITERAL:
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_LITERAL:
 		iValue = sirLangLowerLiteral( pState, iNode );
 		break;
-	case SIR_LANG_SYNTAX_NAME: {
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_NAME: {
 		const uint32_t iDecl = pState->pHIR->pNodes[iNode].iDeclarationNode;
 		if ( iDecl < 4096 ) {
 			iValue = pState->szCurrentValues[iDecl];
 		}
 		if ( iValue == SIR_LANG_INVALID_INDEX ) {
-			sirLangError( pState, SIR_LANG_LOWER_UNRESOLVED, iNode );
+			sirLangError( pState, SIRLangLowerError::SIR_LANG_LOWER_UNRESOLVED, iNode );
 		}
 		break;
 	}
-	case SIR_LANG_SYNTAX_CALL:
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_CALL:
 		iValue = sirLangLowerCall( pState, iNode );
 		break;
-	case SIR_LANG_SYNTAX_GROUP:
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_GROUP:
 		iValue = sirLangLowerExpression( pState, sirLangFirstChild( pState, iNode ) );
 		break;
-	case SIR_LANG_SYNTAX_UNARY: {
-		const sirLangValueKind_t eSignedType = pState->pHIR->pNodes[iNode].eType;
-		if ( sirLangEqualNodeToken( pState, iNode, "-" ) && ( eSignedType == SIR_LANG_VALUE_I8 || eSignedType == SIR_LANG_VALUE_I16 ||
-		                                                      eSignedType == SIR_LANG_VALUE_I32 || eSignedType == SIR_LANG_VALUE_I64 ) ) {
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_UNARY: {
+		const SIRLangValueKind eSignedType = pState->pHIR->pNodes[iNode].eType;
+		if ( sirLangEqualNodeToken( pState, iNode, "-" ) && ( eSignedType == SIRLangValueKind::SIR_LANG_VALUE_I8 || eSignedType == SIRLangValueKind::SIR_LANG_VALUE_I16 ||
+		                                                      eSignedType == SIRLangValueKind::SIR_LANG_VALUE_I32 || eSignedType == SIRLangValueKind::SIR_LANG_VALUE_I64 ) ) {
 			uint32_t iLiteral = sirLangFirstChild( pState, iNode );
-			while ( iLiteral < pState->pTree->nNodeCount && pState->pTree->pNodes[iLiteral].eKind == SIR_LANG_SYNTAX_GROUP ) {
+			while ( iLiteral < pState->pTree->nNodeCount && pState->pTree->pNodes[iLiteral].eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_GROUP ) {
 				iLiteral = sirLangFirstChild( pState, iLiteral );
 			}
-			if ( iLiteral < pState->pTree->nNodeCount && pState->pTree->pNodes[iLiteral].eKind == SIR_LANG_SYNTAX_LITERAL ) {
+			if ( iLiteral < pState->pTree->nNodeCount && pState->pTree->pNodes[iLiteral].eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_LITERAL ) {
 				const sirLangToken_t& token = pState->pTree->pTokens[pState->pTree->pNodes[iLiteral].nStartToken];
 				uint64_t nMagnitude = 0;
 				if ( sirLangParseUnsigned( pState->pTree->source.pBytes + token.nOffset, token.nLength, &nMagnitude ) ) {
 					iValue = sirLangNewRegister( pState, iNode );
 					if ( iValue != SIR_LANG_INVALID_INDEX ) {
-						sirLangEmit( pState, { SIR_LANG_OP_CONST, eSignedType, 0, iValue, 0, 0, 0, ( ~nMagnitude ) + 1, iNode } );
+						sirLangEmit( pState, { SIRLangOpcode::SIR_LANG_OP_CONST, eSignedType, 0, iValue, 0, 0, 0, ( ~nMagnitude ) + 1, iNode } );
 					}
 					break;
 				}
@@ -642,20 +643,20 @@ static uint32_t sirLangLowerExpression( sirLangLowerState_t *pState, uint32_t iN
 		if ( iOperand == SIR_LANG_INVALID_INDEX ) {
 			break;
 		}
-		const sirLangValueKind_t eType = pState->pHIR->pNodes[iNode].eType;
-		if ( sirLangEqualNodeToken( pState, iNode, "-" ) && ( eType == SIR_LANG_VALUE_F32 || eType == SIR_LANG_VALUE_F64 ) ) {
+		const SIRLangValueKind eType = pState->pHIR->pNodes[iNode].eType;
+		if ( sirLangEqualNodeToken( pState, iNode, "-" ) && ( eType == SIRLangValueKind::SIR_LANG_VALUE_F32 || eType == SIRLangValueKind::SIR_LANG_VALUE_F64 ) ) {
 			// Float arithmetic is not yet a GraphVM opcode. A unary sign on a
 			// constant can be represented exactly by flipping its IEEE sign bit.
 			if ( pState->pOutput->program.nInstructionCount == 0 ) {
-				sirLangError( pState, SIR_LANG_LOWER_UNSUPPORTED, iNode );
+				sirLangError( pState, SIRLangLowerError::SIR_LANG_LOWER_UNSUPPORTED, iNode );
 				break;
 			}
 			sirLangCIRInstruction_t& constant = pState->pOutput->pInstructions[pState->pOutput->program.nInstructionCount - 1];
-			if ( constant.eOpcode != SIR_LANG_OP_CONST || constant.iDestination != iOperand || constant.eType != eType ) {
-				sirLangError( pState, SIR_LANG_LOWER_UNSUPPORTED, iNode );
+			if ( constant.eOpcode != SIRLangOpcode::SIR_LANG_OP_CONST || constant.iDestination != iOperand || constant.eType != eType ) {
+				sirLangError( pState, SIRLangLowerError::SIR_LANG_LOWER_UNSUPPORTED, iNode );
 				break;
 			}
-			constant.nImmediate ^= eType == SIR_LANG_VALUE_F32 ? UINT64_C( 0x80000000 ) : UINT64_C( 0x8000000000000000 );
+			constant.nImmediate ^= eType == SIRLangValueKind::SIR_LANG_VALUE_F32 ? UINT64_C( 0x80000000 ) : UINT64_C( 0x8000000000000000 );
 			iValue = iOperand;
 			break;
 		}
@@ -666,32 +667,32 @@ static uint32_t sirLangLowerExpression( sirLangLowerState_t *pState, uint32_t iN
 		if ( sirLangEqualNodeToken( pState, iNode, "not" ) || sirLangEqualNodeToken( pState, iNode, "!" ) ) {
 			iValue = sirLangNewRegister( pState, iNode );
 			if ( iValue != SIR_LANG_INVALID_INDEX ) {
-				sirLangEmit( pState, { SIR_LANG_OP_NOT, SIR_LANG_VALUE_BOOL, 0, iValue, iOperand, 0, 0, 0, iNode } );
+				sirLangEmit( pState, { SIRLangOpcode::SIR_LANG_OP_NOT, SIRLangValueKind::SIR_LANG_VALUE_BOOL, 0, iValue, iOperand, 0, 0, 0, iNode } );
 			}
 			break;
 		}
-		if ( sirLangEqualNodeToken( pState, iNode, "-" ) && eType >= SIR_LANG_VALUE_I8 && eType <= SIR_LANG_VALUE_U64 ) {
+		if ( sirLangEqualNodeToken( pState, iNode, "-" ) && eType >= SIRLangValueKind::SIR_LANG_VALUE_I8 && eType <= SIRLangValueKind::SIR_LANG_VALUE_U64 ) {
 			const uint32_t iZero = sirLangNewRegister( pState, iNode );
 			iValue = sirLangNewRegister( pState, iNode );
 			if ( iValue != SIR_LANG_INVALID_INDEX && iZero != SIR_LANG_INVALID_INDEX ) {
-				sirLangEmit( pState, { SIR_LANG_OP_CONST, eType, 0, iZero, 0, 0, 0, 0, iNode } );
-				sirLangEmit( pState, { SIR_LANG_OP_SUBTRACT, eType, 0, iValue, iZero, iOperand, 0, 0, iNode } );
+				sirLangEmit( pState, { SIRLangOpcode::SIR_LANG_OP_CONST, eType, 0, iZero, 0, 0, 0, 0, iNode } );
+				sirLangEmit( pState, { SIRLangOpcode::SIR_LANG_OP_SUBTRACT, eType, 0, iValue, iZero, iOperand, 0, 0, iNode } );
 			}
 			break;
 		}
-		sirLangError( pState, SIR_LANG_LOWER_UNSUPPORTED, iNode );
+		sirLangError( pState, SIRLangLowerError::SIR_LANG_LOWER_UNSUPPORTED, iNode );
 		break;
 	}
-	case SIR_LANG_SYNTAX_BINARY: {
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_BINARY: {
 		const uint32_t iLeft = sirLangFirstChild( pState, iNode );
 		const uint32_t iRight = sirLangNextChild( pState, iLeft );
 		if ( iRight >= pState->pTree->nNodeCount ) {
-			sirLangError( pState, SIR_LANG_LOWER_INVALID_INPUT, iNode );
+			sirLangError( pState, SIRLangLowerError::SIR_LANG_LOWER_INVALID_INPUT, iNode );
 			break;
 		}
-		sirLangBinaryModifiers_t modifiers = {};
-		const sirLangOpcode_t eOp = sirLangBinaryOp( pState, iLeft, iRight, &modifiers );
-		if ( eOp == SIR_LANG_OP_AND || eOp == SIR_LANG_OP_OR ) {
+		sirLangBinaryModifiers_t modifiers {};
+		const SIRLangOpcode eOp = sirLangBinaryOp( pState, iLeft, iRight, &modifiers );
+		if ( eOp == SIRLangOpcode::SIR_LANG_OP_AND || eOp == SIRLangOpcode::SIR_LANG_OP_OR ) {
 			iValue = sirLangLowerLogical( pState, iNode, iLeft, iRight );
 			break;
 		}
@@ -704,12 +705,12 @@ static uint32_t sirLangLowerExpression( sirLangLowerState_t *pState, uint32_t iN
 		// inequality, preserving one canonical scalar opcode set in v1.
 		const uint32_t iOperator = pState->pTree->pNodes[iLeft].nEndToken;
 		if ( sirLangNodeText( pState, iOperator, "xor" ) &&
-		     ( sirLangRegisterType( pState, iA ) != SIR_LANG_VALUE_BOOL || sirLangRegisterType( pState, iB ) != SIR_LANG_VALUE_BOOL ) ) {
-			sirLangError( pState, SIR_LANG_LOWER_TYPE, iNode );
+		     ( sirLangRegisterType( pState, iA ) != SIRLangValueKind::SIR_LANG_VALUE_BOOL || sirLangRegisterType( pState, iB ) != SIRLangValueKind::SIR_LANG_VALUE_BOOL ) ) {
+			sirLangError( pState, SIRLangLowerError::SIR_LANG_LOWER_TYPE, iNode );
 			break;
 		}
-		if ( eOp == SIR_LANG_OP_PHI ) {
-			sirLangError( pState, SIR_LANG_LOWER_UNSUPPORTED, iNode );
+		if ( eOp == SIRLangOpcode::SIR_LANG_OP_PHI ) {
+			sirLangError( pState, SIRLangLowerError::SIR_LANG_LOWER_UNSUPPORTED, iNode );
 			break;
 		}
 		if ( modifiers.bReverse ) {
@@ -723,7 +724,7 @@ static uint32_t sirLangLowerExpression( sirLangLowerState_t *pState, uint32_t iN
 			if ( modifiers.bNegate ) {
 				const uint32_t iNot = sirLangNewRegister( pState, iNode );
 				if ( iNot != SIR_LANG_INVALID_INDEX ) {
-					sirLangEmit( pState, { SIR_LANG_OP_NOT, SIR_LANG_VALUE_BOOL, 0, iNot, iValue, 0, 0, 0, iNode } );
+					sirLangEmit( pState, { SIRLangOpcode::SIR_LANG_OP_NOT, SIRLangValueKind::SIR_LANG_VALUE_BOOL, 0, iNot, iValue, 0, 0, 0, iNode } );
 					iValue = iNot;
 				}
 			}
@@ -731,7 +732,7 @@ static uint32_t sirLangLowerExpression( sirLangLowerState_t *pState, uint32_t iN
 		break;
 	}
 	default:
-		sirLangError( pState, SIR_LANG_LOWER_UNSUPPORTED, iNode );
+		sirLangError( pState, SIRLangLowerError::SIR_LANG_LOWER_UNSUPPORTED, iNode );
 		break;
 	}
 	--pState->nDepth;
@@ -740,14 +741,14 @@ static uint32_t sirLangLowerExpression( sirLangLowerState_t *pState, uint32_t iN
 
 static void sirLangLowerBlock( sirLangLowerState_t *pState, uint32_t iBlock ) noexcept
 {
-	if ( iBlock >= pState->pTree->nNodeCount || pState->pTree->pNodes[iBlock].eKind != SIR_LANG_SYNTAX_BLOCK ||
+	if ( iBlock >= pState->pTree->nNodeCount || pState->pTree->pNodes[iBlock].eKind != SIRLangSyntaxKind::SIR_LANG_SYNTAX_BLOCK ||
 	     !sirLangEnter( pState, iBlock ) ) {
-		sirLangError( pState, SIR_LANG_LOWER_INVALID_INPUT, iBlock );
+		sirLangError( pState, SIRLangLowerError::SIR_LANG_LOWER_INVALID_INPUT, iBlock );
 		return;
 	}
 	for ( uint32_t iStmt = sirLangFirstChild( pState, iBlock ); iStmt != SIR_LANG_INVALID_INDEX;
 	      iStmt = sirLangNextChild( pState, iStmt ) ) {
-		if ( pState->bTerminated || pState->pOutput->eError != SIR_LANG_LOWER_OK ) {
+		if ( pState->bTerminated || pState->pOutput->eError != SIRLangLowerError::SIR_LANG_LOWER_OK ) {
 			break;
 		}
 		sirLangLowerStatement( pState, iStmt );
@@ -758,18 +759,18 @@ static void sirLangLowerBlock( sirLangLowerState_t *pState, uint32_t iBlock ) no
 static void sirLangLowerStatement( sirLangLowerState_t *pState, uint32_t iNode ) noexcept
 {
 	if ( iNode >= pState->pTree->nNodeCount ) {
-		sirLangError( pState, SIR_LANG_LOWER_INVALID_INPUT, iNode );
+		sirLangError( pState, SIRLangLowerError::SIR_LANG_LOWER_INVALID_INPUT, iNode );
 		return;
 	}
 	const sirLangSyntaxNode_t& node = pState->pTree->pNodes[iNode];
 	switch ( node.eKind ) {
-	case SIR_LANG_SYNTAX_LET: {
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_LET: {
 		uint32_t iExpression = sirLangFirstChild( pState, iNode );
-		if ( iExpression < pState->pTree->nNodeCount && pState->pTree->pNodes[iExpression].eKind == SIR_LANG_SYNTAX_TYPE ) {
+		if ( iExpression < pState->pTree->nNodeCount && pState->pTree->pNodes[iExpression].eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_TYPE ) {
 			iExpression = sirLangNextChild( pState, iExpression );
 		}
 		if ( iExpression >= pState->pTree->nNodeCount ) {
-			sirLangError( pState, SIR_LANG_LOWER_UNSUPPORTED, iNode );
+			sirLangError( pState, SIRLangLowerError::SIR_LANG_LOWER_UNSUPPORTED, iNode );
 			return;
 		}
 		const uint32_t iValue = sirLangLowerExpression( pState, iExpression );
@@ -778,45 +779,45 @@ static void sirLangLowerStatement( sirLangLowerState_t *pState, uint32_t iNode )
 		}
 		return;
 	}
-	case SIR_LANG_SYNTAX_RETURN: {
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_RETURN: {
 		const uint32_t iExpression = sirLangFirstChild( pState, iNode );
-		const bool bVoid = pState->pOutput->pFunctions[pState->iFunction].eReturnType == SIR_LANG_VALUE_VOID;
+		const bool bVoid = pState->pOutput->pFunctions[pState->iFunction].eReturnType == SIRLangValueKind::SIR_LANG_VALUE_VOID;
 		const uint32_t iValue =
 		    iExpression == SIR_LANG_INVALID_INDEX ? SIR_LANG_INVALID_INDEX : sirLangLowerExpression( pState, iExpression );
 		if ( bVoid != ( iExpression == SIR_LANG_INVALID_INDEX ) ) {
-			sirLangError( pState, SIR_LANG_LOWER_TYPE, iNode );
+			sirLangError( pState, SIRLangLowerError::SIR_LANG_LOWER_TYPE, iNode );
 			return;
 		}
-		sirLangEmit( pState, { SIR_LANG_OP_RETURN, pState->pOutput->pFunctions[pState->iFunction].eReturnType, 0, UINT32_MAX, iValue, 0, 0,
+		sirLangEmit( pState, { SIRLangOpcode::SIR_LANG_OP_RETURN, pState->pOutput->pFunctions[pState->iFunction].eReturnType, 0, UINT32_MAX, iValue, 0, 0,
 		                       0, iNode } );
 		pState->bTerminated = true;
 		return;
 	}
-	case SIR_LANG_SYNTAX_EXPRESSION_STATEMENT:
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_EXPRESSION_STATEMENT:
 		sirLangLowerExpression( pState, sirLangFirstChild( pState, iNode ) );
 		return;
-	case SIR_LANG_SYNTAX_ASSIGNMENT: {
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_ASSIGNMENT: {
 		const uint32_t iLhs = sirLangFirstChild( pState, iNode );
 		const uint32_t iRhs = sirLangNextChild( pState, iLhs );
 		if ( iLhs >= pState->pTree->nNodeCount || iRhs >= pState->pTree->nNodeCount ||
-		     pState->pTree->pNodes[iLhs].eKind != SIR_LANG_SYNTAX_NAME ) {
-			sirLangError( pState, SIR_LANG_LOWER_UNSUPPORTED, iNode );
+		     pState->pTree->pNodes[iLhs].eKind != SIRLangSyntaxKind::SIR_LANG_SYNTAX_NAME ) {
+			sirLangError( pState, SIRLangLowerError::SIR_LANG_LOWER_UNSUPPORTED, iNode );
 			return;
 		}
 		const uint32_t iDecl = pState->pHIR->pNodes[iLhs].iDeclarationNode;
 		if ( iDecl >= 4096 || pState->szCurrentValues[iDecl] == SIR_LANG_INVALID_INDEX ) {
-			sirLangError( pState, SIR_LANG_LOWER_UNRESOLVED, iNode );
+			sirLangError( pState, SIRLangLowerError::SIR_LANG_LOWER_UNRESOLVED, iNode );
 			return;
 		}
 		pState->szCurrentValues[iDecl] = sirLangLowerExpression( pState, iRhs );
 		return;
 	}
-	case SIR_LANG_SYNTAX_BREAK: {
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_BREAK: {
 		if ( !pState->bInSwitch || pState->nSwitchBreakCount >= sizeof( pState->szSwitchBreaks ) / sizeof( pState->szSwitchBreaks[0] ) ) {
-			sirLangError( pState, SIR_LANG_LOWER_UNSUPPORTED, iNode );
+			sirLangError( pState, SIRLangLowerError::SIR_LANG_LOWER_UNSUPPORTED, iNode );
 			return;
 		}
-		const uint32_t iJump = sirLangEmit( pState, { SIR_LANG_OP_JUMP, SIR_LANG_VALUE_VOID, 0, UINT32_MAX, 0, 0, 0, 0, iNode } );
+		const uint32_t iJump = sirLangEmit( pState, { SIRLangOpcode::SIR_LANG_OP_JUMP, SIRLangValueKind::SIR_LANG_VALUE_VOID, 0, UINT32_MAX, 0, 0, 0, 0, iNode } );
 		if ( iJump == SIR_LANG_INVALID_INDEX ) {
 			return;
 		}
@@ -825,13 +826,13 @@ static void sirLangLowerStatement( sirLangLowerState_t *pState, uint32_t iNode )
 		pState->bTerminated = true;
 		return;
 	}
-	case SIR_LANG_SYNTAX_SWITCH: {
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_SWITCH: {
 		const uint32_t iSelector = sirLangFirstChild( pState, iNode );
 		const uint32_t iSelectorValue = sirLangLowerExpression( pState, iSelector );
 		if ( iSelectorValue == SIR_LANG_INVALID_INDEX ) {
 			return;
 		}
-		const sirLangValueKind_t eSelectorType = sirLangRegisterType( pState, iSelectorValue );
+		const SIRLangValueKind eSelectorType = sirLangRegisterType( pState, iSelectorValue );
 		const bool bPreviousInSwitch = pState->bInSwitch;
 		const uint32_t nPreviousBreakCount = pState->nSwitchBreakCount;
 		bool bHasDefault = false;
@@ -840,9 +841,9 @@ static void sirLangLowerStatement( sirLangLowerState_t *pState, uint32_t iNode )
 		for ( uint32_t iBranch = sirLangNextChild( pState, iSelector ); iBranch != SIR_LANG_INVALID_INDEX;
 		      iBranch = sirLangNextChild( pState, iBranch ) ) {
 			const sirLangSyntaxNode_t& branch = pState->pTree->pNodes[iBranch];
-			const bool bDefault = branch.eKind == SIR_LANG_SYNTAX_DEFAULT;
-			if ( !bDefault && branch.eKind != SIR_LANG_SYNTAX_CASE ) {
-				sirLangError( pState, SIR_LANG_LOWER_UNSUPPORTED, iBranch );
+			const bool bDefault = branch.eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_DEFAULT;
+			if ( !bDefault && branch.eKind != SIRLangSyntaxKind::SIR_LANG_SYNTAX_CASE ) {
+				sirLangError( pState, SIRLangLowerError::SIR_LANG_LOWER_UNSUPPORTED, iBranch );
 				break;
 			}
 			const uint32_t iCaseValue = branch.nFirstChild;
@@ -851,16 +852,16 @@ static void sirLangLowerStatement( sirLangLowerState_t *pState, uint32_t iNode )
 			if ( !bDefault ) {
 				const uint32_t iConstant = sirLangLowerExpression( pState, iCaseValue );
 				if ( iConstant == SIR_LANG_INVALID_INDEX || sirLangRegisterType( pState, iConstant ) != eSelectorType ) {
-					sirLangError( pState, SIR_LANG_LOWER_TYPE, iBranch );
+					sirLangError( pState, SIRLangLowerError::SIR_LANG_LOWER_TYPE, iBranch );
 					break;
 				}
 				const uint32_t iComparison = sirLangNewRegister( pState, iBranch );
 				if ( iComparison == SIR_LANG_INVALID_INDEX ) {
 					break;
 				}
-				sirLangEmit( pState, { SIR_LANG_OP_EQUAL, SIR_LANG_VALUE_BOOL, 0, iComparison, iSelectorValue, iConstant, 0, 0, iBranch } );
+				sirLangEmit( pState, { SIRLangOpcode::SIR_LANG_OP_EQUAL, SIRLangValueKind::SIR_LANG_VALUE_BOOL, 0, iComparison, iSelectorValue, iConstant, 0, 0, iBranch } );
 				iMiss =
-				    sirLangEmit( pState, { SIR_LANG_OP_JUMP_FALSE, SIR_LANG_VALUE_VOID, 0, UINT32_MAX, iComparison, 0, 0, 0, iBranch } );
+				    sirLangEmit( pState, { SIRLangOpcode::SIR_LANG_OP_JUMP_FALSE, SIRLangValueKind::SIR_LANG_VALUE_VOID, 0, UINT32_MAX, iComparison, 0, 0, 0, iBranch } );
 				iBlock = sirLangNextChild( pState, iCaseValue );
 			} else {
 				bHasDefault = true;
@@ -871,12 +872,12 @@ static void sirLangLowerStatement( sirLangLowerState_t *pState, uint32_t iNode )
 			bAllReturn = bAllReturn && pState->bTerminated && !pState->bSwitchBreak;
 			if ( !pState->bTerminated ) {
 				// A v1 switch case must terminate with return or break.
-				sirLangError( pState, SIR_LANG_LOWER_UNSUPPORTED, iBranch );
+				sirLangError( pState, SIRLangLowerError::SIR_LANG_LOWER_UNSUPPORTED, iBranch );
 			}
 			if ( iMiss != SIR_LANG_INVALID_INDEX ) {
 				pState->pOutput->pInstructions[iMiss].nAuxiliary = pState->pOutput->program.nInstructionCount;
 			}
-			if ( pState->pOutput->eError != SIR_LANG_LOWER_OK ) {
+			if ( pState->pOutput->eError != SIRLangLowerError::SIR_LANG_LOWER_OK ) {
 				break;
 			}
 		}
@@ -890,7 +891,7 @@ static void sirLangLowerStatement( sirLangLowerState_t *pState, uint32_t iNode )
 		pState->bTerminated = bHasDefault && bAllReturn;
 		return;
 	}
-	case SIR_LANG_SYNTAX_WHEN: {
+	case SIRLangSyntaxKind::SIR_LANG_SYNTAX_WHEN: {
 		const uint32_t iCondition = sirLangFirstChild( pState, iNode );
 		const uint32_t iThen = sirLangNextChild( pState, iCondition );
 		const uint32_t iElse = sirLangNextChild( pState, iThen );
@@ -899,19 +900,22 @@ static void sirLangLowerStatement( sirLangLowerState_t *pState, uint32_t iNode )
 			return;
 		}
 		const uint32_t iBranch =
-		    sirLangEmit( pState, { SIR_LANG_OP_JUMP_FALSE, SIR_LANG_VALUE_VOID, 0, UINT32_MAX, iCondValue, 0, 0, 0, iNode } );
+		    sirLangEmit( pState, { SIRLangOpcode::SIR_LANG_OP_JUMP_FALSE, SIRLangValueKind::SIR_LANG_VALUE_VOID, 0, UINT32_MAX, iCondValue, 0, 0, 0, iNode } );
 		const bool bOldConditional = pState->bInConditional;
 		pState->bInConditional = true;
-		uint32_t szBefore[4096] = {};
-		uint32_t szThen[4096] = {};
-		uint32_t szElse[4096] = {};
+		uint32_t szBefore[4096];
+		memset( szBefore, 0, sizeof( szBefore ) );
+		uint32_t szThen[4096];
+		memset( szThen, 0, sizeof( szThen ) );
+		uint32_t szElse[4096];
+		memset( szElse, 0, sizeof( szElse ) );
 		memcpy( szBefore, pState->szCurrentValues, sizeof( szBefore ) );
 		sirLangLowerBlock( pState, iThen );
 		const bool bThenReturns = pState->bTerminated;
 		memcpy( szThen, pState->szCurrentValues, sizeof( szThen ) );
 		uint32_t iExit = SIR_LANG_INVALID_INDEX;
 		if ( !bThenReturns ) {
-			iExit = sirLangEmit( pState, { SIR_LANG_OP_JUMP, SIR_LANG_VALUE_VOID, 0, UINT32_MAX, 0, 0, 0, 0, iNode } );
+			iExit = sirLangEmit( pState, { SIRLangOpcode::SIR_LANG_OP_JUMP, SIRLangValueKind::SIR_LANG_VALUE_VOID, 0, UINT32_MAX, 0, 0, 0, 0, iNode } );
 		}
 		if ( iBranch != SIR_LANG_INVALID_INDEX ) {
 			pState->pOutput->pInstructions[iBranch].nAuxiliary = pState->pOutput->program.nInstructionCount;
@@ -919,7 +923,7 @@ static void sirLangLowerStatement( sirLangLowerState_t *pState, uint32_t iNode )
 		memcpy( pState->szCurrentValues, szBefore, sizeof( szBefore ) );
 		pState->bTerminated = false;
 		bool bElseReturns = false;
-		if ( iElse < pState->pTree->nNodeCount && pState->pTree->pNodes[iElse].eKind == SIR_LANG_SYNTAX_OTHERWISE ) {
+		if ( iElse < pState->pTree->nNodeCount && pState->pTree->pNodes[iElse].eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_OTHERWISE ) {
 			sirLangLowerBlock( pState, sirLangFirstChild( pState, iElse ) );
 			bElseReturns = pState->bTerminated;
 		}
@@ -943,16 +947,16 @@ static void sirLangLowerStatement( sirLangLowerState_t *pState, uint32_t iNode )
 					pState->szCurrentValues[iDecl] = SIR_LANG_INVALID_INDEX;
 					continue;
 				}
-				const sirLangValueKind_t eType = sirLangRegisterType( pState, iA );
-				if ( eType == SIR_LANG_VALUE_UNKNOWN || eType != sirLangRegisterType( pState, iB ) ) {
-					sirLangError( pState, SIR_LANG_LOWER_TYPE, iNode );
+				const SIRLangValueKind eType = sirLangRegisterType( pState, iA );
+				if ( eType == SIRLangValueKind::SIR_LANG_VALUE_UNKNOWN || eType != sirLangRegisterType( pState, iB ) ) {
+					sirLangError( pState, SIRLangLowerError::SIR_LANG_LOWER_TYPE, iNode );
 					break;
 				}
 				const uint32_t iPhi = sirLangNewRegister( pState, iNode );
 				if ( iPhi == SIR_LANG_INVALID_INDEX ) {
 					break;
 				}
-				sirLangEmit( pState, { SIR_LANG_OP_PHI, eType, 0, iPhi, iA, iB, iExit, 0, iNode } );
+				sirLangEmit( pState, { SIRLangOpcode::SIR_LANG_OP_PHI, eType, 0, iPhi, iA, iB, iExit, 0, iNode } );
 				pState->szCurrentValues[iDecl] = iPhi;
 			}
 		}
@@ -962,7 +966,7 @@ static void sirLangLowerStatement( sirLangLowerState_t *pState, uint32_t iNode )
 	}
 
 	default:
-		sirLangError( pState, SIR_LANG_LOWER_UNSUPPORTED, iNode );
+		sirLangError( pState, SIRLangLowerError::SIR_LANG_LOWER_UNSUPPORTED, iNode );
 		return;
 	}
 }
@@ -974,7 +978,7 @@ static uint64_t sirLangModuleFunctionId( uint64_t nModuleId, uint64_t nFingerpri
 	return nHash == 0 ? 1 : nHash;
 }
 
-sirLangLowerError_t SIRLangBuildCIR( const sirLangSyntaxTree_t *pTree, const sirLangSignatureOutput_t *pSignatures,
+SIRLangLowerError SIRLangBuildCIR( const sirLangSyntaxTree_t *pTree, const sirLangSignatureOutput_t *pSignatures,
                                      const sirLangHIRProgram_t *pHIR, sirLangCIRStorage_t *pOutput ) noexcept
 {
 	if ( pTree == nullptr || pSignatures == nullptr || pHIR == nullptr || pOutput == nullptr || pTree->pNodes == nullptr ||
@@ -983,9 +987,9 @@ sirLangLowerError_t SIRLangBuildCIR( const sirLangSyntaxTree_t *pTree, const sir
 	     pSignatures->nFunctionCount == 0 || pSignatures->nFunctionCount > pOutput->nFunctionCapacity || pOutput->nModuleId == 0 ||
 	     pOutput->nLayoutDigest == 0 || pOutput->nBindingDigest == 0 ||
 	     ( pOutput->nCapabilityCount > 0 && pOutput->pCapabilities == nullptr ) ) {
-		return SIR_LANG_LOWER_INVALID_INPUT;
+		return SIRLangLowerError::SIR_LANG_LOWER_INVALID_INPUT;
 	}
-	pOutput->eError = SIR_LANG_LOWER_OK;
+	pOutput->eError = SIRLangLowerError::SIR_LANG_LOWER_OK;
 	pOutput->iErrorNode = SIR_LANG_INVALID_INDEX;
 	pOutput->program = {};
 	pOutput->program.pFunctions = pOutput->pFunctions;
@@ -999,7 +1003,7 @@ sirLangLowerError_t SIRLangBuildCIR( const sirLangSyntaxTree_t *pTree, const sir
 	pOutput->program.nBindingDigest = pOutput->nBindingDigest;
 	pOutput->program.nRevision = SIR_LANG_VM_VERSION;
 	pOutput->program.nFunctionCount = pSignatures->nFunctionCount;
-	sirLangLowerState_t state = {};
+	sirLangLowerState_t state {};
 	state.pTree = pTree;
 	state.pSignatures = pSignatures;
 	state.pHIR = pHIR;
@@ -1007,9 +1011,9 @@ sirLangLowerError_t SIRLangBuildCIR( const sirLangSyntaxTree_t *pTree, const sir
 	for ( uint32_t iFunction = 0; iFunction < pSignatures->nFunctionCount; ++iFunction ) {
 		const sirLangFunctionSignature_t& signature = pSignatures->pFunctions[iFunction];
 		if ( signature.iDeclarationNode >= pTree->nNodeCount || signature.nParameterCount > SIR_LANG_VM_MAX_PARAMETERS ||
-		     signature.result.eValue == SIR_LANG_VALUE_UNKNOWN ||
-		     ( signature.result.eValue != SIR_LANG_VALUE_VOID && !sirLangIsExecutableValue( signature.result.eValue ) ) ) {
-			return sirLangError( &state, SIR_LANG_LOWER_UNSUPPORTED, signature.iDeclarationNode );
+		     signature.result.eValue == SIRLangValueKind::SIR_LANG_VALUE_UNKNOWN ||
+		     ( signature.result.eValue != SIRLangValueKind::SIR_LANG_VALUE_VOID && !sirLangIsExecutableValue( signature.result.eValue ) ) ) {
+			return sirLangError( &state, SIRLangLowerError::SIR_LANG_LOWER_UNSUPPORTED, signature.iDeclarationNode );
 		}
 		sirLangCIRFunction_t& function = pOutput->pFunctions[iFunction];
 		function = {};
@@ -1018,12 +1022,12 @@ sirLangLowerError_t SIRLangBuildCIR( const sirLangSyntaxTree_t *pTree, const sir
 		function.iFirstParameterType = pOutput->program.nParameterTypeCount;
 		function.eReturnType = signature.result.eValue;
 		if ( signature.nParameterCount > pOutput->nParameterTypeCapacity - pOutput->program.nParameterTypeCount ) {
-			return sirLangError( &state, SIR_LANG_LOWER_CAPACITY, signature.iDeclarationNode );
+			return sirLangError( &state, SIRLangLowerError::SIR_LANG_LOWER_CAPACITY, signature.iDeclarationNode );
 		}
 		for ( uint32_t iParam = 0; iParam < signature.nParameterCount; ++iParam ) {
 			const sirLangSignatureParameter_t& parameter = pSignatures->pParameters[signature.iFirstParameter + iParam];
 			if ( !sirLangIsExecutableValue( parameter.type.eValue ) ) {
-				return sirLangError( &state, SIR_LANG_LOWER_UNSUPPORTED, parameter.iDeclarationNode );
+				return sirLangError( &state, SIRLangLowerError::SIR_LANG_LOWER_UNSUPPORTED, parameter.iDeclarationNode );
 			}
 			pOutput->pParameterTypes[pOutput->program.nParameterTypeCount++] = parameter.type.eValue;
 		}
@@ -1047,36 +1051,36 @@ sirLangLowerError_t SIRLangBuildCIR( const sirLangSyntaxTree_t *pTree, const sir
 				break;
 			}
 			state.szCurrentValues[parameter.iDeclarationNode] = iReg;
-			sirLangEmit( &state, { SIR_LANG_OP_PARAMETER, parameter.type.eValue, 0, iReg, iParam, 0, 0, 0, parameter.iDeclarationNode } );
+			sirLangEmit( &state, { SIRLangOpcode::SIR_LANG_OP_PARAMETER, parameter.type.eValue, 0, iReg, iParam, 0, 0, 0, parameter.iDeclarationNode } );
 		}
 		uint32_t iBlock = SIR_LANG_INVALID_INDEX;
 		for ( uint32_t iChild = sirLangFirstChild( &state, signature.iDeclarationNode ); iChild != SIR_LANG_INVALID_INDEX;
 		      iChild = sirLangNextChild( &state, iChild ) ) {
-			if ( pTree->pNodes[iChild].eKind == SIR_LANG_SYNTAX_BLOCK ) {
+			if ( pTree->pNodes[iChild].eKind == SIRLangSyntaxKind::SIR_LANG_SYNTAX_BLOCK ) {
 				iBlock = iChild;
 				break;
 			}
 		}
 		if ( iBlock == SIR_LANG_INVALID_INDEX ) {
-			return sirLangError( &state, SIR_LANG_LOWER_INVALID_INPUT, signature.iDeclarationNode );
+			return sirLangError( &state, SIRLangLowerError::SIR_LANG_LOWER_INVALID_INPUT, signature.iDeclarationNode );
 		}
 		sirLangLowerBlock( &state, iBlock );
-		if ( pOutput->eError != SIR_LANG_LOWER_OK ) {
+		if ( pOutput->eError != SIRLangLowerError::SIR_LANG_LOWER_OK ) {
 			return pOutput->eError;
 		}
-		if ( !state.bTerminated && function.eReturnType == SIR_LANG_VALUE_VOID ) {
+		if ( !state.bTerminated && function.eReturnType == SIRLangValueKind::SIR_LANG_VALUE_VOID ) {
 			sirLangEmit( &state,
-			             { SIR_LANG_OP_RETURN, SIR_LANG_VALUE_VOID, 0, UINT32_MAX, UINT32_MAX, 0, 0, 0, signature.iDeclarationNode } );
+			             { SIRLangOpcode::SIR_LANG_OP_RETURN, SIRLangValueKind::SIR_LANG_VALUE_VOID, 0, UINT32_MAX, UINT32_MAX, 0, 0, 0, signature.iDeclarationNode } );
 			state.bTerminated = true;
 		}
 		if ( !state.bTerminated ) {
-			return sirLangError( &state, SIR_LANG_LOWER_MISSING_RETURN, signature.iDeclarationNode );
+			return sirLangError( &state, SIRLangLowerError::SIR_LANG_LOWER_MISSING_RETURN, signature.iDeclarationNode );
 		}
 		function.nRegisterCount = state.nRegisters > 0 ? state.nRegisters : 1;
 		function.nInstructionCount = pOutput->program.nInstructionCount - function.iFirstInstruction;
 	}
-	if ( SIRLangVerifyCIR( &pOutput->program ) != SIR_LANG_VM_OK ) {
-		return sirLangError( &state, SIR_LANG_LOWER_UNVERIFIABLE, pSignatures->pFunctions[0].iDeclarationNode );
+	if ( SIRLangVerifyCIR( &pOutput->program ) != SIRLangVMError::SIR_LANG_VM_OK ) {
+		return sirLangError( &state, SIRLangLowerError::SIR_LANG_LOWER_UNVERIFIABLE, pSignatures->pFunctions[0].iDeclarationNode );
 	}
-	return SIR_LANG_LOWER_OK;
+	return SIRLangLowerError::SIR_LANG_LOWER_OK;
 }

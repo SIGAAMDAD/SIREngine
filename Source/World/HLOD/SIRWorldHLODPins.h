@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRWORLDHLODPINS_H__
-#define __SIRENGINE_SIRWORLDHLODPINS_H__
+#ifndef __SIR_WORLDHLODPINS_H__
+#define __SIR_WORLDHLODPINS_H__
 
 #include <Core/SIRPCH.h>
 
@@ -45,8 +45,7 @@ typedef struct sirWorldHLODPinOutput_s
 	uint32_t *pnPinned;
 } sirWorldHLODPinOutput_t;
 
-typedef enum sirWorldHLODPinResult_e : uint8_t
-{
+enum class SIRWorldHLODPinResult : uint8_t {
 	SIR_WORLD_HLOD_PIN_OK = 0,
 	SIR_WORLD_HLOD_PIN_INVALID_ARGUMENT = 1,
 	SIR_WORLD_HLOD_PIN_INVALID_CUT = 2,
@@ -54,7 +53,7 @@ typedef enum sirWorldHLODPinResult_e : uint8_t
 	SIR_WORLD_HLOD_PIN_CAPACITY = 4,
 	SIR_WORLD_HLOD_PIN_PROVIDER_FAILURE = 5,
 	SIR_WORLD_HLOD_PIN_ROLLBACK_FAILURE = 6
-} sirWorldHLODPinResult_t;
+};
 
 // Pins the selected, ascending unique indices produced by sirWorldHLODPlan
 // against exact GRDG resource and provider revisions. On ordinary failure,
@@ -63,6 +62,6 @@ typedef enum sirWorldHLODPinResult_e : uint8_t
 // pins and reconcile their lifetime with GRDG. All spans must be disjoint.
 // On success the caller must release every returned pin through GRDG, after
 // its own renderer's GPU completion/lifetime fence makes this safe.
-sirWorldHLODPinResult_t sirWorldHLODPinCut( const sirWorldHLODPinInput_t& input, const sirWorldHLODPinOutput_t& output ) noexcept;
+SIRWorldHLODPinResult sirWorldHLODPinCut( const sirWorldHLODPinInput_t& input, const sirWorldHLODPinOutput_t& output ) noexcept;
 
-#endif // __SIRENGINE_SIRWORLDHLODPINS_H__
+#endif // __SIR_WORLDHLODPINS_H__

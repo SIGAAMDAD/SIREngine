@@ -41,20 +41,21 @@ static uint32_t scriptRotateRight( uint32_t nValue, uint32_t nBits ) noexcept
 
 static uint32_t scriptReadBE32( const uint8_t *pData ) noexcept
 {
-	return ( ( uint32_t )pData[0] << 24 ) | ( ( uint32_t )pData[1] << 16 ) | ( ( uint32_t )pData[2] << 8 ) | pData[3];
+	return ( static_cast<uint32_t>(pData[0]) << 24 ) | ( static_cast<uint32_t>(pData[1]) << 16 ) | ( static_cast<uint32_t>(pData[2]) << 8 ) | pData[3];
 }
 
 static void scriptWriteBE32( uint8_t *pData, uint32_t nValue ) noexcept
 {
-	pData[0] = ( uint8_t )( nValue >> 24 );
-	pData[1] = ( uint8_t )( nValue >> 16 );
-	pData[2] = ( uint8_t )( nValue >> 8 );
-	pData[3] = ( uint8_t )nValue;
+	pData[0] = static_cast<uint8_t>( nValue >> 24 );
+	pData[1] = static_cast<uint8_t>( nValue >> 16 );
+	pData[2] = static_cast<uint8_t>( nValue >> 8 );
+	pData[3] = static_cast<uint8_t>(nValue);
 }
 
 static void scriptSHA256Transform( sirScriptSHA256State_t& state, const uint8_t *pBlock ) noexcept
 {
-	uint32_t szWords[64] = {};
+	uint32_t szWords[64];
+	memset( szWords, 0, sizeof( szWords ) );
 	for ( uint32_t iWord = 0; iWord < 16; ++iWord ) {
 		szWords[iWord] = scriptReadBE32( pBlock + 4 * iWord );
 	}
@@ -105,7 +106,7 @@ static void scriptSHA256Update( sirScriptSHA256State_t& state, const uint8_t *pD
 	state.nBytes += nBytes;
 	while ( nBytes != 0 ) {
 		const uint32_t nSpace = 64 - state.nBuffered;
-		const uint32_t nCopy = nBytes < nSpace ? ( uint32_t )nBytes : nSpace;
+		const uint32_t nCopy = nBytes < nSpace ? static_cast<uint32_t>(nBytes) : nSpace;
 		memcpy( state.szBuffer + state.nBuffered, pData, nCopy );
 		state.nBuffered += nCopy;
 		pData += nCopy;
@@ -122,7 +123,7 @@ void SIRScriptSHA256::digest( const void *pData, uint64_t nBytes, uint8_t szDige
 	if ( szDigest == nullptr || ( nBytes != 0 && pData == nullptr ) ) {
 		return;
 	}
-	sirScriptSHA256State_t state = {};
+	sirScriptSHA256State_t state {};
 	state.szHash[0] = 0x6a09e667;
 	state.szHash[1] = 0xbb67ae85;
 	state.szHash[2] = 0x3c6ef372;
@@ -132,7 +133,7 @@ void SIRScriptSHA256::digest( const void *pData, uint64_t nBytes, uint8_t szDige
 	state.szHash[6] = 0x1f83d9ab;
 	state.szHash[7] = 0x5be0cd19;
 
-	scriptSHA256Update( state, ( const uint8_t * )pData, nBytes );
+	scriptSHA256Update( state, static_cast<const uint8_t *>(pData), nBytes );
 	const uint64_t nBitLength = state.nBytes * 8;
 	const uint8_t nMarker = 0x80;
 	scriptSHA256Update( state, &nMarker, 1 );
@@ -140,9 +141,10 @@ void SIRScriptSHA256::digest( const void *pData, uint64_t nBytes, uint8_t szDige
 	while ( state.nBuffered != 56 ) {
 		scriptSHA256Update( state, &nZero, 1 );
 	}
-	uint8_t szLength[8] = {};
+	uint8_t szLength[8];
+	memset( szLength, 0, sizeof( szLength ) );
 	for ( uint32_t iByte = 0; iByte < 8; ++iByte ) {
-		szLength[7 - iByte] = ( uint8_t )( nBitLength >> ( iByte * 8 ) );
+		szLength[7 - iByte] = static_cast<uint8_t>(  nBitLength >> ( iByte * 8 )  );
 	}
 	scriptSHA256Update( state, szLength, 8 );
 	for ( uint32_t iWord = 0; iWord < 8; ++iWord ) {

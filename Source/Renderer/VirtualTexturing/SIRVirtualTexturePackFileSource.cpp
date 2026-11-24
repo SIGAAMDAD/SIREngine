@@ -21,7 +21,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 static bool sirVTReadFull( const SIRPlatformFile& file, uint64_t nOffset, void *pDestination, uint64_t nBytes ) noexcept
 {
 	uint64_t nTransferred = 0;
-	return file.readAt( nOffset, pDestination, nBytes, &nTransferred ) == SIR_FILE_OK && nTransferred == nBytes;
+	return file.readAt( nOffset, pDestination, nBytes, &nTransferred ) == SIRFileResult::SIR_FILE_OK && nTransferred == nBytes;
 }
 
 SIRVirtualTexturePackFileSource::SIRVirtualTexturePackFileSource( void ) noexcept
@@ -81,29 +81,30 @@ bool SIRVirtualTexturePackFileSource::open( const char *pszPath, const sirVirtua
 		*pView = {};
 	}
 	if ( pView == nullptr || pszPath == nullptr || *pszPath == '\0' || buffer.pBytes == nullptr ||
-	     buffer.nCapacity < SIR_VT_PACK_HEADER_BYTES || m_File.open( pszPath, SIR_FILE_OPEN_READ ) != SIR_FILE_OK ) {
+	     buffer.nCapacity < SIR_VT_PACK_HEADER_BYTES || m_File.open( pszPath, SIRFileOpenFlag::SIR_FILE_OPEN_READ ) != SIRFileResult::SIR_FILE_OK ) {
 		return false;
 	}
 	bool bSuccess = false;
 	do {
 		uint64_t nLength = 0;
-		if ( m_File.getSize( &nLength ) != SIR_FILE_OK || nLength < SIR_VT_PACK_HEADER_BYTES || nLength > INT64_MAX ) {
+		if ( m_File.getSize( &nLength ) != SIRFileResult::SIR_FILE_OK || nLength < SIR_VT_PACK_HEADER_BYTES || nLength > INT64_MAX ) {
 			break;
 		}
-		sirVirtualTexturePackHeader_t header = {};
+		sirVirtualTexturePackHeader_t header {};
 		if ( !sirVTReadFull( m_File, 0, &header, sizeof( header ) ) || header.nPackageBytes != nLength ||
 		     header.nPayloadDataOffset < SIR_VT_PACK_HEADER_BYTES || header.nPayloadDataOffset > nLength ||
 		     header.nPayloadDataOffset > 256U * 1024U * 1024U || header.nPayloadDataOffset > buffer.nCapacity ||
 		     !sirVTReadFull( m_File, 0, buffer.pBytes, header.nPayloadDataOffset ) ) {
 			break;
 		}
-		sirVirtualTexturePackView_t candidate = {};
+		sirVirtualTexturePackView_t candidate {};
 		const sirVirtualTexturePackInput_t input = { buffer.pBytes, header.nPayloadDataOffset, nLength, true };
 		if ( !sirVTPackOpenValidated( input, &candidate ) ) {
 			break;
 		}
 		if ( bStrictHash ) {
-			uint8_t szScratch[16384] = {};
+			uint8_t szScratch[16384];
+			memset( szScratch, 0, sizeof( szScratch ) );
 			uint64_t nHash = UINT64_C( 1469598103934665603 );
 			for ( uint64_t nOffset = SIR_VT_PACK_HEADER_BYTES; nOffset < nLength; ) {
 				const uint64_t nRemaining = nLength - nOffset;
@@ -138,7 +139,7 @@ bool SIRVirtualTexturePackFileSource::open( const char *pszPath, const sirVirtua
 bool SIRVirtualTexturePackFileSource::readPayload( uint64_t nOffset, void *pDestination, uint32_t nBytes ) noexcept
 {
 	if ( !m_File.isOpen() || pDestination == nullptr || nBytes == 0 || nOffset > m_nPayloadBytes || nBytes > m_nPayloadBytes - nOffset ||
-	     m_nPayloadOffset > ( uint64_t )INT64_MAX - nOffset || nBytes > ( uint64_t )INT64_MAX - m_nPayloadOffset - nOffset ) {
+	     m_nPayloadOffset > static_cast<uint64_t>(INT64_MAX) - nOffset || nBytes > static_cast<uint64_t>(INT64_MAX) - m_nPayloadOffset - nOffset ) {
 		return false;
 	}
 	if ( !sirVTReadFull( m_File, m_nPayloadOffset + nOffset, pDestination, nBytes ) ) {
@@ -156,11 +157,11 @@ bool SIRVirtualTexturePackFileSource::readCluster( const sirVirtualTexturePackVi
 {
 	if ( !isOpen() || !view.bMetadataOnly || view.header.nPackageGeneration != m_nPackageGeneration ||
 	     view.header.nPayloadDataBytes != m_nPayloadBytes || view.header.nContentSignature != m_nPackageSignature ||
-	     nClusterId >= view.header.nClusterCount || view.szDirectories[SIR_VT_PACK_CLUSTERS].pData == nullptr ) {
+	     nClusterId >= view.header.nClusterCount || view.szDirectories[SIRVirtualTexturePackDirectory::SIR_VT_PACK_CLUSTERS].pData == nullptr ) {
 		return false;
 	}
-	sirVirtualTexturePackClusterRecord_t cluster = {};
-	memcpy( &cluster, view.szDirectories[SIR_VT_PACK_CLUSTERS].pData + ( uint64_t )nClusterId * sizeof( cluster ), sizeof( cluster ) );
+	sirVirtualTexturePackClusterRecord_t cluster {};
+	memcpy( &cluster, view.szDirectories[SIRVirtualTexturePackDirectory::SIR_VT_PACK_CLUSTERS].pData + static_cast<uint64_t>(nClusterId * sizeof(  cluster  )), sizeof( cluster ) );
 	if ( cluster.nStoredBytes == 0 || cluster.nStoredBytes > buffers.nStoredCapacity || buffers.pStoredBytes == nullptr ||
 	     !readPayload( cluster.nPayloadDataOffset, buffers.pStoredBytes, cluster.nStoredBytes ) ) {
 		return false;

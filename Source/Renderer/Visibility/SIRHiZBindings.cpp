@@ -15,7 +15,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Renderer/Visibility/SIRHiZBindings.h>
 
-static bool sirHiZBindingsValidHandle( sirGraphicsHandle_t hResource, sirGraphicsHandleType_t eType, uint32_t nGeneration ) noexcept
+static bool sirHiZBindingsValidHandle( sirGraphicsHandle_t hResource, SIRGraphicsHandleType eType, uint32_t nGeneration ) noexcept
 {
 	return hResource.nGeneration != 0 && hResource.nDeviceGeneration == nGeneration && hResource.eType == eType;
 }
@@ -57,52 +57,52 @@ static bool sirHiZBindingsSamePlan( const sirHiZDispatchPlan_t& a, const sirHiZD
 	return true;
 }
 
-static sirGraphicsResult_t sirHiZBindingsValidate( const sirHiZBindingsDesc_t& desc, uint32_t nGeneration ) noexcept
+static SIRGraphicsResult sirHiZBindingsValidate( const sirHiZBindingsDesc_t& desc, uint32_t nGeneration ) noexcept
 {
 	if ( desc.pPlan == nullptr || nGeneration == 0 ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( desc.nParameterAlignment < 256 || ( desc.nParameterAlignment & ( desc.nParameterAlignment - 1 ) ) != 0 ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( desc.nParameterAlignment > 4096 ) {
-		return SIR_GRAPHICS_UNSUPPORTED;
+		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
-	if ( !sirHiZBindingsValidHandle( desc.hDepthTexture, SIR_GRAPHICS_HANDLE_TEXTURE, nGeneration ) ) {
-		return SIR_GRAPHICS_INVALID_HANDLE;
+	if ( !sirHiZBindingsValidHandle( desc.hDepthTexture, SIRGraphicsHandleType::SIR_GRAPHICS_HANDLE_TEXTURE, nGeneration ) ) {
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_HANDLE;
 	}
-	if ( !sirHiZBindingsValidHandle( desc.hPyramidTexture, SIR_GRAPHICS_HANDLE_TEXTURE, nGeneration ) ) {
-		return SIR_GRAPHICS_INVALID_HANDLE;
+	if ( !sirHiZBindingsValidHandle( desc.hPyramidTexture, SIRGraphicsHandleType::SIR_GRAPHICS_HANDLE_TEXTURE, nGeneration ) ) {
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_HANDLE;
 	}
 	if ( sirHiZBindingsSameHandle( desc.hDepthTexture, desc.hPyramidTexture ) ) {
-		return SIR_GRAPHICS_INVALID_HANDLE;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_HANDLE;
 	}
-	if ( !sirHiZBindingsValidHandle( desc.hCopyPipeline, SIR_GRAPHICS_HANDLE_PIPELINE, nGeneration ) ) {
-		return SIR_GRAPHICS_INVALID_HANDLE;
+	if ( !sirHiZBindingsValidHandle( desc.hCopyPipeline, SIRGraphicsHandleType::SIR_GRAPHICS_HANDLE_PIPELINE, nGeneration ) ) {
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_HANDLE;
 	}
-	if ( !sirHiZBindingsValidHandle( desc.hReducePipeline, SIR_GRAPHICS_HANDLE_PIPELINE, nGeneration ) ) {
-		return SIR_GRAPHICS_INVALID_HANDLE;
+	if ( !sirHiZBindingsValidHandle( desc.hReducePipeline, SIRGraphicsHandleType::SIR_GRAPHICS_HANDLE_PIPELINE, nGeneration ) ) {
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_HANDLE;
 	}
-	if ( desc.depth.texture.eFormat != SIR_GRAPHICS_FORMAT_D32_FLOAT ) {
-		return SIR_GRAPHICS_UNSUPPORTED;
+	if ( desc.depth.texture.eFormat != SIRGraphicsFormat::SIR_GRAPHICS_FORMAT_D32_FLOAT ) {
+		return SIRGraphicsResult::SIR_GRAPHICS_UNSUPPORTED;
 	}
-	sirHiZLayout_t layout = {};
-	if ( sirHiZCalculateLayout( desc.pPlan->pyramid.nWidth, desc.pPlan->pyramid.nHeight, &layout ) != SIR_GRAPHICS_SUCCESS ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	sirHiZLayout_t layout {};
+	if ( sirHiZCalculateLayout( desc.pPlan->pyramid.nWidth, desc.pPlan->pyramid.nHeight, &layout ) != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	sirHiZDispatchPlan_t expected = {};
-	if ( sirHiZPlanDispatches( layout, desc.depth, &expected ) != SIR_GRAPHICS_SUCCESS ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	sirHiZDispatchPlan_t expected {};
+	if ( sirHiZPlanDispatches( layout, desc.depth, &expected ) != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	return sirHiZBindingsSamePlan( *desc.pPlan, expected ) ? SIR_GRAPHICS_SUCCESS : SIR_GRAPHICS_INVALID_ARGUMENT;
+	return sirHiZBindingsSamePlan( *desc.pPlan, expected ) ? SIRGraphicsResult::SIR_GRAPHICS_SUCCESS : SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 }
 
-static sirGraphicsResult_t sirHiZBindingsCreateView( SIRRenderingDevice& device, sirGraphicsHandle_t hResource, uint32_t iMip,
+static SIRGraphicsResult sirHiZBindingsCreateView( SIRRenderingDevice& device, sirGraphicsHandle_t hResource, uint32_t iMip,
                                                      uint32_t nUsage, sirGraphicsHandle_t *pView ) noexcept
 {
-	sirGraphicsViewDesc_t view = {};
+	sirGraphicsViewDesc_t view {};
 	view.hResource = hResource;
-	view.eFormat = SIR_GRAPHICS_FORMAT_R32_FLOAT;
+	view.eFormat = SIRGraphicsFormat::SIR_GRAPHICS_FORMAT_R32_FLOAT;
 	view.nBaseMip = iMip;
 	view.nMipLevels = 1;
 	view.nBaseLayer = 0;
@@ -111,56 +111,56 @@ static sirGraphicsResult_t sirHiZBindingsCreateView( SIRRenderingDevice& device,
 	return device.createView( view, pView );
 }
 
-static sirGraphicsResult_t sirHiZBindingsUpload( SIRRenderingDevice& device, const sirHiZDispatchPlan_t& plan,
+static SIRGraphicsResult sirHiZBindingsUpload( SIRRenderingDevice& device, const sirHiZDispatchPlan_t& plan,
                                                  sirHiZBindings_t *pBindings ) noexcept
 {
-	const uint64_t nTotalBytes = ( uint64_t )pBindings->nParameterStride * plan.nPassCount;
-	sirGraphicsBufferDesc_t buffer = {};
+	const uint64_t nTotalBytes = static_cast<uint64_t>(pBindings->nParameterStride) * plan.nPassCount;
+	sirGraphicsBufferDesc_t buffer {};
 	buffer.nSizeBytes = nTotalBytes;
 	buffer.nAlignmentBytes = pBindings->nParameterStride;
-	buffer.nUsage = SIR_GRAPHICS_USAGE_CONSTANT;
-	buffer.eMemory = SIR_GRAPHICS_MEMORY_CPU_UPLOAD;
-	sirGraphicsResult_t eResult = device.createBuffer( buffer, &pBindings->hParameterBuffer );
-	if ( eResult != SIR_GRAPHICS_SUCCESS ) {
+	buffer.nUsage = SIRGraphicsUsage::SIR_GRAPHICS_USAGE_CONSTANT;
+	buffer.eMemory = SIRGraphicsMemoryClass::SIR_GRAPHICS_MEMORY_CPU_UPLOAD;
+	SIRGraphicsResult eResult = device.createBuffer( buffer, &pBindings->hParameterBuffer );
+	if ( eResult != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 		return eResult;
 	}
-	sirGraphicsMappedBuffer_t mapped = {};
+	sirGraphicsMappedBuffer_t mapped {};
 	eResult = device.mapBuffer( pBindings->hParameterBuffer, 0, nTotalBytes, &mapped );
-	if ( eResult != SIR_GRAPHICS_SUCCESS ) {
+	if ( eResult != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 		return eResult;
 	}
 	pBindings->bMapped = true;
 	if ( mapped.pData == nullptr || mapped.nBytes < nTotalBytes ) {
-		return SIR_GRAPHICS_DRIVER_ERROR;
+		return SIRGraphicsResult::SIR_GRAPHICS_DRIVER_ERROR;
 	}
-	memset( mapped.pData, 0, ( size_t )nTotalBytes );
+	memset( mapped.pData, 0, static_cast<size_t>(nTotalBytes) );
 	for ( uint32_t iMip = 0; iMip < plan.nPassCount; ++iMip ) {
-		uint8_t *pDestination = ( uint8_t * )mapped.pData + ( uint64_t )iMip * pBindings->nParameterStride;
+		uint8_t *pDestination = static_cast<uint8_t *>(mapped.pData) + static_cast<uint64_t>(iMip) * pBindings->nParameterStride;
 		memcpy( pDestination, &plan.szPasses[iMip].parameters, sizeof( sirHiZShaderParameters_t ) );
 	}
 	eResult = device.flushBuffer( pBindings->hParameterBuffer, 0, nTotalBytes );
-	if ( eResult != SIR_GRAPHICS_SUCCESS ) {
+	if ( eResult != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 		return eResult;
 	}
 	eResult = device.unmapBuffer( pBindings->hParameterBuffer, 0, nTotalBytes );
-	if ( eResult == SIR_GRAPHICS_SUCCESS ) {
+	if ( eResult == SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 		pBindings->bMapped = false;
 	}
 	return eResult;
 }
 
-sirGraphicsResult_t sirHiZBindingsCreate( SIRRenderingDevice& device, const sirHiZBindingsDesc_t& desc,
+SIRGraphicsResult sirHiZBindingsCreate( SIRRenderingDevice& device, const sirHiZBindingsDesc_t& desc,
                                           sirHiZBindings_t *pBindings ) noexcept
 {
 	if ( pBindings == nullptr ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( pBindings->nDeviceGeneration != 0 || pBindings->hParameterBuffer.nGeneration != 0 ) {
-		return SIR_GRAPHICS_BUSY;
+		return SIRGraphicsResult::SIR_GRAPHICS_BUSY;
 	}
 	const uint32_t nGeneration = device.getDeviceGeneration();
-	const sirGraphicsResult_t eValid = sirHiZBindingsValidate( desc, nGeneration );
-	if ( eValid != SIR_GRAPHICS_SUCCESS ) {
+	const SIRGraphicsResult eValid = sirHiZBindingsValidate( desc, nGeneration );
+	if ( eValid != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 		return eValid;
 	}
 	pBindings->plan = *desc.pPlan;
@@ -172,59 +172,60 @@ sirGraphicsResult_t sirHiZBindingsCreate( SIRRenderingDevice& device, const sirH
 	pBindings->nPassCount = desc.pPlan->nPassCount;
 	pBindings->nParameterStride = desc.nParameterAlignment;
 
-	sirGraphicsResult_t eResult = sirHiZBindingsUpload( device, *desc.pPlan, pBindings );
-	if ( eResult != SIR_GRAPHICS_SUCCESS ) {
+	SIRGraphicsResult eResult = sirHiZBindingsUpload( device, *desc.pPlan, pBindings );
+	if ( eResult != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 		return eResult;
 	}
 	// The shader reads depth through the native D32F depth-plane sampled view.
-	sirGraphicsViewDesc_t depthView = {};
+	sirGraphicsViewDesc_t depthView {};
 	depthView.hResource = desc.hDepthTexture;
-	depthView.eFormat = SIR_GRAPHICS_FORMAT_D32_FLOAT;
+	depthView.eFormat = SIRGraphicsFormat::SIR_GRAPHICS_FORMAT_D32_FLOAT;
 	depthView.nBaseMip = 0;
 	depthView.nMipLevels = 1;
 	depthView.nLayers = 1;
-	depthView.nUsage = SIR_GRAPHICS_USAGE_SAMPLED;
+	depthView.nUsage = SIRGraphicsUsage::SIR_GRAPHICS_USAGE_SAMPLED;
 	eResult = device.createView( depthView, &pBindings->hDepthView );
-	if ( eResult != SIR_GRAPHICS_SUCCESS ) {
+	if ( eResult != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 		return eResult;
 	}
 	for ( uint32_t iMip = 0; iMip < pBindings->nPassCount; ++iMip ) {
 		eResult =
-		    sirHiZBindingsCreateView( device, desc.hPyramidTexture, iMip, SIR_GRAPHICS_USAGE_SAMPLED, &pBindings->szSampleViews[iMip] );
-		if ( eResult != SIR_GRAPHICS_SUCCESS ) {
+		    sirHiZBindingsCreateView( device, desc.hPyramidTexture, iMip, SIRGraphicsUsage::SIR_GRAPHICS_USAGE_SAMPLED, &pBindings->szSampleViews[iMip] );
+		if ( eResult != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 			return eResult;
 		}
 		eResult =
-		    sirHiZBindingsCreateView( device, desc.hPyramidTexture, iMip, SIR_GRAPHICS_USAGE_STORAGE, &pBindings->szStorageViews[iMip] );
-		if ( eResult != SIR_GRAPHICS_SUCCESS ) {
+		    sirHiZBindingsCreateView( device, desc.hPyramidTexture, iMip, SIRGraphicsUsage::SIR_GRAPHICS_USAGE_STORAGE, &pBindings->szStorageViews[iMip] );
+		if ( eResult != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 			return eResult;
 		}
 	}
 	for ( uint32_t iMip = 0; iMip < pBindings->nPassCount; ++iMip ) {
 		const sirGraphicsHandle_t hPipeline = iMip == 0 ? desc.hCopyPipeline : desc.hReducePipeline;
 		eResult = device.createBindingSet( hPipeline, 0, &pBindings->szPassSets[iMip] );
-		if ( eResult != SIR_GRAPHICS_SUCCESS ) {
+		if ( eResult != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 			return eResult;
 		}
-		sirGraphicsDescriptorWrite_t szWrites[3] = {};
-		szWrites[0] = { pBindings->hParameterBuffer, 0, 0, ( uint64_t )iMip * pBindings->nParameterStride,
+		sirGraphicsDescriptorWrite_t szWrites[3];
+		memset( szWrites, 0, sizeof( szWrites ) );
+		szWrites[0] = { pBindings->hParameterBuffer, 0, 0, static_cast<uint64_t>(iMip) * pBindings->nParameterStride,
 		                sizeof( sirHiZShaderParameters_t ) };
 		const sirGraphicsHandle_t hSource = iMip == 0 ? pBindings->hDepthView : pBindings->szSampleViews[iMip - 1];
 		szWrites[1] = { hSource, 1, 0, 0, 0 };
 		szWrites[2] = { pBindings->szStorageViews[iMip], 2, 0, 0, 0 };
 		eResult = device.updateBindings( pBindings->szPassSets[iMip], szWrites, 3 );
-		if ( eResult != SIR_GRAPHICS_SUCCESS ) {
+		if ( eResult != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 			return eResult;
 		}
 	}
 	pBindings->bReady = true;
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t sirHiZBindingsGetCommands( const sirHiZBindings_t& bindings, sirHiZCommandResources_t *pCommands ) noexcept
+SIRGraphicsResult sirHiZBindingsGetCommands( const sirHiZBindings_t& bindings, sirHiZCommandResources_t *pCommands ) noexcept
 {
 	if ( pCommands == nullptr || !bindings.bReady || bindings.nDeviceGeneration == 0 ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	sirHiZCommandResources_t output = *pCommands;
 	output.pPlan = &bindings.plan;
@@ -235,82 +236,82 @@ sirGraphicsResult_t sirHiZBindingsGetCommands( const sirHiZBindings_t& bindings,
 	output.hCopyPipeline = bindings.hCopyPipeline;
 	output.hReducePipeline = bindings.hReducePipeline;
 	*pCommands = output;
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
-static sirGraphicsResult_t sirHiZBindingsRetireHandle( SIRRenderingDevice& device, const sirGraphicsCompletionSet_t& completion,
+static SIRGraphicsResult sirHiZBindingsRetireHandle( SIRRenderingDevice& device, const sirGraphicsCompletionSet_t& completion,
                                                        sirGraphicsHandle_t *pHandle ) noexcept
 {
 	if ( pHandle->nGeneration == 0 ) {
-		return SIR_GRAPHICS_SUCCESS;
+		return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 	}
-	const sirGraphicsResult_t eResult = device.retireResource( *pHandle, completion );
-	if ( eResult == SIR_GRAPHICS_SUCCESS ) {
+	const SIRGraphicsResult eResult = device.retireResource( *pHandle, completion );
+	if ( eResult == SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 		*pHandle = {};
 	}
 	return eResult;
 }
 
-sirGraphicsResult_t sirHiZBindingsRetire( SIRRenderingDevice& device, const sirGraphicsCompletionSet_t& completion,
+SIRGraphicsResult sirHiZBindingsRetire( SIRRenderingDevice& device, const sirGraphicsCompletionSet_t& completion,
                                           sirHiZBindings_t *pBindings ) noexcept
 {
 	if ( pBindings == nullptr || pBindings->nDeviceGeneration == 0 ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	const uint32_t nGeneration = pBindings->nDeviceGeneration;
 	if ( device.getDeviceGeneration() != nGeneration ) {
-		return SIR_GRAPHICS_DEVICE_LOST;
+		return SIRGraphicsResult::SIR_GRAPHICS_DEVICE_LOST;
 	}
 	if ( completion.nDeviceGeneration != nGeneration ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	pBindings->bReady = false;
-	const uint64_t nBytes = ( uint64_t )pBindings->nPassCount * pBindings->nParameterStride;
+	const uint64_t nBytes = static_cast<uint64_t>(pBindings->nPassCount) * pBindings->nParameterStride;
 	if ( pBindings->bMapped ) {
-		const sirGraphicsResult_t eResult = device.unmapBuffer( pBindings->hParameterBuffer, 0, nBytes );
-		if ( eResult != SIR_GRAPHICS_SUCCESS ) {
+		const SIRGraphicsResult eResult = device.unmapBuffer( pBindings->hParameterBuffer, 0, nBytes );
+		if ( eResult != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 			return eResult;
 		}
 		pBindings->bMapped = false;
 	}
 	for ( uint32_t iMip = 0; iMip < pBindings->nPassCount; ++iMip ) {
-		const sirGraphicsResult_t eResult = sirHiZBindingsRetireHandle( device, completion, &pBindings->szPassSets[iMip] );
-		if ( eResult != SIR_GRAPHICS_SUCCESS ) {
+		const SIRGraphicsResult eResult = sirHiZBindingsRetireHandle( device, completion, &pBindings->szPassSets[iMip] );
+		if ( eResult != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 			return eResult;
 		}
 	}
 	for ( uint32_t iMip = 0; iMip < pBindings->nPassCount; ++iMip ) {
-		const sirGraphicsResult_t eResult = sirHiZBindingsRetireHandle( device, completion, &pBindings->szStorageViews[iMip] );
-		if ( eResult != SIR_GRAPHICS_SUCCESS ) {
+		const SIRGraphicsResult eResult = sirHiZBindingsRetireHandle( device, completion, &pBindings->szStorageViews[iMip] );
+		if ( eResult != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 			return eResult;
 		}
 	}
 	for ( uint32_t iMip = 0; iMip < pBindings->nPassCount; ++iMip ) {
-		const sirGraphicsResult_t eResult = sirHiZBindingsRetireHandle( device, completion, &pBindings->szSampleViews[iMip] );
-		if ( eResult != SIR_GRAPHICS_SUCCESS ) {
+		const SIRGraphicsResult eResult = sirHiZBindingsRetireHandle( device, completion, &pBindings->szSampleViews[iMip] );
+		if ( eResult != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 			return eResult;
 		}
 	}
-	sirGraphicsResult_t eResult = sirHiZBindingsRetireHandle( device, completion, &pBindings->hDepthView );
-	if ( eResult != SIR_GRAPHICS_SUCCESS ) {
+	SIRGraphicsResult eResult = sirHiZBindingsRetireHandle( device, completion, &pBindings->hDepthView );
+	if ( eResult != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 		return eResult;
 	}
 	eResult = sirHiZBindingsRetireHandle( device, completion, &pBindings->hParameterBuffer );
-	if ( eResult != SIR_GRAPHICS_SUCCESS ) {
+	if ( eResult != SIRGraphicsResult::SIR_GRAPHICS_SUCCESS ) {
 		return eResult;
 	}
 	*pBindings = {};
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t sirHiZBindingsDiscardLost( uint32_t nReplacementGeneration, sirHiZBindings_t *pBindings ) noexcept
+SIRGraphicsResult sirHiZBindingsDiscardLost( uint32_t nReplacementGeneration, sirHiZBindings_t *pBindings ) noexcept
 {
 	if ( pBindings == nullptr || pBindings->nDeviceGeneration == 0 || nReplacementGeneration == 0 ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		return SIRGraphicsResult::SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( nReplacementGeneration == pBindings->nDeviceGeneration ) {
-		return SIR_GRAPHICS_BUSY;
+		return SIRGraphicsResult::SIR_GRAPHICS_BUSY;
 	}
 	*pBindings = {};
-	return SIR_GRAPHICS_SUCCESS;
+	return SIRGraphicsResult::SIR_GRAPHICS_SUCCESS;
 }

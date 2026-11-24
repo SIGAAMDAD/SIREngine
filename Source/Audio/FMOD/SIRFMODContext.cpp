@@ -15,47 +15,47 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Audio/FMOD/SIRFMODContext.h>
 
-#include <Core/Platform/SIRAtomic.h>
+#include <atomic>
 #include <stdlib.h>
 #include <limits.h>
 
-static SIRAtomic<uint64_t> s_nFMODEpoch = SIRAtomic<uint64_t>( 1 );
+static std::atomic<uint64_t> s_nFMODEpoch = std::atomic<uint64_t>( 1 );
 
 SIRFMODContext::~SIRFMODContext( void ) noexcept
 {
-	if ( shutdown() != SIR_FMOD_OK ) {
+	if ( shutdown() != SIRFMODContextResult::SIR_FMOD_OK ) {
 		// The caller must resolve release failure before destroying the owner.
 		abort();
 	}
 }
 
-sirFMODContextResult_t SIRFMODContext::rollback( sirFMODContextResult_t eOriginalError, int32_t nNativeError ) noexcept
+SIRFMODContextResult SIRFMODContext::rollback( SIRFMODContextResult eOriginalError, int32_t nNativeError ) noexcept
 {
-	const sirFMODContextResult_t eShutdown = shutdown();
-	if ( eShutdown != SIR_FMOD_OK ) {
+	const SIRFMODContextResult eShutdown = shutdown();
+	if ( eShutdown != SIRFMODContextResult::SIR_FMOD_OK ) {
 		return eShutdown;
 	}
 	m_nLastNativeResult = nNativeError;
 	return eOriginalError;
 }
 
-sirFMODContextResult_t SIRFMODContext::initialize( const sirFMODContextConfig_t& config, const sirFMODNativeOps_t& ops ) noexcept
+SIRFMODContextResult SIRFMODContext::initialize( const sirFMODContextConfig_t& config, const sirFMODNativeOps_t& ops ) noexcept
 {
-	if ( m_eState != SIR_FMOD_CONTEXT_EMPTY ) {
-		return SIR_FMOD_BAD_STATE;
+	if ( m_eState != SIRFMODContextState::SIR_FMOD_CONTEXT_EMPTY ) {
+		return SIRFMODContextResult::SIR_FMOD_BAD_STATE;
 	}
 	if ( config.nMaxChannels <= 0 || config.nMaxChannels > 4095 || config.iOutputDriver < -1 ||
 	     ( config.bNoSound != 0 && config.iOutputDriver >= 0 ) || config.nReserved != 0 || ops.nAbiVersion != 3 || ops.nSDKVersion == 0 ||
 	     ops.createStudio == nullptr || ops.getCore == nullptr || ops.getVersion == nullptr || ops.getDriverCount == nullptr ||
 	     ops.setDriver == nullptr || ops.queryOutputDevice == nullptr || ops.setNoSound == nullptr || ops.initializeStudio == nullptr ||
 	     ops.updateStudio == nullptr || ops.releaseStudio == nullptr || ops.registerDeviceLoss == nullptr ) {
-		return SIR_FMOD_INVALID_ARGUMENT;
+		return SIRFMODContextResult::SIR_FMOD_INVALID_ARGUMENT;
 	}
 
 	m_Ops = ops;
 	m_nLastNativeResult = 0;
 	m_nRuntimeVersion = 0;
-	m_nDeviceLossSignals.store( 0, SIR_MEMORY_ORDER_RELAXED );
+	m_nDeviceLossSignals.store( 0, std::memory_order_relaxed );
 	m_nAcknowledgedDeviceLoss = 0;
 	m_nRecoveryAttempts = 0;
 	m_nSuccessfulRecoveries = 0;
@@ -65,60 +65,60 @@ sirFMODContextResult_t SIRFMODContext::initialize( const sirFMODContextConfig_t&
 	if ( pStudio == nullptr ) {
 		m_Ops = {};
 		m_nLastNativeResult = nCreateResult;
-		return SIR_FMOD_NATIVE_ERROR;
+		return SIRFMODContextResult::SIR_FMOD_NATIVE_ERROR;
 	}
 	m_pStudio = pStudio;
-	m_eState = SIR_FMOD_CONTEXT_CREATED;
+	m_eState = SIRFMODContextState::SIR_FMOD_CONTEXT_CREATED;
 	if ( nCreateResult != 0 ) {
-		return rollback( SIR_FMOD_NATIVE_ERROR, nCreateResult );
+		return rollback( SIRFMODContextResult::SIR_FMOD_NATIVE_ERROR, nCreateResult );
 	}
 
 	void *pCore = nullptr;
 	const int32_t nCoreResult = m_Ops.getCore( m_Ops.pUserData, m_pStudio, &pCore );
 	if ( nCoreResult != 0 || pCore == nullptr ) {
-		return rollback( SIR_FMOD_NATIVE_ERROR, nCoreResult );
+		return rollback( SIRFMODContextResult::SIR_FMOD_NATIVE_ERROR, nCoreResult );
 	}
 	m_pCoreBorrowed = pCore;
 	uint32_t nRuntimeVersion = 0;
 	const int32_t nVersionResult = m_Ops.getVersion( m_Ops.pUserData, m_pCoreBorrowed, &nRuntimeVersion );
 	if ( nVersionResult != 0 ) {
-		return rollback( SIR_FMOD_NATIVE_ERROR, nVersionResult );
+		return rollback( SIRFMODContextResult::SIR_FMOD_NATIVE_ERROR, nVersionResult );
 	}
 	if ( nRuntimeVersion != m_Ops.nSDKVersion ) {
-		return rollback( SIR_FMOD_VERSION_MISMATCH, 0 );
+		return rollback( SIRFMODContextResult::SIR_FMOD_VERSION_MISMATCH, 0 );
 	}
 	const int32_t nCallbackResult = m_Ops.registerDeviceLoss( m_Ops.pUserData, m_pCoreBorrowed, this, notifyDeviceLoss );
 	if ( nCallbackResult != 0 ) {
-		return rollback( SIR_FMOD_NATIVE_ERROR, nCallbackResult );
+		return rollback( SIRFMODContextResult::SIR_FMOD_NATIVE_ERROR, nCallbackResult );
 	}
 
 	if ( config.bNoSound != 0 ) {
 		const int32_t nOutputResult = m_Ops.setNoSound( m_Ops.pUserData, m_pCoreBorrowed );
 		if ( nOutputResult != 0 ) {
-			return rollback( SIR_FMOD_NATIVE_ERROR, nOutputResult );
+			return rollback( SIRFMODContextResult::SIR_FMOD_NATIVE_ERROR, nOutputResult );
 		}
 	} else if ( config.iOutputDriver >= 0 ) {
 		int32_t nDriverCount = 0;
 		const int32_t nCountResult = m_Ops.getDriverCount( m_Ops.pUserData, m_pCoreBorrowed, &nDriverCount );
 		if ( nCountResult != 0 ) {
-			return rollback( SIR_FMOD_NATIVE_ERROR, nCountResult );
+			return rollback( SIRFMODContextResult::SIR_FMOD_NATIVE_ERROR, nCountResult );
 		}
 		if ( config.iOutputDriver >= nDriverCount ) {
-			return rollback( SIR_FMOD_INVALID_DRIVER, 0 );
+			return rollback( SIRFMODContextResult::SIR_FMOD_INVALID_DRIVER, 0 );
 		}
 		const int32_t nDriverResult = m_Ops.setDriver( m_Ops.pUserData, m_pCoreBorrowed, config.iOutputDriver );
 		if ( nDriverResult != 0 ) {
-			return rollback( SIR_FMOD_NATIVE_ERROR, nDriverResult );
+			return rollback( SIRFMODContextResult::SIR_FMOD_NATIVE_ERROR, nDriverResult );
 		}
 	}
 
 	const int32_t nInitializeResult = m_Ops.initializeStudio( m_Ops.pUserData, m_pStudio, &config );
 	if ( nInitializeResult != 0 ) {
-		return rollback( SIR_FMOD_NATIVE_ERROR, nInitializeResult );
+		return rollback( SIRFMODContextResult::SIR_FMOD_NATIVE_ERROR, nInitializeResult );
 	}
-	m_eState = SIR_FMOD_CONTEXT_READY;
+	m_eState = SIRFMODContextState::SIR_FMOD_CONTEXT_READY;
 	m_nRuntimeVersion = nRuntimeVersion;
-	m_nEpoch = s_nFMODEpoch.fetchAdd( 1, SIR_MEMORY_ORDER_RELAXED );
+	m_nEpoch = s_nFMODEpoch.fetch_add( 1, std::memory_order_relaxed );
 	m_nOutputGeneration = m_nEpoch;
 	m_iOutputDriver = config.iOutputDriver;
 	m_nOutputPhysicalId = 0;
@@ -127,42 +127,42 @@ sirFMODContextResult_t SIRFMODContext::initialize( const sirFMODContextConfig_t&
 		uint64_t nPhysical = 0;
 		const int32_t nQueryResult = m_Ops.queryOutputDevice( m_Ops.pUserData, m_pCoreBorrowed, &iSelected, &nPhysical );
 		if ( nQueryResult != 0 || iSelected < 0 ) {
-			return rollback( SIR_FMOD_NATIVE_ERROR, nQueryResult == 0 ? -1 : nQueryResult );
+			return rollback( SIRFMODContextResult::SIR_FMOD_NATIVE_ERROR, nQueryResult == 0 ? -1 : nQueryResult );
 		}
 		m_iOutputDriver = iSelected;
 		m_nOutputPhysicalId = nPhysical;
 	}
-	return SIR_FMOD_OK;
+	return SIRFMODContextResult::SIR_FMOD_OK;
 }
 
-sirFMODContextResult_t SIRFMODContext::shutdown( void ) noexcept
+SIRFMODContextResult SIRFMODContext::shutdown( void ) noexcept
 {
 	// Borrowed Studio object pointers become invalid when a bank or Studio
 	// releases their descriptions. Preserve the owner for explicit cleanup.
 	if ( m_nBorrowedBankObjects != 0 ) {
-		return SIR_FMOD_BAD_STATE;
+		return SIRFMODContextResult::SIR_FMOD_BAD_STATE;
 	}
 	if ( m_pStudio == nullptr ) {
 		m_Ops = {};
-		m_eState = SIR_FMOD_CONTEXT_EMPTY;
+		m_eState = SIRFMODContextState::SIR_FMOD_CONTEXT_EMPTY;
 		m_pCoreBorrowed = nullptr;
 		m_nRuntimeVersion = 0;
 		m_nEpoch = 0;
 		m_nOutputGeneration = 0;
 		m_iOutputDriver = -1;
 		m_nOutputPhysicalId = 0;
-		return SIR_FMOD_OK;
+		return SIRFMODContextResult::SIR_FMOD_OK;
 	}
 	const int32_t nResult = m_Ops.releaseStudio( m_Ops.pUserData, m_pStudio );
 	if ( nResult != 0 ) {
-		m_eState = SIR_FMOD_CONTEXT_RELEASE_FAILED;
+		m_eState = SIRFMODContextState::SIR_FMOD_CONTEXT_RELEASE_FAILED;
 		m_nLastNativeResult = nResult;
-		return SIR_FMOD_RELEASE_ERROR;
+		return SIRFMODContextResult::SIR_FMOD_RELEASE_ERROR;
 	}
 	m_pStudio = nullptr;
 	m_pCoreBorrowed = nullptr;
 	m_Ops = {};
-	m_eState = SIR_FMOD_CONTEXT_EMPTY;
+	m_eState = SIRFMODContextState::SIR_FMOD_CONTEXT_EMPTY;
 	m_nLastNativeResult = 0;
 	m_nRuntimeVersion = 0;
 	m_nEpoch = 0;
@@ -171,50 +171,50 @@ sirFMODContextResult_t SIRFMODContext::shutdown( void ) noexcept
 	m_nOutputPhysicalId = 0;
 	m_nBorrowedBankObjects = 0;
 	m_nUnscopedBankObjects = 0;
-	m_nDeviceLossSignals.store( 0, SIR_MEMORY_ORDER_RELAXED );
+	m_nDeviceLossSignals.store( 0, std::memory_order_relaxed );
 	m_nAcknowledgedDeviceLoss = 0;
 	m_bNoSound = false;
-	return SIR_FMOD_OK;
+	return SIRFMODContextResult::SIR_FMOD_OK;
 }
 
-sirFMODContextResult_t SIRFMODContext::update( void ) noexcept
+SIRFMODContextResult SIRFMODContext::update( void ) noexcept
 {
-	if ( m_eState != SIR_FMOD_CONTEXT_READY ) {
-		return SIR_FMOD_BAD_STATE;
+	if ( m_eState != SIRFMODContextState::SIR_FMOD_CONTEXT_READY ) {
+		return SIRFMODContextResult::SIR_FMOD_BAD_STATE;
 	}
 	const int32_t nResult = m_Ops.updateStudio( m_Ops.pUserData, m_pStudio );
 	m_nLastNativeResult = nResult;
-	return nResult == 0 ? SIR_FMOD_OK : SIR_FMOD_NATIVE_ERROR;
+	return nResult == 0 ? SIRFMODContextResult::SIR_FMOD_OK : SIRFMODContextResult::SIR_FMOD_NATIVE_ERROR;
 }
 
-sirFMODContextResult_t SIRFMODContext::getDriverCount( int32_t& nCount ) noexcept
+SIRFMODContextResult SIRFMODContext::getDriverCount( int32_t& nCount ) noexcept
 {
 	nCount = 0;
-	if ( m_eState != SIR_FMOD_CONTEXT_READY ) {
-		return SIR_FMOD_BAD_STATE;
+	if ( m_eState != SIRFMODContextState::SIR_FMOD_CONTEXT_READY ) {
+		return SIRFMODContextResult::SIR_FMOD_BAD_STATE;
 	}
 	const int32_t nResult = m_Ops.getDriverCount( m_Ops.pUserData, m_pCoreBorrowed, &nCount );
 	m_nLastNativeResult = nResult;
-	return nResult == 0 ? SIR_FMOD_OK : SIR_FMOD_NATIVE_ERROR;
+	return nResult == 0 ? SIRFMODContextResult::SIR_FMOD_OK : SIRFMODContextResult::SIR_FMOD_NATIVE_ERROR;
 }
 
-sirFMODContextResult_t SIRFMODContext::changeDriver( int32_t iDriver ) noexcept
+SIRFMODContextResult SIRFMODContext::changeDriver( int32_t iDriver ) noexcept
 {
-	if ( m_eState != SIR_FMOD_CONTEXT_READY ) {
-		return SIR_FMOD_BAD_STATE;
+	if ( m_eState != SIRFMODContextState::SIR_FMOD_CONTEXT_READY ) {
+		return SIRFMODContextResult::SIR_FMOD_BAD_STATE;
 	}
 	int32_t nCount = 0;
-	const sirFMODContextResult_t eCount = getDriverCount( nCount );
-	if ( eCount != SIR_FMOD_OK ) {
+	const SIRFMODContextResult eCount = getDriverCount( nCount );
+	if ( eCount != SIRFMODContextResult::SIR_FMOD_OK ) {
 		return eCount;
 	}
 	if ( iDriver < 0 || iDriver >= nCount ) {
-		return SIR_FMOD_INVALID_DRIVER;
+		return SIRFMODContextResult::SIR_FMOD_INVALID_DRIVER;
 	}
 	const int32_t nResult = m_Ops.setDriver( m_Ops.pUserData, m_pCoreBorrowed, iDriver );
 	m_nLastNativeResult = nResult;
 	if ( nResult != 0 ) {
-		return SIR_FMOD_NATIVE_ERROR;
+		return SIRFMODContextResult::SIR_FMOD_NATIVE_ERROR;
 	}
 	// The native change has already happened. Invalidate the prior identity
 	// even if querying the new physical endpoint fails.
@@ -229,29 +229,29 @@ sirFMODContextResult_t SIRFMODContext::changeDriver( int32_t iDriver ) noexcept
 	const int32_t nQueryResult = m_Ops.queryOutputDevice( m_Ops.pUserData, m_pCoreBorrowed, &iSelected, &nPhysical );
 	m_nLastNativeResult = nQueryResult;
 	if ( nQueryResult != 0 || iSelected < 0 ) {
-		return SIR_FMOD_NATIVE_ERROR;
+		return SIRFMODContextResult::SIR_FMOD_NATIVE_ERROR;
 	}
 	m_iOutputDriver = iSelected;
 	m_nOutputPhysicalId = nPhysical;
-	return SIR_FMOD_OK;
+	return SIRFMODContextResult::SIR_FMOD_OK;
 }
 
 void SIRFMODContext::notifyDeviceLoss( void *pOwner ) noexcept
 {
-	SIRFMODContext *pContext = ( SIRFMODContext * )pOwner;
+	SIRFMODContext *pContext = static_cast<SIRFMODContext *>(pOwner);
 	if ( pContext != nullptr ) {
-		pContext->m_nDeviceLossSignals.fetchAdd( 1, SIR_MEMORY_ORDER_RELEASE );
+		pContext->m_nDeviceLossSignals.fetch_add( 1, std::memory_order_release );
 	}
 }
 
 bool SIRFMODContext::needsDeviceRecovery( void ) const noexcept
 {
-	return m_nDeviceLossSignals.load( SIR_MEMORY_ORDER_ACQUIRE ) != m_nAcknowledgedDeviceLoss;
+	return m_nDeviceLossSignals.load( std::memory_order_acquire ) != m_nAcknowledgedDeviceLoss;
 }
 
 uint32_t SIRFMODContext::getDeviceLossSignalCount( void ) const noexcept
 {
-	return m_nDeviceLossSignals.load( SIR_MEMORY_ORDER_ACQUIRE );
+	return m_nDeviceLossSignals.load( std::memory_order_acquire );
 }
 
 uint32_t SIRFMODContext::getSuccessfulRecoveryCount( void ) const noexcept
@@ -259,50 +259,50 @@ uint32_t SIRFMODContext::getSuccessfulRecoveryCount( void ) const noexcept
 	return m_nSuccessfulRecoveries;
 }
 
-sirFMODContextResult_t SIRFMODContext::recoverOutput( int32_t iPreferredDriver, bool bFallbackToFirst ) noexcept
+SIRFMODContextResult SIRFMODContext::recoverOutput( int32_t iPreferredDriver, bool bFallbackToFirst ) noexcept
 {
 	if ( !isReady() || m_bNoSound ) {
-		return SIR_FMOD_BAD_STATE;
+		return SIRFMODContextResult::SIR_FMOD_BAD_STATE;
 	}
 	++m_nRecoveryAttempts;
 	int32_t nDrivers = 0;
-	const sirFMODContextResult_t eCount = getDriverCount( nDrivers );
-	if ( eCount != SIR_FMOD_OK ) {
+	const SIRFMODContextResult eCount = getDriverCount( nDrivers );
+	if ( eCount != SIRFMODContextResult::SIR_FMOD_OK ) {
 		return eCount;
 	}
 	if ( nDrivers <= 0 ) {
-		return SIR_FMOD_INVALID_DRIVER;
+		return SIRFMODContextResult::SIR_FMOD_INVALID_DRIVER;
 	}
 	int32_t iTarget = iPreferredDriver;
 	if ( iTarget < 0 || iTarget >= nDrivers ) {
 		if ( !bFallbackToFirst ) {
-			return SIR_FMOD_INVALID_DRIVER;
+			return SIRFMODContextResult::SIR_FMOD_INVALID_DRIVER;
 		}
 		iTarget = 0;
 	}
-	sirFMODContextResult_t eResult = changeDriver( iTarget );
-	if ( eResult != SIR_FMOD_OK && bFallbackToFirst && iTarget != 0 ) {
+	SIRFMODContextResult eResult = changeDriver( iTarget );
+	if ( eResult != SIRFMODContextResult::SIR_FMOD_OK && bFallbackToFirst && iTarget != 0 ) {
 		eResult = changeDriver( 0 );
 	}
-	if ( eResult != SIR_FMOD_OK ) {
+	if ( eResult != SIRFMODContextResult::SIR_FMOD_OK ) {
 		return eResult;
 	}
-	const uint32_t nBeforeUpdate = m_nDeviceLossSignals.load( SIR_MEMORY_ORDER_ACQUIRE );
+	const uint32_t nBeforeUpdate = m_nDeviceLossSignals.load( std::memory_order_acquire );
 	eResult = update();
-	if ( eResult != SIR_FMOD_OK || m_nDeviceLossSignals.load( SIR_MEMORY_ORDER_ACQUIRE ) != nBeforeUpdate ) {
-		return SIR_FMOD_NATIVE_ERROR;
+	if ( eResult != SIRFMODContextResult::SIR_FMOD_OK || m_nDeviceLossSignals.load( std::memory_order_acquire ) != nBeforeUpdate ) {
+		return SIRFMODContextResult::SIR_FMOD_NATIVE_ERROR;
 	}
 	m_nAcknowledgedDeviceLoss = nBeforeUpdate;
 	++m_nSuccessfulRecoveries;
-	return SIR_FMOD_OK;
+	return SIRFMODContextResult::SIR_FMOD_OK;
 }
 
 bool SIRFMODContext::isReady( void ) const noexcept
 {
-	return m_eState == SIR_FMOD_CONTEXT_READY;
+	return m_eState == SIRFMODContextState::SIR_FMOD_CONTEXT_READY;
 }
 
-sirFMODContextState_t SIRFMODContext::getState( void ) const noexcept
+SIRFMODContextState SIRFMODContext::getState( void ) const noexcept
 {
 	return m_eState;
 }
@@ -360,6 +360,6 @@ sirPlatformDeviceIdentity_t SIRFMODContext::getOutputDeviceIdentity( void ) cons
 	if ( !isReady() || m_bNoSound || needsDeviceRecovery() ) {
 		return {};
 	}
-	const uint64_t nNative = m_iOutputDriver < 0 ? 0 : ( uint64_t )m_iOutputDriver + 1;
-	return { nNative, m_nOutputPhysicalId, m_nOutputGeneration, SIR_PLATFORM_DEVICE_FMOD, 0 };
+	const uint64_t nNative = m_iOutputDriver < 0 ? 0 : static_cast<uint64_t>(m_iOutputDriver) + 1;
+	return { nNative, m_nOutputPhysicalId, m_nOutputGeneration, SIRPlatformDeviceBackend::SIR_PLATFORM_DEVICE_FMOD, 0 };
 }

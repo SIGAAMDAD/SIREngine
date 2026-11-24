@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRPLATFORMROOTDIRECTORY_H__
-#define __SIRENGINE_SIRPLATFORMROOTDIRECTORY_H__
+#ifndef __SIR_PLATFORMROOTDIRECTORY_H__
+#define __SIR_PLATFORMROOTDIRECTORY_H__
 
 #include <Core/SIRPCH.h>
 
@@ -43,9 +43,9 @@ public:
 
 	bool isOpen( void ) const noexcept;
 
-	sirFileResult_t openRoot( const char *pszRootPath ) noexcept;
-	sirFileResult_t openRead( const char *pszRelativePath, SIRPlatformFile *pFile ) const noexcept;
-	sirFileResult_t close( void ) noexcept;
+	SIRFileResult openRoot( const char *pszRootPath ) noexcept;
+	SIRFileResult openRead( const char *pszRelativePath, SIRPlatformFile *pFile ) const noexcept;
+	SIRFileResult close( void ) noexcept;
 
 protected:
 private:
@@ -54,4 +54,4 @@ private:
 	uintptr_t m_nNativeDirectory;
 };
 
-#endif // __SIRENGINE_SIRPLATFORMROOTDIRECTORY_H__
+#endif // __SIR_PLATFORMROOTDIRECTORY_H__

@@ -1,5 +1,4 @@
 /*
-
 ===========================================================================
 
 SIREngine MPLv2 Source Code
@@ -19,7 +18,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Memory/Allocators/SIRCacheAllocator.h>
 #include <Core/Memory/SIRMemoryManager.h>
 #include <Core/Memory/SIRMemorySegment.h>
-#include <Core/Memory/SIRMemoryUtils.h>
+#include <Core/SIRMath.h>
 #include <new>
 
 SIRCacheAllocator::SIRCacheAllocator( void )
@@ -38,7 +37,7 @@ uint64_t SIRCacheAllocator::getRequiredMetadataBytes( uint64_t nSegmentBytes, ui
 		return 0;
 	}
 	// Entries and dense CLOCK indices live in one permanent metadata allocation.
-	return nBuddy + ( ( uint64_t )( nMaxEntries ) ) * ( sizeof( sirCacheDesc_t ) + sizeof( uint32_t ) ) + 16;
+	return nBuddy + static_cast<uint64_t>( nMaxEntries ) * ( sizeof( sirCacheDesc_t ) + sizeof( uint32_t ) ) + 16;
 }
 
 bool SIRCacheAllocator::init( SIRMemorySegment *pSegment, uint32_t nMaxEntries, uint64_t nMinimumBlockBytes )
@@ -51,19 +50,19 @@ bool SIRCacheAllocator::init( SIRMemorySegment *pSegment, uint32_t nMaxEntries, 
 		return false;
 	}
 
-	const uint64_t nDescriptorBytes = ( ( uint64_t )( nMaxEntries ) ) * sizeof( sirCacheDesc_t );
-	const uint64_t nTotalBytes = nDescriptorBytes + ( ( uint64_t )( nMaxEntries ) ) * sizeof( uint32_t );
-	uint8_t *pMetadata = ( ( uint8_t * )( pManager->allocateMetadata( nTotalBytes, alignof( uint32_t ) ) ) );
+	const uint64_t nDescriptorBytes = static_cast<uint64_t>( nMaxEntries ) * sizeof( sirCacheDesc_t );
+	const uint64_t nTotalBytes = nDescriptorBytes + static_cast<uint64_t>( nMaxEntries ) * sizeof( uint32_t );
+	uint8_t *pMetadata = static_cast<uint8_t *>(  pManager->allocateMetadata( nTotalBytes, alignof( uint32_t ) )  );
 	if ( pMetadata == nullptr || !m_Buddy.init( pSegment, nMinimumBlockBytes ) ) {
 		return false;
 	}
 
 	m_pSegment = pSegment;
-	m_pEntries = ( ( sirCacheDesc_t * )( pMetadata ) );
-	m_pActiveIndices = ( ( uint32_t * )( pMetadata + nDescriptorBytes ) );
-	m_pBase = ( ( uint8_t * )( pSegment->getBase() ) );
+	m_pEntries = reinterpret_cast<sirCacheDesc_t *>( pMetadata );
+	m_pActiveIndices = reinterpret_cast<uint32_t *>( pMetadata + nDescriptorBytes );
+	m_pBase = static_cast<uint8_t *>(  pSegment->getBase()  );
 	m_nEntryCount = nMaxEntries;
-	m_nPageSize = ( ( uint32_t )( pSegment->getPageSize() ) );
+	m_nPageSize = static_cast<uint32_t>(  pSegment->getPageSize()  );
 	for ( uint32_t i = 0; i < nMaxEntries; ++i ) {
 		m_pEntries[i].nGeneration = 1;
 	}
@@ -204,8 +203,7 @@ void *SIRCacheAllocator::alloc( uint32_t nBytes, uint32_t nAlignment, sirCacheHa
 	}
 
 	sirCacheDesc_t& desc = m_pEntries[nIndex];
-	const uintptr_t nOffset = ( ( uintptr_t )( pMemory ) ) - ( ( uintptr_t )( m_pBase ) );
-	desc.nOffset = ( ( uint32_t )( nOffset ) );
+	desc.nOffset = static_cast<uint32_t>( reinterpret_cast<uintptr_t>(pMemory) - reinterpret_cast<uintptr_t>(m_pBase) );
 	desc.nBytes = nBytes;
 	desc.nPinCount = 0;
 	desc.nActiveSlot = m_nLiveCount;
@@ -283,7 +281,7 @@ uint64_t SIRCacheAllocator::evictUntilFree( uint64_t nBytes )
 
 sirCachePressureResult_t SIRCacheAllocator::reclaimCold( uint64_t nTargetCommittedBytes, uint32_t nMaximumVictims )
 {
-	sirCachePressureResult_t result = {};
+	sirCachePressureResult_t result {};
 
 	if ( m_pEntries == nullptr || nTargetCommittedBytes == 0 || nMaximumVictims == 0 ) {
 		return result;

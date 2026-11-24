@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRFILELOCK_H__
-#define __SIRENGINE_SIRFILELOCK_H__
+#ifndef __SIR_FILELOCK_H__
+#define __SIR_FILELOCK_H__
 
 #include <Core/SIRPCH.h>
 
@@ -46,4 +46,4 @@ private:
 	intptr_t m_nHandle;
 };
 
-#endif // __SIRENGINE_SIRFILELOCK_H__
+#endif // __SIR_FILELOCK_H__

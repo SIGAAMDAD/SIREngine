@@ -13,10 +13,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRFENCERETIREDPTR_H__
-#define __SIRENGINE_SIRFENCERETIREDPTR_H__
+#ifndef __SIR_FENCERETIREDPTR_H__
+#define __SIR_FENCERETIREDPTR_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -187,7 +187,7 @@ private:
 	SIRFenceRetirementQueue *m_pQueue = nullptr;
 	void *m_pContext = nullptr;
 	void ( *m_pDestroy )( void *, void * ) noexcept = nullptr;
-	sirProviderCompletionSet_t m_Required = {};
+	sirProviderCompletionSet_t m_Required {};
 };
 
-#endif // __SIRENGINE_SIRFENCERETIREDPTR_H__
+#endif // __SIR_FENCERETIREDPTR_H__

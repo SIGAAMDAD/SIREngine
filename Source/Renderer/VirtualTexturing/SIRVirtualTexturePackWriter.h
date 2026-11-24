@@ -14,8 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRVIRTUALTEXTUREPACKWRITER_H__
-#define __SIRENGINE_SIRVIRTUALTEXTUREPACKWRITER_H__
+#ifndef __SIR_VIRTUALTEXTUREPACKWRITER_H__
+#define __SIR_VIRTUALTEXTUREPACKWRITER_H__
 
 #include <Core/SIRPCH.h>
 
@@ -65,4 +65,4 @@ bool sirVTMeasurePack( const sirVirtualTexturePackSource_t& source, uint64_t *pM
 bool sirVTWritePack( const sirVirtualTexturePackSource_t& source, void *pDestination, uint64_t nCapacity,
                      uint64_t *pWrittenBytes ) noexcept;
 
-#endif // __SIRENGINE_SIRVIRTUALTEXTUREPACKWRITER_H__
+#endif // __SIR_VIRTUALTEXTUREPACKWRITER_H__

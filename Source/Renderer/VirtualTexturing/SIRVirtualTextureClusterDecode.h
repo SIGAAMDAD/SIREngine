@@ -14,8 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRVIRTUALTEXTURECLUSTERDECODE_H__
-#define __SIRENGINE_SIRVIRTUALTEXTURECLUSTERDECODE_H__
+#ifndef __SIR_VIRTUALTEXTURECLUSTERDECODE_H__
+#define __SIR_VIRTUALTEXTURECLUSTERDECODE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -62,4 +62,4 @@ typedef struct sirVirtualTextureClusterBuffers_s
 bool sirVTDecodePackCluster( const sirVirtualTexturePackView_t& view, uint32_t nClusterId, const sirVirtualTextureClusterBuffers_t& buffers,
                              const sirVirtualTextureClusterCodec_t *pCodec ) noexcept;
 
-#endif // __SIRENGINE_SIRVIRTUALTEXTURECLUSTERDECODE_H__
+#endif // __SIR_VIRTUALTEXTURECLUSTERDECODE_H__

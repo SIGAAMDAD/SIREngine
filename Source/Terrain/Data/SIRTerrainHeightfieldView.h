@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRTERRAINHEIGHTFIELDVIEW_H__
-#define __SIRENGINE_SIRTERRAINHEIGHTFIELDVIEW_H__
+#ifndef __SIR_TERRAINHEIGHTFIELDVIEW_H__
+#define __SIR_TERRAINHEIGHTFIELDVIEW_H__
 
 #include <Core/SIRPCH.h>
 
@@ -33,23 +33,22 @@ typedef struct sirTerrainR16View_s
 	size_t nSampleBytes;
 } sirTerrainR16View_t;
 
-typedef enum sirTerrainSampleResult_e : uint8_t
-{
+enum class SIRTerrainSampleResult : uint8_t {
 	SIR_TERRAIN_SAMPLE_SUCCESS = 0,
 	SIR_TERRAIN_SAMPLE_INVALID_VIEW,
 	SIR_TERRAIN_SAMPLE_INVALID_ARGUMENT,
 	SIR_TERRAIN_SAMPLE_OUT_OF_BOUNDS
-} sirTerrainSampleResult_t;
+};
 
 // Open once inside the owner's GRDG read scope, then sample without decoding a
 // duplicate float array. The borrowed pointer must remain immutable and alive.
 class SIRTerrainHeightfieldView
 {
 public:
-	static sirTerrainCodecResult_t open( sirTerrainConstByteSpan_t input, sirTerrainR16View_t& view,
+	static SIRTerrainCodecResult open( sirTerrainConstByteSpan_t input, sirTerrainR16View_t& view,
 	                                     uint64_t nMinimumRevision = 0 ) noexcept;
-	static sirTerrainSampleResult_t read( const sirTerrainR16View_t& view, uint32_t nX, uint32_t nZ, float& fHeight ) noexcept;
-	static sirTerrainSampleResult_t sampleBilinear( const sirTerrainR16View_t& view, double fCellX, double fCellZ,
+	static SIRTerrainSampleResult read( const sirTerrainR16View_t& view, uint32_t nX, uint32_t nZ, float& fHeight ) noexcept;
+	static SIRTerrainSampleResult sampleBilinear( const sirTerrainR16View_t& view, double fCellX, double fCellZ,
 	                                                float& fHeight ) noexcept;
 
 protected:
@@ -58,4 +57,4 @@ private:
 	static float decodeSample( const sirTerrainR16View_t& view, uint32_t nX, uint32_t nZ ) noexcept;
 };
 
-#endif // __SIRENGINE_SIRTERRAINHEIGHTFIELDVIEW_H__
+#endif // __SIR_TERRAINHEIGHTFIELDVIEW_H__

@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRHASHPROBE_H__
-#define __SIRENGINE_SIRHASHPROBE_H__
+#ifndef __SIR_HASHPROBE_H__
+#define __SIR_HASHPROBE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -51,7 +51,7 @@ public:
 	static uint8_t getControl( const uint8_t *pControl, uint32_t iBucket ) noexcept
 	{
 		if constexpr ( bCompactControl ) {
-			return ( uint8_t )( ( pControl[iBucket >> 2] >> ( ( iBucket & 3 ) * 2 ) ) & 3u );
+			return static_cast<uint8_t>(  ( pControl[iBucket >> 2] >> ( ( iBucket & 3 ) * 2 ) ) & 3u  );
 		}
 		return pControl[iBucket];
 	}
@@ -62,52 +62,52 @@ public:
 		if constexpr ( bCompactControl ) {
 			uint8_t& nByte = pControl[iBucket >> 2];
 			uint32_t nShift = ( iBucket & 3 ) * 2;
-			nByte = ( uint8_t )( ( nByte & ~( 3u << nShift ) ) | ( ( uint32_t )nState << nShift ) );
+			nByte = ( uint8_t )( ( nByte & ~( 3u << nShift ) ) | ( static_cast<uint32_t>(nState) << nShift ) );
 		} else {
 			pControl[iBucket] = nState;
 		}
 	}
 
-	static sirContainerResult_t capacityForCount( uint32_t nElements, uint32_t *pCapacity ) noexcept
+	static SIRContainerResult capacityForCount( uint32_t nElements, uint32_t *pCapacity ) noexcept
 	{
 		if ( pCapacity == nullptr ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
-		uint64_t nRequired = ( ( uint64_t )nElements * 8 + 6 ) / 7;
+		uint64_t nRequired = ( static_cast<uint64_t>(nElements) * 8 + 6 ) / 7;
 		uint64_t nCapacity = MIN_CAPACITY;
 		while ( nCapacity < nRequired ) {
 			nCapacity <<= 1;
-			if ( nCapacity > ( uint64_t )UINT32_MAX ) {
-				return SIR_CONTAINER_SIZE_OVERFLOW;
+			if ( nCapacity > static_cast<uint64_t>(UINT32_MAX) ) {
+				return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 			}
 		}
-		*pCapacity = ( uint32_t )nCapacity;
-		return SIR_CONTAINER_OK;
+		*pCapacity = static_cast<uint32_t>(nCapacity);
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
 	static size_t mixHash( size_t nHash ) noexcept
 	{
 #if SIZE_MAX > UINT32_MAX
-		uint64_t nMixed = ( uint64_t )nHash;
+		uint64_t nMixed = static_cast<uint64_t>(nHash);
 		nMixed ^= nMixed >> 33;
 		nMixed *= UINT64_C( 0xff51afd7ed558ccd );
 		nMixed ^= nMixed >> 33;
-		return ( size_t )nMixed;
+		return static_cast<size_t>(nMixed);
 #else
-		uint32_t nMixed = ( uint32_t )nHash;
+		uint32_t nMixed = static_cast<uint32_t>(nHash);
 		nMixed ^= nMixed >> 16;
 		nMixed *= UINT32_C( 0x85ebca6b );
 		nMixed ^= nMixed >> 13;
 		nMixed *= UINT32_C( 0xc2b2ae35 );
 		nMixed ^= nMixed >> 16;
-		return ( size_t )nMixed;
+		return static_cast<size_t>(nMixed);
 #endif
 	}
 
 	static uint32_t firstIndex( size_t nHash, uint32_t nCapacity ) noexcept
 	{
-		return ( uint32_t )( mixHash( nHash ) & ( nCapacity - 1 ) );
+		return static_cast<uint32_t>(  mixHash( nHash ) & ( nCapacity - 1 )  );
 	}
 };
 
-#endif // __SIRENGINE_SIRHASHPROBE_H__
+#endif // __SIR_HASHPROBE_H__

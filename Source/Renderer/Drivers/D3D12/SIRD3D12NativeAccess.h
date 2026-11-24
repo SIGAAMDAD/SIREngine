@@ -15,8 +15,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRD3D12NATIVEACCESS_H__
-#define __SIRENGINE_SIRD3D12NATIVEACCESS_H__
+#ifndef __SIR_D3_D12_NATIVEACCESS_H__
+#define __SIR_D3_D12_NATIVEACCESS_H__
 
 #include <Renderer/Drivers/D3D12/SIRD3D12Device.h>
 
@@ -26,8 +26,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 static inline D3D12_RESOURCE_DESC sirD3D12GetResourceDesc( ID3D12Resource *pResource ) noexcept
 {
 #if defined( __MINGW32__ )
-	D3D12_RESOURCE_DESC desc = {};
-	( void )pResource->GetDesc( &desc );
+	D3D12_RESOURCE_DESC desc {};
+	static_cast<void>(pResource->GetDesc( &desc ));
 	return desc;
 #else
 	return pResource->GetDesc();
@@ -38,8 +38,8 @@ static inline D3D12_RESOURCE_ALLOCATION_INFO sirD3D12GetResourceAllocationInfo( 
                                                                                 const D3D12_RESOURCE_DESC& desc ) noexcept
 {
 #if defined( __MINGW32__ )
-	D3D12_RESOURCE_ALLOCATION_INFO info = {};
-	( void )pDevice->GetResourceAllocationInfo( &info, 0, 1, &desc );
+	D3D12_RESOURCE_ALLOCATION_INFO info {};
+	static_cast<void>(pDevice->GetResourceAllocationInfo( &info, 0, 1, &desc ));
 	return info;
 #else
 	return pDevice->GetResourceAllocationInfo( 0, 1, &desc );
@@ -49,8 +49,8 @@ static inline D3D12_RESOURCE_ALLOCATION_INFO sirD3D12GetResourceAllocationInfo( 
 static inline D3D12_CPU_DESCRIPTOR_HANDLE sirD3D12GetCPUDescriptorStart( ID3D12DescriptorHeap *pHeap ) noexcept
 {
 #if defined( __MINGW32__ )
-	D3D12_CPU_DESCRIPTOR_HANDLE handle = {};
-	( void )pHeap->GetCPUDescriptorHandleForHeapStart( &handle );
+	D3D12_CPU_DESCRIPTOR_HANDLE handle {};
+	static_cast<void>(pHeap->GetCPUDescriptorHandleForHeapStart( &handle ));
 	return handle;
 #else
 	return pHeap->GetCPUDescriptorHandleForHeapStart();
@@ -60,12 +60,12 @@ static inline D3D12_CPU_DESCRIPTOR_HANDLE sirD3D12GetCPUDescriptorStart( ID3D12D
 static inline D3D12_GPU_DESCRIPTOR_HANDLE sirD3D12GetGPUDescriptorStart( ID3D12DescriptorHeap *pHeap ) noexcept
 {
 #if defined( __MINGW32__ )
-	D3D12_GPU_DESCRIPTOR_HANDLE handle = {};
-	( void )pHeap->GetGPUDescriptorHandleForHeapStart( &handle );
+	D3D12_GPU_DESCRIPTOR_HANDLE handle {};
+	static_cast<void>(pHeap->GetGPUDescriptorHandleForHeapStart( &handle ));
 	return handle;
 #else
 	return pHeap->GetGPUDescriptorHandleForHeapStart();
 #endif
 }
 
-#endif // __SIRENGINE_SIRD3D12NATIVEACCESS_H__
+#endif // __SIR_D3_D12_NATIVEACCESS_H__

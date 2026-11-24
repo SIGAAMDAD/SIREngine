@@ -12,8 +12,8 @@ express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIRSIMULATIONSCHEDULE_H__
-#define __SIRENGINE_SIRSIMULATIONSCHEDULE_H__
+#ifndef __SIR_SIMULATIONSCHEDULE_H__
+#define __SIR_SIMULATIONSCHEDULE_H__
 #include <Core/SIRPCH.h>
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
 #pragma once
@@ -55,4 +55,4 @@ private:
 	bool m_bInitialized;
 	bool m_bActive;
 };
-#endif // __SIRENGINE_SIRSIMULATIONSCHEDULE_H__
+#endif // __SIR_SIMULATIONSCHEDULE_H__

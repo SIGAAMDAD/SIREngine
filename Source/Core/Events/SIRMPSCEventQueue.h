@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRMPSCEVENTQUEUE_H__
-#define __SIRENGINE_SIRMPSCEVENTQUEUE_H__
+#ifndef __SIR_MPSCEVENTQUEUE_H__
+#define __SIR_MPSCEVENTQUEUE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -25,14 +25,14 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <Core/Events/SIREventTypes.h>
-#include <Core/Platform/SIRAtomic.h>
+#include <atomic>
 #include <stdint.h>
 #include <type_traits>
 template <typename TPayload>
 
 struct sirMPSCEventSlot_s
 {
-	SIRAtomic<uint64_t> nSequence;
+	std::atomic<uint64_t> nSequence;
 	TPayload payload;
 	sirMPSCEventSlot_s( void ) noexcept : nSequence( 0 )
 	{
@@ -54,34 +54,34 @@ public:
 	SIRMPSCEventQueue( void ) noexcept : m_nHead( 0 ), m_nTail( 0 ), m_bStopped( false ), m_bDraining( false )
 	{
 		for ( uint32_t i = 0; i < Capacity; ++i ) {
-			m_Slots[i].nSequence.store( i, SIR_MEMORY_ORDER_RELAXED );
+			m_Slots[i].nSequence.store( i, std::memory_order_relaxed );
 		}
 	}
 	SIRMPSCEventQueue( const SIRMPSCEventQueue& ) = delete;
 	SIRMPSCEventQueue& operator=( const SIRMPSCEventQueue& ) = delete;
 
-	sirEventEnqueueStatus_t tryEnqueue( const TPayload& payload ) noexcept
+	SIREventEnqueueStatus tryEnqueue( const TPayload& payload ) noexcept
 	{
-		if ( m_bStopped.load( SIR_MEMORY_ORDER_ACQUIRE ) ) {
-			return SIR_EVENT_ENQUEUE_STOPPED;
+		if ( m_bStopped.load( std::memory_order_acquire ) ) {
+			return SIREventEnqueueStatus::SIR_EVENT_ENQUEUE_STOPPED;
 		}
-		uint64_t nPosition = m_nTail.load( SIR_MEMORY_ORDER_RELAXED );
+		uint64_t nPosition = m_nTail.load( std::memory_order_relaxed );
 		for ( ;; ) {
 			sirMPSCEventSlot_s<TPayload>& slot = m_Slots[nPosition & ( Capacity - 1 )];
-			const uint64_t nSequence = slot.nSequence.load( SIR_MEMORY_ORDER_ACQUIRE );
-			const int64_t nDifference = ( int64_t )( nSequence - nPosition );
+			const uint64_t nSequence = slot.nSequence.load( std::memory_order_acquire );
+			const int64_t nDifference = static_cast<int64_t>( nSequence - nPosition );
 			if ( nDifference == 0 ) {
 				uint64_t nExpected = nPosition;
-				if ( m_nTail.compareExchangeWeak( nExpected, nPosition + 1, SIR_MEMORY_ORDER_RELAXED ) ) {
+				if ( m_nTail.compare_exchange_weak( nExpected, nPosition + 1, std::memory_order_relaxed ) ) {
 					slot.payload = payload;
-					slot.nSequence.store( nPosition + 1, SIR_MEMORY_ORDER_RELEASE );
-					return SIR_EVENT_ENQUEUE_OK;
+					slot.nSequence.store( nPosition + 1, std::memory_order_release );
+					return SIREventEnqueueStatus::SIR_EVENT_ENQUEUE_OK;
 				}
 				nPosition = nExpected;
 			} else if ( nDifference < 0 ) {
-				return SIR_EVENT_ENQUEUE_FULL;
+				return SIREventEnqueueStatus::SIR_EVENT_ENQUEUE_FULL;
 			} else {
-				nPosition = m_nTail.load( SIR_MEMORY_ORDER_RELAXED );
+				nPosition = m_nTail.load( std::memory_order_relaxed );
 			}
 		}
 	}
@@ -113,7 +113,7 @@ public:
 
 	void stop( void ) noexcept
 	{
-		m_bStopped.store( true, SIR_MEMORY_ORDER_RELEASE );
+		m_bStopped.store( true, std::memory_order_release );
 	}
 
 private:
@@ -121,20 +121,20 @@ private:
 	{
 		const uint64_t nPosition = m_nHead;
 		sirMPSCEventSlot_s<TPayload>& slot = m_Slots[nPosition & ( Capacity - 1 )];
-		if ( slot.nSequence.load( SIR_MEMORY_ORDER_ACQUIRE ) != nPosition + 1 ) {
+		if ( slot.nSequence.load( std::memory_order_acquire ) != nPosition + 1 ) {
 			return false;
 		}
 		output = slot.payload;
-		slot.nSequence.store( nPosition + Capacity, SIR_MEMORY_ORDER_RELEASE );
+		slot.nSequence.store( nPosition + Capacity, std::memory_order_release );
 		m_nHead = nPosition + 1;
 		return true;
 	}
 
 	alignas( 64 ) uint64_t m_nHead;
-	alignas( 64 ) SIRAtomic<uint64_t> m_nTail;
-	alignas( 64 ) SIRAtomic<bool> m_bStopped;
+	alignas( 64 ) std::atomic<uint64_t> m_nTail;
+	alignas( 64 ) std::atomic<bool> m_bStopped;
 	bool m_bDraining;
 	sirMPSCEventSlot_s<TPayload> m_Slots[Capacity];
 };
 
-#endif // __SIRENGINE_SIRMPSCEVENTQUEUE_H__
+#endif // __SIR_MPSCEVENTQUEUE_H__

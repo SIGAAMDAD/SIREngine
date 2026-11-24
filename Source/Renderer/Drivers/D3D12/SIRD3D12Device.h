@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRD3D12DEVICE_H__
-#define __SIRENGINE_SIRD3D12DEVICE_H__
+#ifndef __SIR_D3_D12_DEVICE_H__
+#define __SIR_D3_D12_DEVICE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -167,7 +167,7 @@ public:
 	IDXGIFactory6 *getNativeFactory( void ) const noexcept;
 	ID3D12CommandQueue *getDirectQueue( void ) const noexcept;
 	SIRD3D12Memory *getMemory( void ) noexcept;
-	sirGraphicsResult_t submitRecorded( sirGraphicsQueue_t eQueue, ID3D12CommandList *const *ppLists, uint32_t nCount,
+	SIRGraphicsResult submitRecorded( SIRGraphicsQueue eQueue, ID3D12CommandList *const *ppLists, uint32_t nCount,
 	                                    const sirGraphicsCompletion_t *pWaits, uint32_t nWaitCount,
 	                                    sirGraphicsCompletion_t *pCompletion ) noexcept;
 	SIRD3D12Transfers& getTransfers( void ) noexcept;
@@ -190,4 +190,4 @@ public:
 	uint32_t getRetirementCapacity( void ) const noexcept;
 };
 
-#endif // __SIRENGINE_SIRD3D12DEVICE_H__
+#endif // __SIR_D3_D12_DEVICE_H__

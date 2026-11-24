@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRREGISTRATIONSTRINGBRIDGE_H__
-#define __SIRENGINE_SIRREGISTRATIONSTRINGBRIDGE_H__
+#ifndef __SIR_REGISTRATIONSTRINGBRIDGE_H__
+#define __SIR_REGISTRATIONSTRINGBRIDGE_H__
 
 #include <Core/SIRPCH.h>
 #include <Core/Registration/SIRRegistrationTypes.h>
@@ -35,13 +35,13 @@ typedef struct sirRegistrationNameRequest_s
 } sirRegistrationNameRequest_t;
 
 // Cold registration only: normalize names once, never intern submitted argument text.
-sirRegistrationResult_t sirRegistrationInternName( SIRStringPool& pool, const sirRegistrationNameRequest_t& request,
+SIRRegistrationResult sirRegistrationInternName( SIRStringPool& pool, const sirRegistrationNameRequest_t& request,
                                                    SIRStringAtom *pAtom ) noexcept;
 // Read-only lookup is allocation-free and never creates a name on a miss.
-sirRegistrationResult_t sirRegistrationFindName( const SIRStringPool& pool, const char *pszName, size_t nLength,
+SIRRegistrationResult sirRegistrationFindName( const SIRStringPool& pool, const char *pszName, size_t nLength,
                                                  SIRStringAtom *pAtom ) noexcept;
 // Cooked ordinals are accepted only for this pool's matching SIRS content hash.
-sirRegistrationResult_t sirRegistrationCookedName( const SIRStringPool& pool, uint32_t nOrdinal, uint64_t nCatalogHash,
+SIRRegistrationResult sirRegistrationCookedName( const SIRStringPool& pool, uint32_t nOrdinal, uint64_t nCatalogHash,
                                                    SIRStringAtom *pAtom ) noexcept;
 
-#endif // __SIRENGINE_SIRREGISTRATIONSTRINGBRIDGE_H__
+#endif // __SIR_REGISTRATIONSTRINGBRIDGE_H__

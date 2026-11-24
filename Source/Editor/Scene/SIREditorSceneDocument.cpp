@@ -11,13 +11,13 @@ static bool sirEditorNodeLess( const sirEditorNode_t& lhs, const sirEditorNode_t
 static uint32_t sirEditorIndexHash( uint64_t nId, uint32_t nCapacity ) noexcept
 {
 	constexpr uint64_t HASH_FACTOR = UINT64_C( 11400714819323198485 );
-	return ( uint32_t )( nId * HASH_FACTOR ) & ( nCapacity - 1 );
+	return static_cast<uint32_t>( nId * HASH_FACTOR ) & ( nCapacity - 1 );
 }
 
 static bool sirEditorRangesOverlap( const void *pLeft, size_t nLeftBytes, const void *pRight, size_t nRightBytes ) noexcept
 {
-	uintptr_t nLeft = ( uintptr_t )pLeft;
-	uintptr_t nRight = ( uintptr_t )pRight;
+	uintptr_t nLeft = reinterpret_cast<uintptr_t>(pLeft);
+	uintptr_t nRight = reinterpret_cast<uintptr_t>(pRight);
 	if ( nLeftBytes > UINTPTR_MAX - nLeft || nRightBytes > UINTPTR_MAX - nRight ) {
 		return true;
 	}
@@ -30,29 +30,29 @@ SIREditorSceneDocument::SIREditorSceneDocument( void ) noexcept
 {
 }
 
-sirEditorResult_t SIREditorSceneDocument::initialize( const sirEditorDocumentStorage_t& storage ) noexcept
+SIREditorResult SIREditorSceneDocument::initialize( const sirEditorDocumentStorage_t& storage ) noexcept
 {
 	if ( m_bInitialized ) {
-		return SIR_EDITOR_INVALID_ARGUMENT;
+		return SIREditorResult::SIR_EDITOR_INVALID_ARGUMENT;
 	}
 	if ( storage.pNodes == nullptr || storage.pStaging == nullptr || storage.pPending == nullptr || storage.pPendingDeltas == nullptr ||
 	     storage.pHistoryDeltas == nullptr || storage.pHistoryFrames == nullptr || storage.pIndex == nullptr ) {
-		return SIR_EDITOR_INVALID_ARGUMENT;
+		return SIREditorResult::SIR_EDITOR_INVALID_ARGUMENT;
 	}
 	if ( storage.nNodeCapacity == 0 || storage.nPendingCapacity == 0 || storage.nDeltaCapacity == 0 || storage.nFrameCapacity == 0 ||
-	     storage.nIndexCapacity < ( uint64_t )storage.nNodeCapacity * 2 ||
+	     storage.nIndexCapacity < static_cast<uint64_t>(storage.nNodeCapacity) * 2 ||
 	     ( storage.nIndexCapacity & ( storage.nIndexCapacity - 1 ) ) != 0 ) {
-		return SIR_EDITOR_INVALID_ARGUMENT;
+		return SIREditorResult::SIR_EDITOR_INVALID_ARGUMENT;
 	}
 	const void *szPointers[7] = { storage.pNodes,         storage.pStaging,       storage.pPending, storage.pPendingDeltas,
 	                              storage.pHistoryDeltas, storage.pHistoryFrames, storage.pIndex };
-	const size_t szByteCounts[7] = { ( size_t )storage.nNodeCapacity * sizeof( sirEditorNode_t ),
-	                                 ( size_t )storage.nNodeCapacity * sizeof( sirEditorNode_t ),
-	                                 ( size_t )storage.nPendingCapacity * sizeof( sirEditorMutation_t ),
-	                                 ( size_t )storage.nPendingCapacity * sizeof( sirEditorDelta_t ),
-	                                 ( size_t )storage.nDeltaCapacity * sizeof( sirEditorDelta_t ),
-	                                 ( size_t )storage.nFrameCapacity * sizeof( sirEditorHistoryFrame_t ),
-	                                 ( size_t )storage.nIndexCapacity * sizeof( sirEditorIndexEntry_t ) };
+	const size_t szByteCounts[7] = { static_cast<size_t>(storage.nNodeCapacity) * sizeof( sirEditorNode_t ),
+	                                 static_cast<size_t>(storage.nNodeCapacity) * sizeof( sirEditorNode_t ),
+	                                 static_cast<size_t>(storage.nPendingCapacity) * sizeof( sirEditorMutation_t ),
+	                                 static_cast<size_t>(storage.nPendingCapacity) * sizeof( sirEditorDelta_t ),
+	                                 static_cast<size_t>(storage.nDeltaCapacity) * sizeof( sirEditorDelta_t ),
+	                                 static_cast<size_t>(storage.nFrameCapacity) * sizeof( sirEditorHistoryFrame_t ),
+	                                 static_cast<size_t>(storage.nIndexCapacity) * sizeof( sirEditorIndexEntry_t ) };
 	const uint32_t szCapacities[7] = { storage.nNodeCapacity,  storage.nNodeCapacity,  storage.nPendingCapacity, storage.nPendingCapacity,
 	                                   storage.nDeltaCapacity, storage.nFrameCapacity, storage.nIndexCapacity };
 	const size_t szRecordSizes[7] = { sizeof( sirEditorNode_t ),      sizeof( sirEditorNode_t ),  sizeof( sirEditorMutation_t ),
@@ -60,11 +60,11 @@ sirEditorResult_t SIREditorSceneDocument::initialize( const sirEditorDocumentSto
 	                                  sizeof( sirEditorIndexEntry_t ) };
 	for ( uint32_t iRange = 0; iRange < 7; ++iRange ) {
 		if ( szCapacities[iRange] > SIZE_MAX / szRecordSizes[iRange] ) {
-			return SIR_EDITOR_INVALID_ARGUMENT;
+			return SIREditorResult::SIR_EDITOR_INVALID_ARGUMENT;
 		}
 		for ( uint32_t iOther = 0; iOther < iRange; ++iOther ) {
 			if ( sirEditorRangesOverlap( szPointers[iRange], szByteCounts[iRange], szPointers[iOther], szByteCounts[iOther] ) ) {
-				return SIR_EDITOR_INVALID_ARGUMENT;
+				return SIREditorResult::SIR_EDITOR_INVALID_ARGUMENT;
 			}
 		}
 	}
@@ -75,7 +75,7 @@ sirEditorResult_t SIREditorSceneDocument::initialize( const sirEditorDocumentSto
 		if ( storage.nPropertyCapacity == 0 || storage.nPendingPropertyCapacity == 0 || storage.nPropertyDeltaCapacity == 0 ||
 		     storage.pProperties == nullptr || storage.pPropertyStaging == nullptr || storage.pPendingProperties == nullptr ||
 		     storage.pPendingPropertyDeltas == nullptr || storage.pHistoryPropertyDeltas == nullptr ) {
-			return SIR_EDITOR_INVALID_ARGUMENT;
+			return SIREditorResult::SIR_EDITOR_INVALID_ARGUMENT;
 		}
 		const void *szPropertyPointers[5] = { storage.pProperties, storage.pPropertyStaging, storage.pPendingProperties,
 		                                      storage.pPendingPropertyDeltas, storage.pHistoryPropertyDeltas };
@@ -86,28 +86,28 @@ sirEditorResult_t SIREditorSceneDocument::initialize( const sirEditorDocumentSto
 		                                           storage.nPropertyCapacity + storage.nPendingPropertyCapacity,
 		                                           storage.nPropertyDeltaCapacity };
 		if ( storage.nPropertyCapacity > UINT32_MAX - storage.nPendingPropertyCapacity ) {
-			return SIR_EDITOR_INVALID_ARGUMENT;
+			return SIREditorResult::SIR_EDITOR_INVALID_ARGUMENT;
 		}
 		for ( uint32_t iPropertyRange = 0; iPropertyRange < 5; ++iPropertyRange ) {
 			if ( szPropertyCapacities[iPropertyRange] > SIZE_MAX / szPropertySizes[iPropertyRange] ) {
-				return SIR_EDITOR_INVALID_ARGUMENT;
+				return SIREditorResult::SIR_EDITOR_INVALID_ARGUMENT;
 			}
-			const size_t nBytes = ( size_t )szPropertyCapacities[iPropertyRange] * szPropertySizes[iPropertyRange];
+			const size_t nBytes = static_cast<size_t>(szPropertyCapacities[iPropertyRange]) * szPropertySizes[iPropertyRange];
 			for ( uint32_t iExisting = 0; iExisting < 7; ++iExisting ) {
 				if ( sirEditorRangesOverlap( szPropertyPointers[iPropertyRange], nBytes, szPointers[iExisting],
 				                             szByteCounts[iExisting] ) ) {
-					return SIR_EDITOR_INVALID_ARGUMENT;
+					return SIREditorResult::SIR_EDITOR_INVALID_ARGUMENT;
 				}
 			}
 			for ( uint32_t iEarlier = 0; iEarlier < iPropertyRange; ++iEarlier ) {
-				const size_t nEarlierBytes = ( size_t )szPropertyCapacities[iEarlier] * szPropertySizes[iEarlier];
+				const size_t nEarlierBytes = static_cast<size_t>(szPropertyCapacities[iEarlier]) * szPropertySizes[iEarlier];
 				if ( sirEditorRangesOverlap( szPropertyPointers[iPropertyRange], nBytes, szPropertyPointers[iEarlier], nEarlierBytes ) ) {
-					return SIR_EDITOR_INVALID_ARGUMENT;
+					return SIREditorResult::SIR_EDITOR_INVALID_ARGUMENT;
 				}
 			}
 		}
 		if ( storage.nPropertyDeltaCapacity < storage.nPropertyCapacity + storage.nPendingPropertyCapacity ) {
-			return SIR_EDITOR_INVALID_ARGUMENT;
+			return SIREditorResult::SIR_EDITOR_INVALID_ARGUMENT;
 		}
 	}
 
@@ -125,7 +125,7 @@ sirEditorResult_t SIREditorSceneDocument::initialize( const sirEditorDocumentSto
 	memset( m_Storage.pIndex, 0, sizeof( sirEditorIndexEntry_t ) * m_Storage.nIndexCapacity );
 	m_nRevision = 1;
 	m_bInitialized = true;
-	return SIR_EDITOR_OK;
+	return SIREditorResult::SIR_EDITOR_OK;
 }
 
 void SIREditorSceneDocument::shutdown( void ) noexcept
@@ -144,62 +144,62 @@ void SIREditorSceneDocument::shutdown( void ) noexcept
 	m_bInitialized = false;
 }
 
-sirEditorResult_t SIREditorSceneDocument::beginEdit( uint64_t nExpectedRevision ) noexcept
+SIREditorResult SIREditorSceneDocument::beginEdit( uint64_t nExpectedRevision ) noexcept
 {
 	if ( !m_bInitialized ) {
-		return SIR_EDITOR_NOT_INITIALIZED;
+		return SIREditorResult::SIR_EDITOR_NOT_INITIALIZED;
 	}
 	if ( m_bEditing ) {
-		return SIR_EDITOR_TRANSACTION_ACTIVE;
+		return SIREditorResult::SIR_EDITOR_TRANSACTION_ACTIVE;
 	}
 	if ( m_nRevision != nExpectedRevision ) {
-		return SIR_EDITOR_STALE_REVISION;
+		return SIREditorResult::SIR_EDITOR_STALE_REVISION;
 	}
 	if ( m_nRevision == UINT64_MAX ) {
-		return SIR_EDITOR_REVISION_EXHAUSTED;
+		return SIREditorResult::SIR_EDITOR_REVISION_EXHAUSTED;
 	}
 
 	m_bEditing = true;
 	m_nPendingCount = 0;
 	m_nPendingPropertyCount = 0;
-	return SIR_EDITOR_OK;
+	return SIREditorResult::SIR_EDITOR_OK;
 }
 
-sirEditorResult_t SIREditorSceneDocument::queueUpsert( const sirEditorNode_t& node ) noexcept
+SIREditorResult SIREditorSceneDocument::queueUpsert( const sirEditorNode_t& node ) noexcept
 {
 	if ( !m_bEditing ) {
-		return SIR_EDITOR_NO_TRANSACTION;
+		return SIREditorResult::SIR_EDITOR_NO_TRANSACTION;
 	}
 	if ( node.nId == 0 || node.nTypeId == 0 ) {
-		return SIR_EDITOR_INVALID_ID;
+		return SIREditorResult::SIR_EDITOR_INVALID_ID;
 	}
 	if ( m_nPendingCount >= m_Storage.nPendingCapacity ) {
-		return SIR_EDITOR_OUT_OF_CAPACITY;
+		return SIREditorResult::SIR_EDITOR_OUT_OF_CAPACITY;
 	}
 
 	sirEditorMutation_t& mutation = m_Storage.pPending[m_nPendingCount++];
 	mutation.node = node;
-	mutation.eType = SIR_EDITOR_MUTATION_UPSERT;
-	return SIR_EDITOR_OK;
+	mutation.eType = SIREditorMutationType::SIR_EDITOR_MUTATION_UPSERT;
+	return SIREditorResult::SIR_EDITOR_OK;
 }
 
-sirEditorResult_t SIREditorSceneDocument::queueRemove( uint64_t nId ) noexcept
+SIREditorResult SIREditorSceneDocument::queueRemove( uint64_t nId ) noexcept
 {
 	if ( !m_bEditing ) {
-		return SIR_EDITOR_NO_TRANSACTION;
+		return SIREditorResult::SIR_EDITOR_NO_TRANSACTION;
 	}
 	if ( nId == 0 ) {
-		return SIR_EDITOR_INVALID_ID;
+		return SIREditorResult::SIR_EDITOR_INVALID_ID;
 	}
 	if ( m_nPendingCount >= m_Storage.nPendingCapacity ) {
-		return SIR_EDITOR_OUT_OF_CAPACITY;
+		return SIREditorResult::SIR_EDITOR_OUT_OF_CAPACITY;
 	}
 
 	sirEditorMutation_t& mutation = m_Storage.pPending[m_nPendingCount++];
 	mutation.node = {};
 	mutation.node.nId = nId;
-	mutation.eType = SIR_EDITOR_MUTATION_REMOVE;
-	return SIR_EDITOR_OK;
+	mutation.eType = SIREditorMutationType::SIR_EDITOR_MUTATION_REMOVE;
+	return SIREditorResult::SIR_EDITOR_OK;
 }
 
 uint32_t SIREditorSceneDocument::findSlot( const sirEditorNode_t *pNodes, uint64_t nId ) const noexcept
@@ -212,14 +212,14 @@ uint32_t SIREditorSceneDocument::findSlot( const sirEditorNode_t *pNodes, uint64
 	return UINT32_MAX;
 }
 
-sirEditorResult_t SIREditorSceneDocument::applyPending( uint32_t iMutation, sirEditorDelta_t *pDelta ) noexcept
+SIREditorResult SIREditorSceneDocument::applyPending( uint32_t iMutation, sirEditorDelta_t *pDelta ) noexcept
 {
 	const sirEditorMutation_t& mutation = m_Storage.pPending[iMutation];
 	uint32_t iSlot = findSlot( m_Storage.pStaging, mutation.node.nId );
 
-	if ( mutation.eType == SIR_EDITOR_MUTATION_REMOVE ) {
+	if ( mutation.eType == SIREditorMutationType::SIR_EDITOR_MUTATION_REMOVE ) {
 		if ( iSlot == UINT32_MAX ) {
-			return SIR_EDITOR_NOT_FOUND;
+			return SIREditorResult::SIR_EDITOR_NOT_FOUND;
 		}
 		pDelta->iSlot = iSlot;
 		pDelta->previous = m_Storage.pStaging[iSlot];
@@ -228,10 +228,10 @@ sirEditorResult_t SIREditorSceneDocument::applyPending( uint32_t iMutation, sirE
 		m_Storage.pStaging[iSlot].nTypeId = 0;
 		m_Storage.pStaging[iSlot].nFlags = 0;
 		pDelta->next = m_Storage.pStaging[iSlot];
-		return SIR_EDITOR_OK;
+		return SIREditorResult::SIR_EDITOR_OK;
 	}
-	if ( mutation.eType != SIR_EDITOR_MUTATION_UPSERT ) {
-		return SIR_EDITOR_INVALID_ARGUMENT;
+	if ( mutation.eType != SIREditorMutationType::SIR_EDITOR_MUTATION_UPSERT ) {
+		return SIREditorResult::SIR_EDITOR_INVALID_ARGUMENT;
 	}
 	if ( iSlot == UINT32_MAX ) {
 		for ( uint32_t iCandidate = 0; iCandidate < m_Storage.nNodeCapacity; ++iCandidate ) {
@@ -242,7 +242,7 @@ sirEditorResult_t SIREditorSceneDocument::applyPending( uint32_t iMutation, sirE
 		}
 	}
 	if ( iSlot == UINT32_MAX ) {
-		return SIR_EDITOR_OUT_OF_CAPACITY;
+		return SIREditorResult::SIR_EDITOR_OUT_OF_CAPACITY;
 	}
 
 	pDelta->iSlot = iSlot;
@@ -250,7 +250,7 @@ sirEditorResult_t SIREditorSceneDocument::applyPending( uint32_t iMutation, sirE
 	sirEditorNode_t node = mutation.node;
 	if ( pDelta->previous.nId == 0 ) {
 		if ( pDelta->previous.nGeneration == UINT32_MAX ) {
-			return SIR_EDITOR_OUT_OF_CAPACITY;
+			return SIREditorResult::SIR_EDITOR_OUT_OF_CAPACITY;
 		}
 		node.nGeneration = pDelta->previous.nGeneration + 1;
 	} else {
@@ -259,7 +259,7 @@ sirEditorResult_t SIREditorSceneDocument::applyPending( uint32_t iMutation, sirE
 	node.nReserved = 0;
 	m_Storage.pStaging[iSlot] = node;
 	pDelta->next = node;
-	return SIR_EDITOR_OK;
+	return SIREditorResult::SIR_EDITOR_OK;
 }
 
 uint32_t SIREditorSceneDocument::indexedSlot( uint64_t nId ) const noexcept
@@ -281,7 +281,7 @@ uint32_t SIREditorSceneDocument::indexedSlot( uint64_t nId ) const noexcept
 	return UINT32_MAX;
 }
 
-sirEditorResult_t SIREditorSceneDocument::buildValidatedIndex( const sirEditorNode_t *pNodes ) noexcept
+SIREditorResult SIREditorSceneDocument::buildValidatedIndex( const sirEditorNode_t *pNodes ) noexcept
 {
 	memset( m_Storage.pIndex, 0, sizeof( sirEditorIndexEntry_t ) * m_Storage.nIndexCapacity );
 	for ( uint32_t iSlot = 0; iSlot < m_Storage.nNodeCapacity; ++iSlot ) {
@@ -290,12 +290,12 @@ sirEditorResult_t SIREditorSceneDocument::buildValidatedIndex( const sirEditorNo
 			continue;
 		}
 		if ( node.nTypeId == 0 || node.nId == node.nParentId ) {
-			return SIR_EDITOR_INVALID_HIERARCHY;
+			return SIREditorResult::SIR_EDITOR_INVALID_HIERARCHY;
 		}
 		uint32_t iHash = sirEditorIndexHash( node.nId, m_Storage.nIndexCapacity );
 		while ( m_Storage.pIndex[iHash].nId != 0 ) {
 			if ( m_Storage.pIndex[iHash].nId == node.nId ) {
-				return SIR_EDITOR_INVALID_ID;
+				return SIREditorResult::SIR_EDITOR_INVALID_ID;
 			}
 			iHash = ( iHash + 1 ) & ( m_Storage.nIndexCapacity - 1 );
 		}
@@ -309,24 +309,24 @@ sirEditorResult_t SIREditorSceneDocument::buildValidatedIndex( const sirEditorNo
 		while ( nParent != 0 ) {
 			uint32_t iParent = indexedSlot( nParent );
 			if ( iParent == UINT32_MAX || ++nDepth >= m_Storage.nNodeCapacity ) {
-				return SIR_EDITOR_INVALID_HIERARCHY;
+				return SIREditorResult::SIR_EDITOR_INVALID_HIERARCHY;
 			}
 			nParent = pNodes[iParent].nParentId;
 		}
 	}
-	return SIR_EDITOR_OK;
+	return SIREditorResult::SIR_EDITOR_OK;
 }
 
-sirEditorResult_t SIREditorSceneDocument::setPropertyRegistry( const SIRObjectRegistry *pRegistry ) noexcept
+SIREditorResult SIREditorSceneDocument::setPropertyRegistry( const SIRObjectRegistry *pRegistry ) noexcept
 {
 	if ( !m_bInitialized ) {
-		return SIR_EDITOR_NOT_INITIALIZED;
+		return SIREditorResult::SIR_EDITOR_NOT_INITIALIZED;
 	}
 	if ( m_bEditing || pRegistry == nullptr || ( m_pRegistry != nullptr && m_pRegistry != pRegistry ) ) {
-		return SIR_EDITOR_INVALID_ARGUMENT;
+		return SIREditorResult::SIR_EDITOR_INVALID_ARGUMENT;
 	}
 	m_pRegistry = pRegistry;
-	return SIR_EDITOR_OK;
+	return SIREditorResult::SIR_EDITOR_OK;
 }
 
 uint32_t SIREditorSceneDocument::findPropertySlot( const sirEditorProperty_t *pProperties, uint64_t nNodeId,
@@ -340,58 +340,58 @@ uint32_t SIREditorSceneDocument::findPropertySlot( const sirEditorProperty_t *pP
 	return UINT32_MAX;
 }
 
-sirEditorResult_t SIREditorSceneDocument::queueSetProperty( const sirEditorProperty_t& property ) noexcept
+SIREditorResult SIREditorSceneDocument::queueSetProperty( const sirEditorProperty_t& property ) noexcept
 {
 	if ( !m_bEditing ) {
-		return SIR_EDITOR_NO_TRANSACTION;
+		return SIREditorResult::SIR_EDITOR_NO_TRANSACTION;
 	}
 	if ( m_Storage.nPropertyCapacity == 0 || m_pRegistry == nullptr ) {
-		return SIR_EDITOR_INVALID_PROPERTY;
+		return SIREditorResult::SIR_EDITOR_INVALID_PROPERTY;
 	}
 	if ( property.nNodeId == 0 || property.nPropertyId == 0 || property.nReserved != 0 ||
 	     m_nPendingPropertyCount >= m_Storage.nPendingPropertyCapacity ) {
-		return SIR_EDITOR_INVALID_ARGUMENT;
+		return SIREditorResult::SIR_EDITOR_INVALID_ARGUMENT;
 	}
 	sirEditorPropertyMutation_t& mutation = m_Storage.pPendingProperties[m_nPendingPropertyCount++];
 	mutation.property = property;
 	mutation.bRemove = false;
-	return SIR_EDITOR_OK;
+	return SIREditorResult::SIR_EDITOR_OK;
 }
 
-sirEditorResult_t SIREditorSceneDocument::queueRemoveProperty( uint64_t nNodeId, uint32_t nPropertyId ) noexcept
+SIREditorResult SIREditorSceneDocument::queueRemoveProperty( uint64_t nNodeId, uint32_t nPropertyId ) noexcept
 {
 	if ( !m_bEditing ) {
-		return SIR_EDITOR_NO_TRANSACTION;
+		return SIREditorResult::SIR_EDITOR_NO_TRANSACTION;
 	}
 	if ( m_Storage.nPropertyCapacity == 0 || m_pRegistry == nullptr ) {
-		return SIR_EDITOR_INVALID_PROPERTY;
+		return SIREditorResult::SIR_EDITOR_INVALID_PROPERTY;
 	}
 	if ( nNodeId == 0 || nPropertyId == 0 || m_nPendingPropertyCount >= m_Storage.nPendingPropertyCapacity ) {
-		return SIR_EDITOR_INVALID_ARGUMENT;
+		return SIREditorResult::SIR_EDITOR_INVALID_ARGUMENT;
 	}
 	sirEditorPropertyMutation_t& mutation = m_Storage.pPendingProperties[m_nPendingPropertyCount++];
 	mutation = {};
 	mutation.property.nNodeId = nNodeId;
 	mutation.property.nPropertyId = nPropertyId;
 	mutation.bRemove = true;
-	return SIR_EDITOR_OK;
+	return SIREditorResult::SIR_EDITOR_OK;
 }
 
-sirEditorResult_t SIREditorSceneDocument::applyPendingProperty( uint32_t iMutation ) noexcept
+SIREditorResult SIREditorSceneDocument::applyPendingProperty( uint32_t iMutation ) noexcept
 {
 	const sirEditorPropertyMutation_t& mutation = m_Storage.pPendingProperties[iMutation];
 	const sirEditorProperty_t& property = mutation.property;
 	uint32_t iSlot = findPropertySlot( m_Storage.pPropertyStaging, property.nNodeId, property.nPropertyId );
 	const uint32_t iNode = findSlot( m_Storage.pStaging, property.nNodeId );
 	if ( iNode == UINT32_MAX || m_Storage.pStaging[iNode].nId == 0 ) {
-		return SIR_EDITOR_NOT_FOUND;
+		return SIREditorResult::SIR_EDITOR_NOT_FOUND;
 	}
 	if ( mutation.bRemove && iSlot == UINT32_MAX ) {
-		return SIR_EDITOR_NOT_FOUND;
+		return SIREditorResult::SIR_EDITOR_NOT_FOUND;
 	}
 	if ( !mutation.bRemove &&
-	     m_pRegistry->validateProperty( m_Storage.pStaging[iNode].nTypeId, property.nPropertyId, property.value ) != SIR_OBJECT_OK ) {
-		return SIR_EDITOR_INVALID_PROPERTY;
+	     m_pRegistry->validateProperty( m_Storage.pStaging[iNode].nTypeId, property.nPropertyId, property.value ) != SIRObjectResult::SIR_OBJECT_OK ) {
+		return SIREditorResult::SIR_EDITOR_INVALID_PROPERTY;
 	}
 	if ( iSlot == UINT32_MAX ) {
 		for ( uint32_t iCandidate = 0; iCandidate < m_Storage.nPropertyCapacity; ++iCandidate ) {
@@ -402,17 +402,17 @@ sirEditorResult_t SIREditorSceneDocument::applyPendingProperty( uint32_t iMutati
 		}
 	}
 	if ( iSlot == UINT32_MAX ) {
-		return SIR_EDITOR_OUT_OF_CAPACITY;
+		return SIREditorResult::SIR_EDITOR_OUT_OF_CAPACITY;
 	}
 	sirEditorPropertyDelta_t& delta = m_Storage.pPendingPropertyDeltas[m_nPendingPropertyDeltaCount++];
 	delta.iSlot = iSlot;
 	delta.previous = m_Storage.pPropertyStaging[iSlot];
 	m_Storage.pPropertyStaging[iSlot] = mutation.bRemove ? sirEditorProperty_t{} : property;
 	delta.next = m_Storage.pPropertyStaging[iSlot];
-	return SIR_EDITOR_OK;
+	return SIREditorResult::SIR_EDITOR_OK;
 }
 
-sirEditorResult_t SIREditorSceneDocument::discardOrphanedProperties( void ) noexcept
+SIREditorResult SIREditorSceneDocument::discardOrphanedProperties( void ) noexcept
 {
 	for ( uint32_t iProperty = 0; iProperty < m_Storage.nPropertyCapacity; ++iProperty ) {
 		const sirEditorProperty_t& property = m_Storage.pPropertyStaging[iProperty];
@@ -433,13 +433,13 @@ sirEditorResult_t SIREditorSceneDocument::discardOrphanedProperties( void ) noex
 		}
 		if ( iNode != UINT32_MAX && ( bSameGeneration || bExplicitlyAssigned ) ) {
 			if ( m_pRegistry == nullptr || m_pRegistry->validateProperty( m_Storage.pStaging[iNode].nTypeId, property.nPropertyId,
-			                                                              property.value ) != SIR_OBJECT_OK ) {
-				return SIR_EDITOR_INVALID_PROPERTY;
+			                                                              property.value ) != SIRObjectResult::SIR_OBJECT_OK ) {
+				return SIREditorResult::SIR_EDITOR_INVALID_PROPERTY;
 			}
 			continue;
 		}
 		if ( m_nPendingPropertyDeltaCount >= m_Storage.nPropertyCapacity + m_Storage.nPendingPropertyCapacity ) {
-			return SIR_EDITOR_OUT_OF_CAPACITY;
+			return SIREditorResult::SIR_EDITOR_OUT_OF_CAPACITY;
 		}
 		sirEditorPropertyDelta_t& delta = m_Storage.pPendingPropertyDeltas[m_nPendingPropertyDeltaCount++];
 		delta.iSlot = iProperty;
@@ -447,31 +447,31 @@ sirEditorResult_t SIREditorSceneDocument::discardOrphanedProperties( void ) noex
 		m_Storage.pPropertyStaging[iProperty] = {};
 		delta.next = {};
 	}
-	return SIR_EDITOR_OK;
+	return SIREditorResult::SIR_EDITOR_OK;
 }
 
-sirEditorResult_t SIREditorSceneDocument::commitEdit( void ) noexcept
+SIREditorResult SIREditorSceneDocument::commitEdit( void ) noexcept
 {
 	if ( !m_bEditing ) {
-		return SIR_EDITOR_NO_TRANSACTION;
+		return SIREditorResult::SIR_EDITOR_NO_TRANSACTION;
 	}
 	if ( m_nPendingCount == 0 && m_nPendingPropertyCount == 0 ) {
 		m_bEditing = false;
-		return SIR_EDITOR_OK;
+		return SIREditorResult::SIR_EDITOR_OK;
 	}
 	if ( m_nPendingCount > m_Storage.nDeltaCapacity ) {
-		return SIR_EDITOR_OUT_OF_CAPACITY;
+		return SIREditorResult::SIR_EDITOR_OUT_OF_CAPACITY;
 	}
 
 	memcpy( m_Storage.pStaging, m_Storage.pNodes, sizeof( sirEditorNode_t ) * m_Storage.nNodeCapacity );
 	for ( uint32_t iMutation = 0; iMutation < m_nPendingCount; ++iMutation ) {
-		sirEditorResult_t eResult = applyPending( iMutation, &m_Storage.pPendingDeltas[iMutation] );
-		if ( eResult != SIR_EDITOR_OK ) {
+		SIREditorResult eResult = applyPending( iMutation, &m_Storage.pPendingDeltas[iMutation] );
+		if ( eResult != SIREditorResult::SIR_EDITOR_OK ) {
 			return eResult;
 		}
 	}
-	sirEditorResult_t eResult = buildValidatedIndex( m_Storage.pStaging );
-	if ( eResult != SIR_EDITOR_OK ) {
+	SIREditorResult eResult = buildValidatedIndex( m_Storage.pStaging );
+	if ( eResult != SIREditorResult::SIR_EDITOR_OK ) {
 		buildValidatedIndex( m_Storage.pNodes );
 		return eResult;
 	}
@@ -482,14 +482,14 @@ sirEditorResult_t SIREditorSceneDocument::commitEdit( void ) noexcept
 	m_nPendingPropertyDeltaCount = 0;
 	for ( uint32_t iProperty = 0; iProperty < m_nPendingPropertyCount; ++iProperty ) {
 		eResult = applyPendingProperty( iProperty );
-		if ( eResult != SIR_EDITOR_OK ) {
+		if ( eResult != SIREditorResult::SIR_EDITOR_OK ) {
 			buildValidatedIndex( m_Storage.pNodes );
 			return eResult;
 		}
 	}
 	if ( m_Storage.nPropertyCapacity != 0 ) {
 		eResult = discardOrphanedProperties();
-		if ( eResult != SIR_EDITOR_OK ) {
+		if ( eResult != SIREditorResult::SIR_EDITOR_OK ) {
 			buildValidatedIndex( m_Storage.pNodes );
 			return eResult;
 		}
@@ -532,33 +532,33 @@ sirEditorResult_t SIREditorSceneDocument::commitEdit( void ) noexcept
 	m_nPendingCount = 0;
 	m_nPendingPropertyCount = 0;
 	m_bEditing = false;
-	return SIR_EDITOR_OK;
+	return SIREditorResult::SIR_EDITOR_OK;
 }
 
-sirEditorResult_t SIREditorSceneDocument::cancelEdit( void ) noexcept
+SIREditorResult SIREditorSceneDocument::cancelEdit( void ) noexcept
 {
 	if ( !m_bEditing ) {
-		return SIR_EDITOR_NO_TRANSACTION;
+		return SIREditorResult::SIR_EDITOR_NO_TRANSACTION;
 	}
 	m_bEditing = false;
 	m_nPendingCount = 0;
 	m_nPendingPropertyCount = 0;
-	return SIR_EDITOR_OK;
+	return SIREditorResult::SIR_EDITOR_OK;
 }
 
-sirEditorResult_t SIREditorSceneDocument::applyHistoryFrame( bool bUndo ) noexcept
+SIREditorResult SIREditorSceneDocument::applyHistoryFrame( bool bUndo ) noexcept
 {
 	if ( !m_bInitialized ) {
-		return SIR_EDITOR_NOT_INITIALIZED;
+		return SIREditorResult::SIR_EDITOR_NOT_INITIALIZED;
 	}
 	if ( m_bEditing ) {
-		return SIR_EDITOR_TRANSACTION_ACTIVE;
+		return SIREditorResult::SIR_EDITOR_TRANSACTION_ACTIVE;
 	}
 	if ( m_nRevision == UINT64_MAX ) {
-		return SIR_EDITOR_REVISION_EXHAUSTED;
+		return SIREditorResult::SIR_EDITOR_REVISION_EXHAUSTED;
 	}
 	if ( ( bUndo && m_nHistoryCursor == 0 ) || ( !bUndo && m_nHistoryCursor == m_nHistoryCount ) ) {
-		return SIR_EDITOR_NO_HISTORY;
+		return SIREditorResult::SIR_EDITOR_NO_HISTORY;
 	}
 
 	uint32_t iFrame = bUndo ? m_nHistoryCursor - 1 : m_nHistoryCursor;
@@ -579,8 +579,8 @@ sirEditorResult_t SIREditorSceneDocument::applyHistoryFrame( bool bUndo ) noexce
 			m_Storage.pPropertyStaging[delta.iSlot] = bUndo ? delta.previous : delta.next;
 		}
 	}
-	sirEditorResult_t eResult = buildValidatedIndex( m_Storage.pStaging );
-	if ( eResult != SIR_EDITOR_OK ) {
+	SIREditorResult eResult = buildValidatedIndex( m_Storage.pStaging );
+	if ( eResult != SIREditorResult::SIR_EDITOR_OK ) {
 		buildValidatedIndex( m_Storage.pNodes );
 		return eResult;
 	}
@@ -593,9 +593,9 @@ sirEditorResult_t SIREditorSceneDocument::applyHistoryFrame( bool bUndo ) noexce
 			const uint32_t iNode = findSlot( m_Storage.pStaging, property.nNodeId );
 			if ( iNode == UINT32_MAX || m_pRegistry == nullptr ||
 			     m_pRegistry->validateProperty( m_Storage.pStaging[iNode].nTypeId, property.nPropertyId, property.value ) !=
-			         SIR_OBJECT_OK ) {
+			         SIRObjectResult::SIR_OBJECT_OK ) {
 				buildValidatedIndex( m_Storage.pNodes );
-				return SIR_EDITOR_INVALID_PROPERTY;
+				return SIREditorResult::SIR_EDITOR_INVALID_PROPERTY;
 			}
 		}
 		memcpy( m_Storage.pProperties, m_Storage.pPropertyStaging, sizeof( sirEditorProperty_t ) * m_Storage.nPropertyCapacity );
@@ -603,43 +603,43 @@ sirEditorResult_t SIREditorSceneDocument::applyHistoryFrame( bool bUndo ) noexce
 	memcpy( m_Storage.pNodes, m_Storage.pStaging, sizeof( sirEditorNode_t ) * m_Storage.nNodeCapacity );
 	m_nHistoryCursor = bUndo ? m_nHistoryCursor - 1 : m_nHistoryCursor + 1;
 	++m_nRevision;
-	return SIR_EDITOR_OK;
+	return SIREditorResult::SIR_EDITOR_OK;
 }
 
-sirEditorResult_t SIREditorSceneDocument::undo( void ) noexcept
+SIREditorResult SIREditorSceneDocument::undo( void ) noexcept
 {
 	return applyHistoryFrame( true );
 }
 
-sirEditorResult_t SIREditorSceneDocument::redo( void ) noexcept
+SIREditorResult SIREditorSceneDocument::redo( void ) noexcept
 {
 	return applyHistoryFrame( false );
 }
 
-sirEditorResult_t SIREditorSceneDocument::findNode( uint64_t nId, sirEditorNode_t *pOutNode ) const noexcept
+SIREditorResult SIREditorSceneDocument::findNode( uint64_t nId, sirEditorNode_t *pOutNode ) const noexcept
 {
 	if ( !m_bInitialized ) {
-		return SIR_EDITOR_NOT_INITIALIZED;
+		return SIREditorResult::SIR_EDITOR_NOT_INITIALIZED;
 	}
 	if ( nId == 0 || pOutNode == nullptr ) {
-		return SIR_EDITOR_INVALID_ARGUMENT;
+		return SIREditorResult::SIR_EDITOR_INVALID_ARGUMENT;
 	}
 	uint32_t iSlot = indexedSlot( nId );
 	if ( iSlot == UINT32_MAX ) {
-		return SIR_EDITOR_NOT_FOUND;
+		return SIREditorResult::SIR_EDITOR_NOT_FOUND;
 	}
 	*pOutNode = m_Storage.pNodes[iSlot];
-	return SIR_EDITOR_OK;
+	return SIREditorResult::SIR_EDITOR_OK;
 }
 
-sirEditorResult_t SIREditorSceneDocument::copySnapshot( sirEditorNode_t *pOutNodes, uint32_t nCapacity, uint32_t *pOutCount,
+SIREditorResult SIREditorSceneDocument::copySnapshot( sirEditorNode_t *pOutNodes, uint32_t nCapacity, uint32_t *pOutCount,
                                                         uint64_t *pOutRevision ) const noexcept
 {
 	if ( !m_bInitialized ) {
-		return SIR_EDITOR_NOT_INITIALIZED;
+		return SIREditorResult::SIR_EDITOR_NOT_INITIALIZED;
 	}
 	if ( pOutCount == nullptr || pOutRevision == nullptr || ( pOutNodes == nullptr && nCapacity != 0 ) ) {
-		return SIR_EDITOR_INVALID_ARGUMENT;
+		return SIREditorResult::SIR_EDITOR_INVALID_ARGUMENT;
 	}
 	uint32_t nCount = 0;
 	for ( uint32_t iSlot = 0; iSlot < m_Storage.nNodeCapacity; ++iSlot ) {
@@ -650,11 +650,11 @@ sirEditorResult_t SIREditorSceneDocument::copySnapshot( sirEditorNode_t *pOutNod
 	*pOutCount = nCount;
 	*pOutRevision = m_nRevision;
 	if ( nCapacity < nCount || ( nCount != 0 && pOutNodes == nullptr ) ) {
-		return SIR_EDITOR_OUT_OF_CAPACITY;
+		return SIREditorResult::SIR_EDITOR_OUT_OF_CAPACITY;
 	}
-	if ( nCount != 0 && sirEditorRangesOverlap( pOutNodes, ( size_t )nCount * sizeof( sirEditorNode_t ), m_Storage.pNodes,
-	                                            ( size_t )m_Storage.nNodeCapacity * sizeof( sirEditorNode_t ) ) ) {
-		return SIR_EDITOR_INVALID_ARGUMENT;
+	if ( nCount != 0 && sirEditorRangesOverlap( pOutNodes, static_cast<size_t>(nCount * sizeof(  sirEditorNode_t  )), m_Storage.pNodes,
+	                                            static_cast<size_t>(m_Storage.nNodeCapacity) * sizeof( sirEditorNode_t ) ) ) {
+		return SIREditorResult::SIR_EDITOR_INVALID_ARGUMENT;
 	}
 
 	uint32_t iWrite = 0;
@@ -666,7 +666,7 @@ sirEditorResult_t SIREditorSceneDocument::copySnapshot( sirEditorNode_t *pOutNod
 	if ( nCount > 1 ) {
 		std::sort( pOutNodes, pOutNodes + nCount, sirEditorNodeLess );
 	}
-	return SIR_EDITOR_OK;
+	return SIREditorResult::SIR_EDITOR_OK;
 }
 
 uint64_t SIREditorSceneDocument::getRevision( void ) const noexcept
@@ -684,31 +684,31 @@ bool SIREditorSceneDocument::canRedo( void ) const noexcept
 	return m_bInitialized && m_nHistoryCursor < m_nHistoryCount;
 }
 
-sirEditorResult_t SIREditorSceneDocument::findProperty( uint64_t nNodeId, uint32_t nPropertyId,
+SIREditorResult SIREditorSceneDocument::findProperty( uint64_t nNodeId, uint32_t nPropertyId,
                                                         sirPropertyValue_t *pOutValue ) const noexcept
 {
 	if ( !m_bInitialized ) {
-		return SIR_EDITOR_NOT_INITIALIZED;
+		return SIREditorResult::SIR_EDITOR_NOT_INITIALIZED;
 	}
 	if ( nNodeId == 0 || nPropertyId == 0 || pOutValue == nullptr ) {
-		return SIR_EDITOR_INVALID_ARGUMENT;
+		return SIREditorResult::SIR_EDITOR_INVALID_ARGUMENT;
 	}
 	const uint32_t iSlot = findPropertySlot( m_Storage.pProperties, nNodeId, nPropertyId );
 	if ( iSlot == UINT32_MAX ) {
-		return SIR_EDITOR_NOT_FOUND;
+		return SIREditorResult::SIR_EDITOR_NOT_FOUND;
 	}
 	*pOutValue = m_Storage.pProperties[iSlot].value;
-	return SIR_EDITOR_OK;
+	return SIREditorResult::SIR_EDITOR_OK;
 }
 
-sirEditorResult_t SIREditorSceneDocument::copyPropertySnapshot( sirEditorProperty_t *pOut, uint32_t nCapacity,
+SIREditorResult SIREditorSceneDocument::copyPropertySnapshot( sirEditorProperty_t *pOut, uint32_t nCapacity,
                                                                 uint32_t *pOutCount ) const noexcept
 {
 	if ( !m_bInitialized ) {
-		return SIR_EDITOR_NOT_INITIALIZED;
+		return SIREditorResult::SIR_EDITOR_NOT_INITIALIZED;
 	}
 	if ( pOutCount == nullptr || ( nCapacity != 0 && pOut == nullptr ) ) {
-		return SIR_EDITOR_INVALID_ARGUMENT;
+		return SIREditorResult::SIR_EDITOR_INVALID_ARGUMENT;
 	}
 	uint32_t nCount = 0;
 	for ( uint32_t iProperty = 0; iProperty < m_Storage.nPropertyCapacity; ++iProperty ) {
@@ -718,11 +718,11 @@ sirEditorResult_t SIREditorSceneDocument::copyPropertySnapshot( sirEditorPropert
 	}
 	*pOutCount = nCount;
 	if ( nCapacity < nCount || ( nCount != 0 && pOut == nullptr ) ) {
-		return SIR_EDITOR_OUT_OF_CAPACITY;
+		return SIREditorResult::SIR_EDITOR_OUT_OF_CAPACITY;
 	}
 	if ( nCount != 0 && sirEditorRangesOverlap( pOut, nCount * sizeof( sirEditorProperty_t ), m_Storage.pProperties,
 	                                            m_Storage.nPropertyCapacity * sizeof( sirEditorProperty_t ) ) ) {
-		return SIR_EDITOR_INVALID_ARGUMENT;
+		return SIREditorResult::SIR_EDITOR_INVALID_ARGUMENT;
 	}
 	uint32_t iWrite = 0;
 	for ( uint32_t iProperty = 0; iProperty < m_Storage.nPropertyCapacity; ++iProperty ) {
@@ -730,5 +730,5 @@ sirEditorResult_t SIREditorSceneDocument::copyPropertySnapshot( sirEditorPropert
 			pOut[iWrite++] = m_Storage.pProperties[iProperty];
 		}
 	}
-	return SIR_EDITOR_OK;
+	return SIREditorResult::SIR_EDITOR_OK;
 }

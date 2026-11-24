@@ -16,7 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/Memory/Allocators/SIRSlabAllocator.h>
 #include <Core/Memory/SIRMemoryManager.h>
-#include <Core/Memory/SIRMemoryUtils.h>
+#include <Core/SIRMath.h>
 #include <Core/Memory/SIRMemorySegment.h>
 
 #include <cstring>
@@ -39,8 +39,8 @@ uint64_t SIRSlabAllocator::getRequiredMetadataBytes( uint64_t nSegmentBytes, uin
 	}
 	uint64_t nStride = 0;
 	const uint64_t nMinimum = nObjectBytes < 4 ? 4 : nObjectBytes;
-	if ( !SIR_IS_POWER_OF_TWO( nAlignment ) || ( uint64_t )( nAlignment ) > UINTPTR_MAX ||
-	     ( uint64_t )( nMinimum ) > UINTPTR_MAX - ( ( uint64_t )( nAlignment )-1 ) ) {
+	if ( !SIR_IS_POWER_OF_TWO( nAlignment ) || static_cast<uint64_t>( nAlignment ) > UINTPTR_MAX ||
+	     static_cast<uint64_t>( nMinimum ) > UINTPTR_MAX - ( static_cast<uint64_t>( nAlignment )-1 ) ) {
 		return 0;
 	}
 	nStride = SIR_ALIGN_UP( nMinimum, nAlignment );
@@ -66,8 +66,8 @@ bool SIRSlabAllocator::init( SIRMemorySegment *pSegment, uint32_t nObjectBytes, 
 	}
 	uint64_t nStride = 0;
 	const uint64_t nMinimum = nObjectBytes < 4 ? 4 : nObjectBytes;
-	if ( !SIR_IS_POWER_OF_TWO( nAlignment ) || ( uint64_t )( nAlignment ) > UINTPTR_MAX ||
-	     ( uint64_t )( nMinimum ) > UINTPTR_MAX - ( ( uint64_t )( nAlignment )-1 ) ) {
+	if ( !SIR_IS_POWER_OF_TWO( nAlignment ) || static_cast<uint64_t>( nAlignment ) > UINTPTR_MAX ||
+	     static_cast<uint64_t>( nMinimum ) > UINTPTR_MAX - ( static_cast<uint64_t>( nAlignment )-1 ) ) {
 		return false;
 	}
 	nStride = SIR_ALIGN_UP( nMinimum, nAlignment );
@@ -80,7 +80,7 @@ bool SIRSlabAllocator::init( SIRMemorySegment *pSegment, uint32_t nObjectBytes, 
 		return false;
 	}
 	sirSlabDesc_t *pDescs =
-	    ( ( sirSlabDesc_t * )( pSegment->getManager()->allocateMetadata( nSlabs * sizeof( sirSlabDesc_t ), alignof( sirSlabDesc_t ) ) ) );
+	    ( static_cast<sirSlabDesc_t *>(  pSegment->getManager()->allocateMetadata( nSlabs * sizeof( sirSlabDesc_t ), alignof( sirSlabDesc_t ) )  ) );
 	if ( pDescs == nullptr ) {
 		return false;
 	}
@@ -88,20 +88,20 @@ bool SIRSlabAllocator::init( SIRMemorySegment *pSegment, uint32_t nObjectBytes, 
 		pDescs[i].nNext = SIR_SLAB_NONE;
 		pDescs[i].nPrev = SIR_SLAB_NONE;
 		pDescs[i].nFreeHead = SIR_SLAB_NONE;
-		pDescs[i].nState = SIR_SLAB_DORMANT;
+		pDescs[i].nState = static_cast<uint32_t>( SIRSlabState::SIR_SLAB_DORMANT );
 	}
 	const uint64_t nWords = SIR_ROUND_UP_MULTIPLE( nSlabs * nSlotsPerSlab, 64ull ) / 64;
 	uint64_t *pLiveBits =
-	    ( ( uint64_t * )( pSegment->getManager()->allocateMetadata( nWords * sizeof( uint64_t ), alignof( uint64_t ) ) ) );
+	    ( static_cast<uint64_t *>(  pSegment->getManager()->allocateMetadata( nWords * sizeof( uint64_t ), alignof( uint64_t ) )  ) );
 	if ( pLiveBits == nullptr ) {
 		return false;
 	}
 	m_pLiveBits = pLiveBits;
 	m_pSegment = pSegment;
 	m_pDescs = pDescs;
-	m_pBase = ( ( uint8_t * )( pSegment->getBase() ) );
+	m_pBase = static_cast<uint8_t *>(  pSegment->getBase()  );
 	m_nSlabBytes = nSlabBytes;
-	m_nStride = ( ( uint32_t )( nStride ) );
+	m_nStride = static_cast<uint32_t>( nStride );
 	m_nSlabShift = 0;
 	m_nStrideShift = 0;
 	if ( SIR_IS_POWER_OF_TWO( nSlabBytes ) ) {
@@ -118,15 +118,15 @@ bool SIRSlabAllocator::init( SIRMemorySegment *pSegment, uint32_t nObjectBytes, 
 			nSize >>= 1;
 		}
 	}
-	m_nSlabCount = ( ( uint32_t )( nSlabs ) );
-	m_nSlotsPerSlab = ( ( uint32_t )( nSlotsPerSlab ) );
+	m_nSlabCount = static_cast<uint32_t>( nSlabs );
+	m_nSlotsPerSlab = static_cast<uint32_t>( nSlotsPerSlab );
 	return true;
 }
 
 void SIRSlabAllocator::unlink( uint32_t nIndex )
 {
 	sirSlabDesc_t& desc = m_pDescs[nIndex];
-	uint32_t *pHead = desc.nState == SIR_SLAB_PARTIAL ? &m_nPartialHead : desc.nState == SIR_SLAB_EMPTY ? &m_nEmptyHead : &m_nDormantHead;
+	uint32_t *pHead = desc.nState == static_cast<uint32_t>( SIRSlabState::SIR_SLAB_PARTIAL ) ? &m_nPartialHead : desc.nState == static_cast<uint32_t>( SIRSlabState::SIR_SLAB_EMPTY ) ? &m_nEmptyHead : &m_nDormantHead;
 	if ( desc.nPrev == SIR_SLAB_NONE ) {
 		*pHead = desc.nNext;
 	} else {
@@ -142,7 +142,7 @@ void SIRSlabAllocator::unlink( uint32_t nIndex )
 void SIRSlabAllocator::link( uint32_t nIndex, uint32_t nState )
 {
 	sirSlabDesc_t& desc = m_pDescs[nIndex];
-	uint32_t *pHead = nState == SIR_SLAB_PARTIAL ? &m_nPartialHead : nState == SIR_SLAB_EMPTY ? &m_nEmptyHead : &m_nDormantHead;
+	uint32_t *pHead = nState == static_cast<uint32_t>( SIRSlabState::SIR_SLAB_PARTIAL ) ? &m_nPartialHead : nState == static_cast<uint32_t>( SIRSlabState::SIR_SLAB_EMPTY ) ? &m_nEmptyHead : &m_nDormantHead;
 	desc.nState = nState;
 	desc.nPrev = SIR_SLAB_NONE;
 	desc.nNext = *pHead;
@@ -155,19 +155,19 @@ void SIRSlabAllocator::link( uint32_t nIndex, uint32_t nState )
 bool SIRSlabAllocator::activateSlab( uint32_t nIndex )
 {
 	sirSlabDesc_t& desc = m_pDescs[nIndex];
-	if ( desc.nState != SIR_SLAB_DORMANT && desc.nState != SIR_SLAB_DECOMMITTED ) {
+	if ( desc.nState != static_cast<uint32_t>( SIRSlabState::SIR_SLAB_DORMANT ) && desc.nState != static_cast<uint32_t>( SIRSlabState::SIR_SLAB_DECOMMITTED ) ) {
 		return false;
 	}
-	if ( !m_pSegment->commit( ( ( uint64_t )( nIndex ) ) * m_nSlabBytes, m_nSlabBytes ) ) {
+	if ( !m_pSegment->commit( static_cast<uint64_t>( nIndex ) * m_nSlabBytes, m_nSlabBytes ) ) {
 		return false;
 	}
-	if ( desc.nState == SIR_SLAB_DECOMMITTED ) {
+	if ( desc.nState == static_cast<uint32_t>( SIRSlabState::SIR_SLAB_DECOMMITTED ) ) {
 		unlink( nIndex );
 	}
 	desc.nFresh = 0;
 	desc.nLive = 0;
 	desc.nFreeHead = SIR_SLAB_NONE;
-	link( nIndex, SIR_SLAB_EMPTY );
+	link( nIndex, static_cast<uint32_t>( SIRSlabState::SIR_SLAB_EMPTY ) );
 	++m_nCommittedSlabs;
 	++m_nColdActivations;
 	return true;
@@ -175,7 +175,7 @@ bool SIRSlabAllocator::activateSlab( uint32_t nIndex )
 
 uint8_t *SIRSlabAllocator::slot( uint32_t nSlab, uint32_t nSlot ) const
 {
-	return m_pBase + ( ( uint64_t )( nSlab ) ) * m_nSlabBytes + ( ( uint64_t )( nSlot ) ) * m_nStride;
+	return m_pBase + static_cast<uint64_t>( nSlab ) * m_nSlabBytes + static_cast<uint64_t>( nSlot ) * m_nStride;
 }
 
 void *SIRSlabAllocator::alloc( void )
@@ -198,7 +198,7 @@ void *SIRSlabAllocator::alloc( void )
 		// Keep a single warm slab out of partial/empty lists. Switching from
 		// empty to partial on every alloc/free pair would otherwise relink it.
 		unlink( nSlab );
-		m_pDescs[nSlab].nState = SIR_SLAB_ACTIVE;
+		m_pDescs[nSlab].nState = static_cast<uint32_t>( SIRSlabState::SIR_SLAB_ACTIVE );
 		m_nActiveSlab = nSlab;
 	}
 	sirSlabDesc_t& desc = m_pDescs[nSlab];
@@ -213,11 +213,11 @@ void *SIRSlabAllocator::alloc( void )
 	}
 	++desc.nLive;
 	++m_nLiveSlots;
-	const uint64_t nFlat = ( ( uint64_t )( nSlab ) ) * m_nSlotsPerSlab + nSlot;
+	const uint64_t nFlat = static_cast<uint64_t>( nSlab ) * m_nSlotsPerSlab + nSlot;
 	m_pLiveBits[nFlat / 64] |= 1ull << ( nFlat % 64 );
 	if ( desc.nLive == m_nSlotsPerSlab ) {
 		// Full slabs do not belong to any list until one slot is freed.
-		desc.nState = SIR_SLAB_FULL;
+		desc.nState = static_cast<uint32_t>( SIRSlabState::SIR_SLAB_FULL );
 		m_nActiveSlab = SIR_SLAB_NONE;
 	}
 	return slot( nSlab, nSlot );
@@ -228,35 +228,35 @@ bool SIRSlabAllocator::free( void *pMemory )
 	if ( m_pSegment == nullptr || pMemory == nullptr || m_nLiveSlots == 0 ) {
 		return false;
 	}
-	const uintptr_t nBase = ( ( uintptr_t )( m_pBase ) );
-	const uintptr_t nPtr = ( ( uintptr_t )( pMemory ) );
-	if ( nPtr < nBase || ( ( uint64_t )( nPtr - nBase ) ) >= ( ( uint64_t )( m_nSlabCount ) ) * m_nSlabBytes ) {
+	const uintptr_t nBase = reinterpret_cast<uintptr_t>(m_pBase);
+	const uintptr_t nPtr = reinterpret_cast<uintptr_t>(pMemory);
+	if ( nPtr < nBase || ( static_cast<uint64_t>( nPtr - nBase ) ) >= static_cast<uint64_t>( m_nSlabCount ) * m_nSlabBytes ) {
 		return false;
 	}
 	const uint64_t nOffset = nPtr - nBase;
-	const uint32_t nSlab = m_nSlabShift != 0 ? ( ( uint32_t )( nOffset >> m_nSlabShift ) ) : ( ( uint32_t )( nOffset / m_nSlabBytes ) );
+	const uint32_t nSlab = m_nSlabShift != 0 ? ( static_cast<uint32_t>( nOffset >> m_nSlabShift ) ) : ( static_cast<uint32_t>( nOffset / m_nSlabBytes ) );
 	const uint64_t nInside = m_nSlabShift != 0 ? nOffset & ( m_nSlabBytes - 1 ) : nOffset % m_nSlabBytes;
 	uint32_t nSlot = 0;
 	if ( m_nStrideShift != 0 ) {
 		if ( ( nInside & ( m_nStride - 1 ) ) != 0 ) {
 			return false;
 		}
-		nSlot = ( ( uint32_t )( nInside >> m_nStrideShift ) );
+		nSlot = static_cast<uint32_t>( nInside >> m_nStrideShift );
 	} else {
 		if ( nInside % m_nStride != 0 ) {
 			return false;
 		}
-		nSlot = ( ( uint32_t )( nInside / m_nStride ) );
+		nSlot = static_cast<uint32_t>( nInside / m_nStride );
 	}
 	if ( nSlot >= m_pDescs[nSlab].nFresh ) {
 		return false;
 	}
 	sirSlabDesc_t& desc = m_pDescs[nSlab];
-	if ( desc.nState != SIR_SLAB_PARTIAL && desc.nState != SIR_SLAB_FULL && desc.nState != SIR_SLAB_ACTIVE ) {
+	if ( desc.nState != static_cast<uint32_t>( SIRSlabState::SIR_SLAB_PARTIAL ) && desc.nState != static_cast<uint32_t>( SIRSlabState::SIR_SLAB_FULL ) && desc.nState != static_cast<uint32_t>( SIRSlabState::SIR_SLAB_ACTIVE ) ) {
 		return false;
 	}
 	// Validate liveness before modifying the intrusive free list in every build.
-	const uint64_t nFlat = ( ( uint64_t )( nSlab ) ) * m_nSlotsPerSlab + nSlot;
+	const uint64_t nFlat = static_cast<uint64_t>( nSlab ) * m_nSlotsPerSlab + nSlot;
 	const uint64_t nMask = 1ull << ( nFlat % 64 );
 	if ( ( m_pLiveBits[nFlat / 64] & nMask ) == 0 ) {
 		return false;
@@ -267,15 +267,15 @@ bool SIRSlabAllocator::free( void *pMemory )
 	desc.nFreeHead = nSlot;
 	--desc.nLive;
 	--m_nLiveSlots;
-	if ( nOldState == SIR_SLAB_ACTIVE ) {
+	if ( nOldState == static_cast<uint32_t>( SIRSlabState::SIR_SLAB_ACTIVE ) ) {
 		// Retain an empty active slab so immediate reuse is just a free-list pop.
 		return true;
 	}
-	if ( nOldState == SIR_SLAB_FULL ) {
-		link( nSlab, desc.nLive == 0 ? SIR_SLAB_EMPTY : SIR_SLAB_PARTIAL );
+	if ( nOldState == static_cast<uint32_t>( SIRSlabState::SIR_SLAB_FULL ) ) {
+		link( nSlab, desc.nLive == 0 ? static_cast<uint32_t>( SIRSlabState::SIR_SLAB_EMPTY ) : static_cast<uint32_t>( SIRSlabState::SIR_SLAB_PARTIAL ) );
 	} else if ( desc.nLive == 0 ) {
 		unlink( nSlab );
-		link( nSlab, SIR_SLAB_EMPTY );
+		link( nSlab, static_cast<uint32_t>( SIRSlabState::SIR_SLAB_EMPTY ) );
 	}
 	return true;
 }
@@ -310,7 +310,7 @@ bool SIRSlabAllocator::trimEmptySlabsTo( uint32_t nKeepWarm )
 	if ( m_nActiveSlab != SIR_SLAB_NONE && m_pDescs[m_nActiveSlab].nLive == 0 ) {
 		const uint32_t nEmpty = m_nActiveSlab;
 		m_nActiveSlab = SIR_SLAB_NONE;
-		link( nEmpty, SIR_SLAB_EMPTY );
+		link( nEmpty, static_cast<uint32_t>( SIRSlabState::SIR_SLAB_EMPTY ) );
 	}
 	uint32_t nWarm = 0;
 	for ( uint32_t i = m_nEmptyHead; i != SIR_SLAB_NONE; i = m_pDescs[i].nNext ) {
@@ -318,13 +318,13 @@ bool SIRSlabAllocator::trimEmptySlabsTo( uint32_t nKeepWarm )
 	}
 	while ( nWarm > nKeepWarm && m_nEmptyHead != SIR_SLAB_NONE ) {
 		const uint32_t nIndex = m_nEmptyHead;
-		if ( !m_pSegment->decommit( ( ( uint64_t )( nIndex ) ) * m_nSlabBytes, m_nSlabBytes ) ) {
+		if ( !m_pSegment->decommit( static_cast<uint64_t>( nIndex ) * m_nSlabBytes, m_nSlabBytes ) ) {
 			return false;
 		}
 		unlink( nIndex );
 		m_pDescs[nIndex].nFresh = 0;
 		m_pDescs[nIndex].nFreeHead = SIR_SLAB_NONE;
-		link( nIndex, SIR_SLAB_DECOMMITTED );
+		link( nIndex, static_cast<uint32_t>( SIRSlabState::SIR_SLAB_DECOMMITTED ) );
 		--m_nCommittedSlabs;
 		--nWarm;
 	}
@@ -371,13 +371,13 @@ bool SIRSlabAllocator::containsSlotAddress( const void *pMemory ) const
 	if ( m_pBase == nullptr || pMemory == nullptr ) {
 		return false;
 	}
-	const uintptr_t nBase = ( ( uintptr_t )( m_pBase ) );
-	const uintptr_t nPointer = ( ( uintptr_t )( pMemory ) );
+	const uintptr_t nBase = reinterpret_cast<uintptr_t>(m_pBase);
+	const uintptr_t nPointer = reinterpret_cast<uintptr_t>(pMemory);
 	if ( nPointer < nBase ) {
 		return false;
 	}
 	const uint64_t nOffset = nPointer - nBase;
-	if ( nOffset >= ( ( uint64_t )( m_nSlabCount ) ) * m_nSlabBytes ) {
+	if ( nOffset >= static_cast<uint64_t>( m_nSlabCount ) * m_nSlabBytes ) {
 		return false;
 	}
 	const uint64_t nInside = nOffset % m_nSlabBytes;
@@ -389,19 +389,19 @@ bool SIRSlabAllocator::getSlotIndex( const void *pMemory, uint64_t *pIndex ) con
 	if ( pIndex == nullptr || !containsSlotAddress( pMemory ) ) {
 		return false;
 	}
-	const uint64_t nOffset = ( ( uintptr_t )( pMemory ) ) - ( ( uintptr_t )( m_pBase ) );
-	const uint32_t nSlab = ( ( uint32_t )( nOffset / m_nSlabBytes ) );
-	const uint32_t nSlot = ( ( uint32_t )( nOffset % m_nSlabBytes / m_nStride ) );
+	const uint64_t nOffset = reinterpret_cast<uintptr_t>(pMemory) - reinterpret_cast<uintptr_t>(m_pBase);
+	const uint32_t nSlab = static_cast<uint32_t>( nOffset / m_nSlabBytes );
+	const uint32_t nSlot = static_cast<uint32_t>( nOffset % m_nSlabBytes / m_nStride );
 	if ( nSlot >= m_pDescs[nSlab].nFresh ) {
 		return false;
 	}
-	*pIndex = ( ( uint64_t )( nSlab ) ) * m_nSlotsPerSlab + nSlot;
+	*pIndex = static_cast<uint64_t>( nSlab ) * m_nSlotsPerSlab + nSlot;
 	return true;
 }
 
 uint64_t SIRSlabAllocator::getSlotIndexCapacity( void ) const
 {
-	return ( ( uint64_t )( m_nSlabCount ) ) * m_nSlotsPerSlab;
+	return static_cast<uint64_t>( m_nSlabCount ) * m_nSlotsPerSlab;
 }
 
 bool SIRSlabAllocator::owns( const void *pMemory ) const
@@ -409,8 +409,8 @@ bool SIRSlabAllocator::owns( const void *pMemory ) const
 	if ( !containsSlotAddress( pMemory ) ) {
 		return false;
 	}
-	const uint64_t nOffset = ( ( uintptr_t )( pMemory ) ) - ( ( uintptr_t )( m_pBase ) );
-	const uint32_t nSlab = ( ( uint32_t )( nOffset / m_nSlabBytes ) );
+	const uint64_t nOffset = reinterpret_cast<uintptr_t>(pMemory) - reinterpret_cast<uintptr_t>(m_pBase);
+	const uint32_t nSlab = static_cast<uint32_t>( nOffset / m_nSlabBytes );
 	return nOffset % m_nSlabBytes / m_nStride < m_pDescs[nSlab].nFresh && m_pDescs[nSlab].nLive != 0;
 }
 

@@ -41,104 +41,104 @@ static bool sirLangValidAlignment( uint32_t nAlignment ) noexcept
 	return nAlignment > 0 && nAlignment <= 64 && ( nAlignment & ( nAlignment - 1 ) ) == 0;
 }
 
-static sirLangTypeError_t sirLangAddType( sirLangTypeTable_t *pTable, const sirLangTypeDescriptor_t& descriptor, uint32_t *pIndex ) noexcept
+static SIRLangTypeError sirLangAddType( sirLangTypeTable_t *pTable, const sirLangTypeDescriptor_t& descriptor, uint32_t *pIndex ) noexcept
 {
 	if ( pTable == nullptr || pIndex == nullptr || pTable->pTypes == nullptr ) {
-		return SIR_LANG_TYPE_INVALID;
+		return SIRLangTypeError::SIR_LANG_TYPE_INVALID;
 	}
 	for ( uint32_t iType = 0; iType < pTable->nCount; ++iType ) {
 		if ( pTable->pTypes[iType].nTypeId == descriptor.nTypeId ) {
 			if ( memcmp( &pTable->pTypes[iType], &descriptor, sizeof( descriptor ) ) == 0 ) {
 				*pIndex = iType;
-				return SIR_LANG_TYPE_OK;
+				return SIRLangTypeError::SIR_LANG_TYPE_OK;
 			}
-			return SIR_LANG_TYPE_DUPLICATE_ID;
+			return SIRLangTypeError::SIR_LANG_TYPE_DUPLICATE_ID;
 		}
 	}
 	if ( pTable->nCount >= pTable->nCapacity ) {
-		return SIR_LANG_TYPE_CAPACITY;
+		return SIRLangTypeError::SIR_LANG_TYPE_CAPACITY;
 	}
 	*pIndex = pTable->nCount;
 	pTable->pTypes[pTable->nCount++] = descriptor;
-	return SIR_LANG_TYPE_OK;
+	return SIRLangTypeError::SIR_LANG_TYPE_OK;
 }
 
-sirLangTypeError_t SIRLangRegisterScalar( sirLangTypeTable_t *pTable, sirLangValueKind_t eScalar, uint32_t *pIndex ) noexcept
+SIRLangTypeError SIRLangRegisterScalar( sirLangTypeTable_t *pTable, SIRLangValueKind eScalar, uint32_t *pIndex ) noexcept
 {
-	if ( eScalar <= SIR_LANG_VALUE_UNKNOWN || eScalar >= SIR_LANG_VALUE_OTHER ) {
-		return SIR_LANG_TYPE_INVALID;
+	if ( eScalar <= SIRLangValueKind::SIR_LANG_VALUE_UNKNOWN || eScalar >= SIRLangValueKind::SIR_LANG_VALUE_OTHER ) {
+		return SIRLangTypeError::SIR_LANG_TYPE_INVALID;
 	}
 	uint32_t nBytes = 0;
 	switch ( eScalar ) {
-	case SIR_LANG_VALUE_VOID:
+	case SIRLangValueKind::SIR_LANG_VALUE_VOID:
 		nBytes = 0;
 		break;
-	case SIR_LANG_VALUE_BOOL:
-	case SIR_LANG_VALUE_I8:
-	case SIR_LANG_VALUE_U8:
+	case SIRLangValueKind::SIR_LANG_VALUE_BOOL:
+	case SIRLangValueKind::SIR_LANG_VALUE_I8:
+	case SIRLangValueKind::SIR_LANG_VALUE_U8:
 		nBytes = 1;
 		break;
-	case SIR_LANG_VALUE_I16:
-	case SIR_LANG_VALUE_U16:
-	case SIR_LANG_VALUE_F16:
+	case SIRLangValueKind::SIR_LANG_VALUE_I16:
+	case SIRLangValueKind::SIR_LANG_VALUE_U16:
+	case SIRLangValueKind::SIR_LANG_VALUE_F16:
 		nBytes = 2;
 		break;
-	case SIR_LANG_VALUE_I32:
-	case SIR_LANG_VALUE_U32:
-	case SIR_LANG_VALUE_F32:
+	case SIRLangValueKind::SIR_LANG_VALUE_I32:
+	case SIRLangValueKind::SIR_LANG_VALUE_U32:
+	case SIRLangValueKind::SIR_LANG_VALUE_F32:
 		nBytes = 4;
 		break;
-	case SIR_LANG_VALUE_I64:
-	case SIR_LANG_VALUE_U64:
-	case SIR_LANG_VALUE_F64:
-	case SIR_LANG_VALUE_ATOM:
+	case SIRLangValueKind::SIR_LANG_VALUE_I64:
+	case SIRLangValueKind::SIR_LANG_VALUE_U64:
+	case SIRLangValueKind::SIR_LANG_VALUE_F64:
+	case SIRLangValueKind::SIR_LANG_VALUE_ATOM:
 		nBytes = 8;
 		break;
 	default:
-		return SIR_LANG_TYPE_INVALID;
+		return SIRLangTypeError::SIR_LANG_TYPE_INVALID;
 	}
-	sirLangTypeDescriptor_t descriptor = {};
-	descriptor.nTypeId = SIRLangStableTypeId( 0, ( uint64_t )eScalar, SIR_LANG_ABI_REVISION );
+	sirLangTypeDescriptor_t descriptor {};
+	descriptor.nTypeId = SIRLangStableTypeId( 0, static_cast<uint64_t>(eScalar), SIR_LANG_ABI_REVISION );
 	descriptor.nBytes = nBytes;
 	descriptor.nAlignment = nBytes == 0 ? 1 : nBytes;
-	descriptor.nFlags = SIR_LANG_TYPE_FLAG_PLAIN_VALUE | SIR_LANG_TYPE_FLAG_SERIALIZABLE;
-	descriptor.eCategory = SIR_LANG_TYPE_SCALAR;
+	descriptor.nFlags = SIRLangTypeFlags::SIR_LANG_TYPE_FLAG_PLAIN_VALUE | SIRLangTypeFlags::SIR_LANG_TYPE_FLAG_SERIALIZABLE;
+	descriptor.eCategory = SIRLangTypeCategory::SIR_LANG_TYPE_SCALAR;
 	descriptor.eScalar = eScalar;
 	return sirLangAddType( pTable, descriptor, pIndex );
 }
 
-sirLangTypeError_t SIRLangRegisterNominal( sirLangTypeTable_t *pTable, const sirLangNominalLayout_t& layout, uint32_t *pIndex ) noexcept
+SIRLangTypeError SIRLangRegisterNominal( sirLangTypeTable_t *pTable, const sirLangNominalLayout_t& layout, uint32_t *pIndex ) noexcept
 {
 	const uint64_t nSchemaId = layout.nSchemaId;
 	const uint32_t nBytes = layout.nBytes;
 	const uint32_t nAlignment = layout.nAlignment;
 	if ( pTable == nullptr || nSchemaId == 0 || !sirLangValidAlignment( nAlignment ) || nBytes % nAlignment != 0 ) {
-		return SIR_LANG_TYPE_INVALID;
+		return SIRLangTypeError::SIR_LANG_TYPE_INVALID;
 	}
-	sirLangTypeDescriptor_t descriptor = {};
+	sirLangTypeDescriptor_t descriptor {};
 	descriptor.nTypeId = SIRLangStableTypeId( pTable->nModuleId, nSchemaId, SIR_LANG_ABI_REVISION );
 	descriptor.nSchemaId = nSchemaId;
 	descriptor.nBytes = nBytes;
 	descriptor.nAlignment = nAlignment;
-	descriptor.nFlags = SIR_LANG_TYPE_FLAG_PLAIN_VALUE | SIR_LANG_TYPE_FLAG_SERIALIZABLE;
-	descriptor.eCategory = SIR_LANG_TYPE_NOMINAL;
-	descriptor.eScalar = SIR_LANG_VALUE_OTHER;
+	descriptor.nFlags = SIRLangTypeFlags::SIR_LANG_TYPE_FLAG_PLAIN_VALUE | SIRLangTypeFlags::SIR_LANG_TYPE_FLAG_SERIALIZABLE;
+	descriptor.eCategory = SIRLangTypeCategory::SIR_LANG_TYPE_NOMINAL;
+	descriptor.eScalar = SIRLangValueKind::SIR_LANG_VALUE_OTHER;
 	return sirLangAddType( pTable, descriptor, pIndex );
 }
 
-static bool sirLangValidArity( sirLangTypeCategory_t eCategory, uint32_t nArguments ) noexcept
+static bool sirLangValidArity( SIRLangTypeCategory eCategory, uint32_t nArguments ) noexcept
 {
 	switch ( eCategory ) {
-	case SIR_LANG_TYPE_ARRAY:
-	case SIR_LANG_TYPE_STACK_LIST:
-	case SIR_LANG_TYPE_SLICE:
-	case SIR_LANG_TYPE_OPTION:
-	case SIR_LANG_TYPE_HANDLE:
-	case SIR_LANG_TYPE_VECTOR:
+	case SIRLangTypeCategory::SIR_LANG_TYPE_ARRAY:
+	case SIRLangTypeCategory::SIR_LANG_TYPE_STACK_LIST:
+	case SIRLangTypeCategory::SIR_LANG_TYPE_SLICE:
+	case SIRLangTypeCategory::SIR_LANG_TYPE_OPTION:
+	case SIRLangTypeCategory::SIR_LANG_TYPE_HANDLE:
+	case SIRLangTypeCategory::SIR_LANG_TYPE_VECTOR:
 		return nArguments == 1;
-	case SIR_LANG_TYPE_RESULT:
+	case SIRLangTypeCategory::SIR_LANG_TYPE_RESULT:
 		return nArguments == 2;
-	case SIR_LANG_TYPE_VARIANT:
+	case SIRLangTypeCategory::SIR_LANG_TYPE_VARIANT:
 		return nArguments >= 2 && nArguments <= SIR_LANG_MAX_TYPE_ARGUMENTS;
 	default:
 		return false;
@@ -163,7 +163,7 @@ static bool sirLangRoundUp( uint32_t nBytes, uint32_t nAlignment, uint32_t *pRes
 	return true;
 }
 
-sirLangTypeError_t SIRLangConstructType( sirLangTypeTable_t *pTable, sirLangTypeCategory_t eCategory,
+SIRLangTypeError SIRLangConstructType( sirLangTypeTable_t *pTable, SIRLangTypeCategory eCategory,
                                          const sirLangTypeArguments_t& arguments, uint32_t *pIndex ) noexcept
 {
 	const uint32_t *pArguments = arguments.pTypes;
@@ -171,22 +171,22 @@ sirLangTypeError_t SIRLangConstructType( sirLangTypeTable_t *pTable, sirLangType
 	const uint32_t nCapacity = arguments.nCapacity;
 	if ( pTable == nullptr || pTable->pTypes == nullptr || pArguments == nullptr || pIndex == nullptr || nArguments == 0 ||
 	     nArguments > SIR_LANG_MAX_TYPE_ARGUMENTS || !sirLangValidArity( eCategory, nArguments ) ) {
-		return SIR_LANG_TYPE_INVALID_ARGUMENT;
+		return SIRLangTypeError::SIR_LANG_TYPE_INVALID_ARGUMENT;
 	}
-	sirLangTypeDescriptor_t descriptor = {};
+	sirLangTypeDescriptor_t descriptor {};
 	descriptor.eCategory = eCategory;
-	descriptor.eScalar = SIR_LANG_VALUE_OTHER;
-	descriptor.nArgumentCount = ( uint8_t )nArguments;
+	descriptor.eScalar = SIRLangValueKind::SIR_LANG_VALUE_OTHER;
+	descriptor.nArgumentCount = static_cast<uint8_t>(nArguments);
 	descriptor.nCapacity = nCapacity;
 	descriptor.nAlignment = 1;
 	uint32_t nMaxSize = 0;
 	for ( uint32_t iArgument = 0; iArgument < nArguments; ++iArgument ) {
 		if ( pArguments[iArgument] >= pTable->nCount ) {
-			return SIR_LANG_TYPE_MISSING_ARGUMENT;
+			return SIRLangTypeError::SIR_LANG_TYPE_MISSING_ARGUMENT;
 		}
 		const sirLangTypeDescriptor_t& argument = pTable->pTypes[pArguments[iArgument]];
-		if ( argument.eScalar == SIR_LANG_VALUE_VOID || argument.nBytes == 0 || ( argument.nFlags & SIR_LANG_TYPE_FLAG_BORROWED ) ) {
-			return SIR_LANG_TYPE_INVALID_ARGUMENT;
+		if ( argument.eScalar == SIRLangValueKind::SIR_LANG_VALUE_VOID || argument.nBytes == 0 || ( argument.nFlags & SIRLangTypeFlags::SIR_LANG_TYPE_FLAG_BORROWED ) ) {
+			return SIRLangTypeError::SIR_LANG_TYPE_INVALID_ARGUMENT;
 		}
 		descriptor.szArgumentTypes[iArgument] = pArguments[iArgument];
 		if ( argument.nAlignment > descriptor.nAlignment ) {
@@ -198,49 +198,49 @@ sirLangTypeError_t SIRLangConstructType( sirLangTypeTable_t *pTable, sirLangType
 	}
 	const sirLangTypeDescriptor_t& first = pTable->pTypes[pArguments[0]];
 	switch ( eCategory ) {
-	case SIR_LANG_TYPE_ARRAY:
-	case SIR_LANG_TYPE_VECTOR:
+	case SIRLangTypeCategory::SIR_LANG_TYPE_ARRAY:
+	case SIRLangTypeCategory::SIR_LANG_TYPE_VECTOR:
 		if ( nCapacity == 0 || !sirLangMulFits( first.nBytes, nCapacity, &descriptor.nBytes ) ) {
-			return SIR_LANG_TYPE_OVERFLOW;
+			return SIRLangTypeError::SIR_LANG_TYPE_OVERFLOW;
 		}
-		descriptor.nFlags = SIR_LANG_TYPE_FLAG_PLAIN_VALUE | SIR_LANG_TYPE_FLAG_SERIALIZABLE;
+		descriptor.nFlags = SIRLangTypeFlags::SIR_LANG_TYPE_FLAG_PLAIN_VALUE | SIRLangTypeFlags::SIR_LANG_TYPE_FLAG_SERIALIZABLE;
 		break;
-	case SIR_LANG_TYPE_STACK_LIST:
+	case SIRLangTypeCategory::SIR_LANG_TYPE_STACK_LIST:
 		if ( nCapacity == 0 || !sirLangMulFits( first.nBytes, nCapacity, &descriptor.nBytes ) || descriptor.nBytes > UINT32_MAX - 4 ) {
-			return SIR_LANG_TYPE_OVERFLOW;
+			return SIRLangTypeError::SIR_LANG_TYPE_OVERFLOW;
 		}
 		descriptor.nBytes += 4;
-		descriptor.nFlags = SIR_LANG_TYPE_FLAG_PLAIN_VALUE;
+		descriptor.nFlags = SIRLangTypeFlags::SIR_LANG_TYPE_FLAG_PLAIN_VALUE;
 		break;
-	case SIR_LANG_TYPE_SLICE:
+	case SIRLangTypeCategory::SIR_LANG_TYPE_SLICE:
 		descriptor.nBytes = 16;
 		descriptor.nAlignment = 8;
-		descriptor.nFlags = SIR_LANG_TYPE_FLAG_BORROWED;
+		descriptor.nFlags = SIRLangTypeFlags::SIR_LANG_TYPE_FLAG_BORROWED;
 		break;
-	case SIR_LANG_TYPE_HANDLE:
+	case SIRLangTypeCategory::SIR_LANG_TYPE_HANDLE:
 		descriptor.nBytes = 16;
 		descriptor.nAlignment = 8;
-		descriptor.nFlags = SIR_LANG_TYPE_FLAG_PLAIN_VALUE | SIR_LANG_TYPE_FLAG_SERIALIZABLE;
+		descriptor.nFlags = SIRLangTypeFlags::SIR_LANG_TYPE_FLAG_PLAIN_VALUE | SIRLangTypeFlags::SIR_LANG_TYPE_FLAG_SERIALIZABLE;
 		break;
-	case SIR_LANG_TYPE_OPTION:
-	case SIR_LANG_TYPE_RESULT:
-	case SIR_LANG_TYPE_VARIANT:
+	case SIRLangTypeCategory::SIR_LANG_TYPE_OPTION:
+	case SIRLangTypeCategory::SIR_LANG_TYPE_RESULT:
+	case SIRLangTypeCategory::SIR_LANG_TYPE_VARIANT:
 		if ( !sirLangRoundUp( nMaxSize, descriptor.nAlignment, &descriptor.nBytes ) ||
 		     descriptor.nBytes > UINT32_MAX - descriptor.nAlignment ) {
-			return SIR_LANG_TYPE_OVERFLOW;
+			return SIRLangTypeError::SIR_LANG_TYPE_OVERFLOW;
 		}
 		descriptor.nBytes += descriptor.nAlignment;
-		descriptor.nFlags = SIR_LANG_TYPE_FLAG_PLAIN_VALUE | SIR_LANG_TYPE_FLAG_SERIALIZABLE;
+		descriptor.nFlags = SIRLangTypeFlags::SIR_LANG_TYPE_FLAG_PLAIN_VALUE | SIRLangTypeFlags::SIR_LANG_TYPE_FLAG_SERIALIZABLE;
 		break;
 	default:
-		return SIR_LANG_TYPE_INVALID_ARGUMENT;
+		return SIRLangTypeError::SIR_LANG_TYPE_INVALID_ARGUMENT;
 	}
 	uint32_t nAligned = 0;
 	if ( !sirLangRoundUp( descriptor.nBytes, descriptor.nAlignment, &nAligned ) ) {
-		return SIR_LANG_TYPE_OVERFLOW;
+		return SIRLangTypeError::SIR_LANG_TYPE_OVERFLOW;
 	}
 	descriptor.nBytes = nAligned;
-	uint64_t nHash = SIRLangStableTypeId( 0, ( uint64_t )eCategory, SIR_LANG_ABI_REVISION );
+	uint64_t nHash = SIRLangStableTypeId( 0, static_cast<uint64_t>(eCategory), SIR_LANG_ABI_REVISION );
 	nHash = sirLangHashWord( nHash, nCapacity );
 	for ( uint32_t iArgument = 0; iArgument < nArguments; ++iArgument ) {
 		nHash = sirLangHashWord( nHash, pTable->pTypes[pArguments[iArgument]].nTypeId );

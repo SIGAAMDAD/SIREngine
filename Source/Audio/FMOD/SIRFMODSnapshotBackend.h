@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRFMODSNAPSHOTBACKEND_H__
-#define __SIRENGINE_SIRFMODSNAPSHOTBACKEND_H__
+#ifndef __SIR_FMODSNAPSHOTBACKEND_H__
+#define __SIR_FMODSNAPSHOTBACKEND_H__
 
 #include <Core/SIRPCH.h>
 
@@ -39,7 +39,7 @@ typedef struct sirFMODSnapshotNativeOps_s
 	int32_t ( *resolveSnapshot )( void *pUserData, void *pStudio, const char *szPath, void **ppDescription ) noexcept;
 	int32_t ( *createInstance )( void *pUserData, void *pDescription, void **ppInstance ) noexcept;
 	int32_t ( *startInstance )( void *pUserData, void *pInstance ) noexcept;
-	int32_t ( *stopInstance )( void *pUserData, void *pInstance, sirAudioStopMode_t eMode ) noexcept;
+	int32_t ( *stopInstance )( void *pUserData, void *pInstance, SIRAudioStopMode eMode ) noexcept;
 	int32_t ( *releaseInstance )( void *pUserData, void *pInstance ) noexcept;
 } sirFMODSnapshotNativeOps_t;
 
@@ -61,7 +61,7 @@ class SIRFMODSnapshotBackend
 private:
 	SIRFMODContext *m_pContext = nullptr;
 	const sirContainerAllocator_t *m_pAllocator = nullptr;
-	sirFMODSnapshotNativeOps_t m_Ops = {};
+	sirFMODSnapshotNativeOps_t m_Ops {};
 	sirFMODSnapshotRecord_t *m_pSnapshots = nullptr;
 	uint64_t m_nContextEpoch = 0;
 	uint32_t m_nCapacity = 0;
@@ -71,9 +71,9 @@ private:
 
 	bool isReady( void ) const noexcept;
 	bool findSnapshot( uint64_t nSnapshotId, uint32_t& iIndex ) const noexcept;
-	sirAudioResult_t releaseInstance( sirFMODSnapshotRecord_t& record, bool bStop, sirAudioStopMode_t eMode ) noexcept;
+	SIRAudioResult releaseInstance( sirFMODSnapshotRecord_t& record, bool bStop, SIRAudioStopMode eMode ) noexcept;
 	void releaseStorage( void ) noexcept;
-	sirAudioResult_t registerSnapshotInternal( uint64_t nSnapshotId, const char *szPath, SIRFMODBankStore *pBankStore,
+	SIRAudioResult registerSnapshotInternal( uint64_t nSnapshotId, const char *szPath, SIRFMODBankStore *pBankStore,
 	                                           uint64_t nPackageId ) noexcept;
 
 public:
@@ -82,16 +82,16 @@ public:
 	SIRFMODSnapshotBackend( const SIRFMODSnapshotBackend& ) = delete;
 	SIRFMODSnapshotBackend& operator=( const SIRFMODSnapshotBackend& ) = delete;
 
-	sirAudioResult_t configure( SIRFMODContext *pContext, const sirContainerAllocator_t *pAllocator, const sirFMODSnapshotNativeOps_t& ops,
+	SIRAudioResult configure( SIRFMODContext *pContext, const sirContainerAllocator_t *pAllocator, const sirFMODSnapshotNativeOps_t& ops,
 	                            uint32_t nMaxSnapshots ) noexcept;
-	sirAudioResult_t initialize( void ) noexcept;
-	sirAudioResult_t shutdown( void ) noexcept;
-	sirAudioResult_t registerSnapshot( uint64_t nSnapshotId, const char *szPath ) noexcept;
-	sirAudioResult_t registerSnapshotFromBank( uint64_t nSnapshotId, uint64_t nPackageId, SIRFMODBankStore *pBankStore,
+	SIRAudioResult initialize( void ) noexcept;
+	SIRAudioResult shutdown( void ) noexcept;
+	SIRAudioResult registerSnapshot( uint64_t nSnapshotId, const char *szPath ) noexcept;
+	SIRAudioResult registerSnapshotFromBank( uint64_t nSnapshotId, uint64_t nPackageId, SIRFMODBankStore *pBankStore,
 	                                           const char *szPath ) noexcept;
-	sirAudioResult_t unregisterSnapshot( uint64_t nSnapshotId ) noexcept;
-	sirAudioResult_t startSnapshot( uint64_t nSnapshotId ) noexcept;
-	sirAudioResult_t stopSnapshot( uint64_t nSnapshotId, sirAudioStopMode_t eMode ) noexcept;
+	SIRAudioResult unregisterSnapshot( uint64_t nSnapshotId ) noexcept;
+	SIRAudioResult startSnapshot( uint64_t nSnapshotId ) noexcept;
+	SIRAudioResult stopSnapshot( uint64_t nSnapshotId, SIRAudioStopMode eMode ) noexcept;
 	uint32_t getSnapshotCount( void ) const noexcept;
 	bool isBoundTo( const SIRFMODContext *pContext ) const noexcept;
 	uint32_t getActiveInstanceCount( void ) const noexcept;
@@ -100,4 +100,4 @@ public:
 
 sirFMODSnapshotNativeOps_t sirGetFMODSnapshotNativeOps( void ) noexcept;
 
-#endif // __SIRENGINE_SIRFMODSNAPSHOTBACKEND_H__
+#endif // __SIR_FMODSNAPSHOTBACKEND_H__

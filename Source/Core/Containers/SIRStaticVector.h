@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSTATICVECTOR_H__
-#define __SIRENGINE_SIRSTATICVECTOR_H__
+#ifndef __SIR_STATICVECTOR_H__
+#define __SIR_STATICVECTOR_H__
 
 #include <Core/SIRPCH.h>
 
@@ -42,11 +42,11 @@ private:
 
 	T *slot( uint32_t iIndex ) noexcept
 	{
-		return ( T * )( m_szStorage + ( size_t )iIndex * sizeof( T ) );
+		return ( T * )( m_szStorage + static_cast<size_t>(iIndex * sizeof(  T  )) );
 	}
 	const T *slot( uint32_t iIndex ) const noexcept
 	{
-		return ( const T * )( m_szStorage + ( size_t )iIndex * sizeof( T ) );
+		return ( const T * )( m_szStorage + static_cast<size_t>(iIndex * sizeof(  T  )) );
 	}
 
 public:
@@ -103,39 +103,39 @@ public:
 		return *slot( iIndex );
 	}
 
-	sirContainerResult_t tryReserve( uint32_t nCapacity ) noexcept
+	SIRContainerResult tryReserve( uint32_t nCapacity ) noexcept
 	{
-		return nCapacity <= N ? SIR_CONTAINER_OK : SIR_CONTAINER_CAPACITY_EXCEEDED;
+		return nCapacity <= N ? SIRContainerResult::SIR_CONTAINER_OK : SIRContainerResult::SIR_CONTAINER_CAPACITY_EXCEEDED;
 	}
 
 	template <typename... Args>
-	sirContainerResult_t tryEmplaceBack( Args&&...args )
+	SIRContainerResult tryEmplaceBack( Args&&...args )
 	{
 		if ( m_nSize == N ) {
-			return SIR_CONTAINER_CAPACITY_EXCEEDED;
+			return SIRContainerResult::SIR_CONTAINER_CAPACITY_EXCEEDED;
 		}
 		new ( slot( m_nSize ) ) T( std::forward<Args>( args )... );
 		++m_nSize;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
-	sirContainerResult_t tryPushBack( const T& value )
+	SIRContainerResult tryPushBack( const T& value )
 	{
 		return tryEmplaceBack( value );
 	}
-	sirContainerResult_t tryPushBack( T&& value )
+	SIRContainerResult tryPushBack( T&& value )
 	{
 		return tryEmplaceBack( std::move( value ) );
 	}
 
-	sirContainerResult_t tryPopBack( void ) noexcept
+	SIRContainerResult tryPopBack( void ) noexcept
 	{
 		if ( m_nSize == 0 ) {
-			return SIR_CONTAINER_EMPTY;
+			return SIRContainerResult::SIR_CONTAINER_EMPTY;
 		}
 		--m_nSize;
 		slot( m_nSize )->~T();
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
 	void clear( void ) noexcept
@@ -148,8 +148,8 @@ public:
 
 	sirContainerFootprint_t getFootprint( void ) const noexcept
 	{
-		return { ( uint64_t )N * sizeof( T ), 0, 0, 0, ( uint64_t )m_nSize * sizeof( T ) };
+		return { static_cast<uint64_t>(N * sizeof(  T  )), 0, 0, 0, static_cast<uint64_t>(m_nSize * sizeof(  T  )) };
 	}
 };
 
-#endif // __SIRENGINE_SIRSTATICVECTOR_H__
+#endif // __SIR_STATICVECTOR_H__

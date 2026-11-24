@@ -8,14 +8,17 @@ License, v2. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIREDITORCOMPLEXWRITER_H__
-#define __SIRENGINE_SIREDITORCOMPLEXWRITER_H__
+#ifndef __SIR_EDITORCOMPLEXWRITER_H__
+#define __SIR_EDITORCOMPLEXWRITER_H__
+
 #include <Core/SIRPCH.h>
+
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
     #pragma once
 #endif
 // clang-format on
+
 #include <Editor/Scene/SIREditorTextWriter.h>
 
 // Bounded syntactic validation for text-scene constructors, nested arrays,
@@ -26,7 +29,7 @@ bool sirEditorValidateComplexValue( const char *pszValue, uint32_t nLength ) noe
 
 // Lossless source-span replacement, supporting complex Godot text syntax.
 // On failure the output remains unchanged; caller-owned buffers are required.
-sirEditorTextWriteResult_t sirEditorWriteComplexPatches( const char *pszSource, size_t nSourceBytes,
+SIREditorTextWriteResult sirEditorWriteComplexPatches( const char *pszSource, size_t nSourceBytes,
                                                          const sirEditorTextPropertyIndex_t& index, const sirEditorTextEdit_t *pEdits,
                                                          uint32_t nEdits, char *pszOutput, size_t nCapacity, size_t *pOutBytes ) noexcept;
-#endif // __SIRENGINE_SIREDITORCOMPLEXWRITER_H__
+#endif // __SIR_EDITORCOMPLEXWRITER_H__

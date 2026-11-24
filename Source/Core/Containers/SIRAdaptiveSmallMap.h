@@ -41,10 +41,10 @@ public:
 		}
 		return nullptr;
 	}
-	sirContainerResult_t tryInsert( const K& key, const V& value )
+	SIRContainerResult tryInsert( const K& key, const V& value )
 	{
 		if ( find( key ) != nullptr ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		if ( m_pHash != nullptr ) {
 			return m_pHash->tryInsert( key, value );
@@ -53,18 +53,18 @@ public:
 			return m_inline.tryEmplaceBack( key, value );
 		}
 		void *pMemory = nullptr;
-		sirContainerResult_t eResult = SIRRawStorage::tryAllocate( m_pAllocator, sizeof( SIRFlatHashMap<K, V, Hash, Equal> ),
+		SIRContainerResult eResult = SIRRawStorage::tryAllocate( m_pAllocator, sizeof( SIRFlatHashMap<K, V, Hash, Equal> ),
 		                                                           alignof( SIRFlatHashMap<K, V, Hash, Equal> ), &pMemory );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		auto *pNew = new ( pMemory ) SIRFlatHashMap<K, V, Hash, Equal>( m_pAllocator, m_hash, m_equal );
 		try {
 			eResult = pNew->tryReserve( INLINE_COUNT + 1 );
-			for ( uint32_t iIndex = 0; eResult == SIR_CONTAINER_OK && iIndex < m_inline.getSize(); ++iIndex ) {
+			for ( uint32_t iIndex = 0; eResult == SIRContainerResult::SIR_CONTAINER_OK && iIndex < m_inline.getSize(); ++iIndex ) {
 				eResult = pNew->tryInsert( m_inline[iIndex].first, m_inline[iIndex].second );
 			}
-			if ( eResult == SIR_CONTAINER_OK ) {
+			if ( eResult == SIRContainerResult::SIR_CONTAINER_OK ) {
 				eResult = pNew->tryInsert( key, value );
 			}
 		} catch ( ... ) {
@@ -72,14 +72,14 @@ public:
 			SIRRawStorage::deallocate( m_pAllocator, pNew, sizeof( *pNew ), alignof( SIRFlatHashMap<K, V, Hash, Equal> ) );
 			throw;
 		}
-		if ( eResult != SIR_CONTAINER_OK ) {
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			pNew->~SIRFlatHashMap<K, V, Hash, Equal>();
 			SIRRawStorage::deallocate( m_pAllocator, pNew, sizeof( *pNew ), alignof( SIRFlatHashMap<K, V, Hash, Equal> ) );
 			return eResult;
 		}
 		m_inline.clear();
 		m_pHash = pNew;
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 	bool erase( const K& key )
 	{

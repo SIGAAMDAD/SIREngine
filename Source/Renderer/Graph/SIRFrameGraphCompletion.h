@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRFRAMEGRAPHCOMPLETION_H__
-#define __SIRENGINE_SIRFRAMEGRAPHCOMPLETION_H__
+#ifndef __SIR_FRAMEGRAPHCOMPLETION_H__
+#define __SIR_FRAMEGRAPHCOMPLETION_H__
 
 #include <Core/SIRPCH.h>
 
@@ -33,20 +33,20 @@ typedef struct sirFrameGraphProviderLaneMap_s
 	uint32_t nProviderGeneration;
 	uint32_t nDeviceGeneration;
 	uint32_t nLaneCount;
-	uint32_t szQueueToLane[SIR_GRAPHICS_QUEUE_COUNT];
+	uint32_t szQueueToLane[SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT];
 } sirFrameGraphProviderLaneMap_t;
 
 // Build retirement REQUIREMENTS from submitted fence values. This result
 // must never be supplied to GRDG as an OBSERVED completion until every
 // named graphics fence has actually completed.
-sirGraphicsResult_t sirFrameGraphProviderRequiredCompletion( const sirFrameGraphNativeOutput_t& output,
+SIRGraphicsResult sirFrameGraphProviderRequiredCompletion( const sirFrameGraphNativeOutput_t& output,
 															 const sirFrameGraphProviderLaneMap_t& mapping,
 															 sirProviderCompletionSet_t *pCompletion ) noexcept;
 
 // Poll every submitted queue fence. Only a fully completed set may be used
 // with SIRResourceDerivedRegistry::updateProviderCompletion().
-sirGraphicsResult_t sirFrameGraphProviderObservedCompletion( SIRRenderingDevice *pDevice, const sirFrameGraphNativeOutput_t& output,
+SIRGraphicsResult sirFrameGraphProviderObservedCompletion( SIRRenderingDevice *pDevice, const sirFrameGraphNativeOutput_t& output,
 															 const sirFrameGraphProviderLaneMap_t& mapping,
 															 sirProviderCompletionSet_t *pCompletion ) noexcept;
 
-#endif // __SIRENGINE_SIRFRAMEGRAPHCOMPLETION_H__
+#endif // __SIR_FRAMEGRAPHCOMPLETION_H__

@@ -12,8 +12,8 @@ express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIRD3D9RESOURCES_H__
-#define __SIRENGINE_SIRD3D9RESOURCES_H__
+#ifndef __SIR_D3_D9_RESOURCES_H__
+#define __SIR_D3_D9_RESOURCES_H__
 #include <Core/SIRPCH.h>
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
 #pragma once
@@ -23,7 +23,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 typedef struct sirD3D9ResourceSlot_s
 {
 	uint32_t nGeneration;
-	sirGraphicsHandleType_t eType;
+	SIRGraphicsHandleType eType;
 	uint64_t nBytes;
 	uint64_t nRetireValue;
 	void *pNative;
@@ -41,15 +41,15 @@ typedef struct sirD3D9ResourceTable_s
 	uint64_t nPeakBytes;
 } sirD3D9ResourceTable_t;
 
-sirGraphicsResult_t sirD3D9ResourcesInitialize( sirD3D9ResourceTable_t *pTable, sirD3D9ResourceSlot_t *pSlots, uint32_t nCapacity,
+SIRGraphicsResult sirD3D9ResourcesInitialize( sirD3D9ResourceTable_t *pTable, sirD3D9ResourceSlot_t *pSlots, uint32_t nCapacity,
                                                 uint64_t nBudgetBytes ) noexcept;
-sirGraphicsResult_t sirD3D9ResourcesCanAllocate( const sirD3D9ResourceTable_t *pTable, uint64_t nBytes ) noexcept;
-sirGraphicsResult_t sirD3D9ResourcesInsert( sirD3D9ResourceTable_t *pTable, sirGraphicsHandleType_t eType, uint64_t nBytes, void *pNative,
+SIRGraphicsResult sirD3D9ResourcesCanAllocate( const sirD3D9ResourceTable_t *pTable, uint64_t nBytes ) noexcept;
+SIRGraphicsResult sirD3D9ResourcesInsert( sirD3D9ResourceTable_t *pTable, SIRGraphicsHandleType eType, uint64_t nBytes, void *pNative,
                                             sirGraphicsHandle_t *pHandle ) noexcept;
-sirGraphicsResult_t sirD3D9ResourcesLookup( const sirD3D9ResourceTable_t *pTable, sirGraphicsHandle_t hHandle, void **ppNative ) noexcept;
-sirGraphicsResult_t sirD3D9ResourcesRetire( sirD3D9ResourceTable_t *pTable, sirGraphicsHandle_t hHandle,
+SIRGraphicsResult sirD3D9ResourcesLookup( const sirD3D9ResourceTable_t *pTable, sirGraphicsHandle_t hHandle, void **ppNative ) noexcept;
+SIRGraphicsResult sirD3D9ResourcesRetire( sirD3D9ResourceTable_t *pTable, sirGraphicsHandle_t hHandle,
                                             uint64_t nCompletionValue ) noexcept;
 // Returns one native pointer at a time for the owner to release, after GPU completion.
 void *sirD3D9ResourcesCollect( sirD3D9ResourceTable_t *pTable, uint64_t nCompletedValue ) noexcept;
 void sirD3D9ResourcesInvalidate( sirD3D9ResourceTable_t *pTable ) noexcept;
-#endif // __SIRENGINE_SIRD3D9RESOURCES_H__
+#endif // __SIR_D3_D9_RESOURCES_H__

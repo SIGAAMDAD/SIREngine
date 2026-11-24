@@ -59,7 +59,7 @@ static bool sirVFSValidUtf8( const uint8_t *pBytes, uint32_t nLength ) noexcept
 
 static uint8_t sirVFSFoldAscii( uint8_t nByte ) noexcept
 {
-	return nByte >= 'A' && nByte <= 'Z' ? ( uint8_t )( nByte + ( 'a' - 'A' ) ) : nByte;
+	return nByte >= 'A' && nByte <= 'Z' ? static_cast<uint8_t>(  nByte + ( 'a' - 'A' )  ) : nByte;
 }
 
 static bool sirVFSReservedSegment( const char *pszSegment, uint32_t nLength ) noexcept
@@ -72,65 +72,66 @@ static bool sirVFSReservedSegment( const char *pszSegment, uint32_t nLength ) no
 		++nStem;
 	}
 	if ( nStem == 3 ) {
-		const uint8_t a = sirVFSFoldAscii( ( uint8_t )pszSegment[0] );
-		const uint8_t b = sirVFSFoldAscii( ( uint8_t )pszSegment[1] );
-		const uint8_t c = sirVFSFoldAscii( ( uint8_t )pszSegment[2] );
+		const uint8_t a = sirVFSFoldAscii( static_cast<uint8_t>(pszSegment[0]) );
+		const uint8_t b = sirVFSFoldAscii( static_cast<uint8_t>(pszSegment[1]) );
+		const uint8_t c = sirVFSFoldAscii( static_cast<uint8_t>(pszSegment[2]) );
 		if ( ( a == 'c' && b == 'o' && c == 'n' ) || ( a == 'p' && b == 'r' && c == 'n' ) || ( a == 'a' && b == 'u' && c == 'x' ) ||
 		     ( a == 'n' && b == 'u' && c == 'l' ) ) {
 			return true;
 		}
 	}
 	if ( nStem == 4 || nStem == 5 ) {
-		const uint8_t a = sirVFSFoldAscii( ( uint8_t )pszSegment[0] );
-		const uint8_t b = sirVFSFoldAscii( ( uint8_t )pszSegment[1] );
-		const uint8_t c = sirVFSFoldAscii( ( uint8_t )pszSegment[2] );
-		const uint8_t d = ( uint8_t )pszSegment[3];
+		const uint8_t a = sirVFSFoldAscii( static_cast<uint8_t>(pszSegment[0]) );
+		const uint8_t b = sirVFSFoldAscii( static_cast<uint8_t>(pszSegment[1]) );
+		const uint8_t c = sirVFSFoldAscii( static_cast<uint8_t>(pszSegment[2]) );
+		const uint8_t d = static_cast<uint8_t>(pszSegment[3]);
 		const bool bDevice = ( a == 'c' && b == 'o' && c == 'm' ) || ( a == 'l' && b == 'p' && c == 't' );
 		if ( nStem == 4 ) {
 			return bDevice && d >= '1' && d <= '9';
 		}
-		const uint8_t nSuperscript = ( uint8_t )pszSegment[4];
+		const uint8_t nSuperscript = static_cast<uint8_t>(pszSegment[4]);
 		return bDevice && d == 0xc2 && ( nSuperscript == 0xb9 || nSuperscript == 0xb2 || nSuperscript == 0xb3 );
 	}
 	return false;
 }
 
-sirVFSPathResult_t SIRVFSPath::normalize( const char *pszInput, uint32_t nInputBytes, sirVFSPath_t *pOutput ) noexcept
+SIRVFSPathResult SIRVFSPath::normalize( const char *pszInput, uint32_t nInputBytes, sirVFSPath_t *pOutput ) noexcept
 {
 	if ( pOutput == nullptr || pszInput == nullptr || nInputBytes == 0 ) {
-		return SIR_VFS_PATH_INVALID_ARGUMENT;
+		return SIRVFSPathResult::SIR_VFS_PATH_INVALID_ARGUMENT;
 	}
 	// Reject oversized inputs before reading or computing a potentially
 	// overflowing buffer length. Output is only changed on success.
 	if ( nInputBytes >= SIR_VFS_MAX_PATH_BYTES ) {
-		return SIR_VFS_PATH_TOO_LONG;
+		return SIRVFSPathResult::SIR_VFS_PATH_TOO_LONG;
 	}
-	if ( !sirVFSValidUtf8( ( const uint8_t * )pszInput, nInputBytes ) ) {
-		return SIR_VFS_PATH_INVALID_ENCODING;
+	if ( !sirVFSValidUtf8( reinterpret_cast<const uint8_t *>(pszInput), nInputBytes ) ) {
+		return SIRVFSPathResult::SIR_VFS_PATH_INVALID_ENCODING;
 	}
 
 	uint32_t nNamespaceBytes = 0;
 	while ( nNamespaceBytes < nInputBytes && pszInput[nNamespaceBytes] != ':' ) {
-		const uint8_t nByte = sirVFSFoldAscii( ( uint8_t )pszInput[nNamespaceBytes] );
+		const uint8_t nByte = sirVFSFoldAscii( static_cast<uint8_t>(pszInput[nNamespaceBytes]) );
 		if ( !( nByte >= 'a' && nByte <= 'z' ) &&
 		     !( nNamespaceBytes != 0 && ( ( nByte >= '0' && nByte <= '9' ) || nByte == '_' || nByte == '-' ) ) ) {
-			return SIR_VFS_PATH_INVALID_NAMESPACE;
+			return SIRVFSPathResult::SIR_VFS_PATH_INVALID_NAMESPACE;
 		}
 		++nNamespaceBytes;
 	}
 	if ( nNamespaceBytes < 2 || nNamespaceBytes > SIR_VFS_MAX_NAMESPACE_BYTES || nNamespaceBytes + 1 >= nInputBytes ||
 	     pszInput[nNamespaceBytes + 1] != '/' ) {
-		return SIR_VFS_PATH_INVALID_NAMESPACE;
+		return SIRVFSPathResult::SIR_VFS_PATH_INVALID_NAMESPACE;
 	}
-	sirVFSPath_t candidate = {};
+	sirVFSPath_t candidate {};
 	for ( uint32_t i = 0; i < nNamespaceBytes; ++i ) {
-		candidate.szPath[i] = ( char )sirVFSFoldAscii( ( uint8_t )pszInput[i] );
+		candidate.szPath[i] = static_cast<char>(sirVFSFoldAscii( static_cast<uint8_t>(pszInput[i]) ));
 	}
 	candidate.szPath[nNamespaceBytes] = ':';
 	candidate.szPath[nNamespaceBytes + 1] = '/';
-	candidate.nNamespaceLength = ( uint8_t )nNamespaceBytes;
+	candidate.nNamespaceLength = static_cast<uint8_t>(nNamespaceBytes);
 	uint32_t nWritten = nNamespaceBytes + 2;
-	uint16_t szComponentStart[SIR_VFS_MAX_PATH_BYTES / 2] = {};
+	uint16_t szComponentStart[SIR_VFS_MAX_PATH_BYTES / 2];
+	memset( szComponentStart, 0, sizeof( szComponentStart ) );
 	uint32_t nComponents = 0;
 	uint32_t nInput = nNamespaceBytes + 2;
 	while ( nInput < nInputBytes ) {
@@ -144,7 +145,7 @@ sirVFSPathResult_t SIRVFSPath::normalize( const char *pszInput, uint32_t nInputB
 		while ( nInput < nInputBytes && pszInput[nInput] != '/' && pszInput[nInput] != '\\' ) {
 			const char ch = pszInput[nInput];
 			if ( ch == ':' || ch == '%' || ch == '<' || ch == '>' || ch == '|' || ch == '"' || ch == '?' || ch == '*' ) {
-				return SIR_VFS_PATH_FORBIDDEN;
+				return SIRVFSPathResult::SIR_VFS_PATH_FORBIDDEN;
 			}
 			++nInput;
 		}
@@ -154,26 +155,26 @@ sirVFSPathResult_t SIRVFSPath::normalize( const char *pszInput, uint32_t nInputB
 		}
 		if ( nLength == 2 && pszInput[nStart] == '.' && pszInput[nStart + 1] == '.' ) {
 			if ( nComponents == 0 ) {
-				return SIR_VFS_PATH_FORBIDDEN;
+				return SIRVFSPathResult::SIR_VFS_PATH_FORBIDDEN;
 			}
 			nWritten = szComponentStart[--nComponents];
 			continue;
 		}
 		if ( sirVFSReservedSegment( pszInput + nStart, nLength ) ) {
-			return SIR_VFS_PATH_INVALID_SEGMENT;
+			return SIRVFSPathResult::SIR_VFS_PATH_INVALID_SEGMENT;
 		}
 		if ( nWritten + ( nComponents != 0 ? 1u : 0u ) + nLength >= SIR_VFS_MAX_PATH_BYTES ) {
-			return SIR_VFS_PATH_TOO_LONG;
+			return SIRVFSPathResult::SIR_VFS_PATH_TOO_LONG;
 		}
-		szComponentStart[nComponents++] = ( uint16_t )nWritten;
+		szComponentStart[nComponents++] = static_cast<uint16_t>(nWritten);
 		if ( nComponents > 1 ) {
 			candidate.szPath[nWritten++] = '/';
 		}
 		memcpy( candidate.szPath + nWritten, pszInput + nStart, nLength );
 		nWritten += nLength;
 	}
-	candidate.nLength = ( uint16_t )nWritten;
+	candidate.nLength = static_cast<uint16_t>(nWritten);
 	candidate.szPath[nWritten] = '\0';
 	*pOutput = candidate;
-	return SIR_VFS_PATH_OK;
+	return SIRVFSPathResult::SIR_VFS_PATH_OK;
 }

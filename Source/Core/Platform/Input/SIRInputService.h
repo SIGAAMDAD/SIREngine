@@ -13,10 +13,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRINPUTSERVICE_H__
-#define __SIRENGINE_SIRINPUTSERVICE_H__
+#ifndef __SIR_INPUTSERVICE_H__
+#define __SIR_INPUTSERVICE_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -68,26 +68,26 @@ public:
 	bool vibrateTriggers( sirInputDeviceId_t hDevice, uint16_t nLeft, uint16_t nRight ) noexcept;
 	uint32_t activeHaptics( void ) const noexcept;
 	bool connect( const sirInputHardwareKey_t& key, sirInputDeviceId_t *pOut ) noexcept;
-	bool disconnect( sirInputBackendId_t eSource, sirInputDeviceId_t hDevice ) noexcept;
+	bool disconnect( SIRInputBackendId eSource, sirInputDeviceId_t hDevice ) noexcept;
 	bool pairUser( sirInputDeviceId_t hDevice, uint32_t nUser ) noexcept;
 	bool describe( sirInputDeviceId_t hDevice, sirInputDeviceDescriptor_t *pOut ) const noexcept;
-	bool findDevice( sirInputBackendId_t eSource, uint64_t nNative, sirInputDeviceId_t *pOut ) const noexcept;
-	bool emitControls( sirInputBackendId_t eSource, sirInputDeviceId_t hDevice, const sirInputControlChange_t *pChanges, uint32_t nCount,
-	                   uint64_t nTime = 0, sirInputClockSource_t eClock = SIR_INPUT_CLOCK_ENGINE_MONOTONIC ) noexcept;
-	bool emitPointer( sirInputBackendId_t eSource, sirInputDeviceId_t hDevice, sirInputSignal_t eSignal, uint16_t nControl, int32_t nX,
-	                  int32_t nY, uint64_t nTime = 0, sirInputClockSource_t eClock = SIR_INPUT_CLOCK_ENGINE_MONOTONIC ) noexcept;
-	bool resynchronizeControls( sirInputBackendId_t eSource, sirInputDeviceId_t hDevice, const sirInputControlChange_t *pChanges,
+	bool findDevice( SIRInputBackendId eSource, uint64_t nNative, sirInputDeviceId_t *pOut ) const noexcept;
+	bool emitControls( SIRInputBackendId eSource, sirInputDeviceId_t hDevice, const sirInputControlChange_t *pChanges, uint32_t nCount,
+	                   uint64_t nTime = 0, SIRInputClockSource eClock = SIRInputClockSource::SIR_INPUT_CLOCK_ENGINE_MONOTONIC ) noexcept;
+	bool emitPointer( SIRInputBackendId eSource, sirInputDeviceId_t hDevice, SIRInputSignal eSignal, uint16_t nControl, int32_t nX,
+	                  int32_t nY, uint64_t nTime = 0, SIRInputClockSource eClock = SIRInputClockSource::SIR_INPUT_CLOCK_ENGINE_MONOTONIC ) noexcept;
+	bool resynchronizeControls( SIRInputBackendId eSource, sirInputDeviceId_t hDevice, const sirInputControlChange_t *pChanges,
 	                            uint32_t nCount ) noexcept;
-	bool loseState( sirInputBackendId_t eSource, sirInputDeviceId_t hDevice ) noexcept;
-	bool loseBackendState( sirInputBackendId_t eSource ) noexcept;
+	bool loseState( SIRInputBackendId eSource, sirInputDeviceId_t hDevice ) noexcept;
+	bool loseBackendState( SIRInputBackendId eSource ) noexcept;
 	bool vibrate( sirInputDeviceId_t hDevice, uint16_t nLeft, uint16_t nRight ) noexcept;
 	uint32_t activeDeviceCount( void ) const noexcept;
 	void shutdown( void ) noexcept;
 
 private:
-	bool verifyOwner( sirInputBackendId_t eSource, sirInputDeviceId_t id, sirInputDeviceDescriptor_t *pOut ) const noexcept;
-	bool hasBackend( sirInputBackendId_t eSource ) const noexcept;
-	sirInputTimestamp_t timestamp( uint64_t nNative, sirInputClockSource_t eClock ) const noexcept;
+	bool verifyOwner( SIRInputBackendId eSource, sirInputDeviceId_t id, sirInputDeviceDescriptor_t *pOut ) const noexcept;
+	bool hasBackend( SIRInputBackendId eSource ) const noexcept;
+	sirInputTimestamp_t timestamp( uint64_t nNative, SIRInputClockSource eClock ) const noexcept;
 	SIRInputActions m_Actions;
 	SIRInputText m_Text;
 	SIRInputHaptics m_Haptics;
@@ -103,4 +103,4 @@ private:
 	uint64_t m_nCollectingTick;
 };
 
-#endif // __SIRENGINE_SIRINPUTSERVICE_H__
+#endif // __SIR_INPUTSERVICE_H__

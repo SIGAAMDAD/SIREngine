@@ -14,8 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRFREELISTALLOCATOR_H__
-#define __SIRENGINE_SIRFREELISTALLOCATOR_H__
+#ifndef __SIR_FREELISTALLOCATOR_H__
+#define __SIR_FREELISTALLOCATOR_H__
 
 #include <Core/SIRPCH.h>
 
@@ -77,4 +77,4 @@ private:
 	uint32_t m_nAllocationCount;
 };
 
-#endif // __SIRENGINE_SIRFREELISTALLOCATOR_H__
+#endif // __SIR_FREELISTALLOCATOR_H__

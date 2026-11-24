@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRVIRTUALTEXTUREFEEDBACK_H__
-#define __SIRENGINE_SIRVIRTUALTEXTUREFEEDBACK_H__
+#ifndef __SIR_VIRTUALTEXTUREFEEDBACK_H__
+#define __SIR_VIRTUALTEXTUREFEEDBACK_H__
 
 #include <Core/SIRPCH.h>
 
@@ -118,19 +118,18 @@ typedef struct sirVirtualTextureFeedbackStamp_s
 	uint64_t nViewportKey;
 } sirVirtualTextureFeedbackStamp_t;
 
-typedef enum sirVirtualTextureFeedbackSlotState_e : uint8_t
-{
+enum class SIRVirtualTextureFeedbackSlotState : uint8_t {
 	SIR_VT_FEEDBACK_SLOT_FREE = 0,
 	SIR_VT_FEEDBACK_SLOT_PREPARED = 1,
 	SIR_VT_FEEDBACK_SLOT_DRAWN = 2,
 	SIR_VT_FEEDBACK_SLOT_READBACK_SUBMITTED = 3,
 	SIR_VT_FEEDBACK_SLOT_READY = 4
-} sirVirtualTextureFeedbackSlotState_t;
+};
 
 typedef struct sirVirtualTextureFeedbackSlot_s
 {
 	sirVirtualTextureFeedbackHeader_t header;
-	sirVirtualTextureFeedbackSlotState_t eState;
+	SIRVirtualTextureFeedbackSlotState eState;
 	bool bRetireOnCallback;
 } sirVirtualTextureFeedbackSlot_t;
 
@@ -156,4 +155,4 @@ bool sirVTFeedbackMarkDrawn( sirVirtualTextureFeedbackSlot_t *pSlot ) noexcept;
 bool sirVTFeedbackSubmitSlot( sirVirtualTextureFeedbackSlot_t *pSlot, bool bAccepted ) noexcept;
 bool sirVTFeedbackCompleteSlot( sirVirtualTextureFeedbackSlot_t *pSlot, const sirVirtualTextureFeedbackHeader_t& received ) noexcept;
 
-#endif // __SIRENGINE_SIRVIRTUALTEXTUREFEEDBACK_H__
+#endif // __SIR_VIRTUALTEXTUREFEEDBACK_H__

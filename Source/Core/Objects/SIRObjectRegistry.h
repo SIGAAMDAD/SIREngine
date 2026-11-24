@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIROBJECTREGISTRY_H__
-#define __SIRENGINE_SIROBJECTREGISTRY_H__
+#ifndef __SIR_OBJECTREGISTRY_H__
+#define __SIR_OBJECTREGISTRY_H__
 
 #include <Core/SIRPCH.h>
 
@@ -24,8 +24,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-typedef enum sirObjectResult_e : uint8_t
-{
+enum class SIRObjectResult : uint8_t {
 	SIR_OBJECT_OK = 0,
 	SIR_OBJECT_INVALID_ARGUMENT = 1,
 	SIR_OBJECT_NOT_INITIALIZED = 2,
@@ -35,10 +34,9 @@ typedef enum sirObjectResult_e : uint8_t
 	SIR_OBJECT_SEALED = 6,
 	SIR_OBJECT_TYPE_MISMATCH = 7,
 	SIR_OBJECT_STALE_HANDLE = 8
-} sirObjectResult_t;
+};
 
-typedef enum sirPropertyKind_e : uint8_t
-{
+enum class SIRPropertyKind : uint8_t {
 	SIR_PROPERTY_NONE = 0,
 	SIR_PROPERTY_BOOL = 1,
 	SIR_PROPERTY_INT64 = 2,
@@ -46,11 +44,11 @@ typedef enum sirPropertyKind_e : uint8_t
 	SIR_PROPERTY_REAL64 = 4,
 	SIR_PROPERTY_STRING_ATOM = 5,
 	SIR_PROPERTY_RESOURCE_ID = 6
-} sirPropertyKind_t;
+};
 
 typedef struct sirPropertyValue_s
 {
-	sirPropertyKind_t eKind;
+	SIRPropertyKind eKind;
 	uint8_t szReserved[7];
 	uint64_t nPayload;
 } sirPropertyValue_t;
@@ -67,7 +65,7 @@ typedef struct sirObjectPropertyDescriptor_s
 	uint32_t nPropertyId;
 	uint32_t nOwnerTypeId;
 	uint64_t nNameAtom;
-	sirPropertyKind_t eKind;
+	SIRPropertyKind eKind;
 	uint8_t szReserved[7];
 } sirObjectPropertyDescriptor_t;
 
@@ -85,16 +83,16 @@ private:
 	bool m_bSealed = false;
 
 public:
-	sirObjectResult_t initialize( sirObjectTypeDescriptor_t *pTypes, uint32_t nTypeCapacity, sirObjectPropertyDescriptor_t *pProperties,
+	SIRObjectResult initialize( sirObjectTypeDescriptor_t *pTypes, uint32_t nTypeCapacity, sirObjectPropertyDescriptor_t *pProperties,
 	                              uint32_t nPropertyCapacity ) noexcept;
 	void shutdown( void ) noexcept;
-	sirObjectResult_t registerType( const sirObjectTypeDescriptor_t& type ) noexcept;
-	sirObjectResult_t registerProperty( const sirObjectPropertyDescriptor_t& property ) noexcept;
-	sirObjectResult_t seal( void ) noexcept;
+	SIRObjectResult registerType( const sirObjectTypeDescriptor_t& type ) noexcept;
+	SIRObjectResult registerProperty( const sirObjectPropertyDescriptor_t& property ) noexcept;
+	SIRObjectResult seal( void ) noexcept;
 	const sirObjectTypeDescriptor_t *findType( uint32_t nTypeId ) const noexcept;
 	const sirObjectPropertyDescriptor_t *findProperty( uint32_t nTypeId, uint32_t nPropertyId ) const noexcept;
 	const sirObjectPropertyDescriptor_t *getPropertyDescriptor( uint32_t iProperty ) const noexcept;
-	sirObjectResult_t validateProperty( uint32_t nTypeId, uint32_t nPropertyId, const sirPropertyValue_t& value ) const noexcept;
+	SIRObjectResult validateProperty( uint32_t nTypeId, uint32_t nPropertyId, const sirPropertyValue_t& value ) const noexcept;
 	uint32_t getTypeCount( void ) const noexcept;
 	uint32_t getPropertyCount( void ) const noexcept;
 };
@@ -124,12 +122,12 @@ private:
 	uint32_t m_nCount = 0;
 
 public:
-	sirObjectResult_t initialize( sirObjectSlot_t *pSlots, uint32_t nCapacity, const SIRObjectRegistry *pTypes ) noexcept;
+	SIRObjectResult initialize( sirObjectSlot_t *pSlots, uint32_t nCapacity, const SIRObjectRegistry *pTypes ) noexcept;
 	void shutdown( void ) noexcept;
-	sirObjectResult_t create( uint64_t nStableId, uint32_t nTypeId, sirObjectHandle_t *pOutHandle ) noexcept;
-	sirObjectResult_t resolve( const sirObjectHandle_t& handle, sirObjectSlot_t *pOutSlot ) const noexcept;
-	sirObjectResult_t destroy( const sirObjectHandle_t& handle ) noexcept;
+	SIRObjectResult create( uint64_t nStableId, uint32_t nTypeId, sirObjectHandle_t *pOutHandle ) noexcept;
+	SIRObjectResult resolve( const sirObjectHandle_t& handle, sirObjectSlot_t *pOutSlot ) const noexcept;
+	SIRObjectResult destroy( const sirObjectHandle_t& handle ) noexcept;
 	uint32_t getCount( void ) const noexcept;
 };
 
-#endif // __SIRENGINE_SIROBJECTREGISTRY_H__
+#endif // __SIR_OBJECTREGISTRY_H__

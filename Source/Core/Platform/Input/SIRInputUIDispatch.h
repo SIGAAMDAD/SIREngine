@@ -13,10 +13,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRINPUTUIDISPATCH_H__
-#define __SIRENGINE_SIRINPUTUIDISPATCH_H__
+#ifndef __SIR_INPUTUIDISPATCH_H__
+#define __SIR_INPUTUIDISPATCH_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -59,4 +59,4 @@ private:
 	bool m_bFocused;
 };
 
-#endif // __SIRENGINE_SIRINPUTUIDISPATCH_H__
+#endif // __SIR_INPUTUIDISPATCH_H__

@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSCRIPTOPTIMIZERPROCESSTRANSPORT_H__
-#define __SIRENGINE_SIRSCRIPTOPTIMIZERPROCESSTRANSPORT_H__
+#ifndef __SIR_SCRIPTOPTIMIZERPROCESSTRANSPORT_H__
+#define __SIR_SCRIPTOPTIMIZERPROCESSTRANSPORT_H__
 
 #include <Core/SIRPCH.h>
 
@@ -25,7 +25,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <Scripting/Core/SIRScriptOptimizationCoordinator.h>
-#include <Core/Platform/SIRAtomic.h>
+#include <atomic>
 #include <chrono>
 #include <Core/Platform/SIRSync.h>
 
@@ -60,20 +60,20 @@ public:
 	bool isRunning( void ) const noexcept;
 	bool hasFailed( void ) const noexcept;
 
-	sirScriptResult_t configure( const sirScriptOptimizerProcessConfig_t& config ) noexcept;
-	sirScriptResult_t start( void ) noexcept;
+	SIRScriptResult configure( const sirScriptOptimizerProcessConfig_t& config ) noexcept;
+	SIRScriptResult start( void ) noexcept;
 	void stop( void ) noexcept;
-	sirScriptResult_t send( const uint8_t *pWire, uint32_t nBytes ) noexcept;
-	sirScriptResult_t receive( uint8_t *pWire, uint32_t nCapacity, uint32_t *pReceived ) noexcept;
+	SIRScriptResult send( const uint8_t *pWire, uint32_t nBytes ) noexcept;
+	SIRScriptResult receive( uint8_t *pWire, uint32_t nCapacity, uint32_t *pReceived ) noexcept;
 
 protected:
 	// Process handles are exclusively managed by this transport.
 
 private:
-	static sirScriptResult_t apiStart( void *pUser ) noexcept;
+	static SIRScriptResult apiStart( void *pUser ) noexcept;
 	static void apiStop( void *pUser ) noexcept;
-	static sirScriptResult_t apiSend( void *pUser, const uint8_t *pWire, uint32_t nBytes ) noexcept;
-	static sirScriptResult_t apiReceive( void *pUser, uint8_t *pWire, uint32_t nCapacity, uint32_t *pReceived ) noexcept;
+	static SIRScriptResult apiSend( void *pUser, const uint8_t *pWire, uint32_t nBytes ) noexcept;
+	static SIRScriptResult apiReceive( void *pUser, uint8_t *pWire, uint32_t nCapacity, uint32_t *pReceived ) noexcept;
 
 	bool spawn( void ) noexcept;
 	void terminateChild( void ) noexcept;
@@ -92,8 +92,8 @@ private:
 	SIRThread m_Reader;
 	SIRMutex m_Mutex;
 	SIRConditionVariable m_CV;
-	SIRAtomic<bool> m_bStopping;
-	SIRAtomic<bool> m_bFailed;
+	std::atomic<bool> m_bStopping;
+	std::atomic<bool> m_bFailed;
 	std::chrono::steady_clock::time_point m_LastActivity;
 	uint8_t m_szRequests[SIR_SCRIPT_OPT_MAX_QUEUED_FRAMES][SIRScriptOptimizationProtocol::REQUEST_BYTES];
 	uint8_t m_szReplies[SIR_SCRIPT_OPT_MAX_QUEUED_FRAMES][SIRScriptOptimizationProtocol::REPLY_BYTES];
@@ -117,4 +117,4 @@ private:
 #endif
 };
 
-#endif // __SIRENGINE_SIRSCRIPTOPTIMIZERPROCESSTRANSPORT_H__
+#endif // __SIR_SCRIPTOPTIMIZERPROCESSTRANSPORT_H__

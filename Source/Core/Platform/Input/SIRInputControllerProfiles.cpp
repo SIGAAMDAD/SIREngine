@@ -18,25 +18,25 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 static void sirInputCookWrite16( uint8_t *pBytes, uint16_t nValue ) noexcept
 {
-	pBytes[0] = ( uint8_t )nValue;
-	pBytes[1] = ( uint8_t )( nValue >> 8 );
+	pBytes[0] = static_cast<uint8_t>(nValue);
+	pBytes[1] = static_cast<uint8_t>( nValue >> 8 );
 }
 
 static void sirInputCookWrite32( uint8_t *pBytes, uint32_t nValue ) noexcept
 {
 	for ( uint32_t i = 0; i < 4; ++i ) {
-		pBytes[i] = ( uint8_t )( nValue >> ( i * 8 ) );
+		pBytes[i] = static_cast<uint8_t>(  nValue >> ( i * 8 )  );
 	}
 }
 
 static uint16_t sirInputCookRead16( const uint8_t *pBytes ) noexcept
 {
-	return ( uint16_t )( pBytes[0] | ( ( uint16_t )pBytes[1] << 8 ) );
+	return ( uint16_t )( pBytes[0] | ( static_cast<uint16_t>(pBytes[1]) << 8 ) );
 }
 
 static uint32_t sirInputCookRead32( const uint8_t *pBytes ) noexcept
 {
-	return ( uint32_t )pBytes[0] | ( ( uint32_t )pBytes[1] << 8 ) | ( ( uint32_t )pBytes[2] << 16 ) | ( ( uint32_t )pBytes[3] << 24 );
+	return static_cast<uint32_t>(pBytes[0]) | ( static_cast<uint32_t>(pBytes[1]) << 8 ) | ( static_cast<uint32_t>(pBytes[2]) << 16 ) | ( static_cast<uint32_t>(pBytes[3]) << 24 );
 }
 
 static uint32_t sirInputCookHash( const uint8_t *pBytes, uint32_t nBytes ) noexcept
@@ -55,7 +55,7 @@ SIRInputControllerProfiles::SIRInputControllerProfiles( void ) noexcept : m_Prof
 bool SIRInputControllerProfiles::add( const sirInputControllerProfile_t& profile ) noexcept
 {
 	if ( m_nCount >= SIR_INPUT_CONTROLLER_PROFILE_CAPACITY || profile.nVendor == 0 || profile.nProduct == 0 ||
-	     profile.nButtonCount > SIR_INPUT_CONTROLLER_BUTTON_MAP_CAPACITY || profile.nAxisCount > SIR_INPUT_AXIS_COUNT ) {
+	     profile.nButtonCount > SIR_INPUT_CONTROLLER_BUTTON_MAP_CAPACITY || profile.nAxisCount > SIRInputAxisCode::SIR_INPUT_AXIS_COUNT ) {
 		return false;
 	}
 	for ( uint32_t i = 0; i < m_nCount; ++i ) {
@@ -65,7 +65,7 @@ bool SIRInputControllerProfiles::add( const sirInputControllerProfile_t& profile
 		}
 	}
 	for ( uint32_t i = 0; i < profile.nButtonCount; ++i ) {
-		if ( profile.buttons[i].nLogicalCode >= SIR_INPUT_PAD_BUTTON_COUNT ) {
+		if ( profile.buttons[i].nLogicalCode >= SIRInputControllerControl::SIR_INPUT_PAD_BUTTON_COUNT ) {
 			return false;
 		}
 		for ( uint32_t j = 0; j < i; ++j ) {
@@ -76,8 +76,8 @@ bool SIRInputControllerProfiles::add( const sirInputControllerProfile_t& profile
 		}
 	}
 	for ( uint32_t i = 0; i < profile.nAxisCount; ++i ) {
-		if ( profile.axes[i].nLogicalCode >= SIR_INPUT_AXIS_COUNT ||
-		     ( profile.axes[i].bInvert && profile.axes[i].nLogicalCode >= SIR_INPUT_AXIS_LT ) ) {
+		if ( profile.axes[i].nLogicalCode >= SIRInputAxisCode::SIR_INPUT_AXIS_COUNT ||
+		     ( profile.axes[i].bInvert && profile.axes[i].nLogicalCode >= SIRInputAxisCode::SIR_INPUT_AXIS_LT ) ) {
 			return false;
 		}
 		for ( uint32_t j = 0; j < i; ++j ) {
@@ -112,7 +112,7 @@ int16_t SIRInputControllerProfiles::button( const sirInputControllerProfile_t& p
 {
 	for ( uint32_t i = 0; i < profile.nButtonCount; ++i ) {
 		if ( profile.buttons[i].nNativeCode == nNativeCode ) {
-			return ( int16_t )profile.buttons[i].nLogicalCode;
+			return static_cast<int16_t>(profile.buttons[i].nLogicalCode);
 		}
 	}
 	return -1;
@@ -125,7 +125,7 @@ int16_t SIRInputControllerProfiles::axis( const sirInputControllerProfile_t& pro
 			if ( pInvert != nullptr ) {
 				*pInvert = profile.axes[i].bInvert;
 			}
-			return ( int16_t )profile.axes[i].nLogicalCode;
+			return static_cast<int16_t>(profile.axes[i].nLogicalCode);
 		}
 	}
 	return -1;
@@ -146,8 +146,8 @@ bool SIRInputControllerProfiles::saveCooked( uint8_t *pBytes, uint32_t nCapacity
 	uint32_t nRequired = SIR_INPUT_COOKED_PROFILE_HEADER_BYTES;
 	for ( uint32_t i = 0; i < m_nCount; ++i ) {
 		const sirInputControllerProfile_t& profile = m_Profiles[i];
-		nRequired += SIR_INPUT_COOKED_PROFILE_RECORD_BYTES + ( uint32_t )profile.nButtonCount * 4 +
-		             ( uint32_t )profile.nAxisCount * SIR_INPUT_COOKED_PROFILE_AXIS_BYTES;
+		nRequired += SIR_INPUT_COOKED_PROFILE_RECORD_BYTES + static_cast<uint32_t>(profile.nButtonCount) * 4 +
+		             static_cast<uint32_t>(profile.nAxisCount) * SIR_INPUT_COOKED_PROFILE_AXIS_BYTES;
 	}
 	if ( pWritten != nullptr ) {
 		*pWritten = nRequired;
@@ -168,7 +168,7 @@ bool SIRInputControllerProfiles::saveCooked( uint8_t *pBytes, uint32_t nCapacity
 		sirInputCookWrite16( pBytes + nOffset, profile.nBus );
 		sirInputCookWrite16( pBytes + nOffset + 2, profile.nVendor );
 		sirInputCookWrite16( pBytes + nOffset + 4, profile.nProduct );
-		sirInputCookWrite16( pBytes + nOffset + 6, ( uint16_t )( ( profile.bReplaceButtons ? 1 : 0 ) | ( profile.bReplaceAxes ? 2 : 0 ) ) );
+		sirInputCookWrite16( pBytes + nOffset + 6, static_cast<uint16_t>(  ( profile.bReplaceButtons ? 1 : 0 ) | ( profile.bReplaceAxes ? 2 : 0 )  ) );
 		pBytes[nOffset + 8] = profile.nButtonCount;
 		pBytes[nOffset + 9] = profile.nAxisCount;
 		nOffset += SIR_INPUT_COOKED_PROFILE_RECORD_BYTES;
@@ -209,7 +209,7 @@ bool SIRInputControllerProfiles::loadCooked( const uint8_t *pBytes, uint32_t nBy
 		if ( nBytes - nOffset < SIR_INPUT_COOKED_PROFILE_RECORD_BYTES ) {
 			return false;
 		}
-		sirInputControllerProfile_t profile = {};
+		sirInputControllerProfile_t profile {};
 		profile.nBus = sirInputCookRead16( pBytes + nOffset );
 		profile.nVendor = sirInputCookRead16( pBytes + nOffset + 2 );
 		profile.nProduct = sirInputCookRead16( pBytes + nOffset + 4 );
@@ -217,14 +217,14 @@ bool SIRInputControllerProfiles::loadCooked( const uint8_t *pBytes, uint32_t nBy
 		profile.nButtonCount = pBytes[nOffset + 8];
 		profile.nAxisCount = pBytes[nOffset + 9];
 		if ( ( nFlags & ~3U ) != 0 || pBytes[nOffset + 10] != 0 || pBytes[nOffset + 11] != 0 ||
-		     profile.nButtonCount > SIR_INPUT_CONTROLLER_BUTTON_MAP_CAPACITY || profile.nAxisCount > SIR_INPUT_AXIS_COUNT ) {
+		     profile.nButtonCount > SIR_INPUT_CONTROLLER_BUTTON_MAP_CAPACITY || profile.nAxisCount > SIRInputAxisCode::SIR_INPUT_AXIS_COUNT ) {
 			return false;
 		}
 		profile.bReplaceButtons = ( nFlags & 1 ) != 0;
 		profile.bReplaceAxes = ( nFlags & 2 ) != 0;
 		nOffset += SIR_INPUT_COOKED_PROFILE_RECORD_BYTES;
 		const uint32_t nRecordBytes =
-		    ( uint32_t )profile.nButtonCount * 4 + ( uint32_t )profile.nAxisCount * SIR_INPUT_COOKED_PROFILE_AXIS_BYTES;
+		    static_cast<uint32_t>(profile.nButtonCount) * 4 + static_cast<uint32_t>(profile.nAxisCount) * SIR_INPUT_COOKED_PROFILE_AXIS_BYTES;
 		if ( nRecordBytes > nBytes - nOffset ) {
 			return false;
 		}

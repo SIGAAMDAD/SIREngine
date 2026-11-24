@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRMESHCACHE_H__
-#define __SIRENGINE_SIRMESHCACHE_H__
+#ifndef __SIR_MESH_CACHE_H__
+#define __SIR_MESH_CACHE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -27,8 +27,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // CPU-only foundation. No GRDG, physics, graphics API, or allocator dependency.
 // All methods must run on the owning thread. Source pointers remain immutable
 // and alive through the caller-supplied final-release callback.
-typedef enum sirMeshResult_e : uint8_t
-{
+enum class SIRMeshResult : uint8_t {
 	SIR_MESH_OK = 0,
 	SIR_MESH_INVALID_ARGUMENT = 1,
 	SIR_MESH_NOT_READY = 2,
@@ -38,7 +37,7 @@ typedef enum sirMeshResult_e : uint8_t
 	SIR_MESH_STALE_HANDLE = 6,
 	SIR_MESH_RETIRED = 7,
 	SIR_MESH_BUSY = 8
-} sirMeshResult_t;
+};
 
 typedef struct sirMeshKey_s
 {
@@ -104,7 +103,7 @@ public:
 	SIRMeshCache( void ) noexcept;
 	SIRMeshCache( const SIRMeshCache& other ) = delete;
 	SIRMeshCache( SIRMeshCache&& other ) = delete;
-	~SIRMeshCache( void ) noexcept;
+	~SIRMeshCache() noexcept;
 
 	SIRMeshCache& operator=( const SIRMeshCache& other ) = delete;
 	SIRMeshCache& operator=( SIRMeshCache&& other ) = delete;
@@ -116,13 +115,13 @@ public:
 	static uint64_t requiredBytes( uint32_t nCapacity ) noexcept;
 	static uint32_t requiredAlignment( void ) noexcept;
 
-	sirMeshResult_t initialize( void *pStorage, uint64_t nStorageBytes, uint32_t nCapacity ) noexcept;
-	sirMeshResult_t insert( const sirMeshGeometrySource_t *pSource, sirMeshHandle_t *pHandle ) noexcept;
-	sirMeshResult_t find( const sirMeshKey_t *pKey, sirMeshHandle_t *pHandle ) const noexcept;
-	sirMeshResult_t acquire( sirMeshHandle_t handle, sirMeshGeometryRead_t *pRead ) noexcept;
-	sirMeshResult_t release( sirMeshHandle_t handle ) noexcept;
-	sirMeshResult_t retire( sirMeshHandle_t handle ) noexcept;
-	sirMeshResult_t shutdown( void ) noexcept;
+	SIRMeshResult initialize( void *pStorage, uint64_t nStorageBytes, uint32_t nCapacity ) noexcept;
+	SIRMeshResult insert( const sirMeshGeometrySource_t *pSource, sirMeshHandle_t *pHandle ) noexcept;
+	SIRMeshResult find( const sirMeshKey_t *pKey, sirMeshHandle_t *pHandle ) const noexcept;
+	SIRMeshResult acquire( sirMeshHandle_t handle, sirMeshGeometryRead_t *pRead ) noexcept;
+	SIRMeshResult release( sirMeshHandle_t handle ) noexcept;
+	SIRMeshResult retire( sirMeshHandle_t handle ) noexcept;
+	SIRMeshResult shutdown( void ) noexcept;
 
 protected:
 private:
@@ -139,4 +138,4 @@ private:
 	bool m_bShuttingDown;
 };
 
-#endif // __SIRENGINE_SIRMESHCACHE_H__
+#endif // __SIR_MESH_CACHE_H__

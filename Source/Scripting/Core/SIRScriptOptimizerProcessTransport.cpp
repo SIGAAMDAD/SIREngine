@@ -62,46 +62,46 @@ sirScriptOptimizationTransportAPI_t SIRScriptOptimizerProcessTransport::getAPI( 
 
 bool SIRScriptOptimizerProcessTransport::isRunning( void ) const noexcept
 {
-	return SIRThread::isCurrentThread( m_OwnerThread ) && m_bRunning && !m_bFailed.load( SIR_MEMORY_ORDER_ACQUIRE );
+	return SIRThread::isCurrentThread( m_OwnerThread ) && m_bRunning && !m_bFailed.load( std::memory_order_acquire );
 }
 
 bool SIRScriptOptimizerProcessTransport::hasFailed( void ) const noexcept
 {
-	return m_bFailed.load( SIR_MEMORY_ORDER_ACQUIRE );
+	return m_bFailed.load( std::memory_order_acquire );
 }
 
-sirScriptResult_t SIRScriptOptimizerProcessTransport::configure( const sirScriptOptimizerProcessConfig_t& config ) noexcept
+SIRScriptResult SIRScriptOptimizerProcessTransport::configure( const sirScriptOptimizerProcessConfig_t& config ) noexcept
 {
 	if ( !SIRThread::isCurrentThread( m_OwnerThread ) ) {
-		return SIR_SCRIPT_BUSY;
+		return SIRScriptResult::SIR_SCRIPT_BUSY;
 	}
 	if ( m_bRunning ) {
-		return SIR_SCRIPT_WRONG_STATE;
+		return SIRScriptResult::SIR_SCRIPT_WRONG_STATE;
 	}
 	if ( config.nArgumentCount > SIR_SCRIPT_OPT_MAX_ARGUMENTS || config.szExecutable[0] == '\0' ||
 	     memchr( config.szExecutable, '\0', sizeof( config.szExecutable ) ) == nullptr ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 	for ( uint32_t i = 0; i < config.nArgumentCount; ++i ) {
 		if ( memchr( config.szArguments[i], '\0', sizeof( config.szArguments[i] ) ) == nullptr ) {
-			return SIR_SCRIPT_INVALID_ARGUMENT;
+			return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 		}
 	}
 	m_Config = config;
 	m_bConfigured = true;
-	return SIR_SCRIPT_OK;
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
-sirScriptResult_t SIRScriptOptimizerProcessTransport::start( void ) noexcept
+SIRScriptResult SIRScriptOptimizerProcessTransport::start( void ) noexcept
 {
 	if ( !SIRThread::isCurrentThread( m_OwnerThread ) ) {
-		return SIR_SCRIPT_BUSY;
+		return SIRScriptResult::SIR_SCRIPT_BUSY;
 	}
 	if ( !m_bConfigured || m_bRunning ) {
-		return SIR_SCRIPT_WRONG_STATE;
+		return SIRScriptResult::SIR_SCRIPT_WRONG_STATE;
 	}
-	m_bStopping.store( false, SIR_MEMORY_ORDER_RELEASE );
-	m_bFailed.store( false, SIR_MEMORY_ORDER_RELEASE );
+	m_bStopping.store( false, std::memory_order_release );
+	m_bFailed.store( false, std::memory_order_release );
 	{
 		SIRScopedLock<SIRMutex> guard( m_Mutex );
 		m_nRequestHead = m_nRequestTail = m_nRequestCount = 0;
@@ -111,15 +111,15 @@ sirScriptResult_t SIRScriptOptimizerProcessTransport::start( void ) noexcept
 	m_LastActivity = std::chrono::steady_clock::now();
 	if ( !spawn() ) {
 		closePipes();
-		return SIR_SCRIPT_BACKEND_FAILURE;
+		return SIRScriptResult::SIR_SCRIPT_BACKEND_FAILURE;
 	}
 	m_bRunning = true;
 	if ( !m_Writer.start( &SIRScriptOptimizerProcessTransport::writerEntry, this ) ||
 	     !m_Reader.start( &SIRScriptOptimizerProcessTransport::readerEntry, this ) ) {
 		stop();
-		return SIR_SCRIPT_BACKEND_FAILURE;
+		return SIRScriptResult::SIR_SCRIPT_BACKEND_FAILURE;
 	}
-	return SIR_SCRIPT_OK;
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
 void SIRScriptOptimizerProcessTransport::stop( void ) noexcept
@@ -127,7 +127,7 @@ void SIRScriptOptimizerProcessTransport::stop( void ) noexcept
 	if ( !m_bRunning && !m_Writer.isJoinable() && !m_Reader.isJoinable() ) {
 		return;
 	}
-	m_bStopping.store( true, SIR_MEMORY_ORDER_RELEASE );
+	m_bStopping.store( true, std::memory_order_release );
 	m_CV.notifyAll();
 	// Terminate the child before cancelling synchronous I/O. Otherwise an I/O
 	// thread may enter ReadFile after the cancellation and block indefinitely.
@@ -135,10 +135,10 @@ void SIRScriptOptimizerProcessTransport::stop( void ) noexcept
 #if defined( _WIN32 )
 	// Interrupt any remaining Win32 pipe operations before joining threads.
 	if ( m_Writer.isJoinable() ) {
-		( void )m_Writer.cancelSynchronousIo();
+		static_cast<void>(m_Writer.cancelSynchronousIo());
 	}
 	if ( m_Reader.isJoinable() ) {
-		( void )m_Reader.cancelSynchronousIo();
+		static_cast<void>(m_Reader.cancelSynchronousIo());
 	}
 #endif
 	if ( m_Writer.isJoinable() ) {
@@ -157,26 +157,26 @@ void SIRScriptOptimizerProcessTransport::stop( void ) noexcept
 	m_bRunning = false;
 }
 
-sirScriptResult_t SIRScriptOptimizerProcessTransport::send( const uint8_t *pWire, uint32_t nBytes ) noexcept
+SIRScriptResult SIRScriptOptimizerProcessTransport::send( const uint8_t *pWire, uint32_t nBytes ) noexcept
 {
 	if ( !SIRThread::isCurrentThread( m_OwnerThread ) ) {
-		return SIR_SCRIPT_BUSY;
+		return SIRScriptResult::SIR_SCRIPT_BUSY;
 	}
 	if ( !m_bRunning ) {
-		return SIR_SCRIPT_WRONG_STATE;
+		return SIRScriptResult::SIR_SCRIPT_WRONG_STATE;
 	}
 	if ( pWire == nullptr || nBytes != SIRScriptOptimizationProtocol::REQUEST_BYTES ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
-	if ( m_bFailed.load( SIR_MEMORY_ORDER_ACQUIRE ) ) {
-		return SIR_SCRIPT_BACKEND_FAILURE;
+	if ( m_bFailed.load( std::memory_order_acquire ) ) {
+		return SIRScriptResult::SIR_SCRIPT_BACKEND_FAILURE;
 	}
 	{
 		SIRScopedLock<SIRMutex> guard( m_Mutex );
 		// Bound work that has been sent but not yet consumed by the owner.
 		// Writer-side queue drainage alone does not free reply capacity.
 		if ( m_nRequestCount == SIR_SCRIPT_OPT_MAX_QUEUED_FRAMES || m_nOutstanding == SIR_SCRIPT_OPT_MAX_QUEUED_FRAMES ) {
-			return SIR_SCRIPT_BUSY;
+			return SIRScriptResult::SIR_SCRIPT_BUSY;
 		}
 		memcpy( m_szRequests[m_nRequestTail], pWire, nBytes );
 		m_nRequestTail = ( m_nRequestTail + 1 ) % SIR_SCRIPT_OPT_MAX_QUEUED_FRAMES;
@@ -185,19 +185,19 @@ sirScriptResult_t SIRScriptOptimizerProcessTransport::send( const uint8_t *pWire
 	++m_nOutstanding;
 	m_LastActivity = std::chrono::steady_clock::now();
 	m_CV.notifyAll();
-	return SIR_SCRIPT_OK;
+	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
-sirScriptResult_t SIRScriptOptimizerProcessTransport::receive( uint8_t *pWire, uint32_t nCapacity, uint32_t *pReceived ) noexcept
+SIRScriptResult SIRScriptOptimizerProcessTransport::receive( uint8_t *pWire, uint32_t nCapacity, uint32_t *pReceived ) noexcept
 {
 	if ( !SIRThread::isCurrentThread( m_OwnerThread ) ) {
-		return SIR_SCRIPT_BUSY;
+		return SIRScriptResult::SIR_SCRIPT_BUSY;
 	}
 	if ( !m_bRunning ) {
-		return SIR_SCRIPT_WRONG_STATE;
+		return SIRScriptResult::SIR_SCRIPT_WRONG_STATE;
 	}
 	if ( pWire == nullptr || pReceived == nullptr || nCapacity < SIRScriptOptimizationProtocol::REPLY_BYTES ) {
-		return SIR_SCRIPT_INVALID_ARGUMENT;
+		return SIRScriptResult::SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 	*pReceived = 0;
 	{
@@ -212,38 +212,38 @@ sirScriptResult_t SIRScriptOptimizerProcessTransport::receive( uint8_t *pWire, u
 			}
 			m_LastActivity = std::chrono::steady_clock::now();
 			m_CV.notifyAll();
-			return SIR_SCRIPT_OK;
+			return SIRScriptResult::SIR_SCRIPT_OK;
 		}
 	}
-	if ( m_bFailed.load( SIR_MEMORY_ORDER_ACQUIRE ) ) {
-		return SIR_SCRIPT_BACKEND_FAILURE;
+	if ( m_bFailed.load( std::memory_order_acquire ) ) {
+		return SIRScriptResult::SIR_SCRIPT_BACKEND_FAILURE;
 	}
 	if ( m_nOutstanding > 0 && m_Config.nWatchdogMilliseconds > 0 ) {
 		const auto nElapsed = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now() - m_LastActivity );
 		if ( nElapsed.count() >= m_Config.nWatchdogMilliseconds ) {
 			failTransport();
-			return SIR_SCRIPT_BACKEND_FAILURE;
+			return SIRScriptResult::SIR_SCRIPT_BACKEND_FAILURE;
 		}
 	}
-	return SIR_SCRIPT_BUSY;
+	return SIRScriptResult::SIR_SCRIPT_BUSY;
 }
 
 void SIRScriptOptimizerProcessTransport::failTransport( void ) noexcept
 {
-	if ( !m_bStopping.load( SIR_MEMORY_ORDER_ACQUIRE ) ) {
-		m_bFailed.store( true, SIR_MEMORY_ORDER_RELEASE );
+	if ( !m_bStopping.load( std::memory_order_acquire ) ) {
+		m_bFailed.store( true, std::memory_order_release );
 		m_CV.notifyAll();
 	}
 }
 
 void SIRScriptOptimizerProcessTransport::writerEntry( void *pUserData ) noexcept
 {
-	( ( SIRScriptOptimizerProcessTransport * )pUserData )->writerMain();
+	static_cast<SIRScriptOptimizerProcessTransport *>(pUserData)->writerMain();
 }
 
 void SIRScriptOptimizerProcessTransport::readerEntry( void *pUserData ) noexcept
 {
-	( ( SIRScriptOptimizerProcessTransport * )pUserData )->readerMain();
+	static_cast<SIRScriptOptimizerProcessTransport *>(pUserData)->readerMain();
 }
 
 void SIRScriptOptimizerProcessTransport::writerMain( void ) noexcept
@@ -253,9 +253,10 @@ void SIRScriptOptimizerProcessTransport::writerMain( void ) noexcept
 	sigset_t block;
 	sigemptyset( &block );
 	sigaddset( &block, SIGPIPE );
-	( void )pthread_sigmask( SIG_BLOCK, &block, nullptr );
+	static_cast<void>(pthread_sigmask( SIG_BLOCK, &block, nullptr ));
 #endif
-	uint8_t szFrame[SIRScriptOptimizationProtocol::REQUEST_BYTES] = {};
+	uint8_t szFrame[SIRScriptOptimizationProtocol::REQUEST_BYTES];
+	memset( szFrame, 0, sizeof( szFrame ) );
 	for ( ;; ) {
 		{
 			SIRScopedLock<SIRMutex> guard( m_Mutex );
@@ -278,9 +279,10 @@ void SIRScriptOptimizerProcessTransport::writerMain( void ) noexcept
 
 void SIRScriptOptimizerProcessTransport::readerMain( void ) noexcept
 {
-	uint8_t szFrame[SIRScriptOptimizationProtocol::REPLY_BYTES] = {};
+	uint8_t szFrame[SIRScriptOptimizationProtocol::REPLY_BYTES];
+	memset( szFrame, 0, sizeof( szFrame ) );
 	for ( ;; ) {
-		if ( m_bStopping.load( SIR_MEMORY_ORDER_ACQUIRE ) ) {
+		if ( m_bStopping.load( std::memory_order_acquire ) ) {
 			return;
 		}
 		if ( !readFrame( szFrame, sizeof( szFrame ) ) ) {
@@ -300,25 +302,25 @@ void SIRScriptOptimizerProcessTransport::readerMain( void ) noexcept
 	}
 }
 
-sirScriptResult_t SIRScriptOptimizerProcessTransport::apiStart( void *pUser ) noexcept
+SIRScriptResult SIRScriptOptimizerProcessTransport::apiStart( void *pUser ) noexcept
 {
-	return ( ( SIRScriptOptimizerProcessTransport * )pUser )->start();
+	return static_cast<SIRScriptOptimizerProcessTransport *>(pUser)->start();
 }
 
 void SIRScriptOptimizerProcessTransport::apiStop( void *pUser ) noexcept
 {
-	( ( SIRScriptOptimizerProcessTransport * )pUser )->stop();
+	static_cast<SIRScriptOptimizerProcessTransport *>(pUser)->stop();
 }
 
-sirScriptResult_t SIRScriptOptimizerProcessTransport::apiSend( void *pUser, const uint8_t *pWire, uint32_t nBytes ) noexcept
+SIRScriptResult SIRScriptOptimizerProcessTransport::apiSend( void *pUser, const uint8_t *pWire, uint32_t nBytes ) noexcept
 {
-	return ( ( SIRScriptOptimizerProcessTransport * )pUser )->send( pWire, nBytes );
+	return static_cast<SIRScriptOptimizerProcessTransport *>(pUser)->send( pWire, nBytes );
 }
 
-sirScriptResult_t SIRScriptOptimizerProcessTransport::apiReceive( void *pUser, uint8_t *pWire, uint32_t nCapacity,
+SIRScriptResult SIRScriptOptimizerProcessTransport::apiReceive( void *pUser, uint8_t *pWire, uint32_t nCapacity,
                                                                   uint32_t *pReceived ) noexcept
 {
-	return ( ( SIRScriptOptimizerProcessTransport * )pUser )->receive( pWire, nCapacity, pReceived );
+	return static_cast<SIRScriptOptimizerProcessTransport *>(pUser)->receive( pWire, nCapacity, pReceived );
 }
 
 #if !defined( _WIN32 )
@@ -364,11 +366,11 @@ bool SIRScriptOptimizerProcessTransport::spawn( void ) noexcept
 		pid_t nPid = -1;
 		bSuccess = posix_spawnp( &nPid, m_Config.szExecutable, &actions, nullptr, szArguments, environ ) == 0;
 		if ( bSuccess ) {
-			m_nChildPid = ( int )nPid;
+			m_nChildPid = static_cast<int>(nPid);
 		}
 	}
 	if ( bActionsInitialized ) {
-		( void )posix_spawn_file_actions_destroy( &actions );
+		static_cast<void>(posix_spawn_file_actions_destroy( &actions ));
 	}
 	close( szInput[0] );
 	close( szOutput[1] );
@@ -386,9 +388,9 @@ void SIRScriptOptimizerProcessTransport::terminateChild( void ) noexcept
 {
 	if ( m_nChildPid > 0 ) {
 		int nStatus = 0;
-		if ( waitpid( ( pid_t )m_nChildPid, &nStatus, WNOHANG ) == 0 ) {
-			( void )kill( ( pid_t )m_nChildPid, SIGKILL );
-			while ( waitpid( ( pid_t )m_nChildPid, &nStatus, 0 ) < 0 && errno == EINTR ) {
+		if ( waitpid( static_cast<pid_t>(m_nChildPid), &nStatus, WNOHANG ) == 0 ) {
+			static_cast<void>(kill( static_cast<pid_t>(m_nChildPid), SIGKILL ));
+			while ( waitpid( static_cast<pid_t>(m_nChildPid), &nStatus, 0 ) < 0 && errno == EINTR ) {
 			}
 		}
 		m_nChildPid = -1;
@@ -418,7 +420,7 @@ bool SIRScriptOptimizerProcessTransport::writeFrame( const uint8_t *pData, uint3
 		if ( nWritten <= 0 ) {
 			return false;
 		}
-		nOffset += ( uint32_t )nWritten;
+		nOffset += static_cast<uint32_t>(nWritten);
 	}
 	return true;
 }
@@ -434,7 +436,7 @@ bool SIRScriptOptimizerProcessTransport::readFrame( uint8_t *pData, uint32_t nBy
 		if ( nRead <= 0 ) {
 			return false;
 		}
-		nOffset += ( uint32_t )nRead;
+		nOffset += static_cast<uint32_t>(nRead);
 	}
 	return true;
 }
@@ -485,7 +487,8 @@ bool SIRScriptOptimizerProcessTransport::spawn( void ) noexcept
 	}
 	bool bSuccess =
 	    SetHandleInformation( hInputWrite, HANDLE_FLAG_INHERIT, 0 ) && SetHandleInformation( hOutputRead, HANDLE_FLAG_INHERIT, 0 );
-	char szCommandLine[4096] = {};
+	char szCommandLine[4096];
+	memset( szCommandLine, 0, sizeof( szCommandLine ) );
 	size_t nOffset = 0;
 	if ( bSuccess ) {
 		bSuccess = scriptTransportAppendWindowsArgument( szCommandLine, sizeof( szCommandLine ), &nOffset, m_Config.szExecutable );
@@ -494,8 +497,8 @@ bool SIRScriptOptimizerProcessTransport::spawn( void ) noexcept
 			bSuccess = scriptTransportAppendWindowsArgument( szCommandLine, sizeof( szCommandLine ), &nOffset, m_Config.szArguments[i] );
 		}
 	}
-	PROCESS_INFORMATION process = {};
-	STARTUPINFOA startup = {};
+	PROCESS_INFORMATION process {};
+	STARTUPINFOA startup {};
 	startup.cb = sizeof( startup );
 	startup.dwFlags = STARTF_USESTDHANDLES;
 	startup.hStdInput = hInputRead;
@@ -523,11 +526,11 @@ void SIRScriptOptimizerProcessTransport::terminateChild( void ) noexcept
 {
 	if ( m_hChildProcess != nullptr ) {
 		DWORD nExit = STILL_ACTIVE;
-		if ( GetExitCodeProcess( ( HANDLE )m_hChildProcess, &nExit ) && nExit == STILL_ACTIVE ) {
-			( void )TerminateProcess( ( HANDLE )m_hChildProcess, 1 );
+		if ( GetExitCodeProcess( static_cast<HANDLE>(m_hChildProcess), &nExit ) && nExit == STILL_ACTIVE ) {
+			static_cast<void>(TerminateProcess( static_cast<HANDLE>(m_hChildProcess), 1 ));
 		}
-		( void )WaitForSingleObject( ( HANDLE )m_hChildProcess, 5000 );
-		CloseHandle( ( HANDLE )m_hChildProcess );
+		static_cast<void>(WaitForSingleObject( static_cast<HANDLE>(m_hChildProcess), 5000 ));
+		CloseHandle( static_cast<HANDLE>(m_hChildProcess) );
 		m_hChildProcess = nullptr;
 	}
 }
@@ -535,11 +538,11 @@ void SIRScriptOptimizerProcessTransport::terminateChild( void ) noexcept
 void SIRScriptOptimizerProcessTransport::closePipes( void ) noexcept
 {
 	if ( m_hReadPipe != nullptr ) {
-		CloseHandle( ( HANDLE )m_hReadPipe );
+		CloseHandle( static_cast<HANDLE>(m_hReadPipe) );
 		m_hReadPipe = nullptr;
 	}
 	if ( m_hWritePipe != nullptr ) {
-		CloseHandle( ( HANDLE )m_hWritePipe );
+		CloseHandle( static_cast<HANDLE>(m_hWritePipe) );
 		m_hWritePipe = nullptr;
 	}
 }
@@ -549,7 +552,7 @@ bool SIRScriptOptimizerProcessTransport::writeFrame( const uint8_t *pData, uint3
 	uint32_t nOffset = 0;
 	while ( nOffset < nBytes ) {
 		DWORD nWritten = 0;
-		if ( !WriteFile( ( HANDLE )m_hWritePipe, pData + nOffset, nBytes - nOffset, &nWritten, nullptr ) || nWritten == 0 ) {
+		if ( !WriteFile( static_cast<HANDLE>(m_hWritePipe), pData + nOffset, nBytes - nOffset, &nWritten, nullptr ) || nWritten == 0 ) {
 			return false;
 		}
 		nOffset += nWritten;
@@ -562,7 +565,7 @@ bool SIRScriptOptimizerProcessTransport::readFrame( uint8_t *pData, uint32_t nBy
 	uint32_t nOffset = 0;
 	while ( nOffset < nBytes ) {
 		DWORD nRead = 0;
-		if ( !ReadFile( ( HANDLE )m_hReadPipe, pData + nOffset, nBytes - nOffset, &nRead, nullptr ) || nRead == 0 ) {
+		if ( !ReadFile( static_cast<HANDLE>(m_hReadPipe), pData + nOffset, nBytes - nOffset, &nRead, nullptr ) || nRead == 0 ) {
 			return false;
 		}
 		nOffset += nRead;

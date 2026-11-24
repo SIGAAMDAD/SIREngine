@@ -12,13 +12,13 @@ express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIRTIMELINECOORDINATOR_H__
-#define __SIRENGINE_SIRTIMELINECOORDINATOR_H__
+#ifndef __SIR_TIMELINECOORDINATOR_H__
+#define __SIR_TIMELINECOORDINATOR_H__
 #include <Core/SIRPCH.h>
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
 #pragma once
 #endif
-#include <Core/Platform/SIRAtomic.h>
+#include <atomic>
 
 typedef struct sirTimelineConfig_s
 {
@@ -60,8 +60,8 @@ public:
 	bool isFrameOpen( void ) const noexcept;
 
 private:
-	SIRAtomic<uint64_t> m_nPublishedFrame;
-	SIRAtomic<uint64_t> m_nPresentedFrame;
+	std::atomic<uint64_t> m_nPublishedFrame;
+	std::atomic<uint64_t> m_nPresentedFrame;
 	sirTimelineConfig_t m_Config;
 	uint64_t m_nTick;
 	uint64_t m_nRevision;
@@ -76,4 +76,4 @@ private:
 	bool m_bInitialized;
 	bool m_bFrameOpen;
 };
-#endif // __SIRENGINE_SIRTIMELINECOORDINATOR_H__
+#endif // __SIR_TIMELINECOORDINATOR_H__

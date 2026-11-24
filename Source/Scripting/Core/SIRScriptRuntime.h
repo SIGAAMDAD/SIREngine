@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSCRIPTRUNTIME_H__
-#define __SIRENGINE_SIRSCRIPTRUNTIME_H__
+#ifndef __SIR_SCRIPTRUNTIME_H__
+#define __SIR_SCRIPTRUNTIME_H__
 
 #include <Core/SIRPCH.h>
 
@@ -87,36 +87,36 @@ class SIRScriptRuntime
 public:
 	explicit SIRScriptRuntime( const SIRScriptBindingRegistry *pRegistry ) noexcept;
 
-	sirScriptResult_t setProgramSource( const sirScriptProgramSourceAPI_t& api ) noexcept;
-	sirScriptResult_t clearProgramSource( void ) noexcept;
-	sirScriptResult_t registerBackend( uint64_t nBackendId, const sirScriptBackendAPI_t& api ) noexcept;
-	sirScriptResult_t startBackend( uint64_t nBackendId ) noexcept;
-	sirScriptResult_t stopBackend( uint64_t nBackendId ) noexcept;
-	sirScriptResult_t unregisterBackend( uint64_t nBackendId ) noexcept;
-	sirScriptResult_t shutdownAll( void ) noexcept;
-	sirScriptResult_t loadProgram( uint64_t nBackendId, uint64_t nProgramId, uint64_t nRevision,
+	SIRScriptResult setProgramSource( const sirScriptProgramSourceAPI_t& api ) noexcept;
+	SIRScriptResult clearProgramSource( void ) noexcept;
+	SIRScriptResult registerBackend( uint64_t nBackendId, const sirScriptBackendAPI_t& api ) noexcept;
+	SIRScriptResult startBackend( uint64_t nBackendId ) noexcept;
+	SIRScriptResult stopBackend( uint64_t nBackendId ) noexcept;
+	SIRScriptResult unregisterBackend( uint64_t nBackendId ) noexcept;
+	SIRScriptResult shutdownAll( void ) noexcept;
+	SIRScriptResult loadProgram( uint64_t nBackendId, uint64_t nProgramId, uint64_t nRevision,
 	                               sirScriptProgramHandle_t *pHandle ) noexcept;
-	sirScriptResult_t unloadProgram( sirScriptProgramHandle_t handle ) noexcept;
-	sirScriptResult_t createInstance( sirScriptProgramHandle_t program, uint64_t nOwnerId, sirScriptInstanceHandle_t *pHandle ) noexcept;
-	sirScriptResult_t destroyInstance( sirScriptInstanceHandle_t handle ) noexcept;
-	sirScriptResult_t invoke( sirScriptInstanceHandle_t handle, uint64_t nMethodId, sirScriptReadFrame_t arguments,
+	SIRScriptResult unloadProgram( sirScriptProgramHandle_t handle ) noexcept;
+	SIRScriptResult createInstance( sirScriptProgramHandle_t program, uint64_t nOwnerId, sirScriptInstanceHandle_t *pHandle ) noexcept;
+	SIRScriptResult destroyInstance( sirScriptInstanceHandle_t handle ) noexcept;
+	SIRScriptResult invoke( sirScriptInstanceHandle_t handle, uint64_t nMethodId, sirScriptReadFrame_t arguments,
 	                          sirScriptWriteFrame_t result ) noexcept;
-	sirScriptResult_t subscribe( sirScriptInstanceHandle_t instance, uint64_t nEventTypeId, uint64_t nMethodId,
+	SIRScriptResult subscribe( sirScriptInstanceHandle_t instance, uint64_t nEventTypeId, uint64_t nMethodId,
 	                             sirScriptSubscriptionHandle_t *pHandle ) noexcept;
-	sirScriptResult_t unsubscribe( sirScriptSubscriptionHandle_t handle ) noexcept;
-	sirScriptResult_t publishEvent( uint64_t nEventTypeId, sirScriptReadFrame_t payload ) noexcept;
-	sirScriptResult_t enqueueEvent( uint64_t nEventTypeId, sirScriptReadFrame_t payload, sirScriptPhase_t ePhase,
+	SIRScriptResult unsubscribe( sirScriptSubscriptionHandle_t handle ) noexcept;
+	SIRScriptResult publishEvent( uint64_t nEventTypeId, sirScriptReadFrame_t payload ) noexcept;
+	SIRScriptResult enqueueEvent( uint64_t nEventTypeId, sirScriptReadFrame_t payload, SIRScriptPhase ePhase,
 	                                sirScriptTaskHandle_t *pHandle ) noexcept;
-	sirScriptResult_t enqueueInvoke( sirScriptInstanceHandle_t instance, uint64_t nMethodId, uint64_t nArgumentsTypeId,
-	                                 sirScriptReadFrame_t arguments, sirScriptPhase_t ePhase, sirScriptTaskHandle_t *pHandle ) noexcept;
-	sirScriptResult_t cancelScheduled( sirScriptTaskHandle_t handle ) noexcept;
-	sirScriptResult_t setPayloadAllocator( const sirScriptPayloadAllocatorAPI_t& api ) noexcept;
+	SIRScriptResult enqueueInvoke( sirScriptInstanceHandle_t instance, uint64_t nMethodId, uint64_t nArgumentsTypeId,
+	                                 sirScriptReadFrame_t arguments, SIRScriptPhase ePhase, sirScriptTaskHandle_t *pHandle ) noexcept;
+	SIRScriptResult cancelScheduled( sirScriptTaskHandle_t handle ) noexcept;
+	SIRScriptResult setPayloadAllocator( const sirScriptPayloadAllocatorAPI_t& api ) noexcept;
 	// Cross-thread: published registry and runtime must outlive every producer.
-	sirScriptResult_t postEvent( uint64_t nEventTypeId, sirScriptReadFrame_t payload, sirScriptPhase_t ePhase ) noexcept;
-	sirScriptResult_t pumpIngress( sirScriptPhase_t ePhase, uint32_t nBudget, uint32_t *pProcessed ) noexcept;
+	SIRScriptResult postEvent( uint64_t nEventTypeId, sirScriptReadFrame_t payload, SIRScriptPhase ePhase ) noexcept;
+	SIRScriptResult pumpIngress( SIRScriptPhase ePhase, uint32_t nBudget, uint32_t *pProcessed ) noexcept;
 	sirScriptRuntimeFootprint_t queryMemoryFootprint( void ) const noexcept;
-	sirScriptResult_t pumpPhase( sirScriptPhase_t ePhase, uint32_t nBudget, uint32_t *pProcessed, uint32_t *pStale ) noexcept;
-	uint32_t pendingCount( sirScriptPhase_t ePhase ) const noexcept;
+	SIRScriptResult pumpPhase( SIRScriptPhase ePhase, uint32_t nBudget, uint32_t *pProcessed, uint32_t *pStale ) noexcept;
+	uint32_t pendingCount( SIRScriptPhase ePhase ) const noexcept;
 
 private:
 	static constexpr uint32_t MAX_BACKENDS = 8;
@@ -150,4 +150,4 @@ private:
 	bool m_bShuttingDown;
 };
 
-#endif // __SIRENGINE_SIRSCRIPTRUNTIME_H__
+#endif // __SIR_SCRIPTRUNTIME_H__

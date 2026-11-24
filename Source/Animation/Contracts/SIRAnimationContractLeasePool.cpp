@@ -27,31 +27,31 @@ uint32_t SIRAnimationContractLeasePool::getOutstandingReaders( void ) const noex
 	return m_nOutstandingReaders;
 }
 
-sirAnimationResult_t SIRAnimationContractLeasePool::initialize( sirAnimationContractPoseSlot_t *pPoses, uint32_t nPoseCapacity,
+SIRAnimationResult SIRAnimationContractLeasePool::initialize( sirAnimationContractPoseSlot_t *pPoses, uint32_t nPoseCapacity,
                                                                 sirAnimationContractReaderSlot_t *pReaders,
                                                                 uint32_t nReaderCapacity ) noexcept
 {
 	if ( m_pPoses ) {
-		return SIR_ANIMATION_BUSY;
+		return SIRAnimationResult::SIR_ANIMATION_BUSY;
 	}
 	if ( !pPoses || !pReaders || !nPoseCapacity || !nReaderCapacity ) {
-		return SIR_ANIMATION_INVALID_ARGUMENT;
+		return SIRAnimationResult::SIR_ANIMATION_INVALID_ARGUMENT;
 	}
-	if ( ( uintptr_t )pPoses % alignof( sirAnimationContractPoseSlot_t ) != 0 ||
-	     ( uintptr_t )pReaders % alignof( sirAnimationContractReaderSlot_t ) != 0 ) {
-		return SIR_ANIMATION_INVALID_ARGUMENT;
+	if ( reinterpret_cast<uintptr_t>(pPoses) % alignof( sirAnimationContractPoseSlot_t ) != 0 ||
+	     reinterpret_cast<uintptr_t>(pReaders) % alignof( sirAnimationContractReaderSlot_t ) != 0 ) {
+		return SIRAnimationResult::SIR_ANIMATION_INVALID_ARGUMENT;
 	}
-	const uint64_t nPoseBytes = ( uint64_t )sizeof( sirAnimationContractPoseSlot_t ) * nPoseCapacity;
-	const uint64_t nReaderBytes = ( uint64_t )sizeof( sirAnimationContractReaderSlot_t ) * nReaderCapacity;
-	const uintptr_t nPoseStart = ( uintptr_t )pPoses;
-	const uintptr_t nReaderStart = ( uintptr_t )pReaders;
+	const uint64_t nPoseBytes = static_cast<uint64_t>( sizeof( sirAnimationContractPoseSlot_t ) ) * nPoseCapacity;
+	const uint64_t nReaderBytes = static_cast<uint64_t>( sizeof( sirAnimationContractReaderSlot_t ) ) * nReaderCapacity;
+	const uintptr_t nPoseStart = reinterpret_cast<uintptr_t>(pPoses);
+	const uintptr_t nReaderStart = reinterpret_cast<uintptr_t>(pReaders);
 	if ( nPoseBytes > UINTPTR_MAX - nPoseStart || nReaderBytes > UINTPTR_MAX - nReaderStart ) {
-		return SIR_ANIMATION_OUT_OF_CAPACITY;
+		return SIRAnimationResult::SIR_ANIMATION_OUT_OF_CAPACITY;
 	}
 	const uintptr_t nPoseEnd = nPoseStart + nPoseBytes;
 	const uintptr_t nReaderEnd = nReaderStart + nReaderBytes;
 	if ( nPoseStart < nReaderEnd && nReaderStart < nPoseEnd ) {
-		return SIR_ANIMATION_INVALID_ARGUMENT;
+		return SIRAnimationResult::SIR_ANIMATION_INVALID_ARGUMENT;
 	}
 	m_pPoses = pPoses;
 	m_pReaders = pReaders;
@@ -63,29 +63,29 @@ sirAnimationResult_t SIRAnimationContractLeasePool::initialize( sirAnimationCont
 	m_nCancellationGeneration = 0;
 	memset( m_pPoses, 0, sizeof( sirAnimationContractPoseSlot_t ) * nPoseCapacity );
 	memset( m_pReaders, 0, sizeof( sirAnimationContractReaderSlot_t ) * nReaderCapacity );
-	return SIR_ANIMATION_SUCCESS;
+	return SIRAnimationResult::SIR_ANIMATION_SUCCESS;
 }
 
-sirAnimationResult_t SIRAnimationContractLeasePool::registerPose( sirAnimationPoseHandle_t pose, const sirAnimationInstance_t& instance,
+SIRAnimationResult SIRAnimationContractLeasePool::registerPose( sirAnimationPoseHandle_t pose, const sirAnimationInstance_t& instance,
                                                                   const sirAnimationTick_t& tick ) noexcept
 {
 	if ( !m_pPoses || pose.nSlot >= m_nPoseCapacity || pose.nGeneration == 0 ) {
-		return SIR_ANIMATION_INVALID_HANDLE;
+		return SIRAnimationResult::SIR_ANIMATION_INVALID_HANDLE;
 	}
-	if ( SIRAnimationContractValidation::validateInstance( instance ) != SIR_ANIMATION_SUCCESS ) {
-		return SIR_ANIMATION_STALE_ENTITY;
+	if ( SIRAnimationContractValidation::validateInstance( instance ) != SIRAnimationResult::SIR_ANIMATION_SUCCESS ) {
+		return SIRAnimationResult::SIR_ANIMATION_STALE_ENTITY;
 	}
 	sirAnimationContractPoseSlot_t& slot = m_pPoses[pose.nSlot];
 	if ( slot.nActiveReaders ) {
-		return SIR_ANIMATION_BUSY;
+		return SIRAnimationResult::SIR_ANIMATION_BUSY;
 	}
 	if ( pose.nGeneration <= slot.nGeneration ) {
-		return SIR_ANIMATION_STALE_POSE;
+		return SIRAnimationResult::SIR_ANIMATION_STALE_POSE;
 	}
 	if ( m_bHasCancellation &&
 	     ( tick.nWorldEpoch < m_nCancelledWorldEpoch ||
 	       ( tick.nWorldEpoch == m_nCancelledWorldEpoch && tick.nCancellationGeneration <= m_nCancellationGeneration ) ) ) {
-		return SIR_ANIMATION_CANCELLED;
+		return SIRAnimationResult::SIR_ANIMATION_CANCELLED;
 	}
 	slot.instance = instance;
 	slot.tick = tick;
@@ -93,20 +93,20 @@ sirAnimationResult_t SIRAnimationContractLeasePool::registerPose( sirAnimationPo
 	slot.nActiveReaders = 0;
 	slot.bActive = 1;
 	slot.bCancelled = 0;
-	return SIR_ANIMATION_SUCCESS;
+	return SIRAnimationResult::SIR_ANIMATION_SUCCESS;
 }
 
-sirAnimationResult_t SIRAnimationContractLeasePool::acquire( sirAnimationPoseHandle_t pose, sirAnimationPoseLease_t *pLease ) noexcept
+SIRAnimationResult SIRAnimationContractLeasePool::acquire( sirAnimationPoseHandle_t pose, sirAnimationPoseLease_t *pLease ) noexcept
 {
 	if ( !pLease ) {
-		return SIR_ANIMATION_INVALID_ARGUMENT;
+		return SIRAnimationResult::SIR_ANIMATION_INVALID_ARGUMENT;
 	}
 	if ( !m_pPoses || pose.nSlot >= m_nPoseCapacity || pose.nGeneration == 0 ) {
-		return SIR_ANIMATION_INVALID_HANDLE;
+		return SIRAnimationResult::SIR_ANIMATION_INVALID_HANDLE;
 	}
 	sirAnimationContractPoseSlot_t& slot = m_pPoses[pose.nSlot];
 	if ( !slot.bActive || slot.nGeneration != pose.nGeneration || slot.bCancelled ) {
-		return SIR_ANIMATION_STALE_POSE;
+		return SIRAnimationResult::SIR_ANIMATION_STALE_POSE;
 	}
 	for ( uint32_t i = 0; i < m_nReaderCapacity; ++i ) {
 		sirAnimationContractReaderSlot_t& reader = m_pReaders[i];
@@ -119,42 +119,42 @@ sirAnimationResult_t SIRAnimationContractLeasePool::acquire( sirAnimationPoseHan
 			// nReaderEpoch encodes the pool's one-based ticket index; the
 			// generation is the ABA guard when a ticket slot is reused.
 			pLease->pose = pose;
-			pLease->nReaderEpoch = ( uint64_t )i + 1;
+			pLease->nReaderEpoch = static_cast<uint64_t>(i) + 1;
 			pLease->nLeaseGeneration = reader.nGeneration;
 			pLease->nReserved = 0;
-			return SIR_ANIMATION_SUCCESS;
+			return SIRAnimationResult::SIR_ANIMATION_SUCCESS;
 		}
 	}
-	return SIR_ANIMATION_OUT_OF_CAPACITY;
+	return SIRAnimationResult::SIR_ANIMATION_OUT_OF_CAPACITY;
 }
 
-sirAnimationResult_t SIRAnimationContractLeasePool::release( const sirAnimationPoseLease_t& lease ) noexcept
+SIRAnimationResult SIRAnimationContractLeasePool::release( const sirAnimationPoseLease_t& lease ) noexcept
 {
 	if ( !m_pReaders || !lease.nReaderEpoch || lease.nReaderEpoch > m_nReaderCapacity || lease.nReserved != 0 ) {
-		return SIR_ANIMATION_INVALID_HANDLE;
+		return SIRAnimationResult::SIR_ANIMATION_INVALID_HANDLE;
 	}
 	sirAnimationContractReaderSlot_t& reader = m_pReaders[lease.nReaderEpoch - 1];
 	if ( !reader.bActive || reader.nGeneration != lease.nLeaseGeneration || reader.pose.nSlot != lease.pose.nSlot ||
 	     reader.pose.nGeneration != lease.pose.nGeneration ) {
-		return SIR_ANIMATION_INVALID_HANDLE;
+		return SIRAnimationResult::SIR_ANIMATION_INVALID_HANDLE;
 	}
 	if ( lease.pose.nSlot >= m_nPoseCapacity ) {
-		return SIR_ANIMATION_INVALID_HANDLE;
+		return SIRAnimationResult::SIR_ANIMATION_INVALID_HANDLE;
 	}
 	sirAnimationContractPoseSlot_t& slot = m_pPoses[lease.pose.nSlot];
 	if ( slot.nGeneration != lease.pose.nGeneration || !slot.nActiveReaders ) {
-		return SIR_ANIMATION_STALE_POSE;
+		return SIRAnimationResult::SIR_ANIMATION_STALE_POSE;
 	}
 	reader.bActive = 0;
 	--slot.nActiveReaders;
 	--m_nOutstandingReaders;
-	return SIR_ANIMATION_SUCCESS;
+	return SIRAnimationResult::SIR_ANIMATION_SUCCESS;
 }
 
-sirAnimationResult_t SIRAnimationContractLeasePool::cancelEpoch( uint64_t nWorldEpoch, uint32_t nCancellationGeneration ) noexcept
+SIRAnimationResult SIRAnimationContractLeasePool::cancelEpoch( uint64_t nWorldEpoch, uint32_t nCancellationGeneration ) noexcept
 {
 	if ( !m_pPoses ) {
-		return SIR_ANIMATION_INVALID_HANDLE;
+		return SIRAnimationResult::SIR_ANIMATION_INVALID_HANDLE;
 	}
 	if ( !m_bHasCancellation || nWorldEpoch > m_nCancelledWorldEpoch ||
 	     ( nWorldEpoch == m_nCancelledWorldEpoch && nCancellationGeneration > m_nCancellationGeneration ) ) {
@@ -168,35 +168,35 @@ sirAnimationResult_t SIRAnimationContractLeasePool::cancelEpoch( uint64_t nWorld
 			slot.bCancelled = 1;
 		}
 	}
-	return SIR_ANIMATION_SUCCESS;
+	return SIRAnimationResult::SIR_ANIMATION_SUCCESS;
 }
 
-sirAnimationResult_t SIRAnimationContractLeasePool::retirePose( sirAnimationPoseHandle_t pose ) noexcept
+SIRAnimationResult SIRAnimationContractLeasePool::retirePose( sirAnimationPoseHandle_t pose ) noexcept
 {
 	if ( !m_pPoses || pose.nSlot >= m_nPoseCapacity || pose.nGeneration == 0 ) {
-		return SIR_ANIMATION_INVALID_HANDLE;
+		return SIRAnimationResult::SIR_ANIMATION_INVALID_HANDLE;
 	}
 	sirAnimationContractPoseSlot_t& slot = m_pPoses[pose.nSlot];
 	if ( !slot.bActive || slot.nGeneration != pose.nGeneration ) {
-		return SIR_ANIMATION_STALE_POSE;
+		return SIRAnimationResult::SIR_ANIMATION_STALE_POSE;
 	}
 	if ( slot.nActiveReaders ) {
-		return SIR_ANIMATION_BUSY;
+		return SIRAnimationResult::SIR_ANIMATION_BUSY;
 	}
 	slot.bActive = 0;
-	return SIR_ANIMATION_SUCCESS;
+	return SIRAnimationResult::SIR_ANIMATION_SUCCESS;
 }
 
-sirAnimationResult_t SIRAnimationContractLeasePool::shutdown( void ) noexcept
+SIRAnimationResult SIRAnimationContractLeasePool::shutdown( void ) noexcept
 {
 	// Never release borrowed storage while a reader still retains its ticket.
 	if ( m_nOutstandingReaders ) {
-		return SIR_ANIMATION_BUSY;
+		return SIRAnimationResult::SIR_ANIMATION_BUSY;
 	}
 	m_pPoses = nullptr;
 	m_pReaders = nullptr;
 	m_nPoseCapacity = 0;
 	m_nReaderCapacity = 0;
 	m_bHasCancellation = 0;
-	return SIR_ANIMATION_SUCCESS;
+	return SIRAnimationResult::SIR_ANIMATION_SUCCESS;
 }

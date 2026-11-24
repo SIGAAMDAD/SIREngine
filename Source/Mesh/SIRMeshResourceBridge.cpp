@@ -63,14 +63,14 @@ SIRResourceResult SIRMeshResourceBridge::publish( SIRResourceGraphWriter& writer
                                                   const sirMeshPublishRequest_t& request, SIRResourceHandle* pHandle ) noexcept
 {
 	if ( request.key.nAssetId == 0 || request.key.nRevision == 0 || request.key.nReserved != 0 ) {
-		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	if ( source.pPositionsXYZ == nullptr || source.pTriangleIndices == nullptr ||
 	     source.nVertexCount == 0 || source.nIndexCount == 0 ) {
-		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	if ( request.nStagingDomain == 0 ) {
-		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	
 	const SIRResourceKey key = getKey( request.key );
@@ -78,31 +78,31 @@ SIRResourceResult SIRMeshResourceBridge::publish( SIRResourceGraphWriter& writer
 	if ( request.nExpectedGraphRevision != 0 ) {
 		SIRResourceReadScope scope( *writer.m_pGraph );
 		if ( !scope.isActive() ) {
-			return SIR_RESOURCE_RESULT_OUT_OF_BUDGET;
+			return SIRResourceResult::SIR_RESOURCE_RESULT_OUT_OF_BUDGET;
 		}
-		SIRResourceHandle previous = {};
+		SIRResourceHandle previous {};
 		const SIRResourceResult eFound = writer.m_pGraph->find( scope, key, &previous );
-		if ( eFound == SIR_RESOURCE_RESULT_INVALID_HANDLE ) {
-			return SIR_RESOURCE_RESULT_STALE_REVISION;
+		if ( eFound == SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_HANDLE ) {
+			return SIRResourceResult::SIR_RESOURCE_RESULT_STALE_REVISION;
 		}
-		if ( eFound != SIR_RESOURCE_RESULT_SUCCESS ) {
+		if ( eFound != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ) {
 			return eFound;
 		}
 		SIRResourceView previousView;
 		const SIRResourceResult eResolve = writer.m_pGraph->resolve( scope, previous, &previousView );
-		if ( eResolve != SIR_RESOURCE_RESULT_SUCCESS ) {
+		if ( eResolve != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ) {
 			return eResolve;
 		}
-		SIRResourceInfo info = {};
+		SIRResourceInfo info {};
 		const SIRResourceResult eInfo = previousView.getInfo( &info );
-		if ( eInfo != SIR_RESOURCE_RESULT_SUCCESS ) {
+		if ( eInfo != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ) {
 			return eInfo;
 		}
 		if ( info.m_nRevision != request.nExpectedGraphRevision ) {
-			return SIR_RESOURCE_RESULT_STALE_REVISION;
+			return SIRResourceResult::SIR_RESOURCE_RESULT_STALE_REVISION;
 		}
-		if ( info.m_eKind != SIR_RESOURCE_KIND_GEOMETRY || info.m_nFormatId != SIR_MESH_RESOURCE_FORMAT || info.m_nSchemaVersion != 1 ) {
-			return SIR_RESOURCE_RESULT_TYPE_MISMATCH;
+		if ( info.m_eKind != SIRResourceKind::SIR_RESOURCE_KIND_GEOMETRY || info.m_nFormatId != SIR_MESH_RESOURCE_FORMAT || info.m_nSchemaVersion != 1 ) {
+			return SIRResourceResult::SIR_RESOURCE_RESULT_TYPE_MISMATCH;
 		}
 	}
 	
@@ -111,10 +111,10 @@ SIRResourceResult SIRMeshResourceBridge::publish( SIRResourceGraphWriter& writer
 	const uint64_t nIndexBytes = source.nIndexCount * sizeof( uint32_t );
 	const uint64_t nTotalBytes = nVertexBytes + nIndexBytes;
 	
-	SIRResourceStagingHandle staging = {};
-	SIRResourceMutableBytes stagingBytes = {};
+	SIRResourceStagingHandle staging {};
+	SIRResourceMutableBytes stagingBytes {};
 	const SIRResourceResult eStaging = writer.allocateStaging( nTotalBytes, 16, request.nStagingDomain, &staging, &stagingBytes );
-	if ( eStaging != SIR_RESOURCE_RESULT_SUCCESS ) {
+	if ( eStaging != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ) {
 		return eStaging;
 	}
 	
@@ -128,9 +128,9 @@ SIRResourceResult SIRMeshResourceBridge::publish( SIRResourceGraphWriter& writer
 	
 	const SIRResourceContentKey contentKey = fingerprint( source );
 	const SIRResourceChunkPublication chunk = { { 0 }, contentKey, staging, false };
-	const SIRResourcePublication publication = { key, SIR_RESOURCE_KIND_GEOMETRY, 1, SIR_MESH_RESOURCE_FORMAT, &chunk, 1, nullptr, 0 };
+	const SIRResourcePublication publication = { key, SIRResourceKind::SIR_RESOURCE_KIND_GEOMETRY, 1, SIR_MESH_RESOURCE_FORMAT, &chunk, 1, nullptr, 0 };
 	const SIRResourceResult ePublished = writer.publishExpected( publication, request.nExpectedGraphRevision, pHandle );
-	if ( ePublished != SIR_RESOURCE_RESULT_SUCCESS ) {
+	if ( ePublished != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ) {
 		writer.cancelStaging( staging );
 	}
 	return ePublished;
@@ -140,43 +140,43 @@ SIRResourceResult SIRMeshResourceBridge::open( const SIRResourceGraph& graph, co
                                                const sirMeshKey_t& key, sirMeshGeometryRead_t* pRead ) noexcept
 {
 	if ( key.nAssetId == 0 || key.nRevision == 0 || key.nReserved != 0 ) {
-		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	if ( pRead == nullptr ) {
-		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	
 	const SIRResourceKey resourceKey = getKey( key );
-	SIRResourceHandle handle = {};
+	SIRResourceHandle handle {};
 	const SIRResourceResult eFind = graph.find( scope, resourceKey, &handle );
-	if ( eFind != SIR_RESOURCE_RESULT_SUCCESS ) {
+	if ( eFind != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ) {
 		return eFind;
 	}
 	
 	SIRResourceView resource;
 	const SIRResourceResult eResolve = graph.resolve( scope, handle, &resource );
-	if ( eResolve != SIR_RESOURCE_RESULT_SUCCESS ) {
+	if ( eResolve != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ) {
 		return eResolve;
 	}
 	
-	SIRResourceInfo info = {};
+	SIRResourceInfo info {};
 	const SIRResourceResult eInfo = resource.getInfo( &info );
-	if ( eInfo != SIR_RESOURCE_RESULT_SUCCESS ) {
+	if ( eInfo != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ) {
 		return eInfo;
 	}
-	if ( info.m_eKind != SIR_RESOURCE_KIND_GEOMETRY || info.m_nFormatId != SIR_MESH_RESOURCE_FORMAT || info.m_nSchemaVersion != 1 ) {
-		return SIR_RESOURCE_RESULT_TYPE_MISMATCH;
+	if ( info.m_eKind != SIRResourceKind::SIR_RESOURCE_KIND_GEOMETRY || info.m_nFormatId != SIR_MESH_RESOURCE_FORMAT || info.m_nSchemaVersion != 1 ) {
+		return SIRResourceResult::SIR_RESOURCE_RESULT_TYPE_MISMATCH;
 	}
 	
-	SIRResourceConstBytes payload = {};
+	SIRResourceConstBytes payload {};
 	const SIRResourceResult eChunk = resource.getChunk( { 0 }, &payload );
-	if ( eChunk != SIR_RESOURCE_RESULT_SUCCESS ) {
+	if ( eChunk != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ) {
 		return eChunk;
 	}
 	
 	// Parse the stored vertex positions and indices
 	if ( payload.m_pData == nullptr || payload.m_nSize < 16 ) {
-		return SIR_RESOURCE_RESULT_INVALID_FORMAT;
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_FORMAT;
 	}
 	
 	// We stored: [vertex positions (float*3*nVertexCount)] [indices (uint32_t*nIndexCount)]
@@ -187,5 +187,5 @@ SIRResourceResult SIRMeshResourceBridge::open( const SIRResourceGraph& graph, co
 	// For a complete implementation, we'd need to store the counts in the chunk
 	// For now, return the key and let the caller use the mesh cache for actual geometry access
 	*pRead = { nullptr, nullptr, 0, 0, key };
-	return SIR_RESOURCE_RESULT_SUCCESS;
+	return SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS;
 }

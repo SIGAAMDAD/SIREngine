@@ -12,8 +12,8 @@ express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIRWINDOWSURFACEADAPTER_H__
-#define __SIRENGINE_SIRWINDOWSURFACEADAPTER_H__
+#ifndef __SIR_WINDOWSURFACEADAPTER_H__
+#define __SIR_WINDOWSURFACEADAPTER_H__
 #include <Core/SIRPCH.h>
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -26,6 +26,6 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // Renderer retains the acquired native lease until GPU surface retirement.
 // The window owner must call this from its owner thread; render workers hand
 // the request to that thread, never dereference borrowed native pointers.
-sirGraphicsResult_t sirGraphicsAcquireWindowSurface( SIRWindowSystem& windows, sirWindowHandle_t hWindow,
+SIRGraphicsResult sirGraphicsAcquireWindowSurface( SIRWindowSystem& windows, sirWindowHandle_t hWindow,
                                                      sirGraphicsNativeSurface_t *pNative, sirWindowNativeLease_t *pLease ) noexcept;
-#endif // __SIRENGINE_SIRWINDOWSURFACEADAPTER_H__
+#endif // __SIR_WINDOWSURFACEADAPTER_H__

@@ -1,7 +1,7 @@
 # SIREngine first-party C++ only. LLVM 23.1.5; independently owned vendor style is unchanged.
 BasedOnStyle: LLVM
 Language: Cpp
-Standard: c++23
+Standard: Latest
 ColumnLimit: 140
 UseTab: ForIndentation
 IndentWidth: 4
@@ -77,8 +77,5 @@ IncludeBlocks: Preserve
 ReflowComments: false
 FixNamespaceComments: false
 SeparateDefinitionBlocks: Always
-KeepEmptyLines:
-  AtEndOfFile: false
-  AtStartOfBlock: false
-  AtStartOfFile: false
+KeepEmptyLinesAtTheStartOfBlocks: false
 MaxEmptyLinesToKeep: 1

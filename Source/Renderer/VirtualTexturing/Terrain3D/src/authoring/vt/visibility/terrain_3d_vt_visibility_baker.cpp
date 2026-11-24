@@ -159,9 +159,9 @@ void t3dVTProbeView( t3dVTProbePush_t& pc, const t3dVTVisibilityProbeInput_t& pr
 	pc.m_eye[3] = 1.0f / tanf( probe.m_fFovDegrees * 0.008726646259971648f );
 	float dx, dy, dz;
 	if ( face < 8u ) {
-		dx = cosf( ( float )face * 0.7853981633974483f );
+		dx = cosf( static_cast<float>(face) * 0.7853981633974483f );
 		dy = 0.0f;
-		dz = sinf( ( float )face * 0.7853981633974483f );
+		dz = sinf( static_cast<float>(face) * 0.7853981633974483f );
 		pc.m_right[0] = -dz;
 		pc.m_right[2] = dx;
 		pc.m_up[1] = 1.0f;
@@ -182,7 +182,7 @@ void t3dVTProbeView( t3dVTProbePush_t& pc, const t3dVTVisibilityProbeInput_t& pr
 PackedByteArray t3dVTProbeBytes( const void *p, const size_t count )
 {
 	PackedByteArray b;
-	b.resize( ( int64_t )count );
+	b.resizestatic_cast<int64_t>(count);
 	if ( count != 0u )
 		memcpy( b.ptrw(), p, count );
 	return b;
@@ -208,8 +208,8 @@ bool Terrain3DVTVisibilityBaker::selectCellProbes( const t3dVTVisibilityStaticVe
 	std::vector<t3dVTVisibilityProbeInput_t> selected;
 	selected.reserve( 5u );
 	for ( uint32_t i = 0u; i < 5u; ++i ) {
-		const float x = ( ( float )cellX + positions[i][0] ) * 128.0f;
-		const float z = ( ( float )cellZ + positions[i][1] ) * 128.0f;
+		const float x = ( static_cast<float>(cellX) + positions[i][0] ) * 128.0f;
+		const float z = ( static_cast<float>(cellZ) + positions[i][1] ) * 128.0f;
 		float highest = -INFINITY;
 		for ( uint32_t j = 0u; j < nTriangles; ++j ) {
 			const auto& t = triangles[firstTriangle + j];
@@ -325,7 +325,7 @@ bool Terrain3DVTVisibilityBaker::bake( const t3dVTVisibilityStaticSceneView_t& s
 	for ( uint32_t probeIndex = 0u; probeIndex < scene.m_nProbeCount; ++probeIndex ) {
 		const auto& probe = scene.m_pProbes[probeIndex];
 		std::vector<t3dVTProbeGpuVertex_t> vertices;
-		vertices.reserve( ( size_t )probe.m_nTriangleCount * 3u );
+		vertices.reserve( static_cast<size_t>(probe.m_nTriangleCount) * 3u );
 		uint32_t unsupported = 0u;
 		for ( uint32_t ti = 0u; ti < probe.m_nTriangleCount; ++ti ) {
 			const auto& tri = scene.m_pTriangles[probe.m_nFirstTriangle + ti];
@@ -342,7 +342,7 @@ bool Terrain3DVTVisibilityBaker::bake( const t3dVTVisibilityStaticSceneView_t& s
 				expanded.m_position[3] = 1.0f;
 				expanded.m_uvMaterial[0] = in.m_fU;
 				expanded.m_uvMaterial[1] = in.m_fV;
-				expanded.m_uvMaterial[2] = ( float )tri.m_nMaterialKeyIndex;
+				expanded.m_uvMaterial[2] = static_cast<float>(tri.m_nMaterialKeyIndex);
 				vertices.push_back( expanded );
 			}
 		}
@@ -353,7 +353,7 @@ bool Terrain3DVTVisibilityBaker::bake( const t3dVTVisibilityStaticSceneView_t& s
 		r.m_nMaterialCount = scene.m_nMaterialCount;
 		r.m_nNominalRenderSize = probe.m_nNominalRenderSize;
 		r.m_nNominalTextureSize = config.m_nNominalTextureSize;
-		r.m_nOpaqueTriangles = ( uint32_t )( vertices.size() / 3u );
+		r.m_nOpaqueTriangles = static_cast<uint32_t>(  vertices.size() / 3u  );
 		r.m_nUncapturedTriangles = unsupported;
 		r.m_bPartial = unsupported != 0u;
 		r.m_counts.resize( nCounters, 0u );
@@ -363,7 +363,7 @@ bool Terrain3DVTVisibilityBaker::bake( const t3dVTVisibilityStaticSceneView_t& s
 			// All attached resources belong to this local RD and are released
 			// before its lifetime ends. Cold probe work may allocate.
 			const RID geometry =
-			    dev.hold( dev.m_rd->storage_buffer_create( ( uint32_t )( vertices.size() * sizeof( vertices[0] ) ),
+			    dev.hold( dev.m_rd->storage_buffer_create( static_cast<uint32_t>(  vertices.size() * sizeof( vertices[0] )  ),
 				                                           t3dVTProbeBytes( vertices.data(), vertices.size() * sizeof( vertices[0] ) ) ) );
 			if ( !geometry.is_valid() )
 				return false;
@@ -371,7 +371,7 @@ bool Terrain3DVTVisibilityBaker::bake( const t3dVTVisibilityStaticSceneView_t& s
 			for ( uint32_t binding = 0u; binding < 2u; ++binding ) {
 				Ref<RDUniform> uniform;
 				uniform.instantiate();
-				uniform->set_binding( ( int32_t )binding );
+				uniform->set_bindingstatic_cast<int32_t>(binding);
 				uniform->set_uniform_type( RenderingDevice::UNIFORM_TYPE_STORAGE_BUFFER );
 				uniform->add_id( binding == 0u ? geometry : histogram );
 				uniforms.push_back( uniform );
@@ -413,21 +413,21 @@ bool Terrain3DVTVisibilityBaker::bake( const t3dVTVisibilityStaticSceneView_t& s
 				const PackedByteArray depthPush = t3dVTProbeBytes( &pc, sizeof( pc ) );
 				dev.m_rd->draw_list_bind_render_pipeline( draw, depthPipeline );
 				dev.m_rd->draw_list_set_push_constant( draw, depthPush, sizeof( pc ) );
-				dev.m_rd->draw_list_draw( draw, false, 1u, ( uint32_t )vertices.size() );
+				dev.m_rd->draw_list_draw( draw, false, 1u, static_cast<uint32_t>(vertices.size() ));
 				// Pass 2: depth-equal, no depth writes. Only final visible
 				// fragments contribute to the histogram.
 				pc.m_parameters[3] = 0u;
 				const PackedByteArray histogramPush = t3dVTProbeBytes( &pc, sizeof( pc ) );
 				dev.m_rd->draw_list_bind_render_pipeline( draw, histogramPipeline );
 				dev.m_rd->draw_list_set_push_constant( draw, histogramPush, sizeof( pc ) );
-				dev.m_rd->draw_list_draw( draw, false, 1u, ( uint32_t )vertices.size() );
+				dev.m_rd->draw_list_draw( draw, false, 1u, static_cast<uint32_t>(vertices.size() ));
 				dev.m_rd->draw_list_end();
 				stats.m_nGpuPasses += 2u;
 			}
 			dev.m_rd->submit();
 			dev.m_rd->sync(); // local RD only, cold bake completion
 			const PackedByteArray bytes = dev.m_rd->buffer_get_data( histogram, 0u, nCounterBytes );
-			if ( ( uint32_t )bytes.size() != nCounterBytes )
+			if ( static_cast<uint32_t>(bytes.size() != nCounterBytes ))
 				return false;
 			memcpy( r.m_counts.data(), bytes.ptr(), nCounterBytes );
 			stats.m_nReadbackBytes += nCounterBytes;

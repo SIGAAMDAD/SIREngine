@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRGRAPHICSPIPELINEBRIDGE_H__
-#define __SIRENGINE_SIRGRAPHICSPIPELINEBRIDGE_H__
+#ifndef __SIR_GRAPHICSPIPELINEBRIDGE_H__
+#define __SIR_GRAPHICSPIPELINEBRIDGE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -30,6 +30,6 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // layout. All recipe, shader, binding, and attribute pointers remain borrowed
 // for the duration of the native pCreatePipeline call. No allocation occurs.
 // On failure, pEncoded is never modified.
-sirGraphicsResult_t sirGraphicsEncodeABIPipeline( const sirGraphicsPipelineDesc_t& source, sirGraphicsABIPipeline_t *pEncoded ) noexcept;
+SIRGraphicsResult sirGraphicsEncodeABIPipeline( const sirGraphicsPipelineDesc_t& source, sirGraphicsABIPipeline_t *pEncoded ) noexcept;
 
-#endif // __SIRENGINE_SIRGRAPHICSPIPELINEBRIDGE_H__
+#endif // __SIR_GRAPHICSPIPELINEBRIDGE_H__

@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRPACKFORMAT_H__
-#define __SIRENGINE_SIRPACKFORMAT_H__
+#ifndef __SIR_PACKFORMAT_H__
+#define __SIR_PACKFORMAT_H__
 
 #include <Core/SIRPCH.h>
 
@@ -39,8 +39,7 @@ constexpr uint32_t SIR_PACK_MAX_RESOURCES = 1048576;
 constexpr uint32_t SIR_PACK_MAX_CHUNKS = 4194304;
 constexpr uint64_t SIR_PACK_MAX_DECODED_CHUNK_BYTES = 1ULL << 30;
 
-typedef enum sirPackResult_e : uint8_t
-{
+enum class SIRPackResult : uint8_t {
 	SIR_PACK_OK = 0,
 	SIR_PACK_INVALID_ARGUMENT,
 	SIR_PACK_INVALID_FORMAT,
@@ -52,14 +51,13 @@ typedef enum sirPackResult_e : uint8_t
 	SIR_PACK_UNSUPPORTED_CODEC,
 	SIR_PACK_CYCLIC_DEPENDENCY,
 	SIR_PACK_STALE_SOURCE
-} sirPackResult_t;
+};
 
-typedef enum sirPackCodec_e : uint16_t
-{
+enum class SIRPackCodec : uint16_t {
 	SIR_PACK_CODEC_NONE = 0,
 	SIR_PACK_CODEC_ZSTD = 1,
 	SIR_PACK_CODEC_LZ4 = 2
-} sirPackCodec_t;
+};
 
 typedef struct sirPackResource_s
 {
@@ -83,7 +81,7 @@ typedef struct sirPackChunk_s
 	uint64_t nEncodedBytes;
 	uint64_t nDecodedBytes;
 	uint8_t szDigest[32];
-	sirPackCodec_t eCodec;
+	SIRPackCodec eCodec;
 	uint16_t nCodecVersion;
 	uint32_t nAlignment;
 	uint32_t nDictionaryId;
@@ -92,7 +90,7 @@ typedef struct sirPackChunk_s
 typedef struct sirPackDependency_s
 {
 	SIRResourceKey key;
-	sirResourceEdgeKind_t eKind;
+	SIRResourceEdgeKind eKind;
 } sirPackDependency_t;
 
 typedef struct sirPackShard_s
@@ -113,4 +111,4 @@ void sirPackWrite64( uint8_t *pBytes, uint64_t nValue ) noexcept;
 void sirPackSha256( const uint8_t *pBytes, uint64_t nBytes, uint8_t *pDigest ) noexcept;
 void sirPackCatalogDigest( const uint8_t *pBytes, uint64_t nBytes, uint8_t *pDigest ) noexcept;
 
-#endif // __SIRENGINE_SIRPACKFORMAT_H__
+#endif // __SIR_PACKFORMAT_H__

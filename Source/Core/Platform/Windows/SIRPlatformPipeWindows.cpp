@@ -29,99 +29,99 @@ SIRPlatformPipe::~SIRPlatformPipe( void ) noexcept
 	close();
 }
 
-sirPipeResult_t SIRPlatformPipe::create( void ) noexcept
+SIRPipeResult SIRPlatformPipe::create( void ) noexcept
 {
 	if ( isReadOpen() || isWriteOpen() ) {
-		return SIR_PIPE_INVALID_ARGUMENT;
+		return SIRPipeResult::SIR_PIPE_INVALID_ARGUMENT;
 	}
 	HANDLE hRead = nullptr;
 	HANDLE hWrite = nullptr;
 	if ( !CreatePipe( &hRead, &hWrite, nullptr, 0 ) ) {
-		return SIR_PIPE_IO_ERROR;
+		return SIRPipeResult::SIR_PIPE_IO_ERROR;
 	}
-	m_nReadHandle = ( uintptr_t )hRead;
-	m_nWriteHandle = ( uintptr_t )hWrite;
-	return SIR_PIPE_OK;
+	m_nReadHandle = static_cast<uintptr_t>(hRead);
+	m_nWriteHandle = static_cast<uintptr_t>(hWrite);
+	return SIRPipeResult::SIR_PIPE_OK;
 }
 
-sirPipeResult_t SIRPlatformPipe::read( void *pDestination, uint64_t nBytes, uint64_t *pTransferred ) noexcept
+SIRPipeResult SIRPlatformPipe::read( void *pDestination, uint64_t nBytes, uint64_t *pTransferred ) noexcept
 {
 	if ( pTransferred == nullptr ) {
-		return SIR_PIPE_INVALID_ARGUMENT;
+		return SIRPipeResult::SIR_PIPE_INVALID_ARGUMENT;
 	}
 	*pTransferred = 0;
 	if ( !isReadOpen() ) {
-		return SIR_PIPE_CLOSED;
+		return SIRPipeResult::SIR_PIPE_CLOSED;
 	}
 	if ( nBytes != 0 && pDestination == nullptr ) {
-		return SIR_PIPE_INVALID_ARGUMENT;
+		return SIRPipeResult::SIR_PIPE_INVALID_ARGUMENT;
 	}
 	if ( nBytes == 0 ) {
-		return SIR_PIPE_OK;
+		return SIRPipeResult::SIR_PIPE_OK;
 	}
-	const DWORD nStep = ( DWORD )( nBytes < 1024 * 1024 ? nBytes : 1024 * 1024 );
+	const DWORD nStep = static_cast<DWORD>( nBytes < 1024 * 1024 ? nBytes : 1024 * 1024 );
 	DWORD nRead = 0;
-	if ( !ReadFile( ( HANDLE )m_nReadHandle, pDestination, nStep, &nRead, nullptr ) ) {
+	if ( !ReadFile( static_cast<HANDLE>(m_nReadHandle), pDestination, nStep, &nRead, nullptr ) ) {
 		const DWORD nError = GetLastError();
-		return nError == ERROR_BROKEN_PIPE || nError == ERROR_NO_DATA ? SIR_PIPE_END_OF_STREAM : SIR_PIPE_IO_ERROR;
+		return nError == ERROR_BROKEN_PIPE || nError == ERROR_NO_DATA ? SIRPipeResult::SIR_PIPE_END_OF_STREAM : SIRPipeResult::SIR_PIPE_IO_ERROR;
 	}
 	*pTransferred = nRead;
-	return nRead == 0 ? SIR_PIPE_END_OF_STREAM : SIR_PIPE_OK;
+	return nRead == 0 ? SIRPipeResult::SIR_PIPE_END_OF_STREAM : SIRPipeResult::SIR_PIPE_OK;
 }
 
-sirPipeResult_t SIRPlatformPipe::write( const void *pSource, uint64_t nBytes, uint64_t *pTransferred ) noexcept
+SIRPipeResult SIRPlatformPipe::write( const void *pSource, uint64_t nBytes, uint64_t *pTransferred ) noexcept
 {
 	if ( pTransferred == nullptr ) {
-		return SIR_PIPE_INVALID_ARGUMENT;
+		return SIRPipeResult::SIR_PIPE_INVALID_ARGUMENT;
 	}
 	*pTransferred = 0;
 	if ( !isWriteOpen() ) {
-		return SIR_PIPE_CLOSED;
+		return SIRPipeResult::SIR_PIPE_CLOSED;
 	}
 	if ( nBytes != 0 && pSource == nullptr ) {
-		return SIR_PIPE_INVALID_ARGUMENT;
+		return SIRPipeResult::SIR_PIPE_INVALID_ARGUMENT;
 	}
 	while ( *pTransferred < nBytes ) {
 		const uint64_t nLeft = nBytes - *pTransferred;
-		const DWORD nStep = ( DWORD )( nLeft < 64 * 1024 ? nLeft : 64 * 1024 );
+		const DWORD nStep = static_cast<DWORD>( nLeft < 64 * 1024 ? nLeft : 64 * 1024 );
 		DWORD nWritten = 0;
-		if ( !WriteFile( ( HANDLE )m_nWriteHandle, ( const uint8_t * )pSource + *pTransferred, nStep, &nWritten, nullptr ) ) {
+		if ( !WriteFile( static_cast<HANDLE>(m_nWriteHandle), static_cast<const uint8_t *>(pSource) + *pTransferred, nStep, &nWritten, nullptr ) ) {
 			const DWORD nError = GetLastError();
-			return nError == ERROR_BROKEN_PIPE || nError == ERROR_NO_DATA ? SIR_PIPE_BROKEN : SIR_PIPE_IO_ERROR;
+			return nError == ERROR_BROKEN_PIPE || nError == ERROR_NO_DATA ? SIRPipeResult::SIR_PIPE_BROKEN : SIRPipeResult::SIR_PIPE_IO_ERROR;
 		}
 		if ( nWritten == 0 ) {
-			return SIR_PIPE_IO_ERROR;
+			return SIRPipeResult::SIR_PIPE_IO_ERROR;
 		}
 		*pTransferred += nWritten;
 	}
-	return SIR_PIPE_OK;
+	return SIRPipeResult::SIR_PIPE_OK;
 }
 
-sirPipeResult_t SIRPlatformPipe::closeRead( void ) noexcept
+SIRPipeResult SIRPlatformPipe::closeRead( void ) noexcept
 {
 	if ( !isReadOpen() ) {
-		return SIR_PIPE_OK;
+		return SIRPipeResult::SIR_PIPE_OK;
 	}
-	HANDLE hRead = ( HANDLE )m_nReadHandle;
+	HANDLE hRead = static_cast<HANDLE>(m_nReadHandle);
 	m_nReadHandle = UINTPTR_MAX;
-	return CloseHandle( hRead ) ? SIR_PIPE_OK : SIR_PIPE_IO_ERROR;
+	return CloseHandle( hRead ) ? SIRPipeResult::SIR_PIPE_OK : SIRPipeResult::SIR_PIPE_IO_ERROR;
 }
 
-sirPipeResult_t SIRPlatformPipe::closeWrite( void ) noexcept
+SIRPipeResult SIRPlatformPipe::closeWrite( void ) noexcept
 {
 	if ( !isWriteOpen() ) {
-		return SIR_PIPE_OK;
+		return SIRPipeResult::SIR_PIPE_OK;
 	}
-	HANDLE hWrite = ( HANDLE )m_nWriteHandle;
+	HANDLE hWrite = static_cast<HANDLE>(m_nWriteHandle);
 	m_nWriteHandle = UINTPTR_MAX;
-	return CloseHandle( hWrite ) ? SIR_PIPE_OK : SIR_PIPE_IO_ERROR;
+	return CloseHandle( hWrite ) ? SIRPipeResult::SIR_PIPE_OK : SIRPipeResult::SIR_PIPE_IO_ERROR;
 }
 
-sirPipeResult_t SIRPlatformPipe::close( void ) noexcept
+SIRPipeResult SIRPlatformPipe::close( void ) noexcept
 {
-	const sirPipeResult_t eRead = closeRead();
-	const sirPipeResult_t eWrite = closeWrite();
-	return eRead != SIR_PIPE_OK ? eRead : eWrite;
+	const SIRPipeResult eRead = closeRead();
+	const SIRPipeResult eWrite = closeWrite();
+	return eRead != SIRPipeResult::SIR_PIPE_OK ? eRead : eWrite;
 }
 
 bool SIRPlatformPipe::isReadOpen( void ) const noexcept

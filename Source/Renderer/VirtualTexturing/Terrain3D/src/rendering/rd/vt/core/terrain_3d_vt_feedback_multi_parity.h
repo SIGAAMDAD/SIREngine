@@ -58,8 +58,8 @@ public:
 			index = m_nNext;
 			m_nNext = ( m_nNext + 1u ) % T3D_VT_FEEDBACK_GRID_SLOT_COUNT;
 		}
-		uint32_t *const pDestination = m_pWords + ( size_t )index * T3D_VT_MULTI_PARITY_MAX_WORDS;
-		memcpy( pDestination, pWords, ( size_t )rHeader.m_nWordCount * sizeof( uint32_t ) );
+		uint32_t *const pDestination = m_pWords + static_cast<size_t>(index) * T3D_VT_MULTI_PARITY_MAX_WORDS;
+		memcpy( pDestination, pWords, static_cast<size_t>(rHeader.m_nWordCount) * sizeof( uint32_t ) );
 		m_Slots[index].m_Header = rHeader;
 		m_Slots[index].m_nWords = rHeader.m_nWordCount;
 		m_Slots[index].m_bValid = true;
@@ -77,7 +77,7 @@ public:
 			const t3dVTFeedbackMultiParitySlot_t& rSlot = m_Slots[slot];
 			if ( !rSlot.m_bValid || !sameFrame( rSlot.m_Header, rV1 ) )
 				continue;
-			const uint32_t *const pPages = m_pWords + ( size_t )slot * T3D_VT_MULTI_PARITY_MAX_WORDS;
+			const uint32_t *const pPages = m_pWords + static_cast<size_t>(slot) * T3D_VT_MULTI_PARITY_MAX_WORDS;
 			for ( uint32_t i = 0u; i < rSlot.m_nWords; ++i ) {
 				const uint32_t page = pPages[i];
 				if ( page >= nPageCount )

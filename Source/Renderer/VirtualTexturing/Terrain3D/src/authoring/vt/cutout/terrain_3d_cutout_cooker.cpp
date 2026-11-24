@@ -10,7 +10,8 @@ bool Terrain3DCutoutCooker::cookRegionCold( const t3dStCutoutCookInput_t& rSourc
 		return false;
 	}
 	std::vector<uint8_t> payload( T3D_ST_CUTOUT_ENTRIES_BYTES, 0u );
-	uint32_t planeWords[T3D_ST_CUTOUT_PAGE_WORDS] = {};
+	uint32_t planeWords[T3D_ST_CUTOUT_PAGE_WORDS];
+	memset( planeWords, 0, sizeof( planeWords ) );
 	uint32_t nPinnedWords = 0u;
 	for ( uint32_t page = 0u; page < T3D_ST_CUTOUT_PAGES_PER_REGION; ++page ) {
 		for ( uint32_t i = 0u; i < T3D_ST_CUTOUT_PAGE_WORDS; ++i ) {
@@ -50,7 +51,7 @@ bool Terrain3DCutoutCooker::cookRegionCold( const t3dStCutoutCookInput_t& rSourc
 			nPinnedWords += T3D_ST_CUTOUT_PAGE_WORDS;
 		}
 	}
-	t3dStSidecarInfo_t info = {};
+	t3dStSidecarInfo_t info {};
 	info.m_nMagic = T3D_ST_SIDECAR_MASK_MAGIC;
 	info.m_nVersion = T3D_ST_SIDECAR_VERSION;
 	info.m_nRegionIndex = rSource.m_nRegionIndex;

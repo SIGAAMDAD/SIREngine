@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRD3D11FEATURELEVELS_H__
-#define __SIRENGINE_SIRD3D11FEATURELEVELS_H__
+#ifndef __SIR_D3_D11_FEATURELEVELS_H__
+#define __SIR_D3_D11_FEATURELEVELS_H__
 
 #include <Core/SIRPCH.h>
 
@@ -29,8 +29,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 // Values match D3D_FEATURE_LEVEL; the public header never imports Windows SDK
 // types. The runtime's returned feature level is the authoritative input.
-typedef enum sirD3D11FeatureLevel_e : uint32_t
-{
+enum class SIRD3D11FeatureLevel : uint32_t {
 	SIR_D3D11_FEATURE_LEVEL_9_1 = 0x9100,
 	SIR_D3D11_FEATURE_LEVEL_9_2 = 0x9200,
 	SIR_D3D11_FEATURE_LEVEL_9_3 = 0x9300,
@@ -38,16 +37,15 @@ typedef enum sirD3D11FeatureLevel_e : uint32_t
 	SIR_D3D11_FEATURE_LEVEL_10_1 = 0xA100,
 	SIR_D3D11_FEATURE_LEVEL_11_0 = 0xB000,
 	SIR_D3D11_FEATURE_LEVEL_11_1 = 0xB100
-} sirD3D11FeatureLevel_t;
+};
 
-typedef enum sirD3D11ShaderProfile_e : uint32_t
-{
+enum class SIRD3D11ShaderProfile : uint32_t {
 	SIR_D3D11_SHADER_PROFILE_4_0_LEVEL_9_1 = 1,
 	SIR_D3D11_SHADER_PROFILE_4_0_LEVEL_9_3 = 2,
 	SIR_D3D11_SHADER_PROFILE_4_0 = 3,
 	SIR_D3D11_SHADER_PROFILE_4_1 = 4,
 	SIR_D3D11_SHADER_PROFILE_5_0 = 5
-} sirD3D11ShaderProfile_t;
+};
 
 // Booleans are 0/1 uint32_t to make validation deterministic at the ABI seam.
 // Only populate these fields from native runtime/device probes, not the
@@ -83,6 +81,6 @@ typedef struct sirD3D11FeatureProfile_s
 	uint64_t nEnabledFeatures;
 } sirD3D11FeatureProfile_t;
 
-sirGraphicsResult_t sirD3D11BuildFeatureProfile( const sirD3D11FeatureProbe_t *pProbe, sirD3D11FeatureProfile_t *pProfile ) noexcept;
+SIRGraphicsResult sirD3D11BuildFeatureProfile( const sirD3D11FeatureProbe_t *pProbe, sirD3D11FeatureProfile_t *pProfile ) noexcept;
 
-#endif // __SIRENGINE_SIRD3D11FEATURELEVELS_H__
+#endif // __SIR_D3_D11_FEATURELEVELS_H__

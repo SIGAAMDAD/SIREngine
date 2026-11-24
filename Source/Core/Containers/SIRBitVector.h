@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRBITVECTOR_H__
-#define __SIRENGINE_SIRBITVECTOR_H__
+#ifndef __SIR_BITVECTOR_H__
+#define __SIR_BITVECTOR_H__
 
 #include <Core/SIRPCH.h>
 
@@ -47,18 +47,18 @@ public:
 		return m_words.getSize();
 	}
 
-	sirContainerResult_t tryResize( uint32_t nBits )
+	SIRContainerResult tryResize( uint32_t nBits )
 	{
-		uint32_t nWords = ( uint32_t )( ( ( uint64_t )nBits + 63 ) / 64 );
-		sirContainerResult_t eResult = m_words.tryResize( nWords );
-		if ( eResult != SIR_CONTAINER_OK ) {
+		uint32_t nWords = ( uint32_t )( ( static_cast<uint64_t>(nBits) + 63 ) / 64 );
+		SIRContainerResult eResult = m_words.tryResize( nWords );
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		m_nBits = nBits;
 		if ( nWords != 0 ) {
 			m_words[nWords - 1] &= SIRBitWords::maskTail( nBits % 64 );
 		}
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
 	bool test( uint32_t iBit ) const noexcept
@@ -66,10 +66,10 @@ public:
 		return iBit < m_nBits && ( ( m_words[iBit / 64] >> ( iBit % 64 ) ) & 1u ) != 0;
 	}
 
-	sirContainerResult_t trySet( uint32_t iBit, bool bValue ) noexcept
+	SIRContainerResult trySet( uint32_t iBit, bool bValue ) noexcept
 	{
 		if ( iBit >= m_nBits ) {
-			return SIR_CONTAINER_INVALID_ARGUMENT;
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		uint64_t nMask = 1ull << ( iBit % 64 );
 		if ( bValue ) {
@@ -77,7 +77,7 @@ public:
 		} else {
 			m_words[iBit / 64] &= ~nMask;
 		}
-		return SIR_CONTAINER_OK;
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
 	uint32_t count( void ) const noexcept
@@ -114,7 +114,7 @@ public:
 		}
 	}
 
-	sirContainerResult_t tryShrinkToFit( void )
+	SIRContainerResult tryShrinkToFit( void )
 	{
 		return m_words.tryShrinkToFit();
 	}
@@ -133,4 +133,4 @@ public:
 	}
 };
 
-#endif // __SIRENGINE_SIRBITVECTOR_H__
+#endif // __SIR_BITVECTOR_H__

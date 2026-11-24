@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRRESOURCETYPES_H__
-#define __SIRENGINE_SIRRESOURCETYPES_H__
+#ifndef __SIR_RESOURCETYPES_H__
+#define __SIR_RESOURCETYPES_H__
 
 #include <Core/SIRPCH.h>
 
@@ -27,8 +27,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <stdint.h>
 
 // These are data-representation categories, not rendering/physics/audio classes.
-typedef enum sirResourceKind_e : uint8_t
-{
+enum class SIRResourceKind : uint8_t {
 	SIR_RESOURCE_KIND_BLOB = 0,
 	SIR_RESOURCE_KIND_IMAGE,
 	SIR_RESOURCE_KIND_GEOMETRY,
@@ -39,22 +38,20 @@ typedef enum sirResourceKind_e : uint8_t
 	SIR_RESOURCE_KIND_TIME_SERIES,
 	SIR_RESOURCE_KIND_SAMPLE_STREAM,
 	SIR_RESOURCE_KIND_COMPOSITION
-} sirResourceKind_t;
-typedef sirResourceKind_t SIRResourceKind;
+};
+typedef SIRResourceKind SIRResourceKind;
 
-typedef enum sirResourceState_e : uint8_t
-{
+enum class SIRResourceState : uint8_t {
 	SIR_RESOURCE_STATE_UNLOADED = 0,
 	SIR_RESOURCE_STATE_REQUESTED,
 	SIR_RESOURCE_STATE_STAGING,
 	SIR_RESOURCE_STATE_RESIDENT,
 	SIR_RESOURCE_STATE_EVICTING,
 	SIR_RESOURCE_STATE_FAILED
-} sirResourceState_t;
-typedef sirResourceState_t SIRResourceState;
+};
+typedef SIRResourceState SIRResourceState;
 
-typedef enum sirResourceResult_e : uint8_t
-{
+enum class SIRResourceResult : uint8_t {
 	SIR_RESOURCE_RESULT_SUCCESS = 0,
 	SIR_RESOURCE_RESULT_INVALID_ARGUMENT,
 	SIR_RESOURCE_RESULT_INVALID_HANDLE,
@@ -70,16 +67,15 @@ typedef enum sirResourceResult_e : uint8_t
 	SIR_RESOURCE_RESULT_FAILED,
 	SIR_RESOURCE_RESULT_STALE_REVISION,
 	SIR_RESOURCE_RESULT_JOURNAL_OVERFLOW
-} sirResourceResult_t;
-typedef sirResourceResult_t SIRResourceResult;
+};
+typedef SIRResourceResult SIRResourceResult;
 
-typedef enum sirResourceEdgeKind_e : uint8_t
-{
+enum class SIRResourceEdgeKind : uint8_t {
 	SIR_RESOURCE_EDGE_KIND_REQUIRED = 0,
 	SIR_RESOURCE_EDGE_KIND_OPTIONAL,
 	SIR_RESOURCE_EDGE_KIND_STREAMED
-} sirResourceEdgeKind_t;
-typedef sirResourceEdgeKind_t SIRResourceEdgeKind;
+};
+typedef SIRResourceEdgeKind SIRResourceEdgeKind;
 
 // A stable cooked identity. Variant is a cooked platform/config variant, not a second CPU owner.
 typedef struct sirResourceKey_s
@@ -217,13 +213,12 @@ typedef struct sirDerivedResourceKey_s
 } sirDerivedResourceKey_t;
 typedef sirDerivedResourceKey_t SIRDerivedResourceKey;
 
-typedef enum sirMemorySpace_e : uint8_t
-{
+enum class SIRMemorySpace : uint8_t {
 	SIR_MEMORY_SPACE_CPU = 0,
 	SIR_MEMORY_SPACE_DEVICE,
 	SIR_MEMORY_SPACE_EXTERNAL
-} sirMemorySpace_t;
-typedef sirMemorySpace_t SIRMemorySpace;
+};
+typedef SIRMemorySpace SIRMemorySpace;
 
 typedef struct sirDerivedResourceAccounting_s
 {
@@ -238,4 +233,4 @@ typedef sirDerivedResourceAccounting_t SIRDerivedResourceAccounting;
 static_assert( sizeof( SIRResourceKey ) == 16, "Resource keys must remain compact" );
 static_assert( sizeof( SIRResourceHandle ) == 16, "Resource handles must remain generation-safe" );
 
-#endif // __SIRENGINE_SIRRESOURCETYPES_H__
+#endif // __SIR_RESOURCETYPES_H__

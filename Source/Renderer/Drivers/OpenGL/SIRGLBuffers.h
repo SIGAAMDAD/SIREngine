@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRGLBUFFERS_H__
-#define __SIRENGINE_SIRGLBUFFERS_H__
+#ifndef __SIR_GLBUFFERS_H__
+#define __SIR_GLBUFFERS_H__
 
 #include <Core/SIRPCH.h>
 
@@ -35,9 +35,9 @@ typedef struct sirGLBufferDispatch_s
 	uint32_t ( *pGetError )( void );
 } sirGLBufferDispatch_t;
 
-sirGraphicsResult_t sirGLLoadBufferDispatch( sirGLProcedureLookup_t pLookup, void *pContext, sirGLBufferDispatch_t *pAPI ) noexcept;
-sirGraphicsResult_t sirGLCreateNativeBuffer( const sirGLBufferDispatch_t *pAPI, const sirGraphicsBufferDesc_t *pDesc,
+SIRGraphicsResult sirGLLoadBufferDispatch( sirGLProcedureLookup_t pLookup, void *pContext, sirGLBufferDispatch_t *pAPI ) noexcept;
+SIRGraphicsResult sirGLCreateNativeBuffer( const sirGLBufferDispatch_t *pAPI, const sirGraphicsBufferDesc_t *pDesc,
                                              uint32_t *pName ) noexcept;
-sirGraphicsResult_t sirGLDeleteNativeBuffer( const sirGLBufferDispatch_t *pAPI, uint32_t nName ) noexcept;
+SIRGraphicsResult sirGLDeleteNativeBuffer( const sirGLBufferDispatch_t *pAPI, uint32_t nName ) noexcept;
 
-#endif // __SIRENGINE_SIRGLBUFFERS_H__
+#endif // __SIR_GLBUFFERS_H__

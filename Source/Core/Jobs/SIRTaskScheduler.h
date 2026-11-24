@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRTASKSCHEDULER_H__
-#define __SIRENGINE_SIRTASKSCHEDULER_H__
+#ifndef __SIR_TASKSCHEDULER_H__
+#define __SIR_TASKSCHEDULER_H__
 
 #include <Core/SIRPCH.h>
 
@@ -88,9 +88,9 @@ public:
 	bool submitBatch( const sirTaskBatchDesc_t& batch, sirTaskHandle_t *pOutHandles ) noexcept;
 	bool cancel( sirTaskHandle_t task ) noexcept;
 	bool isCancellationRequested( sirTaskHandle_t task ) noexcept;
-	sirTaskState_t getState( sirTaskHandle_t task ) noexcept;
+	SIRTaskState getState( sirTaskHandle_t task ) noexcept;
 	// Read state and executor under one lock for provider ownership checks.
-	bool queryTask( sirTaskHandle_t task, sirTaskState_t *pState, sirTaskExecutor_t *pExecutor ) noexcept;
+	bool queryTask( sirTaskHandle_t task, SIRTaskState *pState, SIRTaskExecutor *pExecutor ) noexcept;
 	// Blocking wait is valid only from a non-worker thread and for CPU tasks.
 	bool waitTask( sirTaskHandle_t task ) noexcept;
 	bool releaseTask( sirTaskHandle_t task ) noexcept;
@@ -100,11 +100,11 @@ public:
 	uint32_t pumpCPU( uint32_t nMaximumTasks ) noexcept;
 	// Each provider registers exactly one callback owner. The caller is the
 	// render/physics/audio safe-point thread, never the realtime audio callback.
-	bool bindProviderOwner( sirTaskExecutor_t eExecutor ) noexcept;
-	uint32_t pumpProvider( sirTaskExecutor_t eExecutor, uint32_t nMaximumTasks ) noexcept;
+	bool bindProviderOwner( SIRTaskExecutor eExecutor ) noexcept;
+	uint32_t pumpProvider( SIRTaskExecutor eExecutor, uint32_t nMaximumTasks ) noexcept;
 	// Only the registered provider owner may signal a deferred task. Cancellation
 	// keeps provider-owned resources alive until this acknowledgement arrives.
-	bool completeProvider( sirTaskHandle_t task, sirTaskResult_t eResult ) noexcept;
+	bool completeProvider( sirTaskHandle_t task, SIRTaskResult eResult ) noexcept;
 	uint32_t getActiveCount( void ) noexcept;
 	sirTaskSchedulerStats_t getStats( void ) noexcept;
 
@@ -113,13 +113,13 @@ private:
 	void workerLoop( uint32_t nWorker ) noexcept;
 	bool isCurrentHandleLocked( sirTaskHandle_t task ) const noexcept;
 	void enqueueLocked( uint32_t nSlot ) noexcept;
-	uint32_t dequeueLocked( sirTaskExecutor_t eExecutor, uint32_t nWorker = UINT32_MAX ) noexcept;
+	uint32_t dequeueLocked( SIRTaskExecutor eExecutor, uint32_t nWorker = UINT32_MAX ) noexcept;
 	uint32_t dequeueQueueLocked( sirTaskQueue_t& queue, bool bFromTail ) noexcept;
 	uint32_t selectPriorityLocked( sirTaskQueue_t& queue ) noexcept;
 	void removeLocked( uint32_t nSlot ) noexcept;
-	void finishTask( uint32_t nSlot, sirTaskResult_t eResult ) noexcept;
-	void finishTaskLocked( uint32_t nSlot, sirTaskResult_t eResult ) noexcept;
-	uint32_t pumpExecutor( sirTaskExecutor_t eExecutor, uint32_t nMaximumTasks ) noexcept;
+	void finishTask( uint32_t nSlot, SIRTaskResult eResult ) noexcept;
+	void finishTaskLocked( uint32_t nSlot, SIRTaskResult eResult ) noexcept;
+	uint32_t pumpExecutor( SIRTaskExecutor eExecutor, uint32_t nMaximumTasks ) noexcept;
 	void unlinkEdgeLocked( uint32_t nEdge ) noexcept;
 	void cancelTreeLocked( uint32_t nSlot ) noexcept;
 	void resolveDependentsLocked( uint32_t nSlot, bool bSucceeded ) noexcept;
@@ -136,7 +136,7 @@ private:
 	std::thread::id m_OwnerThread;
 	std::thread::id m_ProviderOwners[3];
 	bool m_bProviderBound[3];
-	sirTaskQueue_t m_GlobalQueues[SIR_TASK_EXEC_COUNT];
+	sirTaskQueue_t m_GlobalQueues[SIRTaskExecutor::SIR_TASK_EXEC_COUNT];
 	uint32_t m_nFreeHead;
 	uint32_t m_nFreeEdgeHead;
 	uint32_t m_nDependencyCapacity;
@@ -155,4 +155,4 @@ private:
 	bool m_bEverInitialized;
 };
 
-#endif // __SIRENGINE_SIRTASKSCHEDULER_H__
+#endif // __SIR_TASKSCHEDULER_H__

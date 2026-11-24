@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRGRAPHICSMODULE_H__
-#define __SIRENGINE_SIRGRAPHICSMODULE_H__
+#ifndef __SIR_GRAPHICSMODULE_H__
+#define __SIR_GRAPHICSMODULE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -56,11 +56,20 @@ typedef struct sirGraphicsABIAdapterChoice_s
 	sirGraphicsABIAdapter_t adapter;
 } sirGraphicsABIAdapterChoice_t;
 
-// The module list is borrowed for this call. Enumeration and output are
-// bounded; no module or device is created and no allocation is performed.
-sirGraphicsABIResult_t sirGraphicsSelectABIModuleAdapter( const sirGraphicsABIModule_t *const *ppModules, uint32_t nModuleCount,
-                                                          const sirGraphicsABIModuleSelection_t *pPolicy,
-                                                          sirGraphicsABIAdapterChoice_t *pChoice ) noexcept;
+class SIRGraphicsModule
+{
+public:
+	SIRGraphicsModule( void );
+	virtual ~SIRGraphicsModule();
+
+	// The module list is borrowed for this call. Enumeration and output are
+	// bounded; no module or device is created and no allocation is performed.
+	sirGraphicsABIResult_t selectABIModuleAdapter( const sirGraphicsABIModule_t *const *ppModules, uint32_t nModuleCount, const sirGraphicsABIModuleSelection_t *pPolicy, sirGraphicsABIAdapterChoice_t *pChoice ) noexcept;
+
+private:
+
+};
+sirGraphicsABIResult_t sirGraphicsSelectABIModuleAdapter(  ) noexcept;
 
 // Startup/shutdown only; the module must outlive every native device and
 // recorded command context. No implicit fallback or process-global registry.
@@ -140,4 +149,4 @@ sirGraphicsABIResult_t sirGraphicsCreateABIPipeline( const sirGraphicsABIDevice_
 sirGraphicsABIResult_t sirGraphicsQueryABIFormat( const sirGraphicsABIDevice_t *pDevice, uint32_t nFormat,
                                                   sirGraphicsABIFormat_t *pFormat ) noexcept;
 
-#endif // __SIRENGINE_SIRGRAPHICSMODULE_H__
+#endif // __SIR_GRAPHICSMODULE_H__

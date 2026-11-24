@@ -7,23 +7,23 @@
   },
   "configurePresets": [
     {
-      "name": "fast-base",
+      "name": "native-base",
       "hidden": true,
-      "generator": "FASTBuild",
+      "generator": "Ninja",
       "binaryDir": "${sourceDir}/out/${hostSystemName}/${presetName}",
       "cacheVariables": {
-        "CMAKE_FASTBUILD_CACHE_PATH": "${sourceDir}/.cache/fastbuild",
         "SIR_BUILD_TESTS": "ON",
         "SIR_ENABLE_UNITY": "OFF",
         "SIR_ENABLE_PCH": "OFF",
         "SIR_ENABLE_IPO": "OFF",
-        "SIR_CXX_STANDARD": "AUTO"
+        "SIR_CXX_STANDARD": "AUTO",
+        "CMAKE_CXX_SCAN_FOR_MODULES": "OFF"
       }
     },
     {
       "name": "dev",
-      "inherits": "fast-base",
-      "displayName": "FASTBuild incremental developer",
+      "inherits": "native-base",
+      "displayName": "Ninja incremental developer",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "SIR_FAST_ITERATION": "ON"
@@ -31,21 +31,21 @@
     },
     {
       "name": "debug",
-      "inherits": "fast-base",
+      "inherits": "native-base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug"
       }
     },
     {
       "name": "profile",
-      "inherits": "fast-base",
+      "inherits": "native-base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo"
       }
     },
     {
       "name": "release",
-      "inherits": "fast-base",
+      "inherits": "native-base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
       }
@@ -66,7 +66,7 @@
     },
     {
       "name": "asan",
-      "inherits": "fast-base",
+      "inherits": "native-base",
       "condition": {
         "type": "equals",
         "lhs": "${hostSystemName}",
@@ -79,7 +79,7 @@
     },
     {
       "name": "ubsan",
-      "inherits": "fast-base",
+      "inherits": "native-base",
       "condition": {
         "type": "equals",
         "lhs": "${hostSystemName}",
@@ -113,7 +113,8 @@
       "cacheVariables": {
         "SIR_BUILD_TESTS": "ON",
         "SIR_CXX_STANDARD": "AUTO"
-      }
+      },
+      "toolset": "v143"
     },
     {
       "name": "tooling",
@@ -191,71 +192,114 @@
         "CMAKE_CXX_SCAN_FOR_MODULES": "OFF",
         "SIR_BUILD_TESTS": "ON"
       }
+    },
+    {
+      "name": "linux-gcc",
+      "inherits": "dev",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++"
+      }
+    },
+    {
+      "name": "linux-clang",
+      "inherits": "dev",
+      "toolchainFile": "${sourceDir}/Build/CMake/Toolchains/LinuxClang.cmake",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++"
+      }
+    },
+    {
+      "name": "windows-msvc",
+      "inherits": "dev",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "cl",
+        "CMAKE_CXX_COMPILER": "cl"
+      },
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      }
+    },
+    {
+      "name": "windows-clang-cl",
+      "inherits": "dev",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "clang-cl",
+        "CMAKE_CXX_COMPILER": "clang-cl"
+      },
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      }
+    },
+    {
+      "name": "fastbuild-dev",
+      "inherits": "dev",
+      "displayName": "Optional FASTBuild developer",
+      "generator": "FASTBuild",
+      "cacheVariables": {
+        "CMAKE_FASTBUILD_CACHE_PATH": "${sourceDir}/.cache/fastbuild"
+      }
     }
   ],
   "buildPresets": [
     {
       "name": "dev",
-      "configurePreset": "dev",
-      "nativeToolOptions": [
-        "-cache"
-      ]
+      "configurePreset": "dev"
     },
     {
       "name": "debug",
-      "configurePreset": "debug",
-      "nativeToolOptions": [
-        "-cache"
-      ]
+      "configurePreset": "debug"
     },
     {
       "name": "profile",
-      "configurePreset": "profile",
-      "nativeToolOptions": [
-        "-cache"
-      ]
+      "configurePreset": "profile"
     },
     {
       "name": "release",
-      "configurePreset": "release",
-      "nativeToolOptions": [
-        "-cache"
-      ]
+      "configurePreset": "release"
     },
     {
       "name": "release-ipo",
-      "configurePreset": "release-ipo",
-      "nativeToolOptions": [
-        "-cache"
-      ]
+      "configurePreset": "release-ipo"
     },
     {
       "name": "bulk",
-      "configurePreset": "bulk",
-      "nativeToolOptions": [
-        "-cache"
-      ]
+      "configurePreset": "bulk"
     },
     {
       "name": "asan",
-      "configurePreset": "asan",
-      "nativeToolOptions": [
-        "-cache"
-      ]
+      "configurePreset": "asan"
     },
     {
       "name": "ubsan",
-      "configurePreset": "ubsan",
-      "nativeToolOptions": [
-        "-cache"
-      ]
+      "configurePreset": "ubsan"
     },
     {
       "name": "macos-preview",
-      "configurePreset": "macos-preview",
-      "nativeToolOptions": [
-        "-cache"
-      ]
+      "configurePreset": "macos-preview"
     },
     {
       "name": "vs2022",
@@ -281,6 +325,34 @@
     {
       "name": "standards-cxx17",
       "configurePreset": "standards-cxx17"
+    },
+    {
+      "name": "linux-gcc",
+      "configurePreset": "linux-gcc"
+    },
+    {
+      "name": "linux-clang",
+      "configurePreset": "linux-clang"
+    },
+    {
+      "name": "windows-msvc",
+      "configurePreset": "windows-msvc"
+    },
+    {
+      "name": "windows-clang-cl",
+      "configurePreset": "windows-clang-cl"
+    },
+    {
+      "name": "fastbuild-dev",
+      "configurePreset": "fastbuild-dev",
+      "nativeToolOptions": [
+        "-cache"
+      ]
+    },
+    {
+      "name": "vs2022-release",
+      "configurePreset": "vs2022",
+      "configuration": "Release"
     }
   ],
   "testPresets": [
@@ -566,6 +638,42 @@
     {
       "name": "standards-cxx17",
       "configurePreset": "standards-cxx17",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "linux-gcc",
+      "configurePreset": "linux-gcc",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "linux-clang",
+      "configurePreset": "linux-clang",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-msvc",
+      "configurePreset": "windows-msvc",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-clang-cl",
+      "configurePreset": "windows-clang-cl",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "vs2022-release",
+      "configurePreset": "vs2022",
+      "configuration": "Release",
       "output": {
         "outputOnFailure": true
       }

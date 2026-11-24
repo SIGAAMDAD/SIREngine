@@ -9,8 +9,8 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRREADONLYVECTORVIEW_H__
-#define __SIRENGINE_SIRREADONLYVECTORVIEW_H__
+#ifndef __SIR_READONLYVECTORVIEW_H__
+#define __SIR_READONLYVECTORVIEW_H__
 
 #include <Core/SIRPCH.h>
 
@@ -69,4 +69,4 @@ public:
 	}
 };
 
-#endif // __SIRENGINE_SIRREADONLYVECTORVIEW_H__
+#endif // __SIR_READONLYVECTORVIEW_H__

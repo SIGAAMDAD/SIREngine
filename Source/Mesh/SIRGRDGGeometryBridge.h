@@ -9,8 +9,16 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRGRDGGEOMETRYBRIDGE_H__
-#define __SIRENGINE_SIRGRDGGEOMETRYBRIDGE_H__
+#ifndef __SIR_GRDG_GEOMETRY_BRIDGE_H__
+#define __SIR_GRDG_GEOMETRY_BRIDGE_H__
+
+#include <Core/SIRPCH.h>
+
+// clang-format off
+#ifdef SIR_PRAGMA_ONCE_SUPPORTED
+	#pragma once
+#endif
+// clang-format on
 
 #include <Mesh/SIRMeshCache.h>
 #include <Resources/SIRResourceGraph.h>
@@ -40,7 +48,7 @@ class SIRGRDGGeometryBridge
 {
 public:
 	SIRGRDGGeometryBridge( void ) = delete;
-	~SIRGRDGGeometryBridge( void ) = delete;
+	~SIRGRDGGeometryBridge() = delete;
 
 	// Both source chunks must be canonical and retained by a GRDG provider pin.
 	// A duplicate key returns the same handle only when the same source bytes
@@ -52,4 +60,4 @@ public:
 	static void releaseSourcePin( void *pContext ) noexcept;
 };
 
-#endif // __SIRENGINE_SIRGRDGGEOMETRYBRIDGE_H__
+#endif // __SIR_GRDG_GEOMETRY_BRIDGE_H__

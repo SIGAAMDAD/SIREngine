@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSCRIPTMEMORYROUTER_H__
-#define __SIRENGINE_SIRSCRIPTMEMORYROUTER_H__
+#ifndef __SIR_SCRIPTMEMORYROUTER_H__
+#define __SIR_SCRIPTMEMORYROUTER_H__
 
 #include <Core/SIRPCH.h>
 
@@ -38,9 +38,9 @@ public:
 	                                               uint32_t nMaximumAlignment ) noexcept;
 
 private:
-	static sirScriptResult_t allocate( void *pContext, uint32_t nBytes, uint32_t nAlignment,
+	static SIRScriptResult allocate( void *pContext, uint32_t nBytes, uint32_t nAlignment,
 	                                   sirScriptPayloadAllocation_t *pAllocation ) noexcept;
 	static void release( void *pContext, sirScriptPayloadAllocation_t allocation ) noexcept;
 };
 
-#endif // __SIRENGINE_SIRSCRIPTMEMORYROUTER_H__
+#endif // __SIR_SCRIPTMEMORYROUTER_H__

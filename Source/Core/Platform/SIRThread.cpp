@@ -132,7 +132,7 @@ DWORD WINAPI SIRThread::threadEntry( LPVOID pUserData )
 void *SIRThread::threadEntry( void *pUserData )
 #endif
 {
-	SIRThread *pThread = ( SIRThread * )pUserData;
+	SIRThread *pThread = static_cast<SIRThread *>(pUserData);
 	pThread->m_pFunction( pThread->m_pUserData );
 	pThread->m_bAlive.store( false, std::memory_order_release );
 #if defined( _WIN32 )

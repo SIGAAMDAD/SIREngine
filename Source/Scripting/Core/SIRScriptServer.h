@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRSCRIPTSERVER_H__
-#define __SIRENGINE_SIRSCRIPTSERVER_H__
+#ifndef __SIR_SCRIPTSERVER_H__
+#define __SIR_SCRIPTSERVER_H__
 
 #include <Core/SIRPCH.h>
 
@@ -37,7 +37,7 @@ public:
 
 	SIRScriptBindingRegistry& bindings( void ) noexcept;
 	SIRScriptCodeManager& codeManager( void ) noexcept;
-	sirScriptResult_t useCodeManagerSource( void ) noexcept;
+	SIRScriptResult useCodeManagerSource( void ) noexcept;
 	SIRScriptRuntime& runtime( void ) noexcept;
 
 private:
@@ -46,4 +46,4 @@ private:
 	SIRScriptRuntime m_Runtime;
 };
 
-#endif // __SIRENGINE_SIRSCRIPTSERVER_H__
+#endif // __SIR_SCRIPTSERVER_H__

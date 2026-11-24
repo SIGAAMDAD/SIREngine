@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRD3D12PIPELINES_H__
-#define __SIRENGINE_SIRD3D12PIPELINES_H__
+#ifndef __SIR_D3_D12_PIPELINES_H__
+#define __SIR_D3_D12_PIPELINES_H__
 
 #include <Core/SIRPCH.h>
 
@@ -36,8 +36,8 @@ typedef struct sirD3D12PipelineSlot_s
 	uint32_t nGeneration;
 	uint32_t nBindingCount;
 	uint32_t nCommandReferences;
-	sirGraphicsPipelineType_t eType;
-	sirGraphicsTopology_t eTopology;
+	SIRGraphicsPipelineType eType;
+	SIRGraphicsTopology eTopology;
 	bool bLive;
 	bool bRetiring;
 } sirD3D12PipelineSlot_t;
@@ -64,16 +64,16 @@ public:
 	SIRD3D12Pipelines& operator=( const SIRD3D12Pipelines& ) = delete;
 
 	bool initialize( SIRD3D12Device *pNative, uint32_t nGeneration ) noexcept;
-	sirGraphicsResult_t loadPipelineCache( const void *pData, uint64_t nBytes ) noexcept;
-	sirGraphicsResult_t serializePipelineCache( void *pData, uint64_t *pBytes ) const noexcept;
-	sirGraphicsResult_t queryPipelineCacheStats( sirD3D12PipelineCacheStats_t *pStats ) const noexcept;
+	SIRGraphicsResult loadPipelineCache( const void *pData, uint64_t nBytes ) noexcept;
+	SIRGraphicsResult serializePipelineCache( void *pData, uint64_t *pBytes ) const noexcept;
+	SIRGraphicsResult queryPipelineCacheStats( sirD3D12PipelineCacheStats_t *pStats ) const noexcept;
 	void shutdown( bool bGpuComplete ) noexcept;
 	void collectRetired( void ) noexcept;
 	const sirD3D12PipelineSlot_t *querySlot( sirGraphicsHandle_t hPipeline ) noexcept;
-	sirGraphicsResult_t retainCommandReference( sirGraphicsHandle_t hPipeline ) noexcept;
+	SIRGraphicsResult retainCommandReference( sirGraphicsHandle_t hPipeline ) noexcept;
 	void releaseCommandReference( sirGraphicsHandle_t hPipeline ) noexcept;
-	sirGraphicsResult_t createPipeline( const sirGraphicsPipelineDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept;
-	sirGraphicsResult_t retirePipeline( sirGraphicsHandle_t hPipeline, const sirGraphicsCompletionSet_t& completion ) noexcept;
+	SIRGraphicsResult createPipeline( const sirGraphicsPipelineDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept;
+	SIRGraphicsResult retirePipeline( sirGraphicsHandle_t hPipeline, const sirGraphicsCompletionSet_t& completion ) noexcept;
 	bool queryNative( sirGraphicsHandle_t hPipeline, ID3D12PipelineState **ppPipeline, ID3D12RootSignature **ppRoot ) noexcept;
 
 protected:
@@ -84,7 +84,7 @@ private:
 	ID3D12Device *m_pDevice = nullptr;
 	Microsoft::WRL::ComPtr<ID3D12PipelineLibrary> m_pPipelineLibrary;
 	void *m_pLibraryBlob = nullptr;
-	sirD3D12PipelineCacheStats_t m_CacheStats = {};
+	sirD3D12PipelineCacheStats_t m_CacheStats {};
 	bool m_bPipelineCreated = false;
 	uint32_t m_nDeviceGeneration = 0;
 
@@ -97,4 +97,4 @@ private:
 	                            const wchar_t *pszCacheKey ) noexcept;
 };
 
-#endif // __SIRENGINE_SIRD3D12PIPELINES_H__
+#endif // __SIR_D3_D12_PIPELINES_H__

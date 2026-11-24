@@ -47,29 +47,29 @@ SIRStreamingDemandReconciler::SIRStreamingDemandReconciler( void ) noexcept
 
 uint64_t SIRStreamingDemandReconciler::requiredBytes( uint32_t nCapacity ) noexcept
 {
-	return ( uint64_t )nCapacity * sizeof( sirStreamingReconcileEntry_t );
+	return static_cast<uint64_t>(nCapacity) * sizeof( sirStreamingReconcileEntry_t );
 }
 
-sirStreamingResult_t SIRStreamingDemandReconciler::initialize( SIRStreamingCoordinator *pCoordinator, void *pStorage,
+SIRStreamingResult SIRStreamingDemandReconciler::initialize( SIRStreamingCoordinator *pCoordinator, void *pStorage,
                                                                uint64_t nStorageBytes, uint32_t nCapacity, uint64_t nConsumerId,
                                                                uint32_t nConsumerGeneration ) noexcept
 {
 	if ( m_bInitialized || pCoordinator == nullptr || pStorage == nullptr || nCapacity == 0 ) {
-		return SIR_STREAMING_INVALID_ARGUMENT;
+		return SIRStreamingResult::SIR_STREAMING_INVALID_ARGUMENT;
 	}
 	if ( nConsumerId == 0 || nConsumerGeneration == 0 ) {
-		return SIR_STREAMING_INVALID_ARGUMENT;
+		return SIRStreamingResult::SIR_STREAMING_INVALID_ARGUMENT;
 	}
 	if ( pCoordinator->getStats().nCapacity < nCapacity ) {
-		return SIR_STREAMING_INVALID_ARGUMENT;
+		return SIRStreamingResult::SIR_STREAMING_INVALID_ARGUMENT;
 	}
 
 	const uint64_t nBytes = requiredBytes( nCapacity );
-	if ( nBytes > SIZE_MAX || nStorageBytes < nBytes || ( ( uintptr_t )pStorage % alignof( sirStreamingReconcileEntry_t ) ) != 0 ) {
-		return SIR_STREAMING_INVALID_ARGUMENT;
+	if ( nBytes > SIZE_MAX || nStorageBytes < nBytes || ( reinterpret_cast<uintptr_t>(pStorage) % alignof( sirStreamingReconcileEntry_t ) ) != 0 ) {
+		return SIRStreamingResult::SIR_STREAMING_INVALID_ARGUMENT;
 	}
 
-	m_pEntries = ( sirStreamingReconcileEntry_t * )pStorage;
+	m_pEntries = static_cast<sirStreamingReconcileEntry_t *>(pStorage);
 	for ( uint32_t iEntry = 0; iEntry < nCapacity; ++iEntry ) {
 		new ( m_pEntries + iEntry ) sirStreamingReconcileEntry_t{};
 	}
@@ -80,7 +80,7 @@ sirStreamingResult_t SIRStreamingDemandReconciler::initialize( SIRStreamingCoord
 	m_nCapacity = nCapacity;
 	m_nLastEpoch = 0;
 	m_bInitialized = true;
-	return SIR_STREAMING_OK;
+	return SIRStreamingResult::SIR_STREAMING_OK;
 }
 
 uint32_t SIRStreamingDemandReconciler::findEntry( const sirStreamingUnitKey_t& key ) const noexcept
@@ -107,22 +107,22 @@ void SIRStreamingDemandReconciler::pruneReleased( void ) noexcept
 			continue;
 		}
 
-		sirStreamingSnapshot_t snapshot = {};
-		if ( m_pCoordinator->query( entry.ticket, &snapshot ) == SIR_STREAMING_STALE_TICKET ) {
+		sirStreamingSnapshot_t snapshot {};
+		if ( m_pCoordinator->query( entry.ticket, &snapshot ) == SIRStreamingResult::SIR_STREAMING_STALE_TICKET ) {
 			clearEntry( iEntry );
 		}
 	}
 }
 
-sirStreamingResult_t SIRStreamingDemandReconciler::shutdown( void ) noexcept
+SIRStreamingResult SIRStreamingDemandReconciler::shutdown( void ) noexcept
 {
 	if ( !m_bInitialized ) {
-		return SIR_STREAMING_NOT_READY;
+		return SIRStreamingResult::SIR_STREAMING_NOT_READY;
 	}
 
 	pruneReleased();
 	if ( getTrackedCount() != 0 ) {
-		return SIR_STREAMING_BUSY;
+		return SIRStreamingResult::SIR_STREAMING_BUSY;
 	}
 
 	m_pCoordinator = nullptr;
@@ -132,32 +132,32 @@ sirStreamingResult_t SIRStreamingDemandReconciler::shutdown( void ) noexcept
 	m_nCapacity = 0;
 	m_nLastEpoch = 0;
 	m_bInitialized = false;
-	return SIR_STREAMING_OK;
+	return SIRStreamingResult::SIR_STREAMING_OK;
 }
 
-sirStreamingResult_t SIRStreamingDemandReconciler::findTicket( const sirStreamingUnitKey_t& key,
+SIRStreamingResult SIRStreamingDemandReconciler::findTicket( const sirStreamingUnitKey_t& key,
                                                                sirStreamingTicket_t *pTicket ) const noexcept
 {
 	if ( !m_bInitialized ) {
-		return SIR_STREAMING_NOT_READY;
+		return SIRStreamingResult::SIR_STREAMING_NOT_READY;
 	}
 	if ( pTicket == nullptr ) {
-		return SIR_STREAMING_INVALID_ARGUMENT;
+		return SIRStreamingResult::SIR_STREAMING_INVALID_ARGUMENT;
 	}
 
 	const uint32_t iEntry = findEntry( key );
 	if ( iEntry == m_nCapacity ) {
-		return SIR_STREAMING_NOT_READY;
+		return SIRStreamingResult::SIR_STREAMING_NOT_READY;
 	}
 
 	const sirStreamingReconcileEntry_t& entry = m_pEntries[iEntry];
-	sirStreamingSnapshot_t snapshot = {};
-	if ( m_pCoordinator->query( entry.ticket, &snapshot ) != SIR_STREAMING_OK ) {
-		return SIR_STREAMING_STALE_TICKET;
+	sirStreamingSnapshot_t snapshot {};
+	if ( m_pCoordinator->query( entry.ticket, &snapshot ) != SIRStreamingResult::SIR_STREAMING_OK ) {
+		return SIRStreamingResult::SIR_STREAMING_STALE_TICKET;
 	}
 
 	*pTicket = entry.ticket;
-	return SIR_STREAMING_OK;
+	return SIRStreamingResult::SIR_STREAMING_OK;
 }
 
 uint32_t SIRStreamingDemandReconciler::getTrackedCount( void ) const noexcept
@@ -173,39 +173,39 @@ uint32_t SIRStreamingDemandReconciler::getTrackedCount( void ) const noexcept
 	return nTracked;
 }
 
-sirStreamingResult_t SIRStreamingDemandReconciler::validateSet( const sirStreamingDemand_t *pDemands, uint32_t nDemandCount,
+SIRStreamingResult SIRStreamingDemandReconciler::validateSet( const sirStreamingDemand_t *pDemands, uint32_t nDemandCount,
                                                                 uint32_t nRequestEpoch ) const noexcept
 {
 	if ( nRequestEpoch == 0 || nRequestEpoch <= m_nLastEpoch ) {
-		return SIR_STREAMING_INVALID_ARGUMENT;
+		return SIRStreamingResult::SIR_STREAMING_INVALID_ARGUMENT;
 	}
 	if ( nDemandCount > m_nCapacity ) {
-		return SIR_STREAMING_OUT_OF_CAPACITY;
+		return SIRStreamingResult::SIR_STREAMING_OUT_OF_CAPACITY;
 	}
 	if ( nDemandCount != 0 && pDemands == nullptr ) {
-		return SIR_STREAMING_INVALID_ARGUMENT;
+		return SIRStreamingResult::SIR_STREAMING_INVALID_ARGUMENT;
 	}
 
 	for ( uint32_t iDemand = 0; iDemand < nDemandCount; ++iDemand ) {
 		const sirStreamingDemand_t& demand = pDemands[iDemand];
 		if ( demand.nConsumerId != m_nConsumerId || demand.nConsumerGeneration != m_nConsumerGeneration ) {
-			return SIR_STREAMING_INVALID_ARGUMENT;
+			return SIRStreamingResult::SIR_STREAMING_INVALID_ARGUMENT;
 		}
 		if ( demand.nRequestEpoch != nRequestEpoch || demand.keyUnit.nUnitId == 0 || demand.keyUnit.nManifestGeneration == 0 ) {
-			return SIR_STREAMING_INVALID_ARGUMENT;
+			return SIRStreamingResult::SIR_STREAMING_INVALID_ARGUMENT;
 		}
-		if ( demand.keyUnit.eKind >= SIR_STREAMING_UNIT_COUNT || demand.eTarget < SIR_STREAMING_TARGET_PREPARED ||
-		     demand.eTarget > SIR_STREAMING_TARGET_ACTIVE ) {
-			return SIR_STREAMING_INVALID_ARGUMENT;
+		if ( demand.keyUnit.eKind >= SIRStreamingUnitKind::SIR_STREAMING_UNIT_COUNT || demand.eTarget < SIRStreamingTarget::SIR_STREAMING_TARGET_PREPARED ||
+		     demand.eTarget > SIRStreamingTarget::SIR_STREAMING_TARGET_ACTIVE ) {
+			return SIRStreamingResult::SIR_STREAMING_INVALID_ARGUMENT;
 		}
 		for ( uint32_t iPrevious = 0; iPrevious < iDemand; ++iPrevious ) {
 			if ( streamingReconcileKeyEqual( demand.keyUnit, pDemands[iPrevious].keyUnit ) ) {
-				return SIR_STREAMING_DUPLICATE;
+				return SIRStreamingResult::SIR_STREAMING_DUPLICATE;
 			}
 		}
 	}
 
-	return SIR_STREAMING_OK;
+	return SIRStreamingResult::SIR_STREAMING_OK;
 }
 
 void SIRStreamingDemandReconciler::retireMissing( const sirStreamingDemand_t *pDemands, uint32_t nDemandCount,
@@ -227,8 +227,8 @@ void SIRStreamingDemandReconciler::retireMissing( const sirStreamingDemand_t *pD
 			continue;
 		}
 
-		const sirStreamingResult_t eCancel = m_pCoordinator->cancel( entry.ticket );
-		if ( eCancel == SIR_STREAMING_OK || eCancel == SIR_STREAMING_STALE_TICKET ) {
+		const SIRStreamingResult eCancel = m_pCoordinator->cancel( entry.ticket );
+		if ( eCancel == SIRStreamingResult::SIR_STREAMING_OK || eCancel == SIRStreamingResult::SIR_STREAMING_STALE_TICKET ) {
 			entry.bRetiring = true;
 			++stats.nCancelled;
 		}
@@ -250,10 +250,10 @@ void SIRStreamingDemandReconciler::refreshCurrent( const sirStreamingDemand_t *p
 			++stats.nDeferred;
 			continue;
 		}
-		const sirStreamingResult_t eUpdate = m_pCoordinator->updateDemand( entry.ticket, demand );
-		if ( eUpdate == SIR_STREAMING_OK ) {
+		const SIRStreamingResult eUpdate = m_pCoordinator->updateDemand( entry.ticket, demand );
+		if ( eUpdate == SIRStreamingResult::SIR_STREAMING_OK ) {
 			++stats.nUpdated;
-		} else if ( eUpdate == SIR_STREAMING_BUSY ) {
+		} else if ( eUpdate == SIRStreamingResult::SIR_STREAMING_BUSY ) {
 			m_pCoordinator->cancel( entry.ticket );
 			entry.bRetiring = true;
 			++stats.nCancelled;
@@ -300,8 +300,8 @@ void SIRStreamingDemandReconciler::submitMissing( const sirStreamingDemand_t *pD
 			continue;
 		}
 
-		sirStreamingTicket_t ticket = {};
-		if ( m_pCoordinator->submit( demand, &ticket ) != SIR_STREAMING_OK ) {
+		sirStreamingTicket_t ticket {};
+		if ( m_pCoordinator->submit( demand, &ticket ) != SIRStreamingResult::SIR_STREAMING_OK ) {
 			++stats.nDeferred;
 			continue;
 		}
@@ -315,23 +315,23 @@ void SIRStreamingDemandReconciler::submitMissing( const sirStreamingDemand_t *pD
 	}
 }
 
-sirStreamingResult_t SIRStreamingDemandReconciler::reconcile( const sirStreamingDemand_t *pDemands, uint32_t nDemandCount,
+SIRStreamingResult SIRStreamingDemandReconciler::reconcile( const sirStreamingDemand_t *pDemands, uint32_t nDemandCount,
                                                               uint32_t nRequestEpoch, sirStreamingReconcileStats_t *pStats ) noexcept
 {
 	if ( !m_bInitialized ) {
-		return SIR_STREAMING_NOT_READY;
+		return SIRStreamingResult::SIR_STREAMING_NOT_READY;
 	}
 	if ( pStats == nullptr ) {
-		return SIR_STREAMING_INVALID_ARGUMENT;
+		return SIRStreamingResult::SIR_STREAMING_INVALID_ARGUMENT;
 	}
 
-	const sirStreamingResult_t eValidation = validateSet( pDemands, nDemandCount, nRequestEpoch );
-	if ( eValidation != SIR_STREAMING_OK ) {
+	const SIRStreamingResult eValidation = validateSet( pDemands, nDemandCount, nRequestEpoch );
+	if ( eValidation != SIRStreamingResult::SIR_STREAMING_OK ) {
 		return eValidation;
 	}
 
 	pruneReleased();
-	sirStreamingReconcileStats_t stats = {};
+	sirStreamingReconcileStats_t stats {};
 	stats.nRequestEpoch = nRequestEpoch;
 
 	retireMissing( pDemands, nDemandCount, stats );
@@ -345,5 +345,5 @@ sirStreamingResult_t SIRStreamingDemandReconciler::reconcile( const sirStreaming
 	}
 	m_nLastEpoch = nRequestEpoch;
 	*pStats = stats;
-	return SIR_STREAMING_OK;
+	return SIRStreamingResult::SIR_STREAMING_OK;
 }

@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIRENGINE_SIRWORLDHLODPROJECTION_H__
-#define __SIRENGINE_SIRWORLDHLODPROJECTION_H__
+#ifndef __SIR_WORLDHLODPROJECTION_H__
+#define __SIR_WORLDHLODPROJECTION_H__
 
 #include <Core/SIRPCH.h>
 
@@ -26,11 +26,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <World/HLOD/SIRWorldHLODManifest.h>
 
-typedef enum sirWorldHLODProjectionMode_e : uint8_t
-{
+enum class SIRWorldHLODProjectionMode : uint8_t {
 	SIR_WORLD_HLOD_PROJECTION_PERSPECTIVE = 0,
 	SIR_WORLD_HLOD_PROJECTION_ORTHOGRAPHIC = 1
-} sirWorldHLODProjectionMode_t;
+};
 
 // Manifest bounds and geometric error are world-space measurements, with no
 // transform or nonuniform scale applied at runtime. Camera coordinates are
@@ -42,7 +41,7 @@ typedef struct sirWorldHLODProjectionView_s
 	double fVerticalParameter; // radians of vertical FOV, or orthographic world-space height
 	double fNearPlane;
 	uint32_t nViewportHeightPixels;
-	sirWorldHLODProjectionMode_t eMode;
+	SIRWorldHLODProjectionMode eMode;
 } sirWorldHLODProjectionView_t;
 
 typedef struct sirWorldHLODProjectionInput_s
@@ -64,7 +63,7 @@ typedef struct sirWorldHLODProjectionOutput_s
 // the near plane; off-frustum/behind-camera rejection belongs to visibility.
 // The caller owns all buffers, and invalid input/capacity leaves output intact.
 // Input/output buffers must be disjoint and immutable during evaluation.
-sirWorldHLODResult_t sirWorldHLODProjectErrors( const sirWorldHLODProjectionInput_t& input,
+SIRWorldHLODResult sirWorldHLODProjectErrors( const sirWorldHLODProjectionInput_t& input,
                                                 const sirWorldHLODProjectionOutput_t& output ) noexcept;
 
-#endif // __SIRENGINE_SIRWORLDHLODPROJECTION_H__
+#endif // __SIR_WORLDHLODPROJECTION_H__
