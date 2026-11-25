@@ -2,25 +2,32 @@
 #ifndef __SIR_PACKEDINTEGERVECTORBUILDER_H__
 #define __SIR_PACKEDINTEGERVECTORBUILDER_H__
 #include <Core/SIRPCH.h>
+
+// clang-format off
+#ifdef SIR_PRAGMA_ONCE_SUPPORTED
+	#pragma once
+#endif
+// clang-format on
 #include <Core/Containers/SIRPackedIntegerVector.h>
 
 class SIRPackedIntegerVectorBuilder
 {
-private:
-	SIRVector<uint64_t> m_Values;
-
 public:
-	explicit SIRPackedIntegerVectorBuilder( const sirContainerAllocator_t *pAllocator ) noexcept : m_Values( pAllocator )
+	explicit SIRPackedIntegerVectorBuilder( const sirContainerAllocator_t *pAllocator ) noexcept
+	    : m_Values( pAllocator )
 	{
 	}
+
 	SIRContainerResult tryAppend( uint64_t nValue )
 	{
 		return m_Values.tryPushBack( nValue );
 	}
+
 	uint32_t getSize( void ) const noexcept
 	{
 		return m_Values.getSize();
 	}
+
 	SIRContainerResult tryBuild( uint8_t nBits, SIRPackedIntegerVector *pOutput )
 	{
 		if ( pOutput == nullptr ) {
@@ -38,5 +45,8 @@ public:
 		}
 		return pOutput->seal();
 	}
+
+private:
+	SIRVector<uint64_t> m_Values;
 };
 #endif // __SIR_PACKEDINTEGERVECTORBUILDER_H__

@@ -6,6 +6,10 @@ Copyright (C) 2023-2027 Noah Van Til
 This Source Code Form is subject to the terms of the Mozilla Public
 License, v2. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+This software is provided "as is", without warranty of any kind,
+express or implied, including but not limited to the warranties
+of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
@@ -14,44 +18,30 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 #include <Core/SIRPCH.h>
 
+// clang-format off
+#ifdef SIR_PRAGMA_ONCE_SUPPORTED
+	#pragma once
+#endif
+// clang-format on
+
 #include <Core/Containers/SIRRawStorage.h>
 #include <Core/Containers/SIRReadOnlyVectorView.h>
 #include <Core/Platform/Shared/Memory/SIRVirtualMemory.h>
 #include <Core/Memory/SIRMemorySegment.h>
-#include <new>
-#include <stdlib.h>
-#include <stdint.h>
-#include <utility>
 
 // Fixed maximum address reservation. Not thread-safe. The caller is responsible
 // for selecting an OS reservation policy permitted by its memory budget.
 template <typename T>
 class SIRVirtualVector
 {
-private:
-	T *m_pData = nullptr;
-	uint32_t m_nSize = 0;
-	uint32_t m_nMaximum = 0;
-	size_t m_nReservationBytes = 0;
-	size_t m_nCommittedBytes = 0;
-	size_t m_nPageBytes = 0;
-	SIRMemorySegment *m_pSegment = nullptr;
-
-	static bool roundUp( size_t nBytes, size_t nPage, size_t *pRounded ) noexcept
-	{
-		if ( nPage == 0 || nBytes > SIZE_MAX - nPage + 1 ) {
-			return false;
-		}
-		*pRounded = ( nBytes + nPage - 1 ) / nPage * nPage;
-		return true;
-	}
-
 public:
-	SIRVirtualVector( void ) noexcept = default;
-	~SIRVirtualVector( void ) noexcept
+	explicit SIRVirtualVector( void ) noexcept = default;
+
+	~SIRVirtualVector() noexcept
 	{
 		release();
 	}
+
 	SIRVirtualVector( const SIRVirtualVector& ) = delete;
 	SIRVirtualVector& operator=( const SIRVirtualVector& ) = delete;
 
@@ -73,7 +63,7 @@ public:
 		if ( pMemory == nullptr ) {
 			return SIRContainerResult::SIR_CONTAINER_OUT_OF_MEMORY;
 		}
-		m_pData = static_cast<T *>(pMemory);
+		m_pData = static_cast<T *>( pMemory );
 		m_nMaximum = nMaximum;
 		m_nPageBytes = nPage;
 		m_nReservationBytes = nRounded;
@@ -87,7 +77,7 @@ public:
 		if ( m_pData != nullptr || nMaximum == 0 || rSegment.getBase() == nullptr || rSegment.getCommittedBytes() != 0 ) {
 			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
-		const size_t nPage = static_cast<size_t>(rSegment.getPageSize());
+		const size_t nPage = static_cast<size_t>( rSegment.getPageSize() );
 		if ( nPage == 0 || alignof( T ) > nPage ) {
 			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
@@ -99,7 +89,7 @@ public:
 		if ( nRounded > rSegment.getReservedBytes() || nRounded > rSegment.getCommitLimitBytes() ) {
 			return SIRContainerResult::SIR_CONTAINER_CAPACITY_EXCEEDED;
 		}
-		m_pData = static_cast<T *>(rSegment.getBase());
+		m_pData = static_cast<T *>( rSegment.getBase() );
 		m_pSegment = &rSegment;
 		m_nMaximum = nMaximum;
 		m_nPageBytes = nPage;
@@ -120,13 +110,15 @@ public:
 		if ( nRounded <= m_nCommittedBytes ) {
 			return SIRContainerResult::SIR_CONTAINER_OK;
 		}
-		if ( m_pSegment != nullptr ? !m_pSegment->commit( m_nCommittedBytes, nRounded - m_nCommittedBytes )
-		                           : !SIRVirtualMemory::commit( reinterpret_cast<uint8_t *>(m_pData) + m_nCommittedBytes, nRounded - m_nCommittedBytes ) ) {
+		if ( m_pSegment != nullptr
+		         ? !m_pSegment->commit( m_nCommittedBytes, nRounded - m_nCommittedBytes )
+		         : !SIRVirtualMemory::commit( reinterpret_cast<uint8_t *>( m_pData ) + m_nCommittedBytes, nRounded - m_nCommittedBytes ) ) {
 			return SIRContainerResult::SIR_CONTAINER_OUT_OF_MEMORY;
 		}
 		m_nCommittedBytes = nRounded;
 		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
+
 	template <typename... Args>
 	SIRContainerResult tryEmplaceBack( Args&&...args )
 	{
@@ -141,6 +133,7 @@ public:
 		++m_nSize;
 		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
+
 	SIRContainerResult tryPopBack( void ) noexcept
 	{
 		if ( m_nSize == 0 ) {
@@ -149,31 +142,35 @@ public:
 		m_pData[--m_nSize].~T();
 		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
+
 	bool tryDecommitTail( void ) noexcept
 	{
 		if ( m_pData == nullptr ) {
 			return false;
 		}
 		size_t nKeep = 0;
-		if ( !roundUp( static_cast<size_t>(m_nSize * sizeof(  T  )), m_nPageBytes, &nKeep ) ) {
+		if ( !roundUp( static_cast<size_t>( m_nSize * sizeof( T ) ), m_nPageBytes, &nKeep ) ) {
 			return false;
 		}
 		if ( nKeep >= m_nCommittedBytes ) {
 			return true;
 		}
-		if ( m_pSegment != nullptr ? !m_pSegment->decommit( nKeep, m_nCommittedBytes - nKeep )
-		                           : !SIRVirtualMemory::decommit( reinterpret_cast<uint8_t *>(m_pData) + nKeep, m_nCommittedBytes - nKeep ) ) {
+		if ( m_pSegment != nullptr
+		         ? !m_pSegment->decommit( nKeep, m_nCommittedBytes - nKeep )
+		         : !SIRVirtualMemory::decommit( reinterpret_cast<uint8_t *>( m_pData ) + nKeep, m_nCommittedBytes - nKeep ) ) {
 			return false;
 		}
 		m_nCommittedBytes = nKeep;
 		return true;
 	}
+
 	void clear( void ) noexcept
 	{
 		while ( m_nSize != 0 ) {
 			m_pData[--m_nSize].~T();
 		}
 	}
+
 	void release( void ) noexcept
 	{
 		clear();
@@ -192,37 +189,63 @@ public:
 		m_nMaximum = 0;
 		m_pSegment = nullptr;
 	}
+
 	uint32_t getSize( void ) const noexcept
 	{
 		return m_nSize;
 	}
+
 	uint32_t getMaximum( void ) const noexcept
 	{
 		return m_nMaximum;
 	}
+
 	uint32_t getCapacity( void ) const noexcept
 	{
-		return static_cast<uint32_t>(  m_nCommittedBytes / sizeof( T )  );
+		return static_cast<uint32_t>( m_nCommittedBytes / sizeof( T ) );
 	}
+
 	size_t getReservedBytes( void ) const noexcept
 	{
 		return m_nReservationBytes;
 	}
+
 	size_t getCommittedBytes( void ) const noexcept
 	{
 		return m_nCommittedBytes;
 	}
+
 	const T *data( void ) const noexcept
 	{
 		return m_pData;
 	}
+
 	T *data( void ) noexcept
 	{
 		return m_pData;
 	}
+
 	SIRReadOnlyVectorView<T> getReadOnlyView( void ) const noexcept
 	{
 		return { m_pData, m_nSize };
+	}
+
+private:
+	T *m_pData = nullptr;
+	uint32_t m_nSize = 0;
+	uint32_t m_nMaximum = 0;
+	size_t m_nReservationBytes = 0;
+	size_t m_nCommittedBytes = 0;
+	size_t m_nPageBytes = 0;
+	SIRMemorySegment *m_pSegment = nullptr;
+
+	static bool roundUp( size_t nBytes, size_t nPage, size_t *pRounded ) noexcept
+	{
+		if ( nPage == 0 || nBytes > SIZE_MAX - nPage + 1 ) {
+			return false;
+		}
+		*pRounded = ( nBytes + nPage - 1 ) / nPage * nPage;
+		return true;
 	}
 };
 

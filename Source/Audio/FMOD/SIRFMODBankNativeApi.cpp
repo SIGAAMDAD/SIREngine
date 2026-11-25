@@ -20,27 +20,28 @@ of merchantability, fitness for a particular purpose and noninfringement.
 static int32_t fmodLoadBankFile( void *, void *pStudio, const char *szPath, void **ppBank ) noexcept
 {
 	FMOD::Studio::Bank *pBank = nullptr;
-	const FMOD_RESULT eResult = static_cast<FMOD::Studio::System *>(pStudio)->loadBankFile( szPath, FMOD_STUDIO_LOAD_BANK_NORMAL, &pBank );
+	const FMOD_RESULT eResult =
+	    static_cast<FMOD::Studio::System *>( pStudio )->loadBankFile( szPath, FMOD_STUDIO_LOAD_BANK_NORMAL, &pBank );
 	*ppBank = pBank;
-	return static_cast<int32_t>(eResult);
+	return static_cast<int32_t>( eResult );
 }
 
 static int32_t fmodUnloadBank( void *, void *pBank ) noexcept
 {
-	return ( int32_t )static_cast<FMOD::Studio::Bank *>(pBank)->unload();
+	return ( int32_t ) static_cast<FMOD::Studio::Bank *>( pBank )->unload();
 }
 
 static int32_t fmodPreloadBankSamples( void *, void *pBank ) noexcept
 {
-	return ( int32_t )static_cast<FMOD::Studio::Bank *>(pBank)->loadSampleData();
+	return ( int32_t ) static_cast<FMOD::Studio::Bank *>( pBank )->loadSampleData();
 }
 
 static int32_t fmodGetBankSampleState( void *, void *pBank, SIRFMODSampleState *pState ) noexcept
 {
 	FMOD_STUDIO_LOADING_STATE eNativeState = FMOD_STUDIO_LOADING_STATE_UNLOADED;
-	const FMOD_RESULT eResult = static_cast<FMOD::Studio::Bank *>(pBank)->getSampleLoadingState( &eNativeState );
+	const FMOD_RESULT eResult = static_cast<FMOD::Studio::Bank *>( pBank )->getSampleLoadingState( &eNativeState );
 	if ( eResult != FMOD_OK ) {
-		return static_cast<int32_t>(eResult);
+		return static_cast<int32_t>( eResult );
 	}
 	if ( eNativeState == FMOD_STUDIO_LOADING_STATE_LOADED ) {
 		*pState = SIRFMODSampleState::SIR_FMOD_SAMPLE_READY;
@@ -51,38 +52,40 @@ static int32_t fmodGetBankSampleState( void *, void *pBank, SIRFMODSampleState *
 	} else {
 		*pState = SIRFMODSampleState::SIR_FMOD_SAMPLE_UNLOADED;
 	}
-	return static_cast<int32_t>(FMOD_OK);
+	return static_cast<int32_t>( FMOD_OK );
 }
 
-static int32_t fmodCheckBankEvent( void *, void *pStudio, void *pBank, const char *szPath, const sirContainerAllocator_t *pAllocator,
-                                   uint8_t *pbFound ) noexcept
+static int32_t fmodCheckBankEvent(
+    void *, void *pStudio, void *pBank, const char *szPath, const sirContainerAllocator_t *pAllocator, uint8_t *pbFound ) noexcept
 {
 	*pbFound = 0;
 	FMOD::Studio::EventDescription *pTarget = nullptr;
-	FMOD_RESULT eResult = static_cast<FMOD::Studio::System *>(pStudio)->getEvent( szPath, &pTarget );
+	FMOD_RESULT eResult = static_cast<FMOD::Studio::System *>( pStudio )->getEvent( szPath, &pTarget );
 	if ( eResult != FMOD_OK ) {
-		return static_cast<int32_t>(eResult);
+		return static_cast<int32_t>( eResult );
 	}
 	int nEventCount = 0;
-	eResult = static_cast<FMOD::Studio::Bank *>(pBank)->getEventCount( &nEventCount );
+	eResult = static_cast<FMOD::Studio::Bank *>( pBank )->getEventCount( &nEventCount );
 	if ( eResult != FMOD_OK ) {
-		return static_cast<int32_t>(eResult);
+		return static_cast<int32_t>( eResult );
 	}
 	if ( nEventCount <= 0 ) {
-		return static_cast<int32_t>(FMOD_OK);
+		return static_cast<int32_t>( FMOD_OK );
 	}
 
 	size_t nBytes = 0;
-	if ( !SIRRawStorage::checkedMultiply( static_cast<size_t>(nEventCount), sizeof( FMOD::Studio::EventDescription * ), &nBytes ) ) {
-		return static_cast<int32_t>(FMOD_ERR_MEMORY);
+	if ( !SIRRawStorage::checkedMultiply( static_cast<size_t>( nEventCount ), sizeof( FMOD::Studio::EventDescription * ), &nBytes ) ) {
+		return static_cast<int32_t>( FMOD_ERR_MEMORY );
 	}
 	void *pMemory = nullptr;
-	if ( SIRRawStorage::tryAllocate( pAllocator, nBytes, alignof( FMOD::Studio::EventDescription * ), &pMemory ) != SIRContainerResult::SIR_CONTAINER_OK ) {
-		return static_cast<int32_t>(FMOD_ERR_MEMORY);
+	if ( SIRRawStorage::tryAllocate( pAllocator, nBytes, alignof( FMOD::Studio::EventDescription * ), &pMemory ) !=
+	     SIRContainerResult::SIR_CONTAINER_OK ) {
+		return static_cast<int32_t>( FMOD_ERR_MEMORY );
 	}
 
 	int nActualCount = 0;
-	eResult = static_cast<FMOD::Studio::Bank *>(pBank)->getEventList( ( FMOD::Studio::EventDescription ** )pMemory, nEventCount, &nActualCount );
+	eResult = static_cast<FMOD::Studio::Bank *>( pBank )->getEventList(
+	    ( FMOD::Studio::EventDescription ** )pMemory, nEventCount, &nActualCount );
 	if ( eResult == FMOD_OK ) {
 		FMOD::Studio::EventDescription **ppEvents = ( FMOD::Studio::EventDescription ** )pMemory;
 		for ( int iEvent = 0; iEvent < nActualCount && iEvent < nEventCount; ++iEvent ) {
@@ -93,15 +96,20 @@ static int32_t fmodCheckBankEvent( void *, void *pStudio, void *pBank, const cha
 		}
 	}
 	SIRRawStorage::deallocate( pAllocator, pMemory, nBytes, alignof( FMOD::Studio::EventDescription * ) );
-	return static_cast<int32_t>(eResult);
+	return static_cast<int32_t>( eResult );
 }
 
-static int32_t fmodCheckBankObject( void *, void *pStudio, void *pBank, SIRFMODBankObjectKind eKind, const char *szPath,
-                                    const sirContainerAllocator_t *pAllocator, uint8_t *pbFound ) noexcept
+static int32_t fmodCheckBankObject( void *,
+                                    void *pStudio,
+                                    void *pBank,
+                                    SIRFMODBankObjectKind eKind,
+                                    const char *szPath,
+                                    const sirContainerAllocator_t *pAllocator,
+                                    uint8_t *pbFound ) noexcept
 {
 	*pbFound = 0;
-	FMOD::Studio::System *pSystem = static_cast<FMOD::Studio::System *>(pStudio);
-	FMOD::Studio::Bank *pNativeBank = static_cast<FMOD::Studio::Bank *>(pBank);
+	FMOD::Studio::System *pSystem = static_cast<FMOD::Studio::System *>( pStudio );
+	FMOD::Studio::Bank *pNativeBank = static_cast<FMOD::Studio::Bank *>( pBank );
 	void *pTarget = nullptr;
 	int nCount = 0;
 	FMOD_RESULT eResult = FMOD_OK;
@@ -109,7 +117,7 @@ static int32_t fmodCheckBankObject( void *, void *pStudio, void *pBank, SIRFMODB
 		FMOD::Studio::Bus *pBus = nullptr;
 		eResult = pSystem->getBus( szPath, &pBus );
 		if ( eResult != FMOD_OK ) {
-			return static_cast<int32_t>(eResult);
+			return static_cast<int32_t>( eResult );
 		}
 		pTarget = pBus;
 		eResult = pNativeBank->getBusCount( &nCount );
@@ -117,7 +125,7 @@ static int32_t fmodCheckBankObject( void *, void *pStudio, void *pBank, SIRFMODB
 		FMOD::Studio::VCA *pVCA = nullptr;
 		eResult = pSystem->getVCA( szPath, &pVCA );
 		if ( eResult != FMOD_OK ) {
-			return static_cast<int32_t>(eResult);
+			return static_cast<int32_t>( eResult );
 		}
 		pTarget = pVCA;
 		eResult = pNativeBank->getVCACount( &nCount );
@@ -125,23 +133,23 @@ static int32_t fmodCheckBankObject( void *, void *pStudio, void *pBank, SIRFMODB
 		FMOD::Studio::EventDescription *pEvent = nullptr;
 		eResult = pSystem->getEvent( szPath, &pEvent );
 		if ( eResult != FMOD_OK ) {
-			return static_cast<int32_t>(eResult);
+			return static_cast<int32_t>( eResult );
 		}
 		pTarget = pEvent;
 		eResult = pNativeBank->getEventCount( &nCount );
 	} else {
-		return static_cast<int32_t>(FMOD_ERR_INVALID_PARAM);
+		return static_cast<int32_t>( FMOD_ERR_INVALID_PARAM );
 	}
 	if ( eResult != FMOD_OK || nCount <= 0 ) {
-		return static_cast<int32_t>(eResult);
+		return static_cast<int32_t>( eResult );
 	}
 	size_t nBytes = 0;
-	if ( !SIRRawStorage::checkedMultiply( static_cast<size_t>(nCount), sizeof( void * ), &nBytes ) ) {
-		return static_cast<int32_t>(FMOD_ERR_MEMORY);
+	if ( !SIRRawStorage::checkedMultiply( static_cast<size_t>( nCount ), sizeof( void * ), &nBytes ) ) {
+		return static_cast<int32_t>( FMOD_ERR_MEMORY );
 	}
 	void *pMemory = nullptr;
 	if ( SIRRawStorage::tryAllocate( pAllocator, nBytes, alignof( void * ), &pMemory ) != SIRContainerResult::SIR_CONTAINER_OK ) {
-		return static_cast<int32_t>(FMOD_ERR_MEMORY);
+		return static_cast<int32_t>( FMOD_ERR_MEMORY );
 	}
 	int nActual = 0;
 	if ( eKind == SIRFMODBankObjectKind::SIR_FMOD_BANK_OBJECT_BUS ) {
@@ -179,23 +187,23 @@ static int32_t fmodCheckBankObject( void *, void *pStudio, void *pBank, SIRFMODB
 		}
 	}
 	SIRRawStorage::deallocate( pAllocator, pMemory, nBytes, alignof( void * ) );
-	return static_cast<int32_t>(eResult);
+	return static_cast<int32_t>( eResult );
 }
 
 static int32_t fmodLoadBankFileAsync( void *, void *pStudio, const char *szPath, void **ppBank ) noexcept
 {
 	FMOD::Studio::Bank *pBank = nullptr;
-	const FMOD_RESULT eResult = static_cast<FMOD::Studio::System *>(pStudio)->loadBankFile( szPath, FMOD_STUDIO_LOAD_BANK_NONBLOCKING, &pBank );
+	const FMOD_RESULT eResult = static_cast<FMOD::Studio::System *>( pStudio )->loadBankFile( szPath, FMOD_STUDIO_LOAD_BANK_NONBLOCKING, &pBank );
 	*ppBank = pBank;
-	return static_cast<int32_t>(eResult);
+	return static_cast<int32_t>( eResult );
 }
 
 static int32_t fmodGetBankLoadingState( void *, void *pBank, SIRFMODSampleState *pState ) noexcept
 {
 	FMOD_STUDIO_LOADING_STATE eNativeState = FMOD_STUDIO_LOADING_STATE_UNLOADED;
-	const FMOD_RESULT eResult = static_cast<FMOD::Studio::Bank *>(pBank)->getLoadingState( &eNativeState );
+	const FMOD_RESULT eResult = static_cast<FMOD::Studio::Bank *>( pBank )->getLoadingState( &eNativeState );
 	if ( eResult != FMOD_OK ) {
-		return static_cast<int32_t>(eResult);
+		return static_cast<int32_t>( eResult );
 	}
 	if ( eNativeState == FMOD_STUDIO_LOADING_STATE_LOADED ) {
 		*pState = SIRFMODSampleState::SIR_FMOD_SAMPLE_READY;
@@ -206,7 +214,7 @@ static int32_t fmodGetBankLoadingState( void *, void *pBank, SIRFMODSampleState 
 	} else {
 		*pState = SIRFMODSampleState::SIR_FMOD_SAMPLE_UNLOADED;
 	}
-	return static_cast<int32_t>(FMOD_OK);
+	return static_cast<int32_t>( FMOD_OK );
 }
 
 sirFMODBankNativeOps_t sirGetFMODBankNativeOps( void ) noexcept

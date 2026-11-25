@@ -25,7 +25,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <Editor/Scene/SIREditorResourceReferences.h>
-#include <Resources/SIRResourceCatalog.h>
+#include <Editor/Assets/SIRResourceCatalog.h>
 
 // The canonical importer supplies scene-scoped identities after resolving the
 // source path and owning resource types. This bridge does not mint global IDs,

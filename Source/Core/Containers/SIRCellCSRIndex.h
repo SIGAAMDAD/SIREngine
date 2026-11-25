@@ -1,6 +1,14 @@
 /* SIREngine - MPL-2.0. Frozen cell -> contiguous handle ranges. */
-#ifndef SIR_CELL_CSR_INDEX_H
-#define SIR_CELL_CSR_INDEX_H
+#ifndef __SIR_CELLCSRINDEX_H__
+#define __SIR_CELLCSRINDEX_H__
+
+#include <Core/SIRPCH.h>
+
+// clang-format off
+#ifdef SIR_PRAGMA_ONCE_SUPPORTED
+	#pragma once
+#endif
+// clang-format on
 #include <Core/Containers/SIRVector.h>
 #include <algorithm>
 #include <functional>
@@ -15,18 +23,15 @@ public:
 		Handle handle;
 	};
 
-private:
-	const sirContainerAllocator_t *m_pAllocator;
-	SIRVector<CellKey> m_cells;
-	SIRVector<uint32_t> m_offsets;
-	SIRVector<Handle> m_handles;
-	Less m_less;
-
-public:
 	explicit SIRCellCSRIndex( const sirContainerAllocator_t *pAllocator, Less less = Less() )
-	    : m_pAllocator( pAllocator ), m_cells( pAllocator ), m_offsets( pAllocator ), m_handles( pAllocator ), m_less( std::move( less ) )
+	    : m_pAllocator( pAllocator ),
+	      m_cells( pAllocator ),
+	      m_offsets( pAllocator ),
+	      m_handles( pAllocator ),
+	      m_less( std::move( less ) )
 	{
 	}
+
 	SIRContainerResult tryBuild( const Entry *pEntries, uint32_t nCount )
 	{
 		if ( nCount == UINT32_MAX || ( nCount > 0 && pEntries == nullptr ) ) {
@@ -89,6 +94,7 @@ public:
 		m_handles = std::move( handles );
 		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
+
 	bool find( const CellKey& cell, const Handle **ppData, uint32_t *pCount ) const
 	{
 		if ( ppData == nullptr || pCount == nullptr ) {
@@ -111,9 +117,18 @@ public:
 		*pCount = m_offsets[nLo + 1] - m_offsets[nLo];
 		return true;
 	}
+
 	uint32_t getCellCount( void ) const noexcept
 	{
 		return m_cells.getSize();
 	}
+
+	publicprivate :
+
+	    const sirContainerAllocator_t *m_pAllocator;
+	SIRVector<CellKey> m_cells;
+	SIRVector<uint32_t> m_offsets;
+	SIRVector<Handle> m_handles;
+	Less m_less;
 };
-#endif
+#endif /* __SIR_CELLCSRINDEX_H__ */

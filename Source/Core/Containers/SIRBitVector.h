@@ -29,12 +29,9 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 class SIRBitVector
 {
-private:
-	SIRVector<uint64_t> m_words;
-	uint32_t m_nBits = 0;
-
 public:
-	explicit SIRBitVector( const sirContainerAllocator_t *pAllocator ) noexcept : m_words( pAllocator )
+	explicit SIRBitVector( const sirContainerAllocator_t *pAllocator ) noexcept
+	    : m_words( pAllocator )
 	{
 	}
 
@@ -42,6 +39,7 @@ public:
 	{
 		return m_nBits;
 	}
+
 	uint32_t getWordCount( void ) const noexcept
 	{
 		return m_words.getSize();
@@ -49,7 +47,7 @@ public:
 
 	SIRContainerResult tryResize( uint32_t nBits )
 	{
-		uint32_t nWords = ( uint32_t )( ( static_cast<uint64_t>(nBits) + 63 ) / 64 );
+		uint32_t nWords = ( uint32_t )( ( static_cast<uint64_t>( nBits ) + 63 ) / 64 );
 		SIRContainerResult eResult = m_words.tryResize( nWords );
 		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
@@ -125,12 +123,17 @@ public:
 		m_nBits = 0;
 		m_words.tryShrinkToFit();
 	}
+
 	void clear( void ) noexcept
 	{
 		for ( uint32_t iWord = 0; iWord < m_words.getSize(); ++iWord ) {
 			m_words[iWord] = 0;
 		}
 	}
+
+private:
+	SIRVector<uint64_t> m_words;
+	uint32_t m_nBits = 0;
 };
 
 #endif // __SIR_BITVECTOR_H__

@@ -14,6 +14,11 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 #include <Tools/SIRPackCooker/SIRPackShippingGuard.h>
 
+static constexpr SIRPackResult SIR_PACK_OK = SIRPackResult::SIR_PACK_OK;
+static constexpr SIRPackResult SIR_PACK_INVALID_ARGUMENT = SIRPackResult::SIR_PACK_INVALID_ARGUMENT;
+static constexpr SIRPackResult SIR_PACK_INVALID_FORMAT = SIRPackResult::SIR_PACK_INVALID_FORMAT;
+static constexpr SIRResourceEdgeKind SIR_RESOURCE_EDGE_KIND_STREAMED = SIRResourceEdgeKind::SIR_RESOURCE_EDGE_KIND_STREAMED;
+
 #include <string.h>
 
 static bool sirShippingSameKey( const SIRResourceKey& a, const SIRResourceKey& b ) noexcept

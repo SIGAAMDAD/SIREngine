@@ -3,6 +3,12 @@
 #define __SIR_AOSOAMULTIVECTOR_H__
 
 #include <Core/SIRPCH.h>
+
+// clang-format off
+#ifdef SIR_PRAGMA_ONCE_SUPPORTED
+	#pragma once
+#endif
+// clang-format on
 #include <Core/Containers/SIRVector.h>
 #include <Core/Containers/SIRReadOnlyVectorView.h>
 #include <new>
@@ -17,21 +23,25 @@ class SIRAoSoAMultiVector
 {
 	static_assert( LANES > 0 && LANES <= 256, "AoSoA lane width out of range" );
 	static_assert( sizeof...( Fields ) > 0, "AoSoA requires at least one column" );
+
 	template <typename T>
 	struct Column
 	{
 		alignas( T ) unsigned char szData[LANES * sizeof( T )];
+
 		T *slot( uint32_t iLane ) noexcept
 		{
-			return ( T * )( szData + static_cast<size_t>(iLane * sizeof(  T  )) );
+			return ( T * )( szData + static_cast<size_t>( iLane * sizeof( T ) ) );
 		}
+
 		T *at( uint32_t iLane ) noexcept
 		{
 			return std::launder( slot( iLane ) );
 		}
+
 		const T *at( uint32_t iLane ) const noexcept
 		{
-			return std::launder( ( const T * )( szData + static_cast<size_t>(iLane * sizeof(  T  )) ) );
+			return std::launder( ( const T * )( szData + static_cast<size_t>( iLane * sizeof( T ) ) ) );
 		}
 	};
 
@@ -76,7 +86,7 @@ class SIRAoSoAMultiVector
 			++nUsed;
 		}
 
-		~Block( void ) noexcept
+		~Block() noexcept
 		{
 			while ( nUsed != 0 ) {
 				--nUsed;
@@ -90,10 +100,13 @@ class SIRAoSoAMultiVector
 	uint32_t m_nSize = 0;
 
 public:
-	explicit SIRAoSoAMultiVector( const sirContainerAllocator_t *pAllocator ) noexcept : m_Blocks( pAllocator ), m_pAllocator( pAllocator )
+	explicit SIRAoSoAMultiVector( const sirContainerAllocator_t *pAllocator ) noexcept
+	    : m_Blocks( pAllocator ),
+	      m_pAllocator( pAllocator )
 	{
 	}
-	~SIRAoSoAMultiVector( void ) noexcept
+
+	~SIRAoSoAMultiVector() noexcept
 	{
 		for ( uint32_t i = 0; i < m_Blocks.getSize(); ++i ) {
 			Block *pBlock = m_Blocks[i];
@@ -101,6 +114,7 @@ public:
 			SIRRawStorage::deallocate( m_pAllocator, pBlock, sizeof( Block ), alignof( Block ) );
 		}
 	}
+
 	SIRAoSoAMultiVector( const SIRAoSoAMultiVector& ) = delete;
 	SIRAoSoAMultiVector& operator=( const SIRAoSoAMultiVector& ) = delete;
 
@@ -145,11 +159,13 @@ public:
 	{
 		return iIndex < m_nSize ? std::get<I>( m_Blocks[iIndex / LANES]->Columns ).at( iIndex % LANES ) : nullptr;
 	}
+
 	template <size_t I>
 	const FieldType<I> *tryGet( uint32_t iIndex ) const noexcept
 	{
 		return iIndex < m_nSize ? std::get<I>( m_Blocks[iIndex / LANES]->Columns ).at( iIndex % LANES ) : nullptr;
 	}
+
 	template <size_t I>
 	SIRReadOnlyVectorView<FieldType<I>> getBlockColumnView( uint32_t iBlock ) const noexcept
 	{
@@ -159,10 +175,12 @@ public:
 		Block *pBlock = m_Blocks[iBlock];
 		return { std::get<I>( pBlock->Columns ).at( 0 ), pBlock->nUsed };
 	}
+
 	uint32_t getSize( void ) const noexcept
 	{
 		return m_nSize;
 	}
+
 	uint32_t getBlockCount( void ) const noexcept
 	{
 		return m_Blocks.getSize();

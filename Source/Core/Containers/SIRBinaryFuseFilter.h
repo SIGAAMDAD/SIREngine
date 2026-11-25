@@ -1,6 +1,14 @@
 /* SIREngine - MPL-2.0. Static segmented XOR8 filter with three adjacent fuse segments. */
-#ifndef SIR_BINARY_FUSE_FILTER_H
-#define SIR_BINARY_FUSE_FILTER_H
+#ifndef __SIR_BINARYFUSEFILTER_H__
+#define __SIR_BINARYFUSEFILTER_H__
+
+#include <Core/SIRPCH.h>
+
+// clang-format off
+#ifdef SIR_PRAGMA_ONCE_SUPPORTED
+	#pragma once
+#endif
+// clang-format on
 #include <Core/Containers/SIRVector.h>
 #include <algorithm>
 
@@ -12,6 +20,7 @@ class SIRBinaryFuseFilter
 	uint32_t m_nPartSize = 0;
 	uint32_t m_nSegmentCount = 0;
 	uint32_t m_nKeys = 0;
+
 	static uint64_t mix( uint64_t nValue ) noexcept
 	{
 		nValue ^= nValue >> 33;
@@ -20,22 +29,27 @@ class SIRBinaryFuseFilter
 		nValue *= 0xc4ceb9fe1a85ec53ull;
 		return nValue ^ ( nValue >> 33 );
 	}
+
 	static uint8_t fingerprint( uint64_t nValue ) noexcept
 	{
-		return static_cast<uint8_t>(mix( nValue ^ 0xaf9d527b6e37c1d5ull ));
+		return static_cast<uint8_t>( mix( nValue ^ 0xaf9d527b6e37c1d5ull ) );
 	}
+
 	static uint32_t index( uint64_t nValue, uint64_t nSeed, uint32_t iPart, uint32_t nSegmentSize, uint32_t nSegments ) noexcept
 	{
 		const uint64_t nHash = mix( nValue ^ nSeed );
-		const uint32_t iStart = static_cast<uint32_t>(  nHash % ( nSegments - 2 )  );
-		const uint32_t iOffset = static_cast<uint32_t>(mix( nHash ^ ( 0x9e3779b97f4a7c15ull * ( iPart + 1 ) ) ) & ( nSegmentSize - 1 ));
+		const uint32_t iStart = static_cast<uint32_t>( nHash % ( nSegments - 2 ) );
+		const uint32_t iOffset = static_cast<uint32_t>( mix( nHash ^ ( 0x9e3779b97f4a7c15ull * ( iPart + 1 ) ) ) & ( nSegmentSize - 1 ) );
 		return ( iStart + iPart ) * nSegmentSize + iOffset;
 	}
 
 public:
-	explicit SIRBinaryFuseFilter( const sirContainerAllocator_t *pAllocator ) : m_pAllocator( pAllocator ), m_fingerprints( pAllocator )
+	explicit SIRBinaryFuseFilter( const sirContainerAllocator_t *pAllocator )
+	    : m_pAllocator( pAllocator ),
+	      m_fingerprints( pAllocator )
 	{
 	}
+
 	SIRContainerResult tryBuild( const uint64_t *pValues, uint32_t nCount )
 	{
 		if ( nCount != 0 && pValues == nullptr ) {
@@ -64,7 +78,7 @@ public:
 		while ( nPart < 256 && nCount / nPart > 10 ) {
 			nPart *= 2;
 		}
-		const uint64_t nSegmentsRequired = ( static_cast<uint64_t>(nCount) * 13 / 10 + nPart - 1 ) / nPart + 2;
+		const uint64_t nSegmentsRequired = ( static_cast<uint64_t>( nCount ) * 13 / 10 + nPart - 1 ) / nPart + 2;
 		if ( nSegmentsRequired > UINT32_MAX / nPart ) {
 			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
@@ -167,6 +181,7 @@ public:
 		}
 		return SIRContainerResult::SIR_CONTAINER_BUSY;
 	}
+
 	bool mayContain( uint64_t nValue ) const noexcept
 	{
 		if ( m_nKeys == 0 ) {
@@ -178,9 +193,10 @@ public:
 		}
 		return nTag == fingerprint( nValue );
 	}
+
 	uint32_t getSize( void ) const noexcept
 	{
 		return m_nKeys;
 	}
 };
-#endif
+#endif /* __SIR_BINARYFUSEFILTER_H__ */

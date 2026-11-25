@@ -13,7 +13,16 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#include <Resources/SIRPackCatalog.h>
+#include <Streaming/Pack/SIRPackCatalog.h>
+
+static constexpr SIRPackResult SIR_PACK_OK = SIRPackResult::SIR_PACK_OK;
+static constexpr SIRPackResult SIR_PACK_INVALID_ARGUMENT = SIRPackResult::SIR_PACK_INVALID_ARGUMENT;
+static constexpr SIRPackResult SIR_PACK_INVALID_FORMAT = SIRPackResult::SIR_PACK_INVALID_FORMAT;
+static constexpr SIRPackResult SIR_PACK_OUT_OF_CAPACITY = SIRPackResult::SIR_PACK_OUT_OF_CAPACITY;
+static constexpr SIRPackResult SIR_PACK_CYCLIC_DEPENDENCY = SIRPackResult::SIR_PACK_CYCLIC_DEPENDENCY;
+static constexpr uint8_t SIR_RESOURCE_KIND_COMPOSITION = static_cast<uint8_t>( SIRResourceKind::SIR_RESOURCE_KIND_COMPOSITION );
+static constexpr SIRResourceEdgeKind SIR_RESOURCE_EDGE_KIND_REQUIRED = SIRResourceEdgeKind::SIR_RESOURCE_EDGE_KIND_REQUIRED;
+static constexpr SIRResourceEdgeKind SIR_RESOURCE_EDGE_KIND_STREAMED = SIRResourceEdgeKind::SIR_RESOURCE_EDGE_KIND_STREAMED;
 #include <Tools/SIRPackCooker/SIRPackCooker.h>
 
 #include <limits.h>

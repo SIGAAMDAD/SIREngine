@@ -2,6 +2,12 @@
 #ifndef __SIR_INLINEVECTORAPPENDWRITER_H__
 #define __SIR_INLINEVECTORAPPENDWRITER_H__
 #include <Core/SIRPCH.h>
+
+// clang-format off
+#ifdef SIR_PRAGMA_ONCE_SUPPORTED
+	#pragma once
+#endif
+// clang-format on
 #include <Core/Containers/SIRInlineVector.h>
 #include <new>
 #include <utility>
@@ -9,21 +15,17 @@
 template <typename T, uint32_t N>
 class SIRInlineVectorAppendWriter
 {
-private:
-	SIRInlineVector<T, N> *m_pVector = nullptr;
-	uint32_t m_nBase = 0;
-	uint32_t m_nReserved = 0;
-	uint32_t m_nConstructed = 0;
-	bool m_bActive = false;
-
 public:
-	explicit SIRInlineVectorAppendWriter( SIRInlineVector<T, N>& rVector ) noexcept : m_pVector( &rVector )
+	explicit SIRInlineVectorAppendWriter( SIRInlineVector<T, N>& rVector ) noexcept
+	    : m_pVector( &rVector )
 	{
 	}
-	~SIRInlineVectorAppendWriter( void ) noexcept
+
+	~SIRInlineVectorAppendWriter() noexcept
 	{
 		rollback();
 	}
+
 	SIRInlineVectorAppendWriter( const SIRInlineVectorAppendWriter& ) = delete;
 	SIRInlineVectorAppendWriter& operator=( const SIRInlineVectorAppendWriter& ) = delete;
 
@@ -56,6 +58,7 @@ public:
 		++m_nConstructed;
 		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
+
 	SIRContainerResult commit( void ) noexcept
 	{
 		if ( !m_bActive || m_nConstructed != m_nReserved ) {
@@ -65,6 +68,7 @@ public:
 		m_bActive = false;
 		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
+
 	void rollback( void ) noexcept
 	{
 		if ( m_bActive ) {
@@ -73,6 +77,13 @@ public:
 			m_nConstructed = 0;
 		}
 	}
+
+private:
+	SIRInlineVector<T, N> *m_pVector = nullptr;
+	uint32_t m_nBase = 0;
+	uint32_t m_nReserved = 0;
+	uint32_t m_nConstructed = 0;
+	bool m_bActive = false;
 };
 
 #endif // __SIR_INLINEVECTORAPPENDWRITER_H__

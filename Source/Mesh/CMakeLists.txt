@@ -53,7 +53,7 @@ target_include_directories(SIRMeshPackSchema PUBLIC
     "${PROJECT_SOURCE_DIR}/Source"
     "${PROJECT_SOURCE_DIR}/Build/CMake")
 target_compile_features(SIRMeshPackSchema PUBLIC cxx_std_17)
-target_link_libraries(SIRMeshPackSchema PUBLIC SIR::Resources)
+target_link_libraries(SIRMeshPackSchema PUBLIC SIR::Pack SIR::Resources)
 sir_configure_owned_target(SIRMeshPackSchema)
 
 # Bind immutable MeshCache leases directly to GRDG source epochs and provider pins.

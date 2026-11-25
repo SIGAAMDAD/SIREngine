@@ -1,6 +1,14 @@
 /* SIREngine - MPL-2.0. Rank/select over packed bits, rebuilt transactionally. */
-#ifndef SIR_RANK_SELECT_BIT_VECTOR_H
-#define SIR_RANK_SELECT_BIT_VECTOR_H
+#ifndef __SIR_RANKSELECTBITVECTOR_H__
+#define __SIR_RANKSELECTBITVECTOR_H__
+
+#include <Core/SIRPCH.h>
+
+// clang-format off
+#ifdef SIR_PRAGMA_ONCE_SUPPORTED
+	#pragma once
+#endif
+// clang-format on
 #include <Core/Containers/SIRVector.h>
 #include <stdint.h>
 
@@ -10,10 +18,11 @@ class SIRRankSelectBitVector
 	SIRVector<uint64_t> m_words;
 	SIRVector<uint64_t> m_prefix;
 	uint32_t m_nBits = 0;
+
 	static uint32_t pop( uint64_t nWord ) noexcept
 	{
 #if defined( __clang__ ) || defined( __GNUC__ )
-		return static_cast<uint32_t>(__builtin_popcountll( nWord ));
+		return static_cast<uint32_t>( __builtin_popcountll( nWord ) );
 #else
 		uint32_t nCount = 0;
 		while ( nWord ) {
@@ -43,9 +52,12 @@ class SIRRankSelectBitVector
 
 public:
 	explicit SIRRankSelectBitVector( const sirContainerAllocator_t *pAllocator ) noexcept
-	    : m_pAllocator( pAllocator ), m_words( pAllocator ), m_prefix( pAllocator )
+	    : m_pAllocator( pAllocator ),
+	      m_words( pAllocator ),
+	      m_prefix( pAllocator )
 	{
 	}
+
 	SIRContainerResult tryBuild( const uint64_t *pWords, uint32_t nBits )
 	{
 		if ( nBits != 0 && pWords == nullptr ) {
@@ -78,6 +90,7 @@ public:
 		m_nBits = nBits;
 		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
+
 	uint64_t rank1( uint32_t nExclusive ) const noexcept
 	{
 		if ( nExclusive > m_nBits ) {
@@ -90,6 +103,7 @@ public:
 		}
 		return nResult;
 	}
+
 	uint32_t select1( uint64_t nOrdinal ) const noexcept
 	{
 		if ( m_prefix.isEmpty() || nOrdinal >= m_prefix[m_prefix.getSize() - 1] ) {
@@ -111,7 +125,7 @@ public:
 			nWord &= nWord - 1;
 		}
 #if defined( __clang__ ) || defined( __GNUC__ )
-		return nLo * 64 + static_cast<uint32_t>(__builtin_ctzll( nWord ));
+		return nLo * 64 + static_cast<uint32_t>( __builtin_ctzll( nWord ) );
 #else
 		uint32_t nBit = 0;
 		while ( ( nWord & 1 ) == 0 ) {
@@ -121,6 +135,7 @@ public:
 		return nLo * 64 + nBit;
 #endif
 	}
+
 	// Locate the zero-based ordinal among unset bits. Tail bits beyond
 	// m_nBits must not be counted, including in the last partial word.
 	// Optional faster choice for repeated wavelet-partition inversion; the
@@ -142,9 +157,10 @@ public:
 		}
 		return nLo * 64 + selectBitInWord( m_words[nLo], static_cast<uint32_t>( nOrdinal - m_prefix[nLo] ) );
 	}
+
 	uint32_t select0( uint64_t nOrdinal ) const noexcept
 	{
-		if ( nOrdinal >= static_cast<uint64_t>(m_nBits - getOnes()) ) {
+		if ( nOrdinal >= static_cast<uint64_t>( m_nBits - getOnes() ) ) {
 			return UINT32_MAX;
 		}
 		uint32_t nLo = 0;
@@ -163,19 +179,22 @@ public:
 		if ( nTail != 0 && nLo + 1 == m_words.getSize() ) {
 			nWord &= ( uint64_t( 1 ) << nTail ) - 1;
 		}
-		return nLo * 64 + selectBitInWord( nWord, ( uint32_t )( nOrdinal - ( static_cast<uint64_t>(nLo) * 64 - m_prefix[nLo] ) ) );
+		return nLo * 64 + selectBitInWord( nWord, ( uint32_t )( nOrdinal - ( static_cast<uint64_t>( nLo ) * 64 - m_prefix[nLo] ) ) );
 	}
+
 	bool contains( uint32_t iBit ) const noexcept
 	{
 		return iBit < m_nBits && ( m_words[iBit / 64] & ( uint64_t( 1 ) << ( iBit % 64 ) ) ) != 0;
 	}
+
 	uint32_t getSize( void ) const noexcept
 	{
 		return m_nBits;
 	}
+
 	uint64_t getOnes( void ) const noexcept
 	{
 		return m_prefix.isEmpty() ? 0 : m_prefix[m_prefix.getSize() - 1];
 	}
 };
-#endif
+#endif /* __SIR_RANKSELECTBITVECTOR_H__ */

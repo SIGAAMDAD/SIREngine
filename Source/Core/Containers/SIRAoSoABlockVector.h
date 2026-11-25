@@ -1,6 +1,14 @@
 /* SIREngine - MPL-2.0. Blocked two-column array of structures of arrays. */
-#ifndef SIR_AOSOA_BLOCK_VECTOR_H
-#define SIR_AOSOA_BLOCK_VECTOR_H
+#ifndef __SIR_AOSOABLOCKVECTOR_H__
+#define __SIR_AOSOABLOCKVECTOR_H__
+
+#include <Core/SIRPCH.h>
+
+// clang-format off
+#ifdef SIR_PRAGMA_ONCE_SUPPORTED
+	#pragma once
+#endif
+// clang-format on
 #include <Core/Containers/SIRVector.h>
 #include <type_traits>
 
@@ -12,18 +20,22 @@ class SIRAoSoABlockVector
 	               "Blocked AoSoA columns require default-constructible entries" );
 	static_assert( std::is_nothrow_copy_assignable<A>::value && std::is_nothrow_copy_assignable<B>::value,
 	               "AoSoA append requires nonthrowing column assignment for atomic element publication" );
+
 	struct alignas( 64 ) Block
 	{
 		A szFirst[LANES]{};
 		B szSecond[LANES]{};
 	};
+
 	SIRVector<Block> m_blocks;
 	uint32_t m_nSize = 0;
 
 public:
-	explicit SIRAoSoABlockVector( const sirContainerAllocator_t *pAllocator ) : m_blocks( pAllocator )
+	explicit SIRAoSoABlockVector( const sirContainerAllocator_t *pAllocator )
+	    : m_blocks( pAllocator )
 	{
 	}
+
 	SIRContainerResult tryEmplaceBack( const A& first, const B& second )
 	{
 		if ( m_nSize == UINT32_MAX ) {
@@ -44,25 +56,30 @@ public:
 		++m_nSize;
 		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
+
 	A *tryGetFirst( uint32_t iIndex ) noexcept
 	{
 		return iIndex < m_nSize ? &m_blocks[iIndex / LANES].szFirst[iIndex % LANES] : nullptr;
 	}
+
 	B *tryGetSecond( uint32_t iIndex ) noexcept
 	{
 		return iIndex < m_nSize ? &m_blocks[iIndex / LANES].szSecond[iIndex % LANES] : nullptr;
 	}
+
 	uint32_t getSize( void ) const noexcept
 	{
 		return m_nSize;
 	}
+
 	uint32_t getBlockCount( void ) const noexcept
 	{
 		return m_blocks.getSize();
 	}
+
 	sirContainerFootprint_t getFootprint( void ) const noexcept
 	{
 		return m_blocks.getFootprint();
 	}
 };
-#endif
+#endif /* __SIR_AOSOABLOCKVECTOR_H__ */

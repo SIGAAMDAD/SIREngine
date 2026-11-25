@@ -1,6 +1,14 @@
 /* SIREngine - MPL-2.0. Four-level 256-bucket timer wheel with generational cancellation. */
-#ifndef SIR_HIERARCHICAL_TIMING_WHEEL_H
-#define SIR_HIERARCHICAL_TIMING_WHEEL_H
+#ifndef __SIR_HIERARCHICALTIMINGWHEEL_H__
+#define __SIR_HIERARCHICALTIMINGWHEEL_H__
+
+#include <Core/SIRPCH.h>
+
+// clang-format off
+#ifdef SIR_PRAGMA_ONCE_SUPPORTED
+	#pragma once
+#endif
+// clang-format on
 #include <Core/Containers/SIRVector.h>
 #include <stdint.h>
 
@@ -13,69 +21,8 @@ public:
 		uint32_t nGeneration;
 	};
 
-private:
-	struct Timer
-	{
-		uint64_t nDeadline = 0;
-		uint64_t nPayload = 0;
-		uint32_t nNext = UINT32_MAX;
-		uint32_t nGeneration = 1;
-		bool bActive = false;
-	};
-	SIRVector<Timer> m_timers;
-	uint32_t m_heads[4][256]{};
-	uint32_t m_nFree = UINT32_MAX;
-	uint64_t m_nCurrent = 0;
-	uint32_t m_nActive = 0;
-	uint32_t level( uint64_t nDeadline ) const noexcept
-	{
-		const uint64_t nDelta = nDeadline - m_nCurrent;
-		if ( nDelta < 256 ) {
-			return 0;
-		}
-		if ( nDelta < ( 1ull << 16 ) ) {
-			return 1;
-		}
-		if ( nDelta < ( 1ull << 24 ) ) {
-			return 2;
-		}
-		return 3;
-	}
-	void link( uint32_t iTimer ) noexcept
-	{
-		const uint32_t iLevel = level( m_timers[iTimer].nDeadline );
-		const uint32_t iBucket = static_cast<uint32_t>(  ( m_timers[iTimer].nDeadline >> ( iLevel * 8 ) ) & 255  );
-		m_timers[iTimer].nNext = m_heads[iLevel][iBucket];
-		m_heads[iLevel][iBucket] = iTimer;
-	}
-	void cascade( uint32_t iLevel ) noexcept
-	{
-		const uint32_t iBucket = static_cast<uint32_t>(  ( m_nCurrent >> ( iLevel * 8 ) ) & 255  );
-		uint32_t iTimer = m_heads[iLevel][iBucket];
-		m_heads[iLevel][iBucket] = UINT32_MAX;
-		while ( iTimer != UINT32_MAX ) {
-			uint32_t iNext = m_timers[iTimer].nNext;
-			if ( m_timers[iTimer].bActive ) {
-				link( iTimer );
-			} else {
-				retire( iTimer );
-			}
-			iTimer = iNext;
-		}
-	}
-	void retire( uint32_t iTimer ) noexcept
-	{
-		m_timers[iTimer].bActive = false;
-		m_timers[iTimer].nNext = m_nFree;
-		m_nFree = iTimer;
-		++m_timers[iTimer].nGeneration;
-		if ( m_timers[iTimer].nGeneration == 0 ) {
-			++m_timers[iTimer].nGeneration;
-		}
-	}
-
-public:
-	explicit SIRHierarchicalTimingWheel( const sirContainerAllocator_t *pAllocator ) : m_timers( pAllocator )
+	explicit SIRHierarchicalTimingWheel( const sirContainerAllocator_t *pAllocator )
+	    : m_timers( pAllocator )
 	{
 		for ( uint32_t iLevel = 0; iLevel < 4; ++iLevel ) {
 			for ( uint32_t iBucket = 0; iBucket < 256; ++iBucket ) {
@@ -83,6 +30,7 @@ public:
 			}
 		}
 	}
+
 	SIRContainerResult trySchedule( uint64_t nDeadline, uint64_t nPayload, Handle *pHandle )
 	{
 		if ( pHandle == nullptr || nDeadline < m_nCurrent || nDeadline - m_nCurrent >= ( 1ull << 32 ) ) {
@@ -107,6 +55,7 @@ public:
 		*pHandle = { iTimer, timer.nGeneration };
 		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
+
 	bool cancel( Handle handle ) noexcept
 	{
 		if ( handle.nIndex >= m_timers.getSize() ) {
@@ -120,6 +69,7 @@ public:
 		--m_nActive;
 		return true;
 	}
+
 	template <typename Visitor>
 	void advanceTo( uint64_t nTarget, Visitor&& visitor )
 	{
@@ -173,13 +123,82 @@ public:
 			++m_nCurrent;
 		}
 	}
+
 	uint32_t getActiveCount( void ) const noexcept
 	{
 		return m_nActive;
 	}
+
 	uint64_t getCurrentTick( void ) const noexcept
 	{
 		return m_nCurrent;
 	}
+
+	publicprivate :
+
+	    struct Timer
+	{
+		uint64_t nDeadline = 0;
+		uint64_t nPayload = 0;
+		uint32_t nNext = UINT32_MAX;
+		uint32_t nGeneration = 1;
+		bool bActive = false;
+	};
+
+	SIRVector<Timer> m_timers;
+	uint32_t m_heads[4][256]{};
+	uint32_t m_nFree = UINT32_MAX;
+	uint64_t m_nCurrent = 0;
+	uint32_t m_nActive = 0;
+
+	uint32_t level( uint64_t nDeadline ) const noexcept
+	{
+		const uint64_t nDelta = nDeadline - m_nCurrent;
+		if ( nDelta < 256 ) {
+			return 0;
+		}
+		if ( nDelta < ( 1ull << 16 ) ) {
+			return 1;
+		}
+		if ( nDelta < ( 1ull << 24 ) ) {
+			return 2;
+		}
+		return 3;
+	}
+
+	void link( uint32_t iTimer ) noexcept
+	{
+		const uint32_t iLevel = level( m_timers[iTimer].nDeadline );
+		const uint32_t iBucket = static_cast<uint32_t>( ( m_timers[iTimer].nDeadline >> ( iLevel * 8 ) ) & 255 );
+		m_timers[iTimer].nNext = m_heads[iLevel][iBucket];
+		m_heads[iLevel][iBucket] = iTimer;
+	}
+
+	void cascade( uint32_t iLevel ) noexcept
+	{
+		const uint32_t iBucket = static_cast<uint32_t>( ( m_nCurrent >> ( iLevel * 8 ) ) & 255 );
+		uint32_t iTimer = m_heads[iLevel][iBucket];
+		m_heads[iLevel][iBucket] = UINT32_MAX;
+		while ( iTimer != UINT32_MAX ) {
+			uint32_t iNext = m_timers[iTimer].nNext;
+			if ( m_timers[iTimer].bActive ) {
+				link( iTimer );
+			} else {
+				retire( iTimer );
+			}
+			iTimer = iNext;
+		}
+	}
+
+	void retire( uint32_t iTimer ) noexcept
+	{
+		m_timers[iTimer].bActive = false;
+		m_timers[iTimer].nNext = m_nFree;
+		m_nFree = iTimer;
+		++m_timers[iTimer].nGeneration;
+		if ( m_timers[iTimer].nGeneration == 0 ) {
+			++m_timers[iTimer].nGeneration;
+		}
+	}
 };
-#endif
+#endif /* __SIR_HIERARCHICALTIMINGWHEEL_H__ */

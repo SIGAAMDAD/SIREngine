@@ -1,4 +1,4 @@
-#include <Resources/SIRResourceCatalog.h>
+#include <Editor/Assets/SIRResourceCatalog.h>
 #include <assert.h>
 
 SIRResourceCatalog *sirEditorTestCatalog( void ) noexcept

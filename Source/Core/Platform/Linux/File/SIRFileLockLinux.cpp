@@ -20,7 +20,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <sys/file.h>
 #include <unistd.h>
 
-SIRFileLock::SIRFileLock( const char *pszLockPath ) noexcept : m_nHandle( -1 )
+SIRFileLock::SIRFileLock( const char *pszLockPath ) noexcept
+    : m_nHandle( -1 )
 {
 	if ( pszLockPath == nullptr || pszLockPath[0] == '\0' ) {
 		return;
@@ -33,7 +34,7 @@ SIRFileLock::SIRFileLock( const char *pszLockPath ) noexcept : m_nHandle( -1 )
 
 	while ( flock( nDescriptor, LOCK_EX ) != 0 ) {
 		if ( errno != EINTR ) {
-			static_cast<void>(close( nDescriptor ));
+			static_cast<void>( close( nDescriptor ) );
 			return;
 		}
 	}
@@ -44,8 +45,8 @@ SIRFileLock::SIRFileLock( const char *pszLockPath ) noexcept : m_nHandle( -1 )
 SIRFileLock::~SIRFileLock( void ) noexcept
 {
 	if ( m_nHandle >= 0 ) {
-		static_cast<void>(flock( static_cast<int>(m_nHandle), LOCK_UN ));
-		static_cast<void>(::close( static_cast<int>(m_nHandle) ));
+		static_cast<void>( flock( static_cast<int>( m_nHandle ), LOCK_UN ) );
+		static_cast<void>( ::close( static_cast<int>( m_nHandle ) ) );
 	}
 }
 

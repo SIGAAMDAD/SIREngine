@@ -26,7 +26,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-enum class SIRContainerResult : uint8_t {
+enum class SIRContainerResult : uint8_t
+{
 	SIR_CONTAINER_OK = 0,
 	SIR_CONTAINER_OUT_OF_MEMORY = 1,
 	SIR_CONTAINER_CAPACITY_EXCEEDED = 2,
@@ -54,10 +55,10 @@ typedef struct sirContainerAllocator_s
 typedef struct sirContainerAllocatorCapabilities_s
 {
 	void *pContext;
-	bool ( *pfnTryExpandInPlace )( void *pContext, void *pMemory, size_t nOldBytes, size_t nRequestedBytes, size_t nAlignment,
-	                               size_t *pActualBytes ) noexcept;
-	bool ( *pfnGetUsableSize )( void *pContext, const void *pMemory, size_t nRequestedBytes, size_t nAlignment,
-	                            size_t *pActualBytes ) noexcept;
+	bool ( *pfnTryExpandInPlace )(
+	    void *pContext, void *pMemory, size_t nOldBytes, size_t nRequestedBytes, size_t nAlignment, size_t *pActualBytes ) noexcept;
+	bool ( *pfnGetUsableSize )(
+	    void *pContext, const void *pMemory, size_t nRequestedBytes, size_t nAlignment, size_t *pActualBytes ) noexcept;
 } sirContainerAllocatorCapabilities_t;
 
 typedef struct sirContainerFootprint_s

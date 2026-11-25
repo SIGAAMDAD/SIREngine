@@ -24,7 +24,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <Mesh/SIRMeshCache.h>
-#include <Resources/SIRPackFormat.h>
+#include <Streaming/Pack/SIRPackFormat.h>
 
 // SIRG V1 is one immutable SIRPack GEOMETRY resource: chunk 0 is this
 // manifest; chunks 1..N hold page payloads. Chunk IDs are stable within a

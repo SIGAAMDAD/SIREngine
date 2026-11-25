@@ -1,6 +1,14 @@
 /* SIREngine - MPL-2.0. Immutable static open-addressing index; exact key verification. */
-#ifndef SIR_FROZEN_HASH_INDEX_H
-#define SIR_FROZEN_HASH_INDEX_H
+#ifndef __SIR_FROZENHASHINDEX_H__
+#define __SIR_FROZENHASHINDEX_H__
+
+#include <Core/SIRPCH.h>
+
+// clang-format off
+#ifdef SIR_PRAGMA_ONCE_SUPPORTED
+	#pragma once
+#endif
+// clang-format on
 #include <Core/Containers/SIRVector.h>
 #include <functional>
 #include <optional>
@@ -16,16 +24,11 @@ public:
 		V value;
 	};
 
-private:
-	const sirContainerAllocator_t *m_pAllocator;
-	SIRVector<std::optional<Entry>> m_slots;
-	uint32_t m_nSize = 0;
-	Hash m_hash;
-	Equal m_equal;
-
-public:
 	explicit SIRFrozenHashIndex( const sirContainerAllocator_t *pAllocator, Hash hash = Hash(), Equal equal = Equal() )
-	    : m_pAllocator( pAllocator ), m_slots( pAllocator ), m_hash( std::move( hash ) ), m_equal( std::move( equal ) )
+	    : m_pAllocator( pAllocator ),
+	      m_slots( pAllocator ),
+	      m_hash( std::move( hash ) ),
+	      m_equal( std::move( equal ) )
 	{
 	}
 
@@ -50,7 +53,7 @@ public:
 			return eResult;
 		}
 		for ( uint32_t iEntry = 0; iEntry < nCount; ++iEntry ) {
-			uint32_t iSlot = static_cast<uint32_t>(m_hash( pEntries[iEntry].key ) & ( nCapacity - 1 ));
+			uint32_t iSlot = static_cast<uint32_t>( m_hash( pEntries[iEntry].key ) & ( nCapacity - 1 ) );
 			while ( staged[iSlot].has_value() ) {
 				if ( m_equal( staged[iSlot]->key, pEntries[iEntry].key ) ) {
 					return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
@@ -63,13 +66,14 @@ public:
 		m_nSize = nCount;
 		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
+
 	const V *find( const K& key ) const
 	{
 		if ( m_slots.isEmpty() ) {
 			return nullptr;
 		}
 		const uint32_t nCapacity = m_slots.getSize();
-		uint32_t iSlot = static_cast<uint32_t>(m_hash( key ) & ( nCapacity - 1 ));
+		uint32_t iSlot = static_cast<uint32_t>( m_hash( key ) & ( nCapacity - 1 ) );
 		for ( uint32_t nProbe = 0; nProbe < nCapacity; ++nProbe ) {
 			if ( !m_slots[iSlot].has_value() ) {
 				return nullptr;
@@ -81,13 +85,23 @@ public:
 		}
 		return nullptr;
 	}
+
 	uint32_t getSize( void ) const noexcept
 	{
 		return m_nSize;
 	}
+
 	sirContainerFootprint_t getFootprint( void ) const noexcept
 	{
 		return m_slots.getFootprint();
 	}
+
+	publicprivate :
+
+	    const sirContainerAllocator_t *m_pAllocator;
+	SIRVector<std::optional<Entry>> m_slots;
+	uint32_t m_nSize = 0;
+	Hash m_hash;
+	Equal m_equal;
 };
-#endif
+#endif /* __SIR_FROZENHASHINDEX_H__ */

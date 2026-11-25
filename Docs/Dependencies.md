@@ -15,6 +15,10 @@
 | OpenAL (system fallback) | OS package | `find_package(OpenAL)` | `SIR_WITH_OPENAL` | `SIR::OpenAL` |
 | Wwise | Proprietary, installed SDK | `SIR_WWISE_SDK_ROOT` | `SIR_WITH_WWISE` | Header interface |
 | EASTL family | Electronic Arts source | `git ls-tree HEAD ThirdParty/` | `SIR_WITH_EASTL` | EASTL |
+| LZ4 | System development package | `find_path(lz4.h)` + `find_library(lz4)` | Always-on Core codec | `SIR::LZ4` |
+| bzip2 | System development package | `find_package(BZip2)` | Always-on Core codec | `BZip2::BZip2` |
+| zlib | System development package | `find_package(ZLIB)` | Always-on Core codec | `ZLIB::ZLIB` |
+| Zstandard | System development package | `find_path(zstd.h)` + `find_library(zstd)` | Always-on Core codec | `SIR::Zstd` |
 
 ## Google testing and profiling
 

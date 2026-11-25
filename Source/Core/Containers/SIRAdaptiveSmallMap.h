@@ -1,6 +1,14 @@
 /* SIREngine - MPL-2.0. Inline linear map with transactional hash spill. */
-#ifndef SIR_ADAPTIVE_SMALL_MAP_H
-#define SIR_ADAPTIVE_SMALL_MAP_H
+#ifndef __SIR_ADAPTIVESMALLMAP_H__
+#define __SIR_ADAPTIVESMALLMAP_H__
+
+#include <Core/SIRPCH.h>
+
+// clang-format off
+#ifdef SIR_PRAGMA_ONCE_SUPPORTED
+	#pragma once
+#endif
+// clang-format on
 #include <Core/Containers/SIRStaticVector.h>
 #include <Core/Containers/SIRFlatHashMap.h>
 #include <Core/Containers/SIRRawStorage.h>
@@ -10,25 +18,24 @@ template <typename K, typename V, uint32_t INLINE_COUNT = 8, typename Hash = std
 class SIRAdaptiveSmallMap
 {
 	using Entry = std::pair<K, V>;
-	const sirContainerAllocator_t *m_pAllocator;
-	SIRStaticVector<Entry, INLINE_COUNT> m_inline;
-	SIRFlatHashMap<K, V, Hash, Equal> *m_pHash = nullptr;
-	Hash m_hash;
-	Equal m_equal;
 
 public:
-	explicit SIRAdaptiveSmallMap( const sirContainerAllocator_t *pAllocator ) noexcept : m_pAllocator( pAllocator )
+	explicit SIRAdaptiveSmallMap( const sirContainerAllocator_t *pAllocator ) noexcept
+	    : m_pAllocator( pAllocator )
 	{
 	}
-	~SIRAdaptiveSmallMap( void ) noexcept
+
+	~SIRAdaptiveSmallMap() noexcept
 	{
 		if ( m_pHash != nullptr ) {
 			m_pHash->~SIRFlatHashMap<K, V, Hash, Equal>();
 			SIRRawStorage::deallocate( m_pAllocator, m_pHash, sizeof( *m_pHash ), alignof( SIRFlatHashMap<K, V, Hash, Equal> ) );
 		}
 	}
+
 	SIRAdaptiveSmallMap( const SIRAdaptiveSmallMap& ) = delete;
 	SIRAdaptiveSmallMap& operator=( const SIRAdaptiveSmallMap& ) = delete;
+
 	const V *find( const K& key ) const
 	{
 		if ( m_pHash != nullptr ) {
@@ -41,6 +48,7 @@ public:
 		}
 		return nullptr;
 	}
+
 	SIRContainerResult tryInsert( const K& key, const V& value )
 	{
 		if ( find( key ) != nullptr ) {
@@ -53,8 +61,8 @@ public:
 			return m_inline.tryEmplaceBack( key, value );
 		}
 		void *pMemory = nullptr;
-		SIRContainerResult eResult = SIRRawStorage::tryAllocate( m_pAllocator, sizeof( SIRFlatHashMap<K, V, Hash, Equal> ),
-		                                                           alignof( SIRFlatHashMap<K, V, Hash, Equal> ), &pMemory );
+		SIRContainerResult eResult = SIRRawStorage::tryAllocate(
+		    m_pAllocator, sizeof( SIRFlatHashMap<K, V, Hash, Equal> ), alignof( SIRFlatHashMap<K, V, Hash, Equal> ), &pMemory );
 		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
@@ -81,6 +89,7 @@ public:
 		m_pHash = pNew;
 		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
+
 	bool erase( const K& key )
 	{
 		if ( m_pHash != nullptr ) {
@@ -99,13 +108,22 @@ public:
 		}
 		return false;
 	}
+
 	uint32_t getSize( void ) const noexcept
 	{
 		return m_pHash == nullptr ? m_inline.getSize() : m_pHash->getSize();
 	}
+
 	bool isHashed( void ) const noexcept
 	{
 		return m_pHash != nullptr;
 	}
+
+private:
+	const sirContainerAllocator_t *m_pAllocator;
+	SIRStaticVector<Entry, INLINE_COUNT> m_inline;
+	SIRFlatHashMap<K, V, Hash, Equal> *m_pHash = nullptr;
+	Hash m_hash;
+	Equal m_equal;
 };
-#endif
+#endif /* __SIR_ADAPTIVESMALLMAP_H__ */

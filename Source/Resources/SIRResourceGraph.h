@@ -158,6 +158,8 @@ public:
 	// Failed version checks do not consume staging or mutate the published record.
 	SIRResourceResult publishExpected( const SIRResourcePublication& rPublication, uint64_t nExpectedRevision,
 	                                   SIRResourceHandle *pHandle ) noexcept;
+	SIRResourceResult publishVerifiedExpected( const SIRResourceVerifiedPublication& rPublication, uint64_t nExpectedRevision,
+	                                           SIRResourceHandle *pHandle ) noexcept;
 	SIRResourceResult markFailed( SIRResourceHandle hResource, SIRResourceResult eCause ) noexcept;
 	SIRResourceResult evictChunk( SIRResourceHandle hResource, SIRResourceChunkId id ) noexcept;
 	SIRResourceResult retire( SIRResourceHandle hResource ) noexcept;
@@ -253,6 +255,8 @@ private:
 	SIRResourceResult checkHandle( SIRResourceHandle hResource, SIRPublishedResourceRecord **pRecord ) const noexcept;
 	SIRResourceResult prepareChunk( SIRPublishedResourceRecord *pRecord, uint32_t iChunk,
 	                                const SIRResourceChunkPublication& rInput ) noexcept;
+	SIRResourceResult prepareVerifiedChunk( SIRPublishedResourceRecord *pRecord, uint32_t iChunk,
+	                                       const sirResourceVerifiedChunk_t& rInput, const SIRPublishedResourceRecord *pPrior ) noexcept;
 	void abandonUnpublishedRecord( SIRPublishedResourceRecord *pRecord ) noexcept;
 	void adoptPublishedRecordChunks( SIRPublishedResourceRecord *pRecord ) noexcept;
 	SIRResourceResult buildReplacement( SIRPublishedResourceRecord *pCurrent, uint32_t iExcludeChunk, SIRResourceState eState,

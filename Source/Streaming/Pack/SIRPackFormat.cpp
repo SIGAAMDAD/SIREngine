@@ -13,7 +13,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#include <Resources/SIRPackFormat.h>
+#include <Streaming/Pack/SIRPackFormat.h>
 
 #include <string.h>
 
@@ -193,4 +193,19 @@ void sirPackCatalogDigest( const uint8_t *pBytes, uint64_t nBytes, uint8_t *pDig
 	sirPackHashUpdate( &state, s_szZeroDigest, 32 );
 	sirPackHashUpdate( &state, pBytes + 120, nBytes - 120 );
 	sirPackHashFinish( &state, pDigest );
+}
+
+void sirPackSha256Init( sirPackSha256State_t *pState ) noexcept
+{
+	if ( pState != nullptr ) sirPackHashInit( reinterpret_cast<sirPackHashState_t *>( pState ) );
+}
+
+void sirPackSha256Update( sirPackSha256State_t *pState, const uint8_t *pBytes, uint64_t nBytes ) noexcept
+{
+	if ( pState != nullptr && ( pBytes != nullptr || nBytes == 0 ) ) sirPackHashUpdate( reinterpret_cast<sirPackHashState_t *>( pState ), pBytes, nBytes );
+}
+
+void sirPackSha256Final( sirPackSha256State_t *pState, uint8_t *pDigest ) noexcept
+{
+	if ( pState != nullptr && pDigest != nullptr ) sirPackHashFinish( reinterpret_cast<sirPackHashState_t *>( pState ), pDigest );
 }

@@ -39,67 +39,16 @@ typedef struct sirStringView_s
 // Allocations, including shrinking, use only the supplied memory domain.
 class SIRString
 {
-private:
-	static constexpr uint32_t INLINE_CAPACITY = 24;
-
-	const sirContainerAllocator_t *m_pAllocator;
-	uint32_t m_nLength;
-	uint32_t m_nCapacity;
-	union
-	{
-		char m_szInline[INLINE_CAPACITY];
-		char *m_pHeap;
-	};
-
-	bool isInline( void ) const noexcept
-	{
-		return m_nCapacity == INLINE_CAPACITY;
-	}
-
-	char *data( void ) noexcept
-	{
-		return isInline() ? m_szInline : m_pHeap;
-	}
-
-	const char *data( void ) const noexcept
-	{
-		return isInline() ? m_szInline : m_pHeap;
-	}
-
-	SIRContainerResult tryReserveBytes( uint32_t nCapacity )
-	{
-		if ( nCapacity <= m_nCapacity ) {
-			return SIRContainerResult::SIR_CONTAINER_OK;
-		}
-		void *pStorage = nullptr;
-		SIRContainerResult eResult = SIRRawStorage::tryAllocate( m_pAllocator, nCapacity, alignof( char ), &pStorage );
-		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
-			return eResult;
-		}
-		memcpy( pStorage, data(), m_nLength + 1 );
-		if ( !isInline() ) {
-			SIRRawStorage::deallocate( m_pAllocator, m_pHeap, m_nCapacity, alignof( char ) );
-		}
-		m_pHeap = static_cast<char *>(pStorage);
-		m_nCapacity = nCapacity;
-		return SIRContainerResult::SIR_CONTAINER_OK;
-	}
-
-	void release( void ) noexcept
-	{
-		if ( !isInline() ) {
-			SIRRawStorage::deallocate( m_pAllocator, m_pHeap, m_nCapacity, alignof( char ) );
-		}
-	}
-
 public:
 	explicit SIRString( const sirContainerAllocator_t *pAllocator ) noexcept
-	    : m_pAllocator( pAllocator ), m_nLength( 0 ), m_nCapacity( INLINE_CAPACITY )
+	    : m_pAllocator( pAllocator ),
+	      m_nLength( 0 ),
+	      m_nCapacity( INLINE_CAPACITY )
 	{
 		m_szInline[0] = '\0';
 	}
 
-	~SIRString( void ) noexcept
+	~SIRString() noexcept
 	{
 		release();
 	}
@@ -108,7 +57,9 @@ public:
 	SIRString& operator=( const SIRString& ) = delete;
 
 	SIRString( SIRString&& other ) noexcept
-	    : m_pAllocator( other.m_pAllocator ), m_nLength( other.m_nLength ), m_nCapacity( other.m_nCapacity )
+	    : m_pAllocator( other.m_pAllocator ),
+	      m_nLength( other.m_nLength ),
+	      m_nCapacity( other.m_nCapacity )
 	{
 		if ( other.isInline() ) {
 			if ( m_nLength < INLINE_CAPACITY ) {
@@ -171,14 +122,14 @@ public:
 
 	sirContainerFootprint_t getFootprint( void ) const noexcept
 	{
-		return { INLINE_CAPACITY, isInline() ? 0u : m_nCapacity, 0, 0, static_cast<uint64_t>(m_nLength) + 1 };
+		return { INLINE_CAPACITY, isInline() ? 0u : m_nCapacity, 0, 0, static_cast<uint64_t>( m_nLength ) + 1 };
 	}
 
 	// Single-byte append stages the input before growth so even a byte borrowed
 	// from this string remains valid when the backing allocation moves.
 	SIRContainerResult tryAppendChar( char nValue )
 	{
-		if ( static_cast<uint64_t>(m_nLength) + 2 > UINT32_MAX ) {
+		if ( static_cast<uint64_t>( m_nLength ) + 2 > UINT32_MAX ) {
 			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
 
@@ -210,14 +161,14 @@ public:
 		if ( pBytes == nullptr ) {
 			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
-		if ( static_cast<uint64_t>(m_nLength) + nBytes + 1 > UINT32_MAX ) {
+		if ( static_cast<uint64_t>( m_nLength ) + nBytes + 1 > UINT32_MAX ) {
 			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
-		uintptr_t nStart = reinterpret_cast<uintptr_t>(data());
-		uintptr_t nSource = reinterpret_cast<uintptr_t>(pBytes);
+		uintptr_t nStart = reinterpret_cast<uintptr_t>( data() );
+		uintptr_t nSource = reinterpret_cast<uintptr_t>( pBytes );
 		bool bAliased = nSource >= nStart && nSource - nStart <= m_nLength;
 		uint32_t iSource = bAliased ? static_cast<uint32_t>( nSource - nStart ) : 0;
-		if ( bAliased && static_cast<uint64_t>(iSource) + nBytes > static_cast<uint64_t>(m_nLength) + 1 ) {
+		if ( bAliased && static_cast<uint64_t>( iSource ) + nBytes > static_cast<uint64_t>( m_nLength ) + 1 ) {
 			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		uint32_t nRequired = m_nLength + nBytes + 1;
@@ -257,11 +208,11 @@ public:
 		if ( nBytes == UINT32_MAX ) {
 			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
-		uintptr_t nStart = reinterpret_cast<uintptr_t>(data());
-		uintptr_t nSource = reinterpret_cast<uintptr_t>(pBytes);
+		uintptr_t nStart = reinterpret_cast<uintptr_t>( data() );
+		uintptr_t nSource = reinterpret_cast<uintptr_t>( pBytes );
 		bool bAliased = pBytes != nullptr && nSource >= nStart && nSource - nStart <= m_nLength;
 		uint32_t iSource = bAliased ? static_cast<uint32_t>( nSource - nStart ) : 0;
-		if ( bAliased && static_cast<uint64_t>(iSource) + nBytes > static_cast<uint64_t>(m_nLength) + 1 ) {
+		if ( bAliased && static_cast<uint64_t>( iSource ) + nBytes > static_cast<uint64_t>( m_nLength ) + 1 ) {
 			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 		if ( nBytes + 1 > m_nCapacity ) {
@@ -313,7 +264,7 @@ public:
 		}
 		memcpy( pMemory, m_pHeap, m_nLength + 1 );
 		SIRRawStorage::deallocate( m_pAllocator, m_pHeap, m_nCapacity, alignof( char ) );
-		m_pHeap = static_cast<char *>(pMemory);
+		m_pHeap = static_cast<char *>( pMemory );
 		m_nCapacity = m_nLength + 1;
 		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
@@ -322,6 +273,60 @@ public:
 	{
 		m_nLength = 0;
 		data()[0] = '\0';
+	}
+
+private:
+	static constexpr uint32_t INLINE_CAPACITY = 24;
+
+	const sirContainerAllocator_t *m_pAllocator;
+	uint32_t m_nLength;
+	uint32_t m_nCapacity;
+
+	union
+	{
+		char m_szInline[INLINE_CAPACITY];
+		char *m_pHeap;
+	};
+
+	bool isInline( void ) const noexcept
+	{
+		return m_nCapacity == INLINE_CAPACITY;
+	}
+
+	char *data( void ) noexcept
+	{
+		return isInline() ? m_szInline : m_pHeap;
+	}
+
+	const char *data( void ) const noexcept
+	{
+		return isInline() ? m_szInline : m_pHeap;
+	}
+
+	SIRContainerResult tryReserveBytes( uint32_t nCapacity )
+	{
+		if ( nCapacity <= m_nCapacity ) {
+			return SIRContainerResult::SIR_CONTAINER_OK;
+		}
+		void *pStorage = nullptr;
+		SIRContainerResult eResult = SIRRawStorage::tryAllocate( m_pAllocator, nCapacity, alignof( char ), &pStorage );
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
+			return eResult;
+		}
+		memcpy( pStorage, data(), m_nLength + 1 );
+		if ( !isInline() ) {
+			SIRRawStorage::deallocate( m_pAllocator, m_pHeap, m_nCapacity, alignof( char ) );
+		}
+		m_pHeap = static_cast<char *>( pStorage );
+		m_nCapacity = nCapacity;
+		return SIRContainerResult::SIR_CONTAINER_OK;
+	}
+
+	void release( void ) noexcept
+	{
+		if ( !isInline() ) {
+			SIRRawStorage::deallocate( m_pAllocator, m_pHeap, m_nCapacity, alignof( char ) );
+		}
 	}
 };
 

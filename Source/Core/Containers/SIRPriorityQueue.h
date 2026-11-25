@@ -43,56 +43,10 @@ public:
 template <typename T, typename Compare = SIRPriorityLess<T>>
 class SIRPriorityQueue
 {
-private:
-	static_assert( std::is_nothrow_move_constructible<T>::value && std::is_nothrow_move_assignable<T>::value,
-	               "Priority queue updates require noexcept movable values" );
-	static_assert( std::is_nothrow_invocable_r<bool, Compare, const T&, const T&>::value, "Priority comparisons must be noexcept" );
-
-	SIRVector<T> m_values;
-	Compare m_compare;
-
-	void siftUp( uint32_t iChild ) noexcept
-	{
-		if ( iChild == 0 ) {
-			return;
-		}
-		uint32_t iParent = ( iChild - 1 ) / 2;
-		if ( !m_compare( m_values[iParent], m_values[iChild] ) ) {
-			return;
-		}
-		T value = std::move( m_values[iChild] );
-		do {
-			m_values[iChild] = std::move( m_values[iParent] );
-			iChild = iParent;
-			if ( iChild == 0 ) {
-				break;
-			}
-			iParent = ( iChild - 1 ) / 2;
-		} while ( m_compare( m_values[iParent], value ) );
-		m_values[iChild] = std::move( value );
-	}
-
-	void siftDown( uint32_t iParent ) noexcept
-	{
-		const uint32_t nCount = m_values.getSize();
-		T value = std::move( m_values[iParent] );
-		while ( iParent < nCount / 2 ) {
-			uint32_t iChild = iParent * 2 + 1;
-			if ( iChild + 1 < nCount && m_compare( m_values[iChild], m_values[iChild + 1] ) ) {
-				++iChild;
-			}
-			if ( !m_compare( value, m_values[iChild] ) ) {
-				break;
-			}
-			m_values[iParent] = std::move( m_values[iChild] );
-			iParent = iChild;
-		}
-		m_values[iParent] = std::move( value );
-	}
-
 public:
 	explicit SIRPriorityQueue( const sirContainerAllocator_t *pAllocator, Compare compare = Compare() )
-	    : m_values( pAllocator ), m_compare( std::move( compare ) )
+	    : m_values( pAllocator ),
+	      m_compare( std::move( compare ) )
 	{
 	}
 
@@ -100,18 +54,22 @@ public:
 	{
 		return m_values.getSize();
 	}
+
 	bool isEmpty( void ) const noexcept
 	{
 		return m_values.isEmpty();
 	}
+
 	const T *top( void ) const noexcept
 	{
 		return m_values.tryGet( 0 );
 	}
+
 	sirContainerFootprint_t getFootprint( void ) const noexcept
 	{
 		return m_values.getFootprint();
 	}
+
 	SIRContainerResult tryReserve( uint32_t nCapacity )
 	{
 		return m_values.tryReserve( nCapacity );
@@ -180,9 +138,57 @@ public:
 	{
 		return m_values.tryShrinkToFit();
 	}
+
 	void clear( void ) noexcept
 	{
 		m_values.clear();
+	}
+
+private:
+	static_assert( std::is_nothrow_move_constructible<T>::value && std::is_nothrow_move_assignable<T>::value,
+	               "Priority queue updates require noexcept movable values" );
+	static_assert( std::is_nothrow_invocable_r<bool, Compare, const T&, const T&>::value, "Priority comparisons must be noexcept" );
+
+	SIRVector<T> m_values;
+	Compare m_compare;
+
+	void siftUp( uint32_t iChild ) noexcept
+	{
+		if ( iChild == 0 ) {
+			return;
+		}
+		uint32_t iParent = ( iChild - 1 ) / 2;
+		if ( !m_compare( m_values[iParent], m_values[iChild] ) ) {
+			return;
+		}
+		T value = std::move( m_values[iChild] );
+		do {
+			m_values[iChild] = std::move( m_values[iParent] );
+			iChild = iParent;
+			if ( iChild == 0 ) {
+				break;
+			}
+			iParent = ( iChild - 1 ) / 2;
+		} while ( m_compare( m_values[iParent], value ) );
+		m_values[iChild] = std::move( value );
+	}
+
+	void siftDown( uint32_t iParent ) noexcept
+	{
+		const uint32_t nCount = m_values.getSize();
+		T value = std::move( m_values[iParent] );
+		while ( iParent < nCount / 2 ) {
+			uint32_t iChild = iParent * 2 + 1;
+			if ( iChild + 1 < nCount && m_compare( m_values[iChild], m_values[iChild + 1] ) ) {
+				++iChild;
+			}
+			if ( !m_compare( value, m_values[iChild] ) ) {
+				break;
+			}
+			m_values[iParent] = std::move( m_values[iChild] );
+			iParent = iChild;
+		}
+		m_values[iParent] = std::move( value );
 	}
 };
 

@@ -204,7 +204,7 @@ A provider borrowing bytes across asynchronous GPU submission or an FMOD callbac
 - `Source/Resources/SIRResourceTypes.h`: keys, generations, states, chunks, typed edges, accounting.
 - `Source/Resources/SIRResourceViews.h`: ten system-neutral read view families and scoped reader guard.
 - `Source/Resources/SIRResourceGraph.h`: read access, writer capability, publication and provider representation accounting.
-- `Source/{Rendering,Physics,Audio,Animation,Navigation,World,Terrain}/Public/...`: subclass projections, split by consumer ownership in the implementation. The combined `SIRSystemResourceViews.h` is a temporary interface-only header, not a permanent consumer-system dependency.
+- Consumer-owned projections now live in `Source/Renderer/SIRRenderResourceViews.h`, `Source/Physics/SIRPhysicsResourceViews.h`, `Source/Audio/SIRAudioResourceViews.h`, `Source/Animation/SIRAnimationResourceViews.h`, `Source/Navigation/SIRNavigationResourceViews.h`, `Source/Terrain/SIRTerrainResourceViews.h`, `Source/World/SIRWorldResourceViews.h`, and `Source/Scripting/SIRScriptResourceViews.h`. Neutral projections remain in `Source/Resources/SIRResourceViews.h`; the former combined `SIRSystemResourceViews.h` has been removed.
 - `Source/Resources/`: registry implementation, chunk content store, generation map, dependency validation, version publication, reclamation.
 - `Tests/Unit/`: handle reuse, type validation, dedup, concurrency, fault injection, retirement and provider lifetime tests.
 

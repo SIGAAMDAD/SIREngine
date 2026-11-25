@@ -24,7 +24,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-#include <Resources/SIRPackFormat.h>
+#include <Streaming/Pack/SIRPackFormat.h>
 
 // Non-owning immutable view into one validated SIRM generation. The source
 // bytes must be pinned by the future VFS/IO source owner while this view lives.
@@ -35,10 +35,12 @@ public:
 	SIRPackCatalog( void ) noexcept;
 
 	bool isOpen( void ) const noexcept;
+
 	uint32_t getResourceCount( void ) const noexcept;
 	uint32_t getChunkCount( void ) const noexcept;
 	uint32_t getShardCount( void ) const noexcept;
 	uint32_t getDependencyCount( void ) const noexcept;
+
 	uint64_t getGeneration( void ) const noexcept;
 	uint64_t getPackageId( void ) const noexcept;
 

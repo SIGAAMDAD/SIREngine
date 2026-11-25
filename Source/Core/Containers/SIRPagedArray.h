@@ -33,21 +33,18 @@ of merchantability, fitness for a particular purpose and noninfringement.
 template <typename T, uint32_t PAGE_ELEMENTS = 256>
 class SIRPagedArray
 {
-private:
-	static_assert( PAGE_ELEMENTS > 0, "Page capacity must be positive" );
-	static_assert( PAGE_ELEMENTS <= UINT32_MAX / 2, "Page capacity must be bounded" );
-	SIRVector<T *> m_pages;
-	const sirContainerAllocator_t *m_pAllocator;
-	uint32_t m_nSize = 0;
-
 public:
-	explicit SIRPagedArray( const sirContainerAllocator_t *pAllocator ) noexcept : m_pages( pAllocator ), m_pAllocator( pAllocator )
+	explicit SIRPagedArray( const sirContainerAllocator_t *pAllocator ) noexcept
+	    : m_pages( pAllocator ),
+	      m_pAllocator( pAllocator )
 	{
 	}
-	~SIRPagedArray( void ) noexcept
+
+	~SIRPagedArray() noexcept
 	{
 		clearAndRelease();
 	}
+
 	SIRPagedArray( const SIRPagedArray& ) = delete;
 	SIRPagedArray& operator=( const SIRPagedArray& ) = delete;
 	SIRPagedArray( SIRPagedArray&& ) = delete;
@@ -57,14 +54,16 @@ public:
 	{
 		return m_nSize;
 	}
+
 	SIRReadOnlyVectorView<T> getPageView( uint32_t iPage ) const noexcept
 	{
-		if ( iPage >= m_pages.getSize() || static_cast<uint64_t>(iPage) * PAGE_ELEMENTS >= m_nSize ) {
+		if ( iPage >= m_pages.getSize() || static_cast<uint64_t>( iPage ) * PAGE_ELEMENTS >= m_nSize ) {
 			return {};
 		}
 		const uint32_t nRemaining = m_nSize - iPage * PAGE_ELEMENTS;
 		return { m_pages[iPage], nRemaining < PAGE_ELEMENTS ? nRemaining : PAGE_ELEMENTS };
 	}
+
 	SIRContainerResult tryAppendRange( const T *pValues, uint32_t nCount )
 	{
 		if ( nCount > UINT32_MAX - m_nSize || ( nCount != 0 && pValues == nullptr ) ) {
@@ -78,23 +77,30 @@ public:
 		}
 		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
+
 	uint32_t getPageCount( void ) const noexcept
 	{
 		return m_pages.getSize();
 	}
+
 	T *tryGet( uint32_t iIndex ) noexcept
 	{
 		return iIndex < m_nSize ? m_pages[iIndex / PAGE_ELEMENTS] + ( iIndex % PAGE_ELEMENTS ) : nullptr;
 	}
+
 	const T *tryGet( uint32_t iIndex ) const noexcept
 	{
 		return iIndex < m_nSize ? m_pages[iIndex / PAGE_ELEMENTS] + ( iIndex % PAGE_ELEMENTS ) : nullptr;
 	}
+
 	sirContainerFootprint_t getFootprint( void ) const noexcept
 	{
 		const sirContainerFootprint_t index = m_pages.getFootprint();
-		return { 0, index.nLiveDomainBytes + static_cast<uint64_t>(m_pages.getSize() * PAGE_ELEMENTS * sizeof( T )), 0, 0,
-		         static_cast<uint64_t>(m_nSize * sizeof(  T  )) };
+		return { 0,
+		         index.nLiveDomainBytes + static_cast<uint64_t>( m_pages.getSize() * PAGE_ELEMENTS * sizeof( T ) ),
+		         0,
+		         0,
+		         static_cast<uint64_t>( m_nSize * sizeof( T ) ) };
 	}
 
 	template <typename... Args>
@@ -113,7 +119,7 @@ public:
 			if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 				return eResult;
 			}
-			eResult = m_pages.tryPushBack( static_cast<T *>(pMemory) );
+			eResult = m_pages.tryPushBack( static_cast<T *>( pMemory ) );
 			if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 				SIRRawStorage::deallocate( m_pAllocator, pMemory, nBytes, alignof( T ) );
 				return eResult;
@@ -164,6 +170,7 @@ public:
 		m_pages[m_nSize / PAGE_ELEMENTS][m_nSize % PAGE_ELEMENTS].~T();
 		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
+
 	// Free empty tail pages without relocating any live elements.
 	// A failed directory shrink leaves an intact, smaller live page set.
 	SIRContainerResult tryShrinkToFit( void )
@@ -172,7 +179,7 @@ public:
 		if ( m_nSize % PAGE_ELEMENTS != 0 ) {
 			++nRequiredPages;
 		}
-		const size_t nPageBytes = static_cast<size_t>(PAGE_ELEMENTS * sizeof(  T  ));
+		const size_t nPageBytes = static_cast<size_t>( PAGE_ELEMENTS * sizeof( T ) );
 		while ( m_pages.getSize() > nRequiredPages ) {
 			uint32_t iLast = m_pages.getSize() - 1;
 			T *pUnused = m_pages[iLast];
@@ -192,12 +199,19 @@ public:
 	void clearAndRelease( void ) noexcept
 	{
 		clear();
-		const size_t nPageBytes = static_cast<size_t>(PAGE_ELEMENTS * sizeof(  T  ));
+		const size_t nPageBytes = static_cast<size_t>( PAGE_ELEMENTS * sizeof( T ) );
 		for ( uint32_t iPage = 0; iPage < m_pages.getSize(); ++iPage ) {
 			SIRRawStorage::deallocate( m_pAllocator, m_pages[iPage], nPageBytes, alignof( T ) );
 		}
 		m_pages = SIRVector<T *>( m_pAllocator );
 	}
+
+private:
+	static_assert( PAGE_ELEMENTS > 0, "Page capacity must be positive" );
+	static_assert( PAGE_ELEMENTS <= UINT32_MAX / 2, "Page capacity must be bounded" );
+	SIRVector<T *> m_pages;
+	const sirContainerAllocator_t *m_pAllocator;
+	uint32_t m_nSize = 0;
 };
 
 #endif // __SIR_PAGEDARRAY_H__

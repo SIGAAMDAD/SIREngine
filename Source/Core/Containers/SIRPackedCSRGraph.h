@@ -1,6 +1,14 @@
 /* SIREngine - MPL-2.0. Mutable CSR-like row ranges with reserved gaps per row. */
-#ifndef SIR_PACKED_CSR_GRAPH_H
-#define SIR_PACKED_CSR_GRAPH_H
+#ifndef __SIR_PACKEDCSRGRAPH_H__
+#define __SIR_PACKEDCSRGRAPH_H__
+
+#include <Core/SIRPCH.h>
+
+// clang-format off
+#ifdef SIR_PRAGMA_ONCE_SUPPORTED
+	#pragma once
+#endif
+// clang-format on
 #include <Core/Containers/SIRVector.h>
 #include <optional>
 
@@ -14,50 +22,15 @@ public:
 		T value;
 	};
 
-private:
-	const sirContainerAllocator_t *m_pAllocator;
-	SIRVector<std::optional<Edge>> m_storage;
-	SIRVector<uint32_t> m_offsets;
-	SIRVector<uint32_t> m_sizes;
-	SIRVector<uint32_t> m_capacities;
-	uint32_t m_nEdges = 0;
-	SIRContainerResult growRow( uint32_t iGrow )
+	explicit SIRPackedCSRGraph( const sirContainerAllocator_t *pAllocator )
+	    : m_pAllocator( pAllocator ),
+	      m_storage( pAllocator ),
+	      m_offsets( pAllocator ),
+	      m_sizes( pAllocator ),
+	      m_capacities( pAllocator )
 	{
-		const uint32_t nOld = m_capacities[iGrow];
-		if ( nOld > UINT32_MAX / 2 ) {
-			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
-		}
-		const uint32_t nNew = nOld == 0 ? 4 : nOld * 2;
-		if ( m_storage.getSize() > UINT32_MAX - ( nNew - nOld ) ) {
-			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
-		}
-		SIRVector<std::optional<Edge>> staged( m_pAllocator );
-		SIRContainerResult eResult = staged.tryResize( m_storage.getSize() + nNew - nOld );
-		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
-			return eResult;
-		}
-		uint32_t iWrite = 0;
-		for ( uint32_t iVertex = 0; iVertex < m_sizes.getSize(); ++iVertex ) {
-			for ( uint32_t iEdge = 0; iEdge < m_sizes[iVertex]; ++iEdge ) {
-				staged[iWrite + iEdge].emplace( *m_storage[m_offsets[iVertex] + iEdge] );
-			}
-			iWrite += iVertex == iGrow ? nNew : m_capacities[iVertex];
-		}
-		m_storage = std::move( staged );
-		m_capacities[iGrow] = nNew;
-		uint32_t iOffset = 0;
-		for ( uint32_t iVertex = 0; iVertex < m_sizes.getSize(); ++iVertex ) {
-			m_offsets[iVertex] = iOffset;
-			iOffset += m_capacities[iVertex];
-		}
-		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
-public:
-	explicit SIRPackedCSRGraph( const sirContainerAllocator_t *pAllocator )
-	    : m_pAllocator( pAllocator ), m_storage( pAllocator ), m_offsets( pAllocator ), m_sizes( pAllocator ), m_capacities( pAllocator )
-	{
-	}
 	SIRContainerResult tryInitialize( uint32_t nVertices, uint32_t nCapacityPerRow = 4 )
 	{
 		if ( nVertices == 0 || nCapacityPerRow == 0 || nVertices > UINT32_MAX / nCapacityPerRow ) {
@@ -94,6 +67,7 @@ public:
 		m_nEdges = 0;
 		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
+
 	SIRContainerResult tryAddEdge( uint32_t iSource, uint32_t iDestination, const T& value )
 	{
 		if ( m_nEdges == UINT32_MAX ) {
@@ -115,6 +89,7 @@ public:
 		++m_nEdges;
 		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
+
 	bool eraseEdge( uint32_t iSource, uint32_t iDestination )
 	{
 		if ( iSource >= m_sizes.getSize() ) {
@@ -137,6 +112,7 @@ public:
 		}
 		return false;
 	}
+
 	template <typename Visitor>
 	void forEachEdge( uint32_t iSource, Visitor&& visitor ) const
 	{
@@ -148,13 +124,56 @@ public:
 			visitor( edge.nDestination, edge.value );
 		}
 	}
+
 	uint32_t getEdgeCount( void ) const noexcept
 	{
 		return m_nEdges;
 	}
+
 	uint32_t getVertexCount( void ) const noexcept
 	{
 		return m_sizes.getSize();
 	}
+
+	publicprivate :
+
+	    const sirContainerAllocator_t *m_pAllocator;
+	SIRVector<std::optional<Edge>> m_storage;
+	SIRVector<uint32_t> m_offsets;
+	SIRVector<uint32_t> m_sizes;
+	SIRVector<uint32_t> m_capacities;
+	uint32_t m_nEdges = 0;
+
+	SIRContainerResult growRow( uint32_t iGrow )
+	{
+		const uint32_t nOld = m_capacities[iGrow];
+		if ( nOld > UINT32_MAX / 2 ) {
+			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
+		}
+		const uint32_t nNew = nOld == 0 ? 4 : nOld * 2;
+		if ( m_storage.getSize() > UINT32_MAX - ( nNew - nOld ) ) {
+			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
+		}
+		SIRVector<std::optional<Edge>> staged( m_pAllocator );
+		SIRContainerResult eResult = staged.tryResize( m_storage.getSize() + nNew - nOld );
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
+			return eResult;
+		}
+		uint32_t iWrite = 0;
+		for ( uint32_t iVertex = 0; iVertex < m_sizes.getSize(); ++iVertex ) {
+			for ( uint32_t iEdge = 0; iEdge < m_sizes[iVertex]; ++iEdge ) {
+				staged[iWrite + iEdge].emplace( *m_storage[m_offsets[iVertex] + iEdge] );
+			}
+			iWrite += iVertex == iGrow ? nNew : m_capacities[iVertex];
+		}
+		m_storage = std::move( staged );
+		m_capacities[iGrow] = nNew;
+		uint32_t iOffset = 0;
+		for ( uint32_t iVertex = 0; iVertex < m_sizes.getSize(); ++iVertex ) {
+			m_offsets[iVertex] = iOffset;
+			iOffset += m_capacities[iVertex];
+		}
+		return SIRContainerResult::SIR_CONTAINER_OK;
+	}
 };
-#endif
+#endif /* __SIR_PACKEDCSRGRAPH_H__ */

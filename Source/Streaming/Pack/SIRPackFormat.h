@@ -39,7 +39,8 @@ constexpr uint32_t SIR_PACK_MAX_RESOURCES = 1048576;
 constexpr uint32_t SIR_PACK_MAX_CHUNKS = 4194304;
 constexpr uint64_t SIR_PACK_MAX_DECODED_CHUNK_BYTES = 1ULL << 30;
 
-enum class SIRPackResult : uint8_t {
+enum class SIRPackResult : uint8_t
+{
 	SIR_PACK_OK = 0,
 	SIR_PACK_INVALID_ARGUMENT,
 	SIR_PACK_INVALID_FORMAT,
@@ -50,14 +51,18 @@ enum class SIRPackResult : uint8_t {
 	SIR_PACK_NOT_FOUND,
 	SIR_PACK_UNSUPPORTED_CODEC,
 	SIR_PACK_CYCLIC_DEPENDENCY,
-	SIR_PACK_STALE_SOURCE
+	SIR_PACK_STALE_SOURCE,
+	SIR_PACK_BUSY,
+	SIR_PACK_IO_ERROR
 };
+typedef SIRPackResult sirPackResult_t;
 
-enum class SIRPackCodec : uint16_t {
+typedef enum sirPackCodec_e : uint16_t
+{
 	SIR_PACK_CODEC_NONE = 0,
 	SIR_PACK_CODEC_ZSTD = 1,
 	SIR_PACK_CODEC_LZ4 = 2
-};
+} sirPackCodec_t;
 
 typedef struct sirPackResource_s
 {
@@ -77,14 +82,18 @@ typedef struct sirPackChunk_s
 {
 	uint32_t nChunkId;
 	uint32_t nShardIndex;
+
 	uint64_t nOffset;
 	uint64_t nEncodedBytes;
 	uint64_t nDecodedBytes;
-	uint8_t szDigest[32];
-	SIRPackCodec eCodec;
+
+	sirPackCodec_t eCodec;
+
 	uint16_t nCodecVersion;
 	uint32_t nAlignment;
 	uint32_t nDictionaryId;
+
+	uint8_t szDigest[32];
 } sirPackChunk_t;
 
 typedef struct sirPackDependency_s
@@ -100,8 +109,6 @@ typedef struct sirPackShard_s
 	uint8_t szDigest[32];
 } sirPackShard_t;
 
-// Wire bytes are encoded and decoded field-by-field. No compiler record layout
-// or raw memory address is part of the persistent format.
 uint16_t sirPackRead16( const uint8_t *pBytes ) noexcept;
 uint32_t sirPackRead32( const uint8_t *pBytes ) noexcept;
 uint64_t sirPackRead64( const uint8_t *pBytes ) noexcept;
@@ -110,5 +117,16 @@ void sirPackWrite32( uint8_t *pBytes, uint32_t nValue ) noexcept;
 void sirPackWrite64( uint8_t *pBytes, uint64_t nValue ) noexcept;
 void sirPackSha256( const uint8_t *pBytes, uint64_t nBytes, uint8_t *pDigest ) noexcept;
 void sirPackCatalogDigest( const uint8_t *pBytes, uint64_t nBytes, uint8_t *pDigest ) noexcept;
+
+typedef struct sirPackSha256State_s
+{
+	uint32_t nState[8];
+	uint8_t szBlock[64];
+	uint64_t nTotal;
+	uint32_t nBuffered;
+} sirPackSha256State_t;
+void sirPackSha256Init( sirPackSha256State_t *pState ) noexcept;
+void sirPackSha256Update( sirPackSha256State_t *pState, const uint8_t *pBytes, uint64_t nBytes ) noexcept;
+void sirPackSha256Final( sirPackSha256State_t *pState, uint8_t *pDigest ) noexcept;
 
 #endif // __SIR_PACKFORMAT_H__

@@ -16,14 +16,22 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Scripting/Core/SIRScriptOptimizationCoordinator.h>
 
 SIRScriptOptimizationCoordinator::SIRScriptOptimizationCoordinator( void ) noexcept
-    : m_Transport{}, m_pSource( nullptr ), m_pManager( nullptr ), m_OwnerThread( SIRThread::currentThreadId() ), m_nNextJobId( 0 ),
-      m_nNextSequence( 0 ), m_szJobs{}, m_bConfigured( false ), m_bRunning( false ), m_bInCallback( false )
+    : m_Transport{},
+      m_pSource( nullptr ),
+      m_pManager( nullptr ),
+      m_OwnerThread( SIRThread::currentThreadId() ),
+      m_nNextJobId( 0 ),
+      m_nNextSequence( 0 ),
+      m_szJobs{},
+      m_bConfigured( false ),
+      m_bRunning( false ),
+      m_bInCallback( false )
 {
 }
 
 SIRScriptOptimizationCoordinator::~SIRScriptOptimizationCoordinator( void ) noexcept
 {
-	static_cast<void>(shutdown());
+	static_cast<void>( shutdown() );
 }
 
 uint32_t SIRScriptOptimizationCoordinator::nextGeneration( uint32_t nGeneration ) noexcept
@@ -50,15 +58,15 @@ int32_t SIRScriptOptimizationCoordinator::findByJobId( uint64_t nJobId ) const n
 {
 	for ( uint32_t i = 0; i < MAX_JOBS; ++i ) {
 		if ( m_szJobs[i].bOccupied && m_szJobs[i].info.nJobId == nJobId && m_szJobs[i].info.bAwaitingReply ) {
-			return static_cast<int32_t>(i);
+			return static_cast<int32_t>( i );
 		}
 	}
 	return -1;
 }
 
 SIRScriptResult SIRScriptOptimizationCoordinator::configure( const sirScriptOptimizationTransportAPI_t& transport,
-                                                               SIRScriptCachedProgramSource *pSource,
-                                                               SIRScriptCodeManager *pManager ) noexcept
+                                                             SIRScriptCachedProgramSource *pSource,
+                                                             SIRScriptCodeManager *pManager ) noexcept
 {
 	if ( !isOwnerThread() || m_bInCallback ) {
 		return SIRScriptResult::SIR_SCRIPT_BUSY;
@@ -94,8 +102,8 @@ SIRScriptResult SIRScriptOptimizationCoordinator::start( void ) noexcept
 	return eResult;
 }
 
-SIRScriptResult SIRScriptOptimizationCoordinator::submit( const sirScriptOptimizationRequest_t& request, bool bActivate,
-                                                            sirScriptOptimizationJobHandle_t *pHandle ) noexcept
+SIRScriptResult
+SIRScriptOptimizationCoordinator::submit( const sirScriptOptimizationRequest_t& request, bool bActivate, sirScriptOptimizationJobHandle_t *pHandle ) noexcept
 {
 	if ( !isOwnerThread() || m_bInCallback ) {
 		return SIRScriptResult::SIR_SCRIPT_BUSY;
@@ -109,7 +117,7 @@ SIRScriptResult SIRScriptOptimizationCoordinator::submit( const sirScriptOptimiz
 	int32_t iFree = -1;
 	for ( uint32_t i = 0; i < MAX_JOBS; ++i ) {
 		if ( !m_szJobs[i].bOccupied ) {
-			iFree = static_cast<int32_t>(i);
+			iFree = static_cast<int32_t>( i );
 			break;
 		}
 	}
@@ -132,7 +140,7 @@ SIRScriptResult SIRScriptOptimizationCoordinator::submit( const sirScriptOptimiz
 	slot.info = { prepared.nJobId, SIRScriptOptimizationJobState::SIR_SCRIPT_JOB_QUEUED, SIRScriptResult::SIR_SCRIPT_BUSY, {}, {}, false };
 	slot.bOccupied = true;
 	slot.bActivate = bActivate;
-	*pHandle = { static_cast<uint32_t>(iFree) + 1, slot.nGeneration };
+	*pHandle = { static_cast<uint32_t>( iFree ) + 1, slot.nGeneration };
 	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
@@ -156,8 +164,7 @@ SIRScriptResult SIRScriptOptimizationCoordinator::cancel( sirScriptOptimizationJ
 	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
-SIRScriptResult SIRScriptOptimizationCoordinator::query( sirScriptOptimizationJobHandle_t handle,
-                                                           sirScriptOptimizationJobInfo_t *pInfo ) const noexcept
+SIRScriptResult SIRScriptOptimizationCoordinator::query( sirScriptOptimizationJobHandle_t handle, sirScriptOptimizationJobInfo_t *pInfo ) const noexcept
 {
 	if ( !isOwnerThread() || m_bInCallback ) {
 		return SIRScriptResult::SIR_SCRIPT_BUSY;
@@ -183,7 +190,8 @@ SIRScriptResult SIRScriptOptimizationCoordinator::release( sirScriptOptimization
 		return SIRScriptResult::SIR_SCRIPT_INVALID_HANDLE;
 	}
 	sirScriptOptimizationJobSlot_t& slot = m_szJobs[iSlot];
-	if ( slot.info.bAwaitingReply || slot.info.eState == SIRScriptOptimizationJobState::SIR_SCRIPT_JOB_QUEUED || slot.info.eState == SIRScriptOptimizationJobState::SIR_SCRIPT_JOB_IN_FLIGHT ) {
+	if ( slot.info.bAwaitingReply || slot.info.eState == SIRScriptOptimizationJobState::SIR_SCRIPT_JOB_QUEUED ||
+	     slot.info.eState == SIRScriptOptimizationJobState::SIR_SCRIPT_JOB_IN_FLIGHT ) {
 		return SIRScriptResult::SIR_SCRIPT_WRONG_STATE;
 	}
 	// Successful artifact ownership was transferred into source/code manager.
@@ -249,7 +257,8 @@ SIRScriptResult SIRScriptOptimizationCoordinator::retryFailed( sirScriptOptimiza
 		return SIRScriptResult::SIR_SCRIPT_INVALID_HANDLE;
 	}
 	sirScriptOptimizationJobSlot_t& slot = m_szJobs[iSlot];
-	if ( slot.info.eState != SIRScriptOptimizationJobState::SIR_SCRIPT_JOB_FAILED || slot.info.eResult != SIRScriptResult::SIR_SCRIPT_BACKEND_FAILURE || slot.info.bAwaitingReply ) {
+	if ( slot.info.eState != SIRScriptOptimizationJobState::SIR_SCRIPT_JOB_FAILED || slot.info.eResult != SIRScriptResult::SIR_SCRIPT_BACKEND_FAILURE ||
+	     slot.info.bAwaitingReply ) {
 		return SIRScriptResult::SIR_SCRIPT_WRONG_STATE;
 	}
 	if ( m_nNextJobId == UINT64_MAX || m_nNextSequence == UINT64_MAX ) {
@@ -270,8 +279,7 @@ SIRScriptResult SIRScriptOptimizationCoordinator::retryFailed( sirScriptOptimiza
 	return SIRScriptResult::SIR_SCRIPT_OK;
 }
 
-void SIRScriptOptimizationCoordinator::processReply( const sirScriptOptimizationReply_t& reply,
-                                                     sirScriptOptimizationPumpStats_t *pStats ) noexcept
+void SIRScriptOptimizationCoordinator::processReply( const sirScriptOptimizationReply_t& reply, sirScriptOptimizationPumpStats_t *pStats ) noexcept
 {
 	const int32_t iSlot = findByJobId( reply.nJobId );
 	if ( iSlot < 0 ) {
@@ -292,7 +300,7 @@ void SIRScriptOptimizationCoordinator::processReply( const sirScriptOptimization
 	}
 	// Register first, acquire from verified disk through the code manager,
 	// and roll back every partially acquired owner if staging/activation fails.
-	sirScriptCachedEntryHandle_t entry {};
+	sirScriptCachedEntryHandle_t entry{};
 	m_bInCallback = true;
 	SIRScriptResult eResult = m_pSource->registerArtifact( reply.cached, &entry );
 	if ( eResult != SIRScriptResult::SIR_SCRIPT_OK ) {
@@ -301,16 +309,16 @@ void SIRScriptOptimizationCoordinator::processReply( const sirScriptOptimization
 		++pStats->nFailed;
 		return;
 	}
-	sirScriptCodeHandle_t code {};
+	sirScriptCodeHandle_t code{};
 	eResult = m_pManager->stage( reply.cached.artifact, &code );
 	if ( eResult == SIRScriptResult::SIR_SCRIPT_OK && slot.bActivate ) {
 		eResult = m_pManager->activate( code );
 	}
 	if ( eResult != SIRScriptResult::SIR_SCRIPT_OK ) {
 		if ( code.nSlot != 0 ) {
-			static_cast<void>(m_pManager->discard( code ));
+			static_cast<void>( m_pManager->discard( code ) );
 		}
-		static_cast<void>(m_pSource->unregisterArtifact( entry ));
+		static_cast<void>( m_pSource->unregisterArtifact( entry ) );
 		m_bInCallback = false;
 		failJob( slot, eResult );
 		++pStats->nFailed;
@@ -324,8 +332,7 @@ void SIRScriptOptimizationCoordinator::processReply( const sirScriptOptimization
 	++pStats->nCompleted;
 }
 
-SIRScriptResult SIRScriptOptimizationCoordinator::pump( uint32_t nSendBudget, uint32_t nReceiveBudget,
-                                                          sirScriptOptimizationPumpStats_t *pStats ) noexcept
+SIRScriptResult SIRScriptOptimizationCoordinator::pump( uint32_t nSendBudget, uint32_t nReceiveBudget, sirScriptOptimizationPumpStats_t *pStats ) noexcept
 {
 	if ( !isOwnerThread() || m_bInCallback ) {
 		return SIRScriptResult::SIR_SCRIPT_BUSY;
@@ -352,7 +359,7 @@ SIRScriptResult SIRScriptOptimizationCoordinator::pump( uint32_t nSendBudget, ui
 			const sirScriptOptimizationJobSlot_t& slot = m_szJobs[i];
 			if ( slot.bOccupied && slot.info.eState == SIRScriptOptimizationJobState::SIR_SCRIPT_JOB_QUEUED && slot.nSequence <= nHighWater &&
 			     slot.nSequence < nFirstSequence ) {
-				iNext = static_cast<int32_t>(i);
+				iNext = static_cast<int32_t>( i );
 				nFirstSequence = slot.nSequence;
 			}
 		}
@@ -395,7 +402,7 @@ SIRScriptResult SIRScriptOptimizationCoordinator::pump( uint32_t nSendBudget, ui
 			failWorker();
 			return SIRScriptResult::SIR_SCRIPT_BACKEND_FAILURE;
 		}
-		sirScriptOptimizationReply_t reply {};
+		sirScriptOptimizationReply_t reply{};
 		if ( SIRScriptOptimizationProtocol::decodeReply( szWire, nBytes, &reply ) != SIRScriptResult::SIR_SCRIPT_OK ) {
 			failWorker();
 			return SIRScriptResult::SIR_SCRIPT_TYPE_MISMATCH;

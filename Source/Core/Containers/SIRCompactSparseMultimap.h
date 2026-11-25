@@ -1,6 +1,14 @@
 /* SIREngine - MPL-2.0. Frozen sorted multimap with grouped duplicate runs. */
-#ifndef SIR_COMPACT_SPARSE_MULTIMAP_H
-#define SIR_COMPACT_SPARSE_MULTIMAP_H
+#ifndef __SIR_COMPACTSPARSEMULTIMAP_H__
+#define __SIR_COMPACTSPARSEMULTIMAP_H__
+
+#include <Core/SIRPCH.h>
+
+// clang-format off
+#ifdef SIR_PRAGMA_ONCE_SUPPORTED
+	#pragma once
+#endif
+// clang-format on
 #include <Core/Containers/SIRVector.h>
 #include <algorithm>
 #include <functional>
@@ -15,18 +23,15 @@ public:
 		V value;
 	};
 
-private:
-	const sirContainerAllocator_t *m_pAllocator;
-	SIRVector<K> m_keys;
-	SIRVector<uint32_t> m_offsets;
-	SIRVector<V> m_values;
-	Less m_less;
-
-public:
 	explicit SIRCompactSparseMultimap( const sirContainerAllocator_t *pAllocator, Less less = Less() )
-	    : m_pAllocator( pAllocator ), m_keys( pAllocator ), m_offsets( pAllocator ), m_values( pAllocator ), m_less( std::move( less ) )
+	    : m_pAllocator( pAllocator ),
+	      m_keys( pAllocator ),
+	      m_offsets( pAllocator ),
+	      m_values( pAllocator ),
+	      m_less( std::move( less ) )
 	{
 	}
+
 	SIRContainerResult tryBuild( const Entry *pEntries, uint32_t nCount )
 	{
 		if ( nCount == UINT32_MAX || ( nCount && pEntries == nullptr ) ) {
@@ -71,6 +76,7 @@ public:
 		m_values = std::move( values );
 		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
+
 	bool find( const K& key, const V **ppValues, uint32_t *pCount ) const
 	{
 		if ( ppValues == nullptr || pCount == nullptr ) {
@@ -93,13 +99,23 @@ public:
 		*pCount = m_offsets[nLo + 1] - m_offsets[nLo];
 		return true;
 	}
+
 	uint32_t getKeyCount( void ) const noexcept
 	{
 		return m_keys.getSize();
 	}
+
 	uint32_t getValueCount( void ) const noexcept
 	{
 		return m_values.getSize();
 	}
+
+	publicprivate :
+
+	    const sirContainerAllocator_t *m_pAllocator;
+	SIRVector<K> m_keys;
+	SIRVector<uint32_t> m_offsets;
+	SIRVector<V> m_values;
+	Less m_less;
 };
-#endif
+#endif /* __SIR_COMPACTSPARSEMULTIMAP_H__ */

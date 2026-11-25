@@ -6,6 +6,10 @@ Copyright (C) 2023-2027 Noah Van Til
 This Source Code Form is subject to the terms of the Mozilla Public
 License, v2. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+This software is provided "as is", without warranty of any kind,
+express or implied, including but not limited to the warranties
+of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
@@ -14,6 +18,12 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 #include <Core/SIRPCH.h>
 
+// clang-format off
+#ifdef SIR_PRAGMA_ONCE_SUPPORTED
+	#pragma once
+#endif
+// clang-format on
+
 #include <Core/Containers/SIRVector.h>
 #include <new>
 #include <utility>
@@ -21,21 +31,17 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 template <typename T>
 class SIRVectorAppendWriter
 {
-private:
-	SIRVector<T> *m_pVector = nullptr;
-	uint32_t m_nBase = 0;
-	uint32_t m_nReserved = 0;
-	uint32_t m_nConstructed = 0;
-	bool m_bActive = false;
-
 public:
-	explicit SIRVectorAppendWriter( SIRVector<T>& rVector ) noexcept : m_pVector( &rVector )
+	explicit SIRVectorAppendWriter( SIRVector<T>& rVector ) noexcept
+	    : m_pVector( &rVector )
 	{
 	}
-	~SIRVectorAppendWriter( void ) noexcept
+
+	~SIRVectorAppendWriter() noexcept
 	{
 		rollback();
 	}
+
 	SIRVectorAppendWriter( const SIRVectorAppendWriter& ) = delete;
 	SIRVectorAppendWriter& operator=( const SIRVectorAppendWriter& ) = delete;
 
@@ -57,6 +63,7 @@ public:
 		m_bActive = true;
 		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
+
 	template <typename... Args>
 	SIRContainerResult tryEmplaceNext( Args&&...args )
 	{
@@ -67,6 +74,7 @@ public:
 		++m_nConstructed;
 		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
+
 	SIRContainerResult commit( void ) noexcept
 	{
 		if ( !m_bActive || m_nConstructed != m_nReserved ) {
@@ -76,6 +84,7 @@ public:
 		m_bActive = false;
 		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
+
 	void rollback( void ) noexcept
 	{
 		if ( m_bActive ) {
@@ -84,6 +93,13 @@ public:
 			m_nConstructed = 0;
 		}
 	}
+
+private:
+	SIRVector<T> *m_pVector = nullptr;
+	uint32_t m_nBase = 0;
+	uint32_t m_nReserved = 0;
+	uint32_t m_nConstructed = 0;
+	bool m_bActive = false;
 };
 
 #endif // __SIR_VECTORAPPENDWRITER_H__

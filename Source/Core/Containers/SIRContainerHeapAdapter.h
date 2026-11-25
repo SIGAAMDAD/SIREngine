@@ -34,13 +34,40 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // allocations. A domain requires a heap whose three backends own that domain.
 class SIRContainerHeapAdapter
 {
+public:
+	explicit SIRContainerHeapAdapter( void ) noexcept = default;
+	SIRContainerHeapAdapter( const SIRContainerHeapAdapter& ) = delete;
+	SIRContainerHeapAdapter& operator=( const SIRContainerHeapAdapter& ) = delete;
+	SIRContainerHeapAdapter( SIRContainerHeapAdapter&& ) = delete;
+	SIRContainerHeapAdapter& operator=( SIRContainerHeapAdapter&& ) = delete;
+
+	bool init( SIRGeneralHeap *pHeap, SIRMemoryDomain eDomain, uint32_t nOwnerTag ) noexcept
+	{
+		if ( m_pHeap != nullptr || pHeap == nullptr || eDomain >= SIRMemoryDomain::SIR_MEMORY_DOMAIN_COUNT ||
+		     !pHeap->isConfiguredForDomain( eDomain ) ) {
+			return false;
+		}
+		m_pHeap = pHeap;
+		m_Allocator.pContext = this;
+		m_Allocator.pfnAllocate = allocate;
+		m_Allocator.pfnDeallocate = deallocate;
+		m_Allocator.nDomainId = static_cast<uint32_t>( eDomain );
+		m_Allocator.nOwnerTag = nOwnerTag;
+		return true;
+	}
+
+	const sirContainerAllocator_t *getAllocator( void ) const noexcept
+	{
+		return m_pHeap != nullptr ? &m_Allocator : nullptr;
+	}
+
 private:
 	SIRGeneralHeap *m_pHeap = nullptr;
-	sirContainerAllocator_t m_Allocator {};
+	sirContainerAllocator_t m_Allocator{};
 
 	static void *allocate( void *pContext, size_t nBytes, size_t nAlignment ) noexcept
 	{
-		SIRContainerHeapAdapter *pAdapter = static_cast<SIRContainerHeapAdapter *>(pContext);
+		SIRContainerHeapAdapter *pAdapter = static_cast<SIRContainerHeapAdapter *>( pContext );
 		if ( pAdapter == nullptr || pAdapter->m_pHeap == nullptr ) {
 			return nullptr;
 		}
@@ -49,39 +76,13 @@ private:
 
 	static void deallocate( void *pContext, void *pMemory, size_t, size_t ) noexcept
 	{
-		SIRContainerHeapAdapter *pAdapter = static_cast<SIRContainerHeapAdapter *>(pContext);
+		SIRContainerHeapAdapter *pAdapter = static_cast<SIRContainerHeapAdapter *>( pContext );
 		assert( pAdapter != nullptr && pAdapter->m_pHeap != nullptr );
 		if ( pAdapter != nullptr && pAdapter->m_pHeap != nullptr ) {
 			const bool bReleased = pAdapter->m_pHeap->tryFree( pMemory );
 			assert( bReleased );
-			static_cast<void>(bReleased);
+			static_cast<void>( bReleased );
 		}
-	}
-
-public:
-	SIRContainerHeapAdapter( void ) noexcept = default;
-	SIRContainerHeapAdapter( const SIRContainerHeapAdapter& ) = delete;
-	SIRContainerHeapAdapter& operator=( const SIRContainerHeapAdapter& ) = delete;
-	SIRContainerHeapAdapter( SIRContainerHeapAdapter&& ) = delete;
-	SIRContainerHeapAdapter& operator=( SIRContainerHeapAdapter&& ) = delete;
-
-	bool init( SIRGeneralHeap *pHeap, SIRMemoryDomain eDomain, uint32_t nOwnerTag ) noexcept
-	{
-		if ( m_pHeap != nullptr || pHeap == nullptr || eDomain >= SIRMemoryDomain::SIR_MEMORY_DOMAIN_COUNT || !pHeap->isConfiguredForDomain( eDomain ) ) {
-			return false;
-		}
-		m_pHeap = pHeap;
-		m_Allocator.pContext = this;
-		m_Allocator.pfnAllocate = allocate;
-		m_Allocator.pfnDeallocate = deallocate;
-		m_Allocator.nDomainId = static_cast<uint32_t>(eDomain);
-		m_Allocator.nOwnerTag = nOwnerTag;
-		return true;
-	}
-
-	const sirContainerAllocator_t *getAllocator( void ) const noexcept
-	{
-		return m_pHeap != nullptr ? &m_Allocator : nullptr;
 	}
 };
 

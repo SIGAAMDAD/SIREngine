@@ -1,6 +1,14 @@
 /* SIREngine - MPL-2.0. Adaptive high16 directory and array/dense Roaring chunks. */
-#ifndef SIR_ADAPTIVE_ROARING_DIRECTORY_H
-#define SIR_ADAPTIVE_ROARING_DIRECTORY_H
+#ifndef __SIR_ADAPTIVEROARINGDIRECTORY_H__
+#define __SIR_ADAPTIVEROARINGDIRECTORY_H__
+
+#include <Core/SIRPCH.h>
+
+// clang-format off
+#ifdef SIR_PRAGMA_ONCE_SUPPORTED
+	#pragma once
+#endif
+// clang-format on
 #include <Core/Containers/SIRVector.h>
 #include <algorithm>
 
@@ -13,18 +21,23 @@ class SIRAdaptiveRoaringDirectory
 		bool bDense = false;
 		SIRVector<uint16_t> lows;
 		SIRVector<uint64_t> words;
+
 		explicit Chunk( uint16_t nValue, const sirContainerAllocator_t *pAllocator )
-		    : nHigh( nValue ), lows( pAllocator ), words( pAllocator )
+		    : nHigh( nValue ),
+		      lows( pAllocator ),
+		      words( pAllocator )
 		{
 		}
+
 		Chunk( Chunk&& ) noexcept = default;
 		Chunk& operator=( Chunk&& ) noexcept = default;
 		Chunk( const Chunk& ) = delete;
 		Chunk& operator=( const Chunk& ) = delete;
+
 		static uint32_t pop( uint64_t nBits ) noexcept
 		{
 #if defined( __clang__ ) || defined( __GNUC__ )
-			return static_cast<uint32_t>(__builtin_popcountll( nBits ));
+			return static_cast<uint32_t>( __builtin_popcountll( nBits ) );
 #else
 			uint32_t nCount = 0;
 			while ( nBits ) {
@@ -34,6 +47,7 @@ class SIRAdaptiveRoaringDirectory
 			return nCount;
 #endif
 		}
+
 		bool contains( uint16_t nLow ) const noexcept
 		{
 			if ( bDense ) {
@@ -51,6 +65,7 @@ class SIRAdaptiveRoaringDirectory
 			}
 			return nLo < lows.getSize() && lows[nLo] == nLow;
 		}
+
 		SIRContainerResult tryAdd( uint16_t nLow, const sirContainerAllocator_t *pAllocator, bool *pInserted = nullptr )
 		{
 			if ( contains( nLow ) ) {
@@ -108,6 +123,7 @@ class SIRAdaptiveRoaringDirectory
 			}
 			return SIRContainerResult::SIR_CONTAINER_OK;
 		}
+
 		bool erase( uint16_t nLow ) noexcept
 		{
 			if ( bDense ) {
@@ -136,6 +152,7 @@ class SIRAdaptiveRoaringDirectory
 			--nCount;
 			return true;
 		}
+
 		template <typename Visitor>
 		void forEach( Visitor&& visitor ) const
 		{
@@ -149,7 +166,7 @@ class SIRAdaptiveRoaringDirectory
 				uint64_t nBits = words[iWord];
 				while ( nBits != 0 ) {
 #if defined( __clang__ ) || defined( __GNUC__ )
-					const uint32_t nLow = iWord * 64 + static_cast<uint32_t>(__builtin_ctzll( nBits ));
+					const uint32_t nLow = iWord * 64 + static_cast<uint32_t>( __builtin_ctzll( nBits ) );
 #else
 					uint32_t nLow = iWord * 64;
 					uint64_t nTmp = nBits;
@@ -158,15 +175,17 @@ class SIRAdaptiveRoaringDirectory
 						++nLow;
 					}
 #endif
-					visitor( static_cast<uint16_t>(nLow) );
+					visitor( static_cast<uint16_t>( nLow ) );
 					nBits &= nBits - 1;
 				}
 			}
 		}
 	};
+
 	const sirContainerAllocator_t *m_pAllocator;
 	SIRVector<Chunk> m_chunks;
 	uint64_t m_nCount = 0;
+
 	// Build a private copy of a chunk without per-value lookup or insertion.
 	// The caller publishes only after every allocation has succeeded.
 	static SIRContainerResult tryCopyChunk( const Chunk& source, Chunk& target )
@@ -278,13 +297,16 @@ class SIRAdaptiveRoaringDirectory
 	}
 
 public:
-	explicit SIRAdaptiveRoaringDirectory( const sirContainerAllocator_t *pAllocator ) : m_pAllocator( pAllocator ), m_chunks( pAllocator )
+	explicit SIRAdaptiveRoaringDirectory( const sirContainerAllocator_t *pAllocator )
+	    : m_pAllocator( pAllocator ),
+	      m_chunks( pAllocator )
 	{
 	}
+
 	SIRContainerResult tryAdd( uint32_t nValue )
 	{
 		const uint16_t nHigh = static_cast<uint16_t>( nValue >> 16 );
-		const uint16_t nLow = static_cast<uint16_t>(nValue);
+		const uint16_t nLow = static_cast<uint16_t>( nValue );
 		const uint32_t iChunk = lowerBound( nHigh );
 		if ( iChunk < m_chunks.getSize() && m_chunks[iChunk].nHigh == nHigh ) {
 			bool bInserted = false;
@@ -311,6 +333,7 @@ public:
 		++m_nCount;
 		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
+
 	bool erase( uint32_t nValue ) noexcept
 	{
 		const uint16_t nHigh = static_cast<uint16_t>( nValue >> 16 );
@@ -318,7 +341,7 @@ public:
 		if ( iChunk == m_chunks.getSize() || m_chunks[iChunk].nHigh != nHigh ) {
 			return false;
 		}
-		if ( !m_chunks[iChunk].erase( static_cast<uint16_t>(nValue) ) ) {
+		if ( !m_chunks[iChunk].erase( static_cast<uint16_t>( nValue ) ) ) {
 			return false;
 		}
 		--m_nCount;
@@ -327,12 +350,15 @@ public:
 		}
 		return true;
 	}
+
 	bool contains( uint32_t nValue ) const noexcept
 	{
 		const uint16_t nHigh = static_cast<uint16_t>( nValue >> 16 );
 		const uint32_t iChunk = lowerBound( nHigh );
-		return iChunk < m_chunks.getSize() && m_chunks[iChunk].nHigh == nHigh && m_chunks[iChunk].contains( static_cast<uint16_t>(nValue) );
+		return iChunk < m_chunks.getSize() && m_chunks[iChunk].nHigh == nHigh &&
+		       m_chunks[iChunk].contains( static_cast<uint16_t>( nValue ) );
 	}
+
 	template <typename Visitor>
 	void forEach( Visitor&& visitor ) const
 	{
@@ -341,6 +367,7 @@ public:
 			m_chunks[iChunk].forEach( [&]( uint16_t nLow ) { visitor( nBase | nLow ); } );
 		}
 	}
+
 	SIRContainerResult tryUnionWith( const SIRAdaptiveRoaringDirectory& other )
 	{
 		if ( this == &other || other.m_chunks.isEmpty() ) {
@@ -383,6 +410,7 @@ public:
 		m_nCount = staged.m_nCount;
 		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
+
 	// Transactionally intersect matching high-key chunks. The dense-dense
 	// case operates on whole words and sparse cases visit only existing lows.
 	SIRContainerResult tryIntersectWith( const SIRAdaptiveRoaringDirectory& other )
@@ -475,13 +503,15 @@ public:
 		m_nCount = staged.m_nCount;
 		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
+
 	uint64_t getSize( void ) const noexcept
 	{
 		return m_nCount;
 	}
+
 	uint32_t getChunkCount( void ) const noexcept
 	{
 		return m_chunks.getSize();
 	}
 };
-#endif
+#endif /* __SIR_ADAPTIVEROARINGDIRECTORY_H__ */

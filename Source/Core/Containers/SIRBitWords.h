@@ -48,7 +48,7 @@ public:
 		nWord -= ( nWord >> 1 ) & 0x5555555555555555ull;
 		nWord = ( nWord & 0x3333333333333333ull ) + ( ( nWord >> 2 ) & 0x3333333333333333ull );
 		nWord = ( nWord + ( nWord >> 4 ) ) & 0x0f0f0f0f0f0f0f0full;
-		return static_cast<uint32_t>(  ( nWord * 0x0101010101010101ull ) >> 56  );
+		return static_cast<uint32_t>( ( nWord * 0x0101010101010101ull ) >> 56 );
 	}
 
 	static uint32_t firstBit( uint64_t nWord ) noexcept
@@ -59,17 +59,17 @@ public:
 #if defined( _MSC_VER ) && defined( _M_X64 )
 		unsigned long iBit = 0;
 		_BitScanForward64( &iBit, nWord );
-		return static_cast<uint32_t>(iBit);
+		return static_cast<uint32_t>( iBit );
 #elif defined( _MSC_VER )
 		unsigned long iBit = 0;
-		if ( static_cast<uint32_t>(nWord) != 0 ) {
-			_BitScanForward( &iBit, static_cast<uint32_t>(nWord) );
-			return static_cast<uint32_t>(iBit);
+		if ( static_cast<uint32_t>( nWord ) != 0 ) {
+			_BitScanForward( &iBit, static_cast<uint32_t>( nWord ) );
+			return static_cast<uint32_t>( iBit );
 		}
 		_BitScanForward( &iBit, static_cast<uint32_t>( nWord >> 32 ) );
-		return static_cast<uint32_t>(iBit) + 32;
+		return static_cast<uint32_t>( iBit ) + 32;
 #else
-		return static_cast<uint32_t>(__builtin_ctzll( nWord ));
+		return static_cast<uint32_t>( __builtin_ctzll( nWord ) );
 #endif
 	}
 };

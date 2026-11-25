@@ -1,0 +1,18 @@
+{
+  "chat.mcp.access": "all",
+
+  "cmake.useCMakePresets": "always",
+  "cmake.configureOnOpen": false,
+  "cmake.useVsDeveloperEnvironment": "auto",
+  "cmake.ctest.testExplorerIntegrationEnabled": true,
+  "clangd.arguments": [
+      "--background-index",
+      "--clang-tidy",
+      "--completion-style=detailed",
+      "--query-driver=/usr/bin/g++,/usr/bin/g++-*",
+      "--compile-commands-dir=${workspaceFolder}"
+  ],
+  "clangd.fallbackFlags": ["-I${workspaceFolder}/Source", "-std=c++23"],
+
+  "C_Cpp.intelliSenseEngine": "disabled"
+}

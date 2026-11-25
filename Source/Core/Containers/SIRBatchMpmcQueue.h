@@ -1,6 +1,14 @@
 /* SIREngine - MPL-2.0. Bounded multi-producer multi-consumer ring with atomic batch claims. */
-#ifndef SIR_BATCH_MPMC_QUEUE_H
-#define SIR_BATCH_MPMC_QUEUE_H
+#ifndef __SIR_BATCHMPMCQUEUE_H__
+#define __SIR_BATCHMPMCQUEUE_H__
+
+#include <Core/SIRPCH.h>
+
+// clang-format off
+#ifdef SIR_PRAGMA_ONCE_SUPPORTED
+	#pragma once
+#endif
+// clang-format on
 #include <atomic>
 #include <Core/Containers/SIRRawStorage.h>
 #include <new>
@@ -11,11 +19,13 @@ class SIRBatchMpmcQueue
 {
 	static_assert( std::is_trivially_copyable<T>::value && std::is_trivially_default_constructible<T>::value,
 	               "Batch queue requires trivially copyable default-constructible values" );
+
 	struct alignas( 64 ) Cell
 	{
 		std::atomic<uint64_t> nSequence{ 0 };
 		T value{};
 	};
+
 	const sirContainerAllocator_t *m_pAllocator;
 	Cell *m_pCells = nullptr;
 	uint32_t m_nCapacity = 0;
@@ -23,15 +33,19 @@ class SIRBatchMpmcQueue
 	alignas( 64 ) std::atomic<uint64_t> m_nDequeue{ 0 };
 
 public:
-	explicit SIRBatchMpmcQueue( const sirContainerAllocator_t *pAllocator ) noexcept : m_pAllocator( pAllocator )
+	explicit SIRBatchMpmcQueue( const sirContainerAllocator_t *pAllocator ) noexcept
+	    : m_pAllocator( pAllocator )
 	{
 	}
-	~SIRBatchMpmcQueue( void ) noexcept
+
+	~SIRBatchMpmcQueue() noexcept
 	{
 		clear();
 	}
+
 	SIRBatchMpmcQueue( const SIRBatchMpmcQueue& ) = delete;
 	SIRBatchMpmcQueue& operator=( const SIRBatchMpmcQueue& ) = delete;
+
 	SIRContainerResult tryInitialize( uint32_t nCapacity )
 	{
 		if ( nCapacity < 2 || ( nCapacity & ( nCapacity - 1 ) ) != 0 || nCapacity > ( 1u << 30 ) ) {
@@ -46,7 +60,7 @@ public:
 		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
-		Cell *pCells = static_cast<Cell *>(pMemory);
+		Cell *pCells = static_cast<Cell *>( pMemory );
 		for ( uint32_t iIndex = 0; iIndex < nCapacity; ++iIndex ) {
 			new ( pCells + iIndex ) Cell();
 			pCells[iIndex].nSequence.store( iIndex, std::memory_order_relaxed );
@@ -58,6 +72,7 @@ public:
 		m_nDequeue.store( 0 );
 		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
+
 	SIRContainerResult tryEnqueueBatch( const T *pValues, uint32_t nCount ) noexcept
 	{
 		if ( pValues == nullptr || nCount == 0 || m_pCells == nullptr || nCount > m_nCapacity ) {
@@ -89,8 +104,7 @@ public:
 				continue;
 			}
 			uint64_t nExpected = nPosition;
-			if ( m_nEnqueue.compare_exchange_weak( nExpected, nPosition + nCount, std::memory_order_acq_rel,
-			                                     std::memory_order_relaxed ) ) {
+			if ( m_nEnqueue.compare_exchange_weak( nExpected, nPosition + nCount, std::memory_order_acq_rel, std::memory_order_relaxed ) ) {
 				break;
 			}
 			nPosition = nExpected;
@@ -102,6 +116,7 @@ public:
 		}
 		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
+
 	SIRContainerResult tryDequeueBatch( T *pValues, uint32_t nCount ) noexcept
 	{
 		if ( pValues == nullptr || nCount == 0 || m_pCells == nullptr || nCount > m_nCapacity ) {
@@ -127,8 +142,7 @@ public:
 				continue;
 			}
 			uint64_t nExpected = nPosition;
-			if ( m_nDequeue.compare_exchange_weak( nExpected, nPosition + nCount, std::memory_order_acq_rel,
-			                                     std::memory_order_relaxed ) ) {
+			if ( m_nDequeue.compare_exchange_weak( nExpected, nPosition + nCount, std::memory_order_acq_rel, std::memory_order_relaxed ) ) {
 				break;
 			}
 			nPosition = nExpected;
@@ -140,26 +154,30 @@ public:
 		}
 		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
+
 	SIRContainerResult tryEnqueue( const T& value ) noexcept
 	{
 		return tryEnqueueBatch( &value, 1 );
 	}
+
 	SIRContainerResult tryDequeue( T *pValue ) noexcept
 	{
 		return tryDequeueBatch( pValue, 1 );
 	}
+
 	void clear( void ) noexcept
 	{
 		for ( uint32_t iIndex = 0; iIndex < m_nCapacity; ++iIndex ) {
 			m_pCells[iIndex].~Cell();
 		}
-		SIRRawStorage::deallocate( m_pAllocator, m_pCells, static_cast<size_t>(m_nCapacity * sizeof(  Cell  )), alignof( Cell ) );
+		SIRRawStorage::deallocate( m_pAllocator, m_pCells, static_cast<size_t>( m_nCapacity * sizeof( Cell ) ), alignof( Cell ) );
 		m_pCells = nullptr;
 		m_nCapacity = 0;
 	}
+
 	uint32_t getCapacity( void ) const noexcept
 	{
 		return m_nCapacity;
 	}
 };
-#endif
+#endif /* __SIR_BATCHMPMCQUEUE_H__ */

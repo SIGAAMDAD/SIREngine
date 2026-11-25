@@ -24,29 +24,36 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
+enum class SIRRenderMemoryType : uint8_t {
+	SIR_RENDER_MEMORY_TYPE_GPU_LOCAL,
+	SIR_RENDER_MEMORY_TYPE_CPU_UPLOAD,
+	SIR_RENDER_MEMORY_TYPE_CPU_READBACK,
+	SIR_RENDER_MEMORY_TYPE_GPU_UPLOAD,
+	SIR_RENDER_MEMORY_TYPE_TRANSIENT
+};
+
 #include <Renderer/SIRRenderTypes.h>
 
 // One GPU buffer. Usage bits select vertex/index/constant/storage/indirect/transfer roles.
 // Nonowning, zero-allocation typed façade; the device owns resource lifetime.
-class SIRRenderStorageBuffer final
+class SIRRenderStorageBuffer
 {
 public:
-	SIRRenderStorageBuffer( void ) noexcept = default;
-	explicit SIRRenderStorageBuffer( sirGraphicsHandle_t hHandle ) noexcept : m_hHandle( hHandle )
-	{
-	}
+	explicit SIRRenderStorageBuffer( const SIRRenderStorageBuffer& ) noexcept = delete;
+	explicit SIRRenderStorageBuffer( SIRRenderStorageBuffer&& ) noexcept = delete;
 
-	sirGraphicsHandle_t getHandle( void ) const noexcept
-	{
-		return m_hHandle;
-	}
-	bool isValid( void ) const noexcept
-	{
-		return m_hHandle.nGeneration != 0 && m_hHandle.nDeviceGeneration != 0 && m_hHandle.eType == SIRGraphicsHandleType::SIR_GRAPHICS_HANDLE_BUFFER;
-	}
+	bool isValid( void ) const noexcept;
+	uint32_t getReservedSize( void ) const noexcept;
+	uint32_t getCommittedBytes( void ) const noexcept;
 
-private:
-	sirGraphicsHandle_t m_hHandle {};
+protected:
+	explicit SIRRenderStorageBuffer( void ) noexcept = default;
+	virtual ~SIRRenderStorageBuffer() noexcept = default;
+
+	uint32_t m_nReservedBytes;
+	uint32_t m_nCommittedBytes;
+
+	SIRRenderMemoryType m_eMemoryType;
 };
 
 #endif // __SIR_RENDER_STORAGE_BUFFER_H__

@@ -16,6 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #ifndef __SIR_GRAPHICS_TYPES_H__
 #define __SIR_GRAPHICS_TYPES_H__
 
+#include "Renderer/RHI/SIRRenderDevice.h"
 #include <Core/SIRPCH.h>
 
 // clang-format off
@@ -24,26 +25,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-enum class sirGraphicsDriver : uint8_t {
-	SIR_GRAPHICS_DRIVER_AMD = 0,
-	SIR_GRAPHICS_DRIVER_NVIDIA = 1,
-	SIR_GRAPHICS_DRIVER_INTEL = 2,
-	SIR_GRAPHICS_DRIVER_APPLE = 3
-};
 
-// Driver-neutral contract. No D3D, Vulkan, OpenGL, DXGI, SDL, or GRDG types.
-// Explicit capability results govern APIs with no compute/descriptor support.
-enum class SIRGraphicsBackend : uint32_t {
-	SIR_GRAPHICS_BACKEND_AUTO = 0,
-	SIR_GRAPHICS_BACKEND_VULKAN = 1,
-	SIR_GRAPHICS_BACKEND_D3D12 = 2,
-	SIR_GRAPHICS_BACKEND_D3D11 = 3,
-	SIR_GRAPHICS_BACKEND_D3D10 = 4,
-	SIR_GRAPHICS_BACKEND_D3D9 = 5,
-	SIR_GRAPHICS_BACKEND_D3D8 = 6,
-	SIR_GRAPHICS_BACKEND_D3D7 = 7,
-	SIR_GRAPHICS_BACKEND_OPENGL = 8
-};
 
 enum class SIRGraphicsResult : uint32_t {
 	SIR_GRAPHICS_SUCCESS = 0,
@@ -60,29 +42,6 @@ enum class SIRGraphicsResult : uint32_t {
 	SIR_GRAPHICS_VERSION_MISMATCH = 11
 };
 
-enum class SIRGraphicsFeature : uint64_t {
-	SIR_GRAPHICS_FEATURE_GRAPHICS = 1ULL << 0,
-	SIR_GRAPHICS_FEATURE_COMPUTE = 1ULL << 1,
-	SIR_GRAPHICS_FEATURE_ASYNC_COMPUTE = 1ULL << 2,
-	SIR_GRAPHICS_FEATURE_COPY_QUEUE = 1ULL << 3,
-	SIR_GRAPHICS_FEATURE_SHADER_STORAGE = 1ULL << 4,
-	SIR_GRAPHICS_FEATURE_DESCRIPTOR_INDEXING = 1ULL << 5,
-	SIR_GRAPHICS_FEATURE_INDIRECT_DRAW = 1ULL << 6,
-	SIR_GRAPHICS_FEATURE_MRT = 1ULL << 7,
-	SIR_GRAPHICS_FEATURE_MULTISAMPLE = 1ULL << 8,
-	SIR_GRAPHICS_FEATURE_TESSELLATION = 1ULL << 9,
-
-	SIR_GRAPHICS_FEATURE_GEOMETRY_SHADER = 1ULL << 10,
-	SIR_GRAPHICS_FEATURE_MESH_SHADER = 1ULL << 11,
-	SIR_GRAPHICS_FEATURE_RAY_TRACING = 1ULL << 12,
-	SIR_GRAPHICS_FEATURE_SPARSE_RESOURCES = 1ULL << 13,
-	SIR_GRAPHICS_FEATURE_SAMPLER_FEEDBACK = 1ULL << 14,
-	SIR_GRAPHICS_FEATURE_ENHANCED_BARRIERS = 1ULL << 15,
-	SIR_GRAPHICS_FEATURE_GPU_UPLOAD = 1ULL << 16,
-	SIR_GRAPHICS_FEATURE_HDR_OUTPUT = 1ULL << 17,
-	SIR_GRAPHICS_FEATURE_FIXED_FUNCTION = 1ULL << 18,
-	SIR_GRAPHICS_FEATURE_PRESENT = 1ULL << 19
-};
 
 enum class SIRGraphicsQueue : uint32_t {
 	SIR_GRAPHICS_QUEUE_DIRECT = 0,
@@ -326,13 +285,6 @@ enum class SIRGraphicsPresentMode : uint32_t {
 	SIR_GRAPHICS_PRESENT_MAILBOX = 2
 };
 
-typedef struct sirGraphicsVersion_s
-{
-	uint32_t nMajor;
-	uint32_t nMinor;
-	uint32_t nPatch;
-} sirGraphicsVersion_t;
-
 // Source-facing pipeline descriptors borrow the same typed, SDK-neutral
 // era recipes as the v1 binary tables. No parallel recipe layouts.
 typedef struct sirGraphicsABIModernRecipe_s sirGraphicsABIModernRecipe_t;
@@ -363,23 +315,6 @@ typedef struct sirGraphicsCompletionSet_s
 	uint32_t nQueueMask;
 	uint64_t szQueueValues[static_cast<uint32_t>( SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT )];
 } sirGraphicsCompletionSet_t;
-
-typedef struct sirGraphicsCapabilities_s
-{
-	SIRGraphicsBackend eBackend;
-	sirGraphicsVersion_t nApiVersion;
-	uint64_t nFeatureMask;
-	uint32_t nQueueMask;
-	uint32_t nPipelineModelMask;
-	uint32_t nMaximumTextureDimension;
-	uint32_t nMaximumColorAttachments;
-	uint32_t nMaximumFramesInFlight;
-	uint32_t nMaximumBindingSlots;
-	uint32_t nMaximumSampleCount;
-	uint32_t nDeviceGeneration;
-	bool bUnifiedMemory;
-	bool bSoftwareAdapter;
-} sirGraphicsCapabilities_t;
 
 typedef struct sirGraphicsAdapterInfo_s
 {

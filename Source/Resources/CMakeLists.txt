@@ -10,8 +10,5 @@ if(MSVC)
 else()
     target_compile_options(SIRResources PRIVATE -Wall -Wextra -Wpedantic)
 endif()
-target_sources(SIRResources PRIVATE SIRResourceCatalog.cpp)
 sir_configure_owned_target(SIRResources)
 
-# Canonical SIRPack V1 metadata reader. Immutable views, no I/O or GRDG writes.
-target_sources(SIRResources PRIVATE SIRPackFormat.cpp SIRPackCatalog.cpp)

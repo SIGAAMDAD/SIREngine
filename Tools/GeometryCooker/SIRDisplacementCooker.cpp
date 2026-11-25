@@ -14,7 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 #include <Tools/GeometryCooker/SIRDisplacementCooker.h>
 
-#include <Resources/SIRPackFormat.h>
+#include <Streaming/Pack/SIRPackFormat.h>
 
 #include <algorithm>
 #include <array>

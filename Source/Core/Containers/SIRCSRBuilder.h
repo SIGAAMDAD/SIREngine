@@ -1,6 +1,14 @@
 /* SIREngine - MPL-2.0. Bulk immutable CSR construction with value-carrying edges. */
-#ifndef SIR_CSR_BUILDER_H
-#define SIR_CSR_BUILDER_H
+#ifndef __SIR_CSRBUILDER_H__
+#define __SIR_CSRBUILDER_H__
+
+#include <Core/SIRPCH.h>
+
+// clang-format off
+#ifdef SIR_PRAGMA_ONCE_SUPPORTED
+	#pragma once
+#endif
+// clang-format on
 #include <Core/Containers/SIRVector.h>
 #include <algorithm>
 #include <utility>
@@ -17,29 +25,37 @@ class SIRCSRGraph
 
 public:
 	explicit SIRCSRGraph( const sirContainerAllocator_t *pAllocator )
-	    : m_offsets( pAllocator ), m_destinations( pAllocator ), m_values( pAllocator )
+	    : m_offsets( pAllocator ),
+	      m_destinations( pAllocator ),
+	      m_values( pAllocator )
 	{
 	}
+
 	uint32_t getVertexCount( void ) const noexcept
 	{
 		return m_nVertices;
 	}
+
 	uint32_t getEdgeCount( void ) const noexcept
 	{
 		return m_values.getSize();
 	}
+
 	uint32_t getEdgeBegin( uint32_t iVertex ) const noexcept
 	{
 		return iVertex < m_nVertices ? m_offsets[iVertex] : 0;
 	}
+
 	uint32_t getEdgeEnd( uint32_t iVertex ) const noexcept
 	{
 		return iVertex < m_nVertices ? m_offsets[iVertex + 1] : 0;
 	}
+
 	uint32_t getDestination( uint32_t iEdge ) const noexcept
 	{
 		return m_destinations[iEdge];
 	}
+
 	const T *tryGetValue( uint32_t iEdge ) const noexcept
 	{
 		return m_values.tryGet( iEdge );
@@ -57,16 +73,13 @@ public:
 		T value;
 	};
 
-private:
-	const sirContainerAllocator_t *m_pAllocator;
-	SIRVector<Edge> m_edges;
-	uint32_t m_nVertices;
-
-public:
 	explicit SIRCSRBuilder( const sirContainerAllocator_t *pAllocator, uint32_t nVertices )
-	    : m_pAllocator( pAllocator ), m_edges( pAllocator ), m_nVertices( nVertices )
+	    : m_pAllocator( pAllocator ),
+	      m_edges( pAllocator ),
+	      m_nVertices( nVertices )
 	{
 	}
+
 	SIRContainerResult tryAddEdge( uint32_t iSource, uint32_t iDestination, const T& value )
 	{
 		if ( iSource >= m_nVertices || iDestination >= m_nVertices ) {
@@ -74,6 +87,7 @@ public:
 		}
 		return m_edges.tryEmplaceBack( Edge{ iSource, iDestination, value } );
 	}
+
 	SIRContainerResult tryFreeze( SIRCSRGraph<T>& output ) const
 	{
 		if ( m_nVertices == UINT32_MAX ) {
@@ -114,8 +128,9 @@ public:
 			const uint32_t iBegin = offsets[iVertex];
 			const uint32_t iEnd = offsets[iVertex + 1];
 			if ( iEnd - iBegin > 1 ) {
-				std::sort( order.begin() + iBegin, order.begin() + iEnd,
-				           [&]( uint32_t iLeft, uint32_t iRight ) { return m_edges[iLeft].nDestination < m_edges[iRight].nDestination; } );
+				std::sort( order.begin() + iBegin, order.begin() + iEnd, [&]( uint32_t iLeft, uint32_t iRight ) {
+					return m_edges[iLeft].nDestination < m_edges[iRight].nDestination;
+				} );
 			}
 		}
 		eResult = destinations.tryReserve( m_edges.getSize() );
@@ -137,9 +152,16 @@ public:
 		output.m_nVertices = m_nVertices;
 		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
+
 	uint32_t getPendingEdges( void ) const noexcept
 	{
 		return m_edges.getSize();
 	}
+
+	publicprivate :
+
+	    const sirContainerAllocator_t *m_pAllocator;
+	SIRVector<Edge> m_edges;
+	uint32_t m_nVertices;
 };
-#endif
+#endif /* __SIR_CSRBUILDER_H__ */

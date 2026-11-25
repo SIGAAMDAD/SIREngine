@@ -9,7 +9,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 ===========================================================================
 */
 #include <Editor/Scene/SIREditorResourceKeys.h>
-#include <Resources/SIRResourceCatalog.h>
+#include <Editor/Assets/SIRResourceCatalog.h>
 
 bool sirEditorCollectCatalogKeys( SIRResourceCatalog& catalog, sirEditorResourceKeyBuffer_t *pBuffer ) noexcept
 {

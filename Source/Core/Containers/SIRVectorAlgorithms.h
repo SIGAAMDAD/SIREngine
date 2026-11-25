@@ -1,7 +1,29 @@
-/* SIREngine MPLv2 - range algorithms for borrowed and owning vectors. */
+/*
+===========================================================================
+SIREngine MPLv2 Source Code
+Copyright (C) 2023-2027 Noah Van Til
+
+This Source Code Form is subject to the terms of the Mozilla Public
+License, v2. If a copy of the MPL was not distributed with this
+file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+This software is provided "as is", without warranty of any kind,
+express or implied, including but not limited to the warranties
+of merchantability, fitness for a particular purpose and noninfringement.
+===========================================================================
+*/
+
 #ifndef __SIR_VECTORALGORITHMS_H__
 #define __SIR_VECTORALGORITHMS_H__
+
 #include <Core/SIRPCH.h>
+
+// clang-format off
+#ifdef SIR_PRAGMA_ONCE_SUPPORTED
+	#pragma once
+#endif
+// clang-format on
+
 #include <Core/Containers/SIRVectorAppendWriter.h>
 #include <Core/Containers/SIRReadOnlyVectorView.h>
 #include <stdint.h>
@@ -12,15 +34,14 @@ public:
 	// Scalar reference compaction. Order is stable, masks contain 0 or nonzero.
 	// Candidate SIMD backends must be bit-for-bit equivalent to this result.
 	template <typename T>
-	static SIRContainerResult tryAppendFiltered( const SIRReadOnlyVectorView<T>& rInput, const uint8_t *pMask,
-	                                               SIRVector<T> *pDestination )
+	static SIRContainerResult tryAppendFiltered( const SIRReadOnlyVectorView<T>& rInput, const uint8_t *pMask, SIRVector<T> *pDestination )
 	{
 		if ( pDestination == nullptr || ( rInput.getSize() != 0 && pMask == nullptr ) ) {
 			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
-		const uintptr_t nInput = reinterpret_cast<uintptr_t>(rInput.data());
-		const uintptr_t nOutput = reinterpret_cast<uintptr_t>(pDestination->data());
-		const uint64_t nOutputBytes = static_cast<uint64_t>(pDestination->getSize() * sizeof( T ));
+		const uintptr_t nInput = reinterpret_cast<uintptr_t>( rInput.data() );
+		const uintptr_t nOutput = reinterpret_cast<uintptr_t>( pDestination->data() );
+		const uint64_t nOutputBytes = static_cast<uint64_t>( pDestination->getSize() * sizeof( T ) );
 		if ( nInput >= nOutput && static_cast<uint64_t>( nInput - nOutput ) < nOutputBytes ) {
 			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
@@ -53,9 +74,10 @@ public:
 		}
 		uint64_t nCombined = 0;
 		for ( uint32_t i = 0; i < nShards; ++i ) {
-			const uintptr_t nInput = reinterpret_cast<uintptr_t>(pShards[i].data());
-			const uintptr_t nOutput = reinterpret_cast<uintptr_t>(pDestination->data());
-			if ( nInput >= nOutput && static_cast<uint64_t>( nInput - nOutput ) < static_cast<uint64_t>(pDestination->getSize() * sizeof( T ) )) {
+			const uintptr_t nInput = reinterpret_cast<uintptr_t>( pShards[i].data() );
+			const uintptr_t nOutput = reinterpret_cast<uintptr_t>( pDestination->data() );
+			if ( nInput >= nOutput &&
+			     static_cast<uint64_t>( nInput - nOutput ) < static_cast<uint64_t>( pDestination->getSize() * sizeof( T ) ) ) {
 				return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 			}
 			nCombined += pShards[i].getSize();
@@ -64,7 +86,7 @@ public:
 			}
 		}
 		SIRVectorAppendWriter<T> writer( *pDestination );
-		SIRContainerResult eResult = writer.tryBeginAppend( static_cast<uint32_t>(nCombined) );
+		SIRContainerResult eResult = writer.tryBeginAppend( static_cast<uint32_t>( nCombined ) );
 		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
 			return eResult;
 		}
@@ -79,4 +101,5 @@ public:
 		return writer.commit();
 	}
 };
+
 #endif // __SIR_VECTORALGORITHMS_H__

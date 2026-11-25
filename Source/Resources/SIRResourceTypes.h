@@ -188,6 +188,19 @@ typedef struct sirResourceChunkPublication_s
 } sirResourceChunkPublication_t;
 typedef sirResourceChunkPublication_t SIRResourceChunkPublication;
 
+typedef struct sirResourceSourceProvenance_s
+{
+	uint64_t nSourceId;
+	uint64_t nSourceGeneration;
+	uint64_t nSourceRevision;
+	uint64_t nCookedRevision;
+	uint32_t nMountSlot;
+	uint32_t nMountGeneration;
+} sirResourceSourceProvenance_t;
+typedef sirResourceSourceProvenance_t SIRResourceSourceProvenance;
+
+typedef struct sirResourceVerifiedChunk_s sirResourceVerifiedChunk_t;
+
 typedef struct sirResourcePublication_s
 {
 	SIRResourceKey m_Key;
@@ -198,8 +211,43 @@ typedef struct sirResourcePublication_s
 	uint32_t m_nChunkCount;
 	const SIRResourceDependency *m_pDependencies;
 	uint32_t m_nDependencyCount;
+	const sirResourceVerifiedChunk_t *m_pVerifiedChunks;
+	sirResourceSourceProvenance_t m_Provenance;
+	bool m_bVerified;
 } sirResourcePublication_t;
 typedef sirResourcePublication_t SIRResourcePublication;
+
+typedef enum sirResourceVerifiedChunkMode_e : uint8_t
+{
+	SIR_RESOURCE_VERIFIED_CHUNK_STAGING = 0,
+	SIR_RESOURCE_VERIFIED_CHUNK_ATTACH_CURRENT = 1
+} sirResourceVerifiedChunkMode_t;
+
+typedef struct sirResourceVerifiedChunk_s
+{
+	SIRResourceChunkId id;
+	SIRResourceContentKey keyContent;
+	SIRResourceStagingHandle staging;
+	uint64_t nBytes;
+	uint32_t nAlignment;
+	uint8_t szDigest[32];
+	sirResourceVerifiedChunkMode_t eMode;
+} sirResourceVerifiedChunk_t;
+typedef sirResourceVerifiedChunk_t SIRResourceVerifiedChunk;
+
+typedef struct sirResourceVerifiedPublication_s
+{
+	SIRResourceKey key;
+	sirResourceSourceProvenance_t provenance;
+	SIRResourceKind eKind;
+	uint16_t nSchemaVersion;
+	uint32_t nFormatId;
+	const sirResourceVerifiedChunk_t *pChunks;
+	uint32_t nChunkCount;
+	const SIRResourceDependency *pDependencies;
+	uint32_t nDependencyCount;
+} sirResourceVerifiedPublication_t;
+typedef sirResourceVerifiedPublication_t SIRResourceVerifiedPublication;
 
 // Opaque provider-native objects are registered with the same resource identity/revision.
 typedef struct sirDerivedResourceKey_s

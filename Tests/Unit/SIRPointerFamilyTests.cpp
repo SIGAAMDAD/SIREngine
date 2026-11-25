@@ -17,7 +17,9 @@
 #include <Core/Jobs/SIRTaskGraph.h>
 #include <Core/Jobs/SIRTaskScheduler.h>
 #include <Core/Memory/SIRMemoryManager.h>
-#include <Resources/SIRSystemResourceViews.h>
+#include <Resources/SIRResourceViews.h>
+#include <Renderer/SIRRenderResourceViews.h>
+#include <Physics/SIRPhysicsResourceViews.h>
 
 #include <atomic>
 #include <cstdio>

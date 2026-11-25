@@ -63,6 +63,7 @@ enum class SIRStreamingResult : uint8_t {
 	SIR_STREAMING_INVALID_TRANSITION = 6,
 	SIR_STREAMING_BUSY = 7
 };
+typedef SIRStreamingResult sirStreamingResult_t;
 
 typedef struct sirStreamingUnitKey_s
 {

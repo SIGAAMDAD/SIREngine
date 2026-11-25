@@ -30,7 +30,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 constexpr uint32_t SIR_VFS_MAX_MOUNTS = 32;
 constexpr uint32_t SIR_VFS_MAX_LEASES = 128;
 
-enum class SIRVFSResult : uint8_t {
+enum class SIRVFSResult : uint8_t
+{
 	SIR_VFS_OK = 0,
 	SIR_VFS_INVALID_ARGUMENT,
 	SIR_VFS_FORBIDDEN,
@@ -42,14 +43,16 @@ enum class SIRVFSResult : uint8_t {
 	SIR_VFS_STOPPED
 };
 
-enum class SIRVFSBackendKind : uint8_t {
+enum class SIRVFSBackendKind : uint8_t
+{
 	SIR_VFS_BACKEND_DIRECTORY = 0,
 	SIR_VFS_BACKEND_SIRPACK,
 	SIR_VFS_BACKEND_MEMORY,
 	SIR_VFS_BACKEND_GENERATED
 };
 
-enum class SIRVFSAccess : uint32_t {
+enum class SIRVFSAccess : uint32_t
+{
 	SIR_VFS_ACCESS_READ = 1u << 0,
 	SIR_VFS_ACCESS_WRITE = 1u << 1,
 	SIR_VFS_ACCESS_ENUMERATE = 1u << 2

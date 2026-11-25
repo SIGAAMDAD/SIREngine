@@ -70,6 +70,8 @@ public:
 	SIRResourceResult getChunk( SIRResourceChunkId id, SIRResourceConstBytes *pBytes ) const noexcept;
 	SIRResourceResult getChunkInfo( uint32_t iChunk, SIRResourceChunkInfo *pInfo ) const noexcept;
 	SIRResourceResult getDependency( uint32_t iEdge, SIRResourceDependency *pEdge ) const noexcept;
+	SIRResourceResult getSourceProvenance( sirResourceSourceProvenance_t *pProvenance ) const noexcept;
+	SIRResourceResult getChunkDigest( SIRResourceChunkId id, uint8_t *pDigest ) const noexcept;
 
 	friend class SIRResourceGraph;
 };
@@ -157,6 +159,7 @@ public:
 	}
 	SIRResourceResult getBytes( SIRResourceChunkId id, SIRResourceByteRange range, SIRResourceConstBytes *pBytes ) const noexcept;
 };
+
 
 class SIRImageResourceView : public SIRResourceView
 {
@@ -276,5 +279,10 @@ SIRResourceResult tryCastResourceView( const SIRResourceView& rView, T *pOut ) n
 	*pOut = T( rView );
 	return SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS;
 }
+
+class SIRTextResourceView final : public SIRBlobResourceView { public: explicit SIRTextResourceView( const SIRResourceView& rView ) noexcept : SIRBlobResourceView( rView ) {} SIRResourceResult getUtf8( SIRResourceChunkId id, SIRResourceConstBytes *pBytes ) const noexcept; };
+class SIRHeightFieldView : public SIRFieldResourceView { public: explicit SIRHeightFieldView( const SIRResourceView& rView ) noexcept : SIRFieldResourceView( rView ) {} SIRResourceResult getHeights( uint32_t iMip, uint32_t nTileId, SIRResourceConstBytes *pBytes ) const noexcept; };
+class SIRVolumeFieldView final : public SIRFieldResourceView { public: explicit SIRVolumeFieldView( const SIRResourceView& rView ) noexcept : SIRFieldResourceView( rView ) {} SIRResourceResult getBrick( uint32_t iMip, uint32_t nBrickId, SIRResourceConstBytes *pBytes ) const noexcept; };
+class SIRParameterSetView : public SIRTableResourceView { public: explicit SIRParameterSetView( const SIRResourceView& rView ) noexcept : SIRTableResourceView( rView ) {} SIRResourceResult findParameter( uint64_t nParameterId, SIRResourceConstBytes *pValue ) const noexcept; };
 
 #endif // __SIR_RESOURCEVIEWS_H__

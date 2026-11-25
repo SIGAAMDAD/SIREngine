@@ -33,18 +33,16 @@ template <typename T>
 class SIRNotNullPtr
 {
 public:
-	SIRNotNullPtr( void ) = delete;
-	SIRNotNullPtr( std::nullptr_t ) = delete;
-	explicit SIRNotNullPtr( T *pObject ) noexcept : m_pObject( pObject )
-	{
-		if ( m_pObject == nullptr ) {
-			abort();
-		}
-	}
+	constexpr SIRNotNullPtr( void ) = delete;
+	constexpr SIRNotNullPtr( std::nullptr_t ) = delete;
+	constexpr explicit SIRNotNullPtr( T *pObject ) noexcept;
+
 	template <typename U, typename std::enable_if<std::is_convertible<U *, T *>::value, int>::type = 0>
-	SIRNotNullPtr( const SIRNotNullPtr<U>& rOther ) noexcept : m_pObject( rOther.get() )
+	SIRNotNullPtr( const SIRNotNullPtr<U>& rOther ) noexcept
+	    : m_pObject( rOther.get() )
 	{
 	}
+
 	SIRNotNullPtr( const SIRNotNullPtr& ) noexcept = default;
 	SIRNotNullPtr& operator=( const SIRNotNullPtr& ) noexcept = default;
 	SIRNotNullPtr& operator=( std::nullptr_t ) = delete;
@@ -53,10 +51,12 @@ public:
 	{
 		return m_pObject;
 	}
+
 	T *operator->( void ) const noexcept
 	{
 		return m_pObject;
 	}
+
 	T& operator*( void ) const noexcept
 	{
 		return *m_pObject;
@@ -65,5 +65,14 @@ public:
 private:
 	T *m_pObject;
 };
+
+template <typename T>
+SIR_FORCEINLINE constexpr SIRNotNullPtr<T>::SIRNotNullPtr( T *pObject ) noexcept
+    : m_pObject( pObject )
+{
+	if ( m_pObject == nullptr ) {
+		abort();
+	}
+}
 
 #endif // __SIR_NOTNULLPTR_H__

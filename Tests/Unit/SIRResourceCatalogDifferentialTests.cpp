@@ -13,7 +13,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#include <Resources/SIRResourceCatalog.h>
+#include <Editor/Assets/SIRResourceCatalog.h>
 
 #include <assert.h>
 #include <stdint.h>

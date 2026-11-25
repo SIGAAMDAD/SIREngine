@@ -33,190 +33,20 @@ of merchantability, fitness for a particular purpose and noninfringement.
 template <typename K, typename Hash = std::hash<K>, typename Equal = std::equal_to<K>, bool bCompactControl = false>
 class SIRFlatHashSet
 {
-private:
-	static_assert( SIRLifetimeOps<K>::CAN_RELOCATE, "Hash set growth requires copy or nothrow move" );
-	static_assert( std::is_nothrow_invocable_r<size_t, Hash, const K&>::value, "Hash must be noexcept" );
-	uint8_t *m_pControl = nullptr;
-	K *m_pKeys = nullptr;
-	uint32_t m_nSize = 0;
-	uint32_t m_nCapacity = 0;
-	uint32_t m_nDeleted = 0;
-	const sirContainerAllocator_t *m_pAllocator;
-	Hash m_hash;
-	Equal m_equal;
-
-	static bool layout( uint32_t nCapacity, size_t *pOffset, size_t *pBytes ) noexcept
-	{
-		size_t nOffset = 0;
-		size_t nEntries = 0;
-		if ( !SIRRawStorage::checkedAdd( SIRHashProbe::controlBytes<bCompactControl>( nCapacity ), alignof( K ) - 1, &nOffset ) ) {
-			return false;
-		}
-		nOffset &= ~( alignof( K ) - 1 );
-		if ( !SIRRawStorage::checkedMultiply( nCapacity, sizeof( K ), &nEntries ) ) {
-			return false;
-		}
-		*pOffset = nOffset;
-		return SIRRawStorage::checkedAdd( nOffset, nEntries, pBytes );
-	}
-
-	void release( void *pBlock, uint32_t nCapacity ) const noexcept
-	{
-		if ( pBlock != nullptr ) {
-			size_t nOffset = 0;
-			size_t nBytes = 0;
-			layout( nCapacity, &nOffset, &nBytes );
-			SIRRawStorage::deallocate( m_pAllocator, pBlock, nBytes, alignof( K ) );
-		}
-	}
-
-	bool ownsAddress( const void *pAddress ) const noexcept
-	{
-		if ( m_pControl == nullptr || pAddress == nullptr ) {
-			return false;
-		}
-		size_t nOffset = 0;
-		size_t nBytes = 0;
-		layout( m_nCapacity, &nOffset, &nBytes );
-		uintptr_t nAddress = reinterpret_cast<uintptr_t>(pAddress);
-		uintptr_t nStart = reinterpret_cast<uintptr_t>(m_pControl);
-		return nAddress >= nStart && nAddress - nStart < nBytes;
-	}
-
-	uint32_t locate( const K& key ) const
-	{
-		if ( m_nCapacity == 0 ) {
-			return UINT32_MAX;
-		}
-		uint32_t iIndex = SIRHashProbe::firstIndex( m_hash( key ), m_nCapacity );
-		for ( uint32_t nProbe = 0; nProbe < m_nCapacity; ++nProbe ) {
-			if ( SIRHashProbe::getControl<bCompactControl>( m_pControl, iIndex ) == SIRHashProbe::EMPTY ) {
-				return UINT32_MAX;
-			}
-			if ( SIRHashProbe::getControl<bCompactControl>( m_pControl, iIndex ) == SIRHashProbe::OCCUPIED &&
-			     m_equal( m_pKeys[iIndex], key ) ) {
-				return iIndex;
-			}
-			iIndex = ( iIndex + 1 ) & ( m_nCapacity - 1 );
-		}
-		return UINT32_MAX;
-	}
-
-	SIRContainerResult rehash( uint32_t nCapacity )
-	{
-		size_t nOffset = 0;
-		size_t nBytes = 0;
-		if ( !layout( nCapacity, &nOffset, &nBytes ) ) {
-			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
-		}
-		void *pBlock = nullptr;
-		SIRContainerResult eResult = SIRRawStorage::tryAllocate( m_pAllocator, nBytes, alignof( K ), &pBlock );
-		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
-			return eResult;
-		}
-		uint8_t *pControl = static_cast<uint8_t *>(pBlock);
-		K *pKeys = reinterpret_cast<K *>( pControl + nOffset );
-		memset( pControl, SIRHashProbe::EMPTY, SIRHashProbe::controlBytes<bCompactControl>( nCapacity ) );
-		try {
-			for ( uint32_t iOld = 0; iOld < m_nCapacity; ++iOld ) {
-				if ( SIRHashProbe::getControl<bCompactControl>( m_pControl, iOld ) != SIRHashProbe::OCCUPIED ) {
-					continue;
-				}
-				uint32_t iNew = SIRHashProbe::firstIndex( m_hash( m_pKeys[iOld] ), nCapacity );
-				while ( SIRHashProbe::getControl<bCompactControl>( pControl, iNew ) == SIRHashProbe::OCCUPIED ) {
-					iNew = ( iNew + 1 ) & ( nCapacity - 1 );
-				}
-				new ( pKeys + iNew ) K( std::move_if_noexcept( m_pKeys[iOld] ) );
-				SIRHashProbe::setControl<bCompactControl>( pControl, iNew, SIRHashProbe::OCCUPIED );
-			}
-		} catch ( ... ) {
-			for ( uint32_t iIndex = 0; iIndex < nCapacity; ++iIndex ) {
-				if ( SIRHashProbe::getControl<bCompactControl>( pControl, iIndex ) == SIRHashProbe::OCCUPIED ) {
-					pKeys[iIndex].~K();
-				}
-			}
-			release( pBlock, nCapacity );
-			throw;
-		}
-		uint32_t nOldSize = m_nSize;
-		clear();
-		release( m_pControl, m_nCapacity );
-		m_pControl = pControl;
-		m_pKeys = pKeys;
-		m_nSize = nOldSize;
-		m_nCapacity = nCapacity;
-		return SIRContainerResult::SIR_CONTAINER_OK;
-	}
-
-	template <typename KeyArg>
-	SIRContainerResult insertInternal( KeyArg&& key, bool *pInserted )
-	{
-		if ( pInserted != nullptr ) {
-			*pInserted = false;
-		}
-		if ( contains( key ) ) {
-			return SIRContainerResult::SIR_CONTAINER_OK;
-		}
-		if ( m_nSize == UINT32_MAX ) {
-			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
-		}
-		if ( m_nCapacity == 0 || ( static_cast<uint64_t>(m_nSize) + m_nDeleted + 1 ) * 8 > static_cast<uint64_t>(m_nCapacity) * 7 ) {
-			uint32_t nNeeded = 0;
-			SIRContainerResult eResult = SIRHashProbe::capacityForCount( m_nSize + 1, &nNeeded );
-			if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
-				return eResult;
-			}
-			uint32_t nCapacity = nNeeded > m_nCapacity ? nNeeded : m_nCapacity;
-			if ( ownsAddress( &key ) ) {
-				if constexpr ( std::is_copy_constructible<K>::value ) {
-					K staged( key );
-					eResult = rehash( nCapacity );
-					if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
-						return eResult;
-					}
-					return insertInternal( std::move( staged ), pInserted );
-				}
-				return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
-			}
-			eResult = rehash( nCapacity );
-			if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
-				return eResult;
-			}
-		}
-		uint32_t iIndex = SIRHashProbe::firstIndex( m_hash( key ), m_nCapacity );
-		uint32_t iDeleted = UINT32_MAX;
-		while ( SIRHashProbe::getControl<bCompactControl>( m_pControl, iIndex ) != SIRHashProbe::EMPTY ) {
-			if ( SIRHashProbe::getControl<bCompactControl>( m_pControl, iIndex ) == SIRHashProbe::DELETED && iDeleted == UINT32_MAX ) {
-				iDeleted = iIndex;
-			}
-			iIndex = ( iIndex + 1 ) & ( m_nCapacity - 1 );
-		}
-		if ( iDeleted != UINT32_MAX ) {
-			iIndex = iDeleted;
-		}
-		new ( m_pKeys + iIndex ) K( std::forward<KeyArg>( key ) );
-		if ( SIRHashProbe::getControl<bCompactControl>( m_pControl, iIndex ) == SIRHashProbe::DELETED ) {
-			--m_nDeleted;
-		}
-		SIRHashProbe::setControl<bCompactControl>( m_pControl, iIndex, SIRHashProbe::OCCUPIED );
-		++m_nSize;
-		if ( pInserted != nullptr ) {
-			*pInserted = true;
-		}
-		return SIRContainerResult::SIR_CONTAINER_OK;
-	}
-
 public:
 	explicit SIRFlatHashSet( const sirContainerAllocator_t *pAllocator, Hash hash = Hash(), Equal equal = Equal() )
-	    : m_pAllocator( pAllocator ), m_hash( std::move( hash ) ), m_equal( std::move( equal ) )
+	    : m_pAllocator( pAllocator ),
+	      m_hash( std::move( hash ) ),
+	      m_equal( std::move( equal ) )
 	{
 	}
 
-	~SIRFlatHashSet( void ) noexcept
+	~SIRFlatHashSet() noexcept
 	{
 		clear();
 		release( m_pControl, m_nCapacity );
 	}
+
 	SIRFlatHashSet( const SIRFlatHashSet& ) = delete;
 	SIRFlatHashSet& operator=( const SIRFlatHashSet& ) = delete;
 	SIRFlatHashSet( SIRFlatHashSet&& ) = delete;
@@ -226,10 +56,12 @@ public:
 	{
 		return m_nSize;
 	}
+
 	uint32_t getCapacity( void ) const noexcept
 	{
 		return m_nCapacity;
 	}
+
 	bool contains( const K& key ) const
 	{
 		return locate( key ) != UINT32_MAX;
@@ -274,6 +106,7 @@ public:
 	{
 		return insertInternal( key, pInserted );
 	}
+
 	SIRContainerResult tryInsert( K&& key, bool *pInserted = nullptr )
 	{
 		return insertInternal( std::move( key ), pInserted );
@@ -319,7 +152,180 @@ public:
 		if ( m_nCapacity != 0 ) {
 			layout( m_nCapacity, &nOffset, &nBytes );
 		}
-		return { 0, nBytes, 0, 0, static_cast<uint64_t>(m_nSize * sizeof(  K  )) };
+		return { 0, nBytes, 0, 0, static_cast<uint64_t>( m_nSize * sizeof( K ) ) };
+	}
+
+private:
+	static_assert( SIRLifetimeOps<K>::CAN_RELOCATE, "Hash set growth requires copy or nothrow move" );
+	static_assert( std::is_nothrow_invocable_r<size_t, Hash, const K&>::value, "Hash must be noexcept" );
+	uint8_t *m_pControl = nullptr;
+	K *m_pKeys = nullptr;
+	uint32_t m_nSize = 0;
+	uint32_t m_nCapacity = 0;
+	uint32_t m_nDeleted = 0;
+	const sirContainerAllocator_t *m_pAllocator;
+	Hash m_hash;
+	Equal m_equal;
+
+	static bool layout( uint32_t nCapacity, size_t *pOffset, size_t *pBytes ) noexcept
+	{
+		size_t nOffset = 0;
+		size_t nEntries = 0;
+		if ( !SIRRawStorage::checkedAdd( SIRHashProbe::controlBytes<bCompactControl>( nCapacity ), alignof( K ) - 1, &nOffset ) ) {
+			return false;
+		}
+		nOffset &= ~( alignof( K ) - 1 );
+		if ( !SIRRawStorage::checkedMultiply( nCapacity, sizeof( K ), &nEntries ) ) {
+			return false;
+		}
+		*pOffset = nOffset;
+		return SIRRawStorage::checkedAdd( nOffset, nEntries, pBytes );
+	}
+
+	void release( void *pBlock, uint32_t nCapacity ) const noexcept
+	{
+		if ( pBlock != nullptr ) {
+			size_t nOffset = 0;
+			size_t nBytes = 0;
+			layout( nCapacity, &nOffset, &nBytes );
+			SIRRawStorage::deallocate( m_pAllocator, pBlock, nBytes, alignof( K ) );
+		}
+	}
+
+	bool ownsAddress( const void *pAddress ) const noexcept
+	{
+		if ( m_pControl == nullptr || pAddress == nullptr ) {
+			return false;
+		}
+		size_t nOffset = 0;
+		size_t nBytes = 0;
+		layout( m_nCapacity, &nOffset, &nBytes );
+		uintptr_t nAddress = reinterpret_cast<uintptr_t>( pAddress );
+		uintptr_t nStart = reinterpret_cast<uintptr_t>( m_pControl );
+		return nAddress >= nStart && nAddress - nStart < nBytes;
+	}
+
+	uint32_t locate( const K& key ) const
+	{
+		if ( m_nCapacity == 0 ) {
+			return UINT32_MAX;
+		}
+		uint32_t iIndex = SIRHashProbe::firstIndex( m_hash( key ), m_nCapacity );
+		for ( uint32_t nProbe = 0; nProbe < m_nCapacity; ++nProbe ) {
+			if ( SIRHashProbe::getControl<bCompactControl>( m_pControl, iIndex ) == SIRHashProbe::EMPTY ) {
+				return UINT32_MAX;
+			}
+			if ( SIRHashProbe::getControl<bCompactControl>( m_pControl, iIndex ) == SIRHashProbe::OCCUPIED &&
+			     m_equal( m_pKeys[iIndex], key ) ) {
+				return iIndex;
+			}
+			iIndex = ( iIndex + 1 ) & ( m_nCapacity - 1 );
+		}
+		return UINT32_MAX;
+	}
+
+	SIRContainerResult rehash( uint32_t nCapacity )
+	{
+		size_t nOffset = 0;
+		size_t nBytes = 0;
+		if ( !layout( nCapacity, &nOffset, &nBytes ) ) {
+			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
+		}
+		void *pBlock = nullptr;
+		SIRContainerResult eResult = SIRRawStorage::tryAllocate( m_pAllocator, nBytes, alignof( K ), &pBlock );
+		if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
+			return eResult;
+		}
+		uint8_t *pControl = static_cast<uint8_t *>( pBlock );
+		K *pKeys = reinterpret_cast<K *>( pControl + nOffset );
+		memset( pControl, SIRHashProbe::EMPTY, SIRHashProbe::controlBytes<bCompactControl>( nCapacity ) );
+		try {
+			for ( uint32_t iOld = 0; iOld < m_nCapacity; ++iOld ) {
+				if ( SIRHashProbe::getControl<bCompactControl>( m_pControl, iOld ) != SIRHashProbe::OCCUPIED ) {
+					continue;
+				}
+				uint32_t iNew = SIRHashProbe::firstIndex( m_hash( m_pKeys[iOld] ), nCapacity );
+				while ( SIRHashProbe::getControl<bCompactControl>( pControl, iNew ) == SIRHashProbe::OCCUPIED ) {
+					iNew = ( iNew + 1 ) & ( nCapacity - 1 );
+				}
+				new ( pKeys + iNew ) K( std::move_if_noexcept( m_pKeys[iOld] ) );
+				SIRHashProbe::setControl<bCompactControl>( pControl, iNew, SIRHashProbe::OCCUPIED );
+			}
+		} catch ( ... ) {
+			for ( uint32_t iIndex = 0; iIndex < nCapacity; ++iIndex ) {
+				if ( SIRHashProbe::getControl<bCompactControl>( pControl, iIndex ) == SIRHashProbe::OCCUPIED ) {
+					pKeys[iIndex].~K();
+				}
+			}
+			release( pBlock, nCapacity );
+			throw;
+		}
+		uint32_t nOldSize = m_nSize;
+		clear();
+		release( m_pControl, m_nCapacity );
+		m_pControl = pControl;
+		m_pKeys = pKeys;
+		m_nSize = nOldSize;
+		m_nCapacity = nCapacity;
+		return SIRContainerResult::SIR_CONTAINER_OK;
+	}
+
+	template <typename KeyArg>
+	SIRContainerResult insertInternal( KeyArg&& key, bool *pInserted )
+	{
+		if ( pInserted != nullptr ) {
+			*pInserted = false;
+		}
+		if ( contains( key ) ) {
+			return SIRContainerResult::SIR_CONTAINER_OK;
+		}
+		if ( m_nSize == UINT32_MAX ) {
+			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
+		}
+		if ( m_nCapacity == 0 || ( static_cast<uint64_t>( m_nSize ) + m_nDeleted + 1 ) * 8 > static_cast<uint64_t>( m_nCapacity ) * 7 ) {
+			uint32_t nNeeded = 0;
+			SIRContainerResult eResult = SIRHashProbe::capacityForCount( m_nSize + 1, &nNeeded );
+			if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
+				return eResult;
+			}
+			uint32_t nCapacity = nNeeded > m_nCapacity ? nNeeded : m_nCapacity;
+			if ( ownsAddress( &key ) ) {
+				if constexpr ( std::is_copy_constructible<K>::value ) {
+					K staged( key );
+					eResult = rehash( nCapacity );
+					if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
+						return eResult;
+					}
+					return insertInternal( std::move( staged ), pInserted );
+				}
+				return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
+			}
+			eResult = rehash( nCapacity );
+			if ( eResult != SIRContainerResult::SIR_CONTAINER_OK ) {
+				return eResult;
+			}
+		}
+		uint32_t iIndex = SIRHashProbe::firstIndex( m_hash( key ), m_nCapacity );
+		uint32_t iDeleted = UINT32_MAX;
+		while ( SIRHashProbe::getControl<bCompactControl>( m_pControl, iIndex ) != SIRHashProbe::EMPTY ) {
+			if ( SIRHashProbe::getControl<bCompactControl>( m_pControl, iIndex ) == SIRHashProbe::DELETED && iDeleted == UINT32_MAX ) {
+				iDeleted = iIndex;
+			}
+			iIndex = ( iIndex + 1 ) & ( m_nCapacity - 1 );
+		}
+		if ( iDeleted != UINT32_MAX ) {
+			iIndex = iDeleted;
+		}
+		new ( m_pKeys + iIndex ) K( std::forward<KeyArg>( key ) );
+		if ( SIRHashProbe::getControl<bCompactControl>( m_pControl, iIndex ) == SIRHashProbe::DELETED ) {
+			--m_nDeleted;
+		}
+		SIRHashProbe::setControl<bCompactControl>( m_pControl, iIndex, SIRHashProbe::OCCUPIED );
+		++m_nSize;
+		if ( pInserted != nullptr ) {
+			*pInserted = true;
+		}
+		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 };
 

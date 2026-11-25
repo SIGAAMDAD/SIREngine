@@ -147,41 +147,6 @@ typedef struct sirRenderBufferRange_s
 	uint64_t nSizeBytes;
 } sirRenderBufferRange_t;
 
-// hView and hResolveView are borrowed views. A framebuffer owns no texture
-// memory. Load/store operations are per attachment, not per texture.
-typedef struct sirRenderAttachmentDesc_s
-{
-	sirGraphicsHandle_t hView;
-	sirGraphicsHandle_t hResolveView;
-	SIRRenderLoadOp eLoad;
-	SIRRenderStoreOp eStore;
-	float szClearColor[4];
-	uint32_t nAspectMask;
-} sirRenderAttachmentDesc_t;
-
-// Depth and stencil have distinct load/store semantics on modern APIs.
-typedef struct sirRenderDepthStencilAttachmentDesc_s
-{
-	sirGraphicsHandle_t hView;
-	SIRRenderLoadOp eDepthLoad;
-	SIRRenderStoreOp eDepthStore;
-	SIRRenderLoadOp eStencilLoad;
-	SIRRenderStoreOp eStencilStore;
-	float fClearDepth;
-	uint32_t nClearStencil;
-} sirRenderDepthStencilAttachmentDesc_t;
-
-typedef struct sirRenderFramebufferDesc_s
-{
-	const sirRenderAttachmentDesc_t *pColors;
-	uint32_t nColorCount;
-	sirRenderDepthStencilAttachmentDesc_t depthStencil;
-	uint32_t nWidth;
-	uint32_t nHeight;
-	uint32_t nLayers;
-	uint32_t nSampleCount;
-} sirRenderFramebufferDesc_t;
-
 // Extends the original simplified sampler state for comparison sampling,
 // border color and LOD bias. Migration needs a canonical createSampler input.
 typedef struct sirRenderSamplerDesc_s

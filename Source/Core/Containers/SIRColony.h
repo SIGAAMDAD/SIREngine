@@ -1,6 +1,14 @@
 /* SIREngine - MPL-2.0. Stable-address segmented live-slot container. */
-#ifndef SIR_COLONY_H
-#define SIR_COLONY_H
+#ifndef __SIR_COLONY_H__
+#define __SIR_COLONY_H__
+
+#include <Core/SIRPCH.h>
+
+// clang-format off
+#ifdef SIR_PRAGMA_ONCE_SUPPORTED
+	#pragma once
+#endif
+// clang-format on
 #include <Core/Containers/SIRRawStorage.h>
 #include <new>
 #include <stdint.h>
@@ -21,6 +29,7 @@ template <typename T, uint32_t BLOCK_SIZE = 64, bool TRACK_GENERATIONS = false>
 class SIRColony
 {
 	static_assert( BLOCK_SIZE > 0 && BLOCK_SIZE <= 64, "Block size must fit a bitmap" );
+
 	struct Block : SIRColonyGenerationStorage<TRACK_GENERATIONS, BLOCK_SIZE>
 	{
 		Block *pNext;
@@ -29,15 +38,17 @@ class SIRColony
 		uint64_t nOccupied;
 		alignas( T ) unsigned char szSlots[BLOCK_SIZE * sizeof( T )];
 	};
+
 	const sirContainerAllocator_t *m_pAllocator;
 	Block *m_pFirst = nullptr;
 	Block *m_pAvailable = nullptr;
 	uint32_t m_nSize = 0;
 	uint32_t m_nBlocks = 0;
 	uint64_t m_nNextGeneration = 0;
+
 	static T *slot( Block *pBlock, uint32_t iIndex ) noexcept
 	{
-		return ( T * )( pBlock->szSlots + static_cast<size_t>(iIndex * sizeof(  T  )) );
+		return ( T * )( pBlock->szSlots + static_cast<size_t>( iIndex * sizeof( T ) ) );
 	}
 
 	void attachAvailable( Block *pBlock ) noexcept
@@ -49,6 +60,7 @@ class SIRColony
 		}
 		m_pAvailable = pBlock;
 	}
+
 	void detachAvailable( Block *pBlock ) noexcept
 	{
 		if ( pBlock->pPreviousAvailable != nullptr ) {
@@ -62,11 +74,12 @@ class SIRColony
 		pBlock->pNextAvailable = nullptr;
 		pBlock->pPreviousAvailable = nullptr;
 	}
+
 	static uint32_t firstFreeBit( uint64_t nOccupied ) noexcept
 	{
 		const uint64_t nVacant = ~nOccupied;
 #if defined( __clang__ ) || defined( __GNUC__ )
-		return static_cast<uint32_t>(__builtin_ctzll( nVacant ));
+		return static_cast<uint32_t>( __builtin_ctzll( nVacant ) );
 #else
 		uint32_t iBit = 0;
 		while ( ( nVacant & ( uint64_t( 1 ) << iBit ) ) == 0 ) {
@@ -75,10 +88,11 @@ class SIRColony
 		return iBit;
 #endif
 	}
+
 	static uint32_t firstOccupiedBit( uint64_t nOccupied ) noexcept
 	{
 #if defined( __clang__ ) || defined( __GNUC__ )
-		return static_cast<uint32_t>(__builtin_ctzll( nOccupied ));
+		return static_cast<uint32_t>( __builtin_ctzll( nOccupied ) );
 #else
 		uint32_t iBit = 0;
 		while ( ( nOccupied & ( uint64_t( 1 ) << iBit ) ) == 0 ) {
@@ -94,13 +108,17 @@ public:
 		T *pValue = nullptr;
 		uint64_t nGeneration = 0;
 	};
-	explicit SIRColony( const sirContainerAllocator_t *pAllocator ) noexcept : m_pAllocator( pAllocator )
+
+	explicit SIRColony( const sirContainerAllocator_t *pAllocator ) noexcept
+	    : m_pAllocator( pAllocator )
 	{
 	}
-	~SIRColony( void ) noexcept
+
+	~SIRColony() noexcept
 	{
 		clear();
 	}
+
 	SIRColony( const SIRColony& ) = delete;
 	SIRColony& operator=( const SIRColony& ) = delete;
 
@@ -160,6 +178,7 @@ public:
 		*ppValue = pValue;
 		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
+
 	// Generation-aware handles are enabled only for tracked colony variants.
 	// Untracked colonies retain the original compact block representation.
 	Handle tryGetHandle( T *pValue ) const noexcept
@@ -168,13 +187,13 @@ public:
 		if ( pValue == nullptr ) {
 			return {};
 		}
-		const uintptr_t nAddress = reinterpret_cast<uintptr_t>(pValue);
+		const uintptr_t nAddress = reinterpret_cast<uintptr_t>( pValue );
 		for ( Block *pBlock = m_pFirst; pBlock != nullptr; pBlock = pBlock->pNext ) {
-			const uintptr_t nStart = reinterpret_cast<uintptr_t>(pBlock->szSlots);
+			const uintptr_t nStart = reinterpret_cast<uintptr_t>( pBlock->szSlots );
 			if ( nAddress < nStart || nAddress - nStart >= sizeof( pBlock->szSlots ) || ( nAddress - nStart ) % sizeof( T ) != 0 ) {
 				continue;
 			}
-			const uint32_t iSlot = static_cast<uint32_t>(  ( nAddress - nStart ) / sizeof( T )  );
+			const uint32_t iSlot = static_cast<uint32_t>( ( nAddress - nStart ) / sizeof( T ) );
 			if ( ( pBlock->nOccupied & ( uint64_t( 1 ) << iSlot ) ) != 0 ) {
 				return { pValue, pBlock->nGenerations[iSlot] };
 			}
@@ -219,9 +238,9 @@ public:
 		if ( pValue == nullptr ) {
 			return false;
 		}
-		const uintptr_t nAddress = reinterpret_cast<uintptr_t>(pValue);
+		const uintptr_t nAddress = reinterpret_cast<uintptr_t>( pValue );
 		for ( Block *pBlock = m_pFirst; pBlock != nullptr; pBlock = pBlock->pNext ) {
-			const uintptr_t nStart = reinterpret_cast<uintptr_t>(pBlock->szSlots);
+			const uintptr_t nStart = reinterpret_cast<uintptr_t>( pBlock->szSlots );
 			const uintptr_t nEnd = nStart + sizeof( pBlock->szSlots );
 			if ( nAddress < nStart || nAddress >= nEnd ) {
 				continue;
@@ -229,7 +248,7 @@ public:
 			if ( ( nAddress - nStart ) % sizeof( T ) != 0 ) {
 				return false;
 			}
-			const uint32_t iIndex = static_cast<uint32_t>(  ( nAddress - nStart ) / sizeof( T )  );
+			const uint32_t iIndex = static_cast<uint32_t>( ( nAddress - nStart ) / sizeof( T ) );
 			const uint64_t nMask = uint64_t( 1 ) << iIndex;
 			if ( ( pBlock->nOccupied & nMask ) == 0 ) {
 				return false;
@@ -245,6 +264,7 @@ public:
 		}
 		return false;
 	}
+
 	template <typename Visitor>
 	void forEach( Visitor&& visitor ) const
 	{
@@ -256,6 +276,7 @@ public:
 			}
 		}
 	}
+
 	void clear( void ) noexcept
 	{
 		Block *pBlock = m_pFirst;
@@ -274,16 +295,20 @@ public:
 		m_nBlocks = 0;
 		m_nSize = 0;
 	}
+
 	uint32_t getSize( void ) const noexcept
 	{
 		return m_nSize;
 	}
+
 	sirContainerFootprint_t getFootprint( void ) const noexcept
 	{
-		return { sizeof( *this ), static_cast<uint64_t>(m_nBlocks * sizeof(  Block  )), 0, 0, static_cast<uint64_t>(m_nSize * sizeof(  T  )) };
+		return {
+		    sizeof( *this ), static_cast<uint64_t>( m_nBlocks * sizeof( Block ) ), 0, 0, static_cast<uint64_t>( m_nSize * sizeof( T ) ) };
 	}
 };
+
 template <typename T, uint32_t BLOCK_SIZE = 64>
 using SIRGenerationColony = SIRColony<T, BLOCK_SIZE, true>;
 
-#endif
+#endif /* __SIR_COLONY_H__ */

@@ -58,8 +58,7 @@ public:
 		return true;
 	}
 
-	static SIRContainerResult tryAllocate( const sirContainerAllocator_t *pAllocator, size_t nBytes, size_t nAlignment,
-	                                         void **ppMemory ) noexcept
+	static SIRContainerResult tryAllocate( const sirContainerAllocator_t *pAllocator, size_t nBytes, size_t nAlignment, void **ppMemory ) noexcept
 	{
 		if ( ppMemory == nullptr ) {
 			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
@@ -75,7 +74,7 @@ public:
 		if ( pMemory == nullptr ) {
 			return SIRContainerResult::SIR_CONTAINER_OUT_OF_MEMORY;
 		}
-		if ( ( reinterpret_cast<uintptr_t>(pMemory) & ( nAlignment - 1 ) ) != 0 ) {
+		if ( ( reinterpret_cast<uintptr_t>( pMemory ) & ( nAlignment - 1 ) ) != 0 ) {
 			pAllocator->pfnDeallocate( pAllocator->pContext, pMemory, nBytes, nAlignment );
 			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
@@ -83,8 +82,12 @@ public:
 		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
-	static bool tryExpandInPlace( const sirContainerAllocatorCapabilities_t *pCapabilities, void *pMemory, size_t nOldBytes,
-	                              size_t nRequestedBytes, size_t nAlignment, size_t *pActualBytes ) noexcept
+	static bool tryExpandInPlace( const sirContainerAllocatorCapabilities_t *pCapabilities,
+	                              void *pMemory,
+	                              size_t nOldBytes,
+	                              size_t nRequestedBytes,
+	                              size_t nAlignment,
+	                              size_t *pActualBytes ) noexcept
 	{
 		if ( pActualBytes == nullptr || pMemory == nullptr || pCapabilities == nullptr || pCapabilities->pfnTryExpandInPlace == nullptr ||
 		     nRequestedBytes < nOldBytes ) {
@@ -99,15 +102,17 @@ public:
 		return true;
 	}
 
-	static bool tryGetUsableSize( const sirContainerAllocatorCapabilities_t *pCapabilities, const void *pMemory, size_t nRequestedBytes,
-	                              size_t nAlignment, size_t *pActualBytes ) noexcept
+	static bool tryGetUsableSize( const sirContainerAllocatorCapabilities_t *pCapabilities,
+	                              const void *pMemory,
+	                              size_t nRequestedBytes,
+	                              size_t nAlignment,
+	                              size_t *pActualBytes ) noexcept
 	{
 		if ( pActualBytes == nullptr || pMemory == nullptr || pCapabilities == nullptr || pCapabilities->pfnGetUsableSize == nullptr ) {
 			return false;
 		}
 		size_t nActual = 0;
-		if ( !pCapabilities->pfnGetUsableSize( pCapabilities->pContext, pMemory, nRequestedBytes, nAlignment, &nActual ) ||
-		     nActual < nRequestedBytes ) {
+		if ( !pCapabilities->pfnGetUsableSize( pCapabilities->pContext, pMemory, nRequestedBytes, nAlignment, &nActual ) || nActual < nRequestedBytes ) {
 			return false;
 		}
 		*pActualBytes = nActual;
@@ -172,7 +177,7 @@ public:
 		static_assert( CAN_RELOCATE, "Transactional relocation requires nothrow move construction or copy construction" );
 		if constexpr ( SIRRelocationTraits<T>::CAN_BYTE_RELOCATE ) {
 			if ( nCount != 0 ) {
-				memcpy( pDestination, pSource, static_cast<size_t>(nCount * sizeof(  T  )) );
+				memcpy( pDestination, pSource, static_cast<size_t>( nCount * sizeof( T ) ) );
 			}
 			return;
 		}

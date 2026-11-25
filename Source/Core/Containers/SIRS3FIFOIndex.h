@@ -1,17 +1,42 @@
-/* SIREngine - MPL-2.0. Three-queue scan-resistant FIFO cache admission index. */
-#ifndef SIR_S3_FIFO_INDEX_H
-#define SIR_S3_FIFO_INDEX_H
+/*
+===========================================================================
+SIREngine MPLv2 Source Code
+Copyright (C) 2023-2027 Noah Van Til
+
+This Source Code Form is subject to the terms of the Mozilla Public
+License, v2. If a copy of the MPL was not distributed with this
+file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+This software is provided "as is", without warranty of any kind,
+express or implied, including but not limited to the warranties
+of merchantability, fitness for a particular purpose and noninfringement.
+===========================================================================
+*/
+
+#ifndef __SIR_S3FIFOINDEX_H__
+#define __SIR_S3FIFOINDEX_H__
+
+#include <Core/SIRPCH.h>
+
+// clang-format off
+#ifdef SIR_PRAGMA_ONCE_SUPPORTED
+	#pragma once
+#endif
+// clang-format on
+
 #include <Core/Containers/SIRVector.h>
 #include <Core/Containers/SIRFlatHashMap.h>
 
 class SIRS3FIFOIndex
 {
 	static constexpr uint32_t NONE = UINT32_MAX;
-	enum class SIRQueue : uint8_t {
+	enum class SIRQueue : uint8_t
+	{
 		SMALL = 0,
 		MAIN = 1,
 		GHOST = 2
 	};
+
 	struct Entry
 	{
 		uint64_t nKey = 0;
@@ -22,12 +47,14 @@ class SIRS3FIFOIndex
 		SIRQueue eQueue = SIRQueue::SMALL;
 		bool bLive = false;
 	};
+
 	struct List
 	{
 		uint32_t iHead = NONE;
 		uint32_t iTail = NONE;
 		uint32_t nCount = 0;
 	};
+
 	SIRVector<Entry> m_entries;
 	SIRFlatHashMap<uint64_t, uint32_t> m_positions;
 	List m_lists[3];
@@ -35,6 +62,7 @@ class SIRS3FIFOIndex
 	uint32_t m_nResidentCapacity = 0;
 	uint32_t m_nGhostCapacity = 0;
 	uint32_t m_nResidents = 0;
+
 	void unlink( uint32_t iEntry ) noexcept
 	{
 		Entry& entry = m_entries[iEntry];
@@ -51,6 +79,7 @@ class SIRS3FIFOIndex
 		}
 		--list.nCount;
 	}
+
 	void append( uint32_t iEntry, SIRQueue eQueue ) noexcept
 	{
 		Entry& entry = m_entries[iEntry];
@@ -66,6 +95,7 @@ class SIRS3FIFOIndex
 		list.iTail = iEntry;
 		++list.nCount;
 	}
+
 	void dropOldestGhost( void ) noexcept
 	{
 		const uint32_t iEntry = m_lists[SIRQueue::GHOST].iHead;
@@ -78,6 +108,7 @@ class SIRS3FIFOIndex
 		m_entries[iEntry].iFree = m_iFree;
 		m_iFree = iEntry;
 	}
+
 	void retireResident( void ) noexcept
 	{
 		uint32_t iEntry = m_lists[SIRQueue::SMALL].iHead;
@@ -103,9 +134,12 @@ class SIRS3FIFOIndex
 	}
 
 public:
-	explicit SIRS3FIFOIndex( const sirContainerAllocator_t *pAllocator ) : m_entries( pAllocator ), m_positions( pAllocator )
+	explicit SIRS3FIFOIndex( const sirContainerAllocator_t *pAllocator )
+	    : m_entries( pAllocator ),
+	      m_positions( pAllocator )
 	{
 	}
+
 	SIRContainerResult tryInitialize( uint32_t nResidents, uint32_t nGhosts )
 	{
 		if ( m_nResidentCapacity != 0 || nResidents == 0 || nGhosts == 0 || nResidents > UINT32_MAX - nGhosts ) {
@@ -123,6 +157,7 @@ public:
 		m_nGhostCapacity = nGhosts;
 		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
+
 	SIRContainerResult tryAccess( uint64_t nKey, bool *pHit = nullptr )
 	{
 		if ( m_nResidentCapacity == 0 ) {
@@ -192,18 +227,21 @@ public:
 		}
 		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
+
 	bool containsResident( uint64_t nKey ) const
 	{
 		const uint32_t *pIndex = m_positions.find( nKey );
 		return pIndex != nullptr && m_entries[*pIndex].eQueue != SIRQueue::GHOST;
 	}
+
 	uint32_t getResidentCount( void ) const noexcept
 	{
 		return m_nResidents;
 	}
+
 	uint32_t getGhostCount( void ) const noexcept
 	{
 		return m_lists[SIRQueue::GHOST].nCount;
 	}
 };
-#endif
+#endif /* __SIR_S3FIFOINDEX_H__ */

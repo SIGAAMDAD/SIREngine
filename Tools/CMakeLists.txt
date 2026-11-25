@@ -23,12 +23,12 @@ target_compile_features(SIRAnimationCook PUBLIC cxx_std_17)
 sir_configure_owned_target(SIRAnimationCook)
 
 # -- Tools/SIRPackCooker --
-# Offline SIRPack V1 writer; runtime reads remain in SIR::Resources.
+# Offline SIRPack V1 writer consumes the dedicated package target.
 add_library(SIRPackCooker STATIC ${PROJECT_SOURCE_DIR}/Tools/SIRPackCooker/SIRPackCooker.cpp ${PROJECT_SOURCE_DIR}/Tools/SIRPackCooker/SIRPackShippingGuard.cpp)
 add_library(SIR::PackCooker ALIAS SIRPackCooker)
 target_include_directories(SIRPackCooker PUBLIC "${PROJECT_SOURCE_DIR}")
 target_compile_features(SIRPackCooker PUBLIC cxx_std_17)
-target_link_libraries(SIRPackCooker PUBLIC SIR::Resources)
+target_link_libraries(SIRPackCooker PUBLIC SIR::Pack SIR::Resources)
 sir_configure_owned_target(SIRPackCooker)
 
 # -- Tools/GeometryCooker --

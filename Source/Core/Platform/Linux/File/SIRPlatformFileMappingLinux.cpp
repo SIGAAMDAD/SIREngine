@@ -41,8 +41,7 @@ SIRPlatformFileMapping::~SIRPlatformFileMapping( void ) noexcept
 	static_cast<void>( unmap() );
 }
 
-sirFileResult SIRPlatformFileMapping::map( const SIRPlatformFile& rFile, uint64_t nOffset, uint64_t nBytes,
-                                             sirFileMapMode eMode ) noexcept
+sirFileResult SIRPlatformFileMapping::map( const SIRPlatformFile& rFile, uint64_t nOffset, uint64_t nBytes, sirFileMapMode eMode ) noexcept
 {
 	if ( isMapped() || !rFile.isOpen() || eMode > sirFileMapMode::SIR_FILE_MAP_COPY_ON_WRITE || ( rFile.m_nFlags & static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_READ ) ) == 0 ||
 	     ( eMode == sirFileMapMode::SIR_FILE_MAP_READ_WRITE && ( rFile.m_nFlags & static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_WRITE ) ) == 0 ) ) {

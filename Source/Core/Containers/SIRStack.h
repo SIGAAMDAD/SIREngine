@@ -32,11 +32,9 @@ of merchantability, fitness for a particular purpose and noninfringement.
 template <typename T>
 class SIRStack
 {
-private:
-	SIRVector<T> m_elements;
-
 public:
-	explicit SIRStack( const sirContainerAllocator_t *pAllocator ) noexcept : m_elements( pAllocator )
+	explicit SIRStack( const sirContainerAllocator_t *pAllocator ) noexcept
+	    : m_elements( pAllocator )
 	{
 	}
 
@@ -44,11 +42,13 @@ public:
 	{
 		return m_elements.getSize();
 	}
+
 	const T *peek( void ) const noexcept
 	{
 		uint32_t nSize = m_elements.getSize();
 		return nSize == 0 ? nullptr : m_elements.tryGet( nSize - 1 );
 	}
+
 	T *peek( void ) noexcept
 	{
 		uint32_t nSize = m_elements.getSize();
@@ -60,26 +60,34 @@ public:
 	{
 		return m_elements.tryEmplaceBack( std::forward<Args>( args )... );
 	}
+
 	SIRContainerResult tryPush( const T& value )
 	{
 		return m_elements.tryPushBack( value );
 	}
+
 	SIRContainerResult tryPush( T&& value )
 	{
 		return m_elements.tryPushBack( std::move( value ) );
 	}
+
 	SIRContainerResult tryPop( void ) noexcept
 	{
 		return m_elements.tryPopBack();
 	}
+
 	SIRContainerResult tryShrinkToFit( void )
 	{
 		return m_elements.tryShrinkToFit();
 	}
+
 	void clear( void ) noexcept
 	{
 		m_elements.clear();
 	}
+
+private:
+	SIRVector<T> m_elements;
 };
 
 #endif // __SIR_STACK_H__

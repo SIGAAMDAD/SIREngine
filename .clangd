@@ -20,7 +20,6 @@ Diagnostics:
     FastCheckFilter: Loose
   UnusedIncludes: Strict
   # Detect direct dependency omissions (first-party headers should be standalone).
-  MissingIncludes: Strict
   Includes:
     # Every first-party header explicitly includes this engine PCH by policy.
     IgnoreHeader: ['(^|/)Core/SIRPCH\.h$']

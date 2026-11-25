@@ -1,0 +1,16 @@
+{
+    "recommendations": [
+        "ms-vscode.cmake-tools",
+        "llvm-vs-code-extensions.vscode-clangd",
+        "ms-vscode.cpptools",
+        "editorconfig.editorconfig",
+        "github.vscode-pull-request-github",
+        "github.vscode-github-actions",
+        "eamodio.gitlens",
+        "redhat.vscode-yaml",
+        "slevesque.shader",
+        "ms-vscode.powershell",
+        "ms-python.python",
+        "ms-vscode.hexeditor"
+    ]
+}

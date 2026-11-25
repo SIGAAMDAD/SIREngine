@@ -5,6 +5,32 @@ target_include_directories(SIRCore PUBLIC
     "${PROJECT_SOURCE_DIR}/Source"
     "${PROJECT_SOURCE_DIR}/Build/CMake")
 target_compile_features(SIRCore PUBLIC cxx_std_17)
+
+find_package(BZip2 REQUIRED)
+find_package(ZLIB REQUIRED)
+find_path(SIR_LZ4_INCLUDE_DIR NAMES lz4.h REQUIRED)
+find_library(SIR_LZ4_LIBRARY NAMES lz4 REQUIRED)
+find_path(SIR_ZSTD_INCLUDE_DIR NAMES zstd.h REQUIRED)
+find_library(SIR_ZSTD_LIBRARY NAMES zstd REQUIRED)
+
+add_library(SIR::LZ4 UNKNOWN IMPORTED)
+set_target_properties(SIR::LZ4 PROPERTIES
+    IMPORTED_LOCATION "${SIR_LZ4_LIBRARY}"
+    INTERFACE_INCLUDE_DIRECTORIES "${SIR_LZ4_INCLUDE_DIR}")
+add_library(SIR::Zstd UNKNOWN IMPORTED)
+set_target_properties(SIR::Zstd PROPERTIES
+    IMPORTED_LOCATION "${SIR_ZSTD_LIBRARY}"
+    INTERFACE_INCLUDE_DIRECTORIES "${SIR_ZSTD_INCLUDE_DIR}")
+target_link_libraries(SIRCore PRIVATE BZip2::BZip2 ZLIB::ZLIB SIR::LZ4 SIR::Zstd)
+target_sources(SIRCore PRIVATE
+    Compression/SIRBZip2Codec.cpp
+    Compression/SIRLZ4Codec.cpp
+    Compression/SIRZlibCodec.cpp
+    Compression/SIRZstdCodec.cpp)
+target_sources(SIRCore PRIVATE
+    IO/SIRIOBufferPool.cpp
+    IO/SIRIORequestPlanner.cpp
+    IO/Backends/SIRJobIOService.cpp)
 if(MSVC)
     target_compile_options(SIRCore PRIVATE /W4)
 else()

@@ -35,41 +35,17 @@ of merchantability, fitness for a particular purpose and noninfringement.
 template <typename T>
 class SIRRingBuffer
 {
-private:
-	T *m_pData = nullptr;
-	uint32_t m_nSize = 0;
-	uint32_t m_nCapacity = 0;
-	uint32_t m_iHead = 0;
-	const sirContainerAllocator_t *m_pAllocator;
-
-	bool overlapsStorage( const T *pItems, uint32_t nCount ) const noexcept
-	{
-		const uintptr_t nStorage = reinterpret_cast<uintptr_t>(m_pData);
-		const uintptr_t nInput = reinterpret_cast<uintptr_t>(pItems);
-		const uint64_t nStorageBytes = static_cast<uint64_t>(m_nCapacity * sizeof(  T  ));
-		const uint64_t nInputBytes = static_cast<uint64_t>(nCount * sizeof(  T  ));
-		if ( nInput >= nStorage ) {
-			return nInput - nStorage < nStorageBytes;
-		}
-		return nStorage - nInput < nInputBytes;
-	}
-
-	uint32_t wrapIndex( uint64_t iIndex ) const noexcept
-	{
-		if ( ( m_nCapacity & ( m_nCapacity - 1 ) ) == 0 ) {
-			return static_cast<uint32_t>(iIndex) & ( m_nCapacity - 1 );
-		}
-		return static_cast<uint32_t>( iIndex >= m_nCapacity ? iIndex - m_nCapacity : iIndex );
-	}
-
 public:
-	explicit SIRRingBuffer( const sirContainerAllocator_t *pAllocator ) noexcept : m_pAllocator( pAllocator )
+	explicit SIRRingBuffer( const sirContainerAllocator_t *pAllocator ) noexcept
+	    : m_pAllocator( pAllocator )
 	{
 	}
-	~SIRRingBuffer( void ) noexcept
+
+	~SIRRingBuffer() noexcept
 	{
 		clearAndRelease();
 	}
+
 	SIRRingBuffer( const SIRRingBuffer& ) = delete;
 	SIRRingBuffer& operator=( const SIRRingBuffer& ) = delete;
 	SIRRingBuffer( SIRRingBuffer&& ) = delete;
@@ -87,7 +63,7 @@ public:
 		void *pMemory = nullptr;
 		SIRContainerResult eResult = SIRRawStorage::tryAllocate( m_pAllocator, nBytes, alignof( T ), &pMemory );
 		if ( eResult == SIRContainerResult::SIR_CONTAINER_OK ) {
-			m_pData = static_cast<T *>(pMemory);
+			m_pData = static_cast<T *>( pMemory );
 			m_nCapacity = nCapacity;
 		}
 		return eResult;
@@ -97,10 +73,12 @@ public:
 	{
 		return m_nSize;
 	}
+
 	uint32_t getCapacity( void ) const noexcept
 	{
 		return m_nCapacity;
 	}
+
 	bool isFull( void ) const noexcept
 	{
 		return m_nSize == m_nCapacity && m_nCapacity != 0;
@@ -110,6 +88,7 @@ public:
 	{
 		return m_nSize == 0 ? nullptr : &m_pData[m_iHead];
 	}
+
 	const T *front( void ) const noexcept
 	{
 		return m_nSize == 0 ? nullptr : &m_pData[m_iHead];
@@ -117,12 +96,12 @@ public:
 
 	T *back( void ) noexcept
 	{
-		return m_nSize == 0 ? nullptr : &m_pData[wrapIndex( static_cast<uint64_t>(m_iHead) + m_nSize - 1 )];
+		return m_nSize == 0 ? nullptr : &m_pData[wrapIndex( static_cast<uint64_t>( m_iHead ) + m_nSize - 1 )];
 	}
 
 	const T *back( void ) const noexcept
 	{
-		return m_nSize == 0 ? nullptr : &m_pData[wrapIndex( static_cast<uint64_t>(m_iHead) + m_nSize - 1 )];
+		return m_nSize == 0 ? nullptr : &m_pData[wrapIndex( static_cast<uint64_t>( m_iHead ) + m_nSize - 1 )];
 	}
 
 	template <typename... Args>
@@ -145,6 +124,7 @@ public:
 	{
 		return tryEmplaceFront( value );
 	}
+
 	SIRContainerResult tryPushFront( T&& value )
 	{
 		return tryEmplaceFront( std::move( value ) );
@@ -159,7 +139,7 @@ public:
 		if ( m_nSize == m_nCapacity ) {
 			return SIRContainerResult::SIR_CONTAINER_FULL;
 		}
-		uint32_t iSlot = wrapIndex( static_cast<uint64_t>(m_iHead) + m_nSize );
+		uint32_t iSlot = wrapIndex( static_cast<uint64_t>( m_iHead ) + m_nSize );
 		new ( m_pData + iSlot ) T( std::forward<Args>( args )... );
 		++m_nSize;
 		return SIRContainerResult::SIR_CONTAINER_OK;
@@ -169,6 +149,7 @@ public:
 	{
 		return tryEmplaceBack( value );
 	}
+
 	SIRContainerResult tryPushBack( T&& value )
 	{
 		return tryEmplaceBack( std::move( value ) );
@@ -193,7 +174,7 @@ public:
 			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
 
-		const uint32_t iTail = wrapIndex( static_cast<uint64_t>(m_iHead) + m_nSize );
+		const uint32_t iTail = wrapIndex( static_cast<uint64_t>( m_iHead ) + m_nSize );
 		const uint32_t nFirst = nCount < m_nCapacity - iTail ? nCount : m_nCapacity - iTail;
 		for ( uint32_t iIndex = 0; iIndex < nFirst; ++iIndex ) {
 			new ( m_pData + iTail + iIndex ) T( pItems[iIndex] );
@@ -230,7 +211,7 @@ public:
 			pOutput[iIndex] = m_pData[iIndex - nFirst];
 			m_pData[iIndex - nFirst].~T();
 		}
-		m_iHead = wrapIndex( static_cast<uint64_t>(m_iHead) + nCount );
+		m_iHead = wrapIndex( static_cast<uint64_t>( m_iHead ) + nCount );
 		m_nSize -= nCount;
 		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
@@ -241,7 +222,7 @@ public:
 			return SIRContainerResult::SIR_CONTAINER_EMPTY;
 		}
 		m_pData[m_iHead].~T();
-		m_iHead = wrapIndex( static_cast<uint64_t>(m_iHead) + 1 );
+		m_iHead = wrapIndex( static_cast<uint64_t>( m_iHead ) + 1 );
 		--m_nSize;
 		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
@@ -251,7 +232,7 @@ public:
 		if ( m_nSize == 0 ) {
 			return SIRContainerResult::SIR_CONTAINER_EMPTY;
 		}
-		uint32_t iLast = wrapIndex( static_cast<uint64_t>(m_iHead) + m_nSize - 1 );
+		uint32_t iLast = wrapIndex( static_cast<uint64_t>( m_iHead ) + m_nSize - 1 );
 		m_pData[iLast].~T();
 		--m_nSize;
 		return SIRContainerResult::SIR_CONTAINER_OK;
@@ -268,14 +249,41 @@ public:
 	void clearAndRelease( void ) noexcept
 	{
 		clear();
-		SIRRawStorage::deallocate( m_pAllocator, m_pData, static_cast<size_t>(m_nCapacity * sizeof(  T  )), alignof( T ) );
+		SIRRawStorage::deallocate( m_pAllocator, m_pData, static_cast<size_t>( m_nCapacity * sizeof( T ) ), alignof( T ) );
 		m_pData = nullptr;
 		m_nCapacity = 0;
 	}
 
 	sirContainerFootprint_t getFootprint( void ) const noexcept
 	{
-		return { 0, static_cast<uint64_t>(m_nCapacity * sizeof(  T  )), 0, 0, static_cast<uint64_t>(m_nSize * sizeof(  T  )) };
+		return { 0, static_cast<uint64_t>( m_nCapacity * sizeof( T ) ), 0, 0, static_cast<uint64_t>( m_nSize * sizeof( T ) ) };
+	}
+
+private:
+	T *m_pData = nullptr;
+	uint32_t m_nSize = 0;
+	uint32_t m_nCapacity = 0;
+	uint32_t m_iHead = 0;
+	const sirContainerAllocator_t *m_pAllocator;
+
+	bool overlapsStorage( const T *pItems, uint32_t nCount ) const noexcept
+	{
+		const uintptr_t nStorage = reinterpret_cast<uintptr_t>( m_pData );
+		const uintptr_t nInput = reinterpret_cast<uintptr_t>( pItems );
+		const uint64_t nStorageBytes = static_cast<uint64_t>( m_nCapacity * sizeof( T ) );
+		const uint64_t nInputBytes = static_cast<uint64_t>( nCount * sizeof( T ) );
+		if ( nInput >= nStorage ) {
+			return nInput - nStorage < nStorageBytes;
+		}
+		return nStorage - nInput < nInputBytes;
+	}
+
+	uint32_t wrapIndex( uint64_t iIndex ) const noexcept
+	{
+		if ( ( m_nCapacity & ( m_nCapacity - 1 ) ) == 0 ) {
+			return static_cast<uint32_t>( iIndex ) & ( m_nCapacity - 1 );
+		}
+		return static_cast<uint32_t>( iIndex >= m_nCapacity ? iIndex - m_nCapacity : iIndex );
 	}
 };
 

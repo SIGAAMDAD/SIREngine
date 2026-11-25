@@ -24,7 +24,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-#include <Resources/SIRPackFormat.h>
+#include <Streaming/Pack/SIRPackFormat.h>
 
 typedef struct sirPackCookResource_s
 {

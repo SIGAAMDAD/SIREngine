@@ -1,6 +1,14 @@
 /* SIREngine - MPL-2.0. Immutable rank/access wavelet matrix. */
-#ifndef SIR_SUCCINCT_WAVELET_MATRIX_H
-#define SIR_SUCCINCT_WAVELET_MATRIX_H
+#ifndef __SIR_SUCCINCTWAVELETMATRIX_H__
+#define __SIR_SUCCINCTWAVELETMATRIX_H__
+
+#include <Core/SIRPCH.h>
+
+// clang-format off
+#ifdef SIR_PRAGMA_ONCE_SUPPORTED
+	#pragma once
+#endif
+// clang-format on
 #include <Core/Containers/SIRRankSelectBitVector.h>
 #include <Core/Containers/SIRVector.h>
 
@@ -10,19 +18,25 @@ class SIRSuccinctWaveletMatrix
 	{
 		SIRRankSelectBitVector bits;
 		uint32_t nZeros = 0;
-		explicit Level( const sirContainerAllocator_t *pAllocator ) : bits( pAllocator )
+
+		explicit Level( const sirContainerAllocator_t *pAllocator )
+		    : bits( pAllocator )
 		{
 		}
 	};
+
 	const sirContainerAllocator_t *m_pAllocator;
 	SIRVector<Level> m_levels;
 	uint32_t m_nCount = 0;
 	uint32_t m_nBits = 0;
 
 public:
-	explicit SIRSuccinctWaveletMatrix( const sirContainerAllocator_t *pAllocator ) : m_pAllocator( pAllocator ), m_levels( pAllocator )
+	explicit SIRSuccinctWaveletMatrix( const sirContainerAllocator_t *pAllocator )
+	    : m_pAllocator( pAllocator ),
+	      m_levels( pAllocator )
 	{
 	}
+
 	SIRContainerResult tryBuild( const uint32_t *pValues, uint32_t nCount, uint32_t nBits = 32 )
 	{
 		if ( nBits == 0 || nBits > 32 || ( nCount > 0 && pValues == nullptr ) ) {
@@ -95,6 +109,7 @@ public:
 		m_nBits = nBits;
 		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
+
 	uint32_t access( uint32_t iIndex ) const noexcept
 	{
 		if ( iIndex >= m_nCount ) {
@@ -106,13 +121,14 @@ public:
 			const uint64_t nOnes = level.bits.rank1( iIndex );
 			if ( level.bits.contains( iIndex ) ) {
 				nValue |= uint32_t( 1 ) << ( m_nBits - 1 - iLevel );
-				iIndex = level.nZeros + static_cast<uint32_t>(nOnes);
+				iIndex = level.nZeros + static_cast<uint32_t>( nOnes );
 			} else {
-				iIndex -= static_cast<uint32_t>(nOnes);
+				iIndex -= static_cast<uint32_t>( nOnes );
 			}
 		}
 		return nValue;
 	}
+
 	uint32_t rank( uint32_t nValue, uint32_t nExclusive ) const noexcept
 	{
 		if ( m_nBits < 32 && nValue >= ( uint32_t( 1 ) << m_nBits ) ) {
@@ -125,8 +141,8 @@ public:
 		uint32_t iLast = nExclusive;
 		for ( uint32_t iLevel = 0; iLevel < m_nBits; ++iLevel ) {
 			const Level& level = m_levels[iLevel];
-			const uint32_t nStartOnes = static_cast<uint32_t>(level.bits.rank1( iFirst ));
-			const uint32_t nEndOnes = static_cast<uint32_t>(level.bits.rank1( iLast ));
+			const uint32_t nStartOnes = static_cast<uint32_t>( level.bits.rank1( iFirst ) );
+			const uint32_t nEndOnes = static_cast<uint32_t>( level.bits.rank1( iLast ) );
 			if ( ( ( nValue >> ( m_nBits - 1 - iLevel ) ) & 1 ) != 0 ) {
 				iFirst = level.nZeros + nStartOnes;
 				iLast = level.nZeros + nEndOnes;
@@ -137,6 +153,7 @@ public:
 		}
 		return iLast - iFirst;
 	}
+
 	// Descend to the value's final interval, then invert each stable
 	// partition with select0/select1. This avoids O(log N) full rank walks.
 	uint32_t select( uint32_t nValue, uint32_t nOrdinal ) const noexcept
@@ -151,8 +168,8 @@ public:
 		uint32_t iLast = m_nCount;
 		for ( uint32_t iLevel = 0; iLevel < m_nBits; ++iLevel ) {
 			const Level& level = m_levels[iLevel];
-			const uint32_t nFirstOnes = static_cast<uint32_t>(level.bits.rank1( iFirst ));
-			const uint32_t nLastOnes = static_cast<uint32_t>(level.bits.rank1( iLast ));
+			const uint32_t nFirstOnes = static_cast<uint32_t>( level.bits.rank1( iFirst ) );
+			const uint32_t nLastOnes = static_cast<uint32_t>( level.bits.rank1( iLast ) );
 			const uint32_t nBit = ( nValue >> ( m_nBits - iLevel - 1 ) ) & 1;
 			if ( nBit != 0 ) {
 				iFirst = level.nZeros + nFirstOnes;
@@ -177,9 +194,10 @@ public:
 		}
 		return iPosition;
 	}
+
 	uint32_t getSize( void ) const noexcept
 	{
 		return m_nCount;
 	}
 };
-#endif
+#endif /* __SIR_SUCCINCTWAVELETMATRIX_H__ */

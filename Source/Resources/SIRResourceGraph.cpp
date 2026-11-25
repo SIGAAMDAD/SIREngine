@@ -42,6 +42,8 @@ struct SIRRecordChunk
 	SIRSharedResourceChunk *m_pShared;
 	uint32_t m_iStagingSlot;
 	bool m_bNewShared;
+	uint8_t m_szDigest[32];
+	bool m_bHasDigest;
 };
 
 struct SIRPublishedResourceRecord
@@ -54,6 +56,8 @@ struct SIRPublishedResourceRecord
 	uint64_t nRetireEpoch;
 	uint64_t m_nAllocationBytes;
 	uint32_t m_nProviderPins; // Protected by the graph's pin mutex.
+	sirResourceSourceProvenance_t m_Provenance;
+	bool m_bHasProvenance;
 };
 
 struct SIRGraphSlot
@@ -1144,11 +1148,52 @@ SIRResourceResult SIRResourceGraph::prepareChunk( SIRPublishedResourceRecord *pR
 	}
 	rChunk.m_pShared = pShared;
 	rChunk.m_Info = { rInput.m_Id, pShared->m_nAlignment, pShared->m_nSize, rInput.m_ContentKey };
+	rChunk.m_bHasDigest = false;
 	if ( rChunk.m_Info.m_nBytes > UINT64_MAX - pRecord->m_Info.m_nLogicalBytes ) {
 		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	pRecord->m_Info.m_nLogicalBytes += rChunk.m_Info.m_nBytes;
 	return SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS;
+}
+
+SIRResourceResult SIRResourceGraph::prepareVerifiedChunk( SIRPublishedResourceRecord *pRecord, uint32_t iChunk,
+                                                          const sirResourceVerifiedChunk_t& rInput,
+                                                          const SIRPublishedResourceRecord *pPrior ) noexcept
+{
+	if ( pRecord == nullptr || rInput.nBytes == 0 || rInput.nAlignment == 0 || ( rInput.nAlignment & ( rInput.nAlignment - 1 ) ) != 0 ) {
+		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+	}
+	for ( uint32_t iEarlier = 0; iEarlier < iChunk; ++iEarlier ) {
+		if ( pRecord->m_pChunks[iEarlier].m_Info.m_Id.m_nValue == rInput.id.m_nValue ) return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+	}
+	SIRRecordChunk& rChunk = pRecord->m_pChunks[iChunk];
+	rChunk.m_iStagingSlot = UINT32_MAX;
+	rChunk.m_bNewShared = false;
+	if ( rInput.eMode == SIR_RESOURCE_VERIFIED_CHUNK_ATTACH_CURRENT ) {
+		if ( pPrior == nullptr || !pRecord->m_bHasProvenance ) return SIRResourceResult::SIR_RESOURCE_RESULT_MISSING_CHUNK;
+		for ( uint32_t i = 0; i < pPrior->m_Info.m_nChunkCount; ++i ) {
+			const SIRRecordChunk& prior = pPrior->m_pChunks[i];
+			if ( prior.m_Info.m_Id.m_nValue != rInput.id.m_nValue || !prior.m_bHasDigest || memcmp( prior.m_szDigest, rInput.szDigest, 32 ) != 0 ||
+				 prior.m_Info.m_ContentKey.m_nHashLo != rInput.keyContent.m_nHashLo || prior.m_Info.m_ContentKey.m_nHashHi != rInput.keyContent.m_nHashHi ||
+				 prior.m_Info.m_ContentKey.m_nFormatId != rInput.keyContent.m_nFormatId || prior.m_Info.m_ContentKey.m_nEncodingId != rInput.keyContent.m_nEncodingId ||
+				 prior.m_Info.m_nBytes != rInput.nBytes || prior.m_Info.m_nAlignment != rInput.nAlignment ) continue;
+			rChunk.m_pShared = prior.m_pShared;
+			rChunk.m_Info = prior.m_Info;
+			memcpy( rChunk.m_szDigest, rInput.szDigest, 32 );
+			rChunk.m_bHasDigest = true;
+			pRecord->m_Info.m_nLogicalBytes += rChunk.m_Info.m_nBytes;
+			return SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS;
+		}
+		return SIRResourceResult::SIR_RESOURCE_RESULT_MISSING_CHUNK;
+	}
+	SIRResourceChunkPublication input { rInput.id, rInput.keyContent, rInput.staging, false };
+	const SIRResourceResult result = prepareChunk( pRecord, iChunk, input );
+	if ( result == SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ) {
+		memcpy( rChunk.m_szDigest, rInput.szDigest, 32 );
+		rChunk.m_bHasDigest = true;
+		if ( rChunk.m_Info.m_nBytes != rInput.nBytes || rChunk.m_Info.m_nAlignment != rInput.nAlignment ) return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_FORMAT;
+	}
+	return result;
 }
 
 void SIRResourceGraph::abandonUnpublishedRecord( SIRPublishedResourceRecord *pRecord ) noexcept
@@ -1215,7 +1260,8 @@ SIRResourceResult SIRResourceGraphWriter::publish( const SIRResourcePublication&
 	}
 	if ( !pHandle || !rPublication.m_Key.m_nTypeId || !rPublication.m_nSchemaVersion ||
 	     rPublication.m_eKind > SIRResourceKind::SIR_RESOURCE_KIND_COMPOSITION || ( rPublication.m_nChunkCount && !rPublication.m_pChunks ) ||
-	     ( rPublication.m_nDependencyCount && !rPublication.m_pDependencies ) ) {
+	     ( rPublication.m_nDependencyCount && !rPublication.m_pDependencies ) ||
+	     ( rPublication.m_bVerified && ( rPublication.m_pVerifiedChunks == nullptr || rPublication.m_pChunks != nullptr ) ) ) {
 		return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	const SIRResourceResult eDependencies = m_pGraph->validateDependencies( rPublication );
@@ -1254,9 +1300,13 @@ SIRResourceResult SIRResourceGraphWriter::publish( const SIRResourcePublication&
 	for ( uint32_t iEdge = 0; iEdge < rPublication.m_nDependencyCount; ++iEdge ) {
 		pRecord->m_pDependencies[iEdge] = rPublication.m_pDependencies[iEdge];
 	}
+	pRecord->m_bHasProvenance = rPublication.m_bVerified;
+	if ( pRecord->m_bHasProvenance ) pRecord->m_Provenance = rPublication.m_Provenance;
 
 	for ( uint32_t iChunk = 0; iChunk < rPublication.m_nChunkCount; ++iChunk ) {
-		const SIRResourceResult eResult = m_pGraph->prepareChunk( pRecord, iChunk, rPublication.m_pChunks[iChunk] );
+		const SIRResourceResult eResult = rPublication.m_bVerified
+		                                     ? m_pGraph->prepareVerifiedChunk( pRecord, iChunk, rPublication.m_pVerifiedChunks[iChunk], pPrior )
+		                                     : m_pGraph->prepareChunk( pRecord, iChunk, rPublication.m_pChunks[iChunk] );
 		if ( eResult != SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS ) {
 			m_pGraph->abandonUnpublishedRecord( pRecord );
 			return eResult;
@@ -1280,6 +1330,24 @@ SIRResourceResult SIRResourceGraphWriter::publish( const SIRResourcePublication&
 	return SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS;
 }
 
+SIRResourceResult SIRResourceGraphWriter::publishVerifiedExpected( const SIRResourceVerifiedPublication& publication,
+                                                                    uint64_t nExpectedRevision, SIRResourceHandle *pHandle ) noexcept
+{
+	if ( publication.pChunks == nullptr && publication.nChunkCount != 0 ) return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+	SIRResourcePublication normal {};
+	normal.m_Key = publication.key;
+	normal.m_eKind = publication.eKind;
+	normal.m_nSchemaVersion = publication.nSchemaVersion;
+	normal.m_nFormatId = publication.nFormatId;
+	normal.m_nChunkCount = publication.nChunkCount;
+	normal.m_nDependencyCount = publication.nDependencyCount;
+	normal.m_pDependencies = publication.pDependencies;
+	normal.m_pVerifiedChunks = publication.pChunks;
+	normal.m_Provenance = publication.provenance;
+	normal.m_bVerified = true;
+	return publishExpected( normal, nExpectedRevision, pHandle );
+}
+
 SIRResourceResult SIRResourceGraph::buildReplacement( SIRPublishedResourceRecord *pCurrent, uint32_t iExcludeChunk, SIRResourceState eState,
                                                       SIRPublishedResourceRecord **pReplacement ) noexcept
 {
@@ -1293,6 +1361,8 @@ SIRResourceResult SIRResourceGraph::buildReplacement( SIRPublishedResourceRecord
 		return SIRResourceResult::SIR_RESOURCE_RESULT_OUT_OF_BUDGET;
 	}
 	pResult->m_Info = pCurrent->m_Info;
+	pResult->m_Provenance = pCurrent->m_Provenance;
+	pResult->m_bHasProvenance = pCurrent->m_bHasProvenance;
 	pResult->m_Info.m_nRevision++;
 	pResult->m_Info.m_nChunkCount = nChunks;
 	pResult->m_Info.m_nLogicalBytes = 0;
@@ -1308,6 +1378,8 @@ SIRResourceResult SIRResourceGraph::buildReplacement( SIRPublishedResourceRecord
 		}
 		pResult->m_pChunks[iNext] = pCurrent->m_pChunks[iChunk];
 		pResult->m_pChunks[iNext].m_bNewShared = false;
+		memcpy( pResult->m_pChunks[iNext].m_szDigest, pCurrent->m_pChunks[iChunk].m_szDigest, 32 );
+		pResult->m_pChunks[iNext].m_bHasDigest = pCurrent->m_pChunks[iChunk].m_bHasDigest;
 		pResult->m_pChunks[iNext].m_iStagingSlot = UINT32_MAX;
 		++pResult->m_pChunks[iNext].m_pShared->m_nReferences;
 		pResult->m_Info.m_nLogicalBytes += pResult->m_pChunks[iNext].m_Info.m_nBytes;
@@ -1681,6 +1753,28 @@ SIRResourceResult SIRResourceView::getDependency( uint32_t iEdge, SIRResourceDep
 	}
 	*pEdge = m_pRecord->m_pDependencies[iEdge];
 	return SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS;
+}
+
+SIRResourceResult SIRResourceView::getSourceProvenance( sirResourceSourceProvenance_t *pProvenance ) const noexcept
+{
+	if ( pProvenance == nullptr || !isValid() ) return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+	if ( !m_pRecord->m_bHasProvenance ) return SIRResourceResult::SIR_RESOURCE_RESULT_NOT_RESIDENT;
+	*pProvenance = m_pRecord->m_Provenance;
+	return SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS;
+}
+
+SIRResourceResult SIRResourceView::getChunkDigest( SIRResourceChunkId id, uint8_t *pDigest ) const noexcept
+{
+	if ( pDigest == nullptr || !isValid() ) return SIRResourceResult::SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+	for ( uint32_t i = 0; i < m_pRecord->m_Info.m_nChunkCount; ++i ) {
+		const SIRRecordChunk& chunk = m_pRecord->m_pChunks[i];
+		if ( chunk.m_Info.m_Id.m_nValue == id.m_nValue ) {
+			if ( !chunk.m_bHasDigest ) return SIRResourceResult::SIR_RESOURCE_RESULT_MISSING_CHUNK;
+			memcpy( pDigest, chunk.m_szDigest, 32 );
+			return SIRResourceResult::SIR_RESOURCE_RESULT_SUCCESS;
+		}
+	}
+	return SIRResourceResult::SIR_RESOURCE_RESULT_MISSING_CHUNK;
 }
 
 SIRResourceResult SIRBlobResourceView::getBytes( SIRResourceChunkId id, SIRResourceByteRange range,

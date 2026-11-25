@@ -13,7 +13,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#include <Resources/SIRPackCatalog.h>
+#include <Streaming/Pack/SIRPackCatalog.h>
 #include <Tools/SIRPackCooker/SIRPackCooker.h>
 
 #include <stdio.h>

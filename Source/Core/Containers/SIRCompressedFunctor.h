@@ -34,15 +34,18 @@ template <typename TFunctor, uint32_t nIndex, bool bEmpty = std::is_empty<TFunct
 class SIRCompressedFunctor
 {
 public:
-	SIRCompressedFunctor( void ) = default;
+	explicit SIRCompressedFunctor( void ) = default;
+
 	explicit SIRCompressedFunctor( TFunctor&& rValue ) noexcept( std::is_nothrow_move_constructible<TFunctor>::value )
 	    : m_Functor( std::move( rValue ) )
 	{
 	}
+
 	TFunctor& getFunctor( void ) noexcept
 	{
 		return m_Functor;
 	}
+
 	const TFunctor& getFunctor( void ) const noexcept
 	{
 		return m_Functor;
@@ -56,15 +59,18 @@ template <typename TFunctor, uint32_t nIndex>
 class SIRCompressedFunctor<TFunctor, nIndex, true> : private TFunctor
 {
 public:
-	SIRCompressedFunctor( void ) = default;
+	explicit SIRCompressedFunctor( void ) = default;
+
 	explicit SIRCompressedFunctor( TFunctor&& rValue ) noexcept( std::is_nothrow_move_constructible<TFunctor>::value )
 	    : TFunctor( std::move( rValue ) )
 	{
 	}
+
 	TFunctor& getFunctor( void ) noexcept
 	{
 		return *this;
 	}
+
 	const TFunctor& getFunctor( void ) const noexcept
 	{
 		return *this;

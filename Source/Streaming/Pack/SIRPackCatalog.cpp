@@ -13,7 +13,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#include <Resources/SIRPackCatalog.h>
+#include <Streaming/Pack/SIRPackCatalog.h>
 
 #include <limits.h>
 #include <string.h>
@@ -123,7 +123,7 @@ SIRPackResult SIRPackCatalog::chunkAt( uint32_t iChunk, sirPackChunk_t *pChunk )
 	chunk.nEncodedBytes = sirPackRead64( p + 16 );
 	chunk.nDecodedBytes = sirPackRead64( p + 24 );
 	memcpy( chunk.szDigest, p + 32, 32 );
-	chunk.eCodec = static_cast<SIRPackCodec>(sirPackRead16( p + 64 ));
+	chunk.eCodec = static_cast<sirPackCodec_t>(sirPackRead16( p + 64 ));
 	chunk.nCodecVersion = sirPackRead16( p + 66 );
 	chunk.nAlignment = sirPackRead32( p + 68 );
 	chunk.nDictionaryId = sirPackRead32( p + 72 );
@@ -321,12 +321,13 @@ SIRPackResult SIRPackCatalog::validateTables( uint8_t *pScratch, uint64_t nScrat
 			sirPackChunk_t chunk {};
 			chunkAt( iChunk, &chunk );
 			const uint8_t *pChunk = m_pBytes + m_nChunkOffset + static_cast<uint64_t>(iChunk) * SIR_PACK_CHUNK_RECORD_BYTES;
+			const bool bKnownCodec = chunk.eCodec == SIR_PACK_CODEC_NONE || chunk.eCodec == SIR_PACK_CODEC_ZSTD || chunk.eCodec == SIR_PACK_CODEC_LZ4;
 			if ( chunk.nShardIndex >= m_nShards || chunk.nAlignment == 0 || chunk.nAlignment > 4096 ||
 			     ( chunk.nAlignment & ( chunk.nAlignment - 1 ) ) != 0 || chunk.nOffset % chunk.nAlignment != 0 ||
 			     chunk.nDecodedBytes == 0 || chunk.nDecodedBytes > SIR_PACK_MAX_DECODED_CHUNK_BYTES || chunk.nEncodedBytes == 0 ||
-			     chunk.nEncodedBytes != chunk.nDecodedBytes || chunk.eCodec != SIRPackCodec::SIR_PACK_CODEC_NONE || chunk.nCodecVersion != 1 ||
+			     ( chunk.eCodec == SIR_PACK_CODEC_NONE && chunk.nEncodedBytes != chunk.nDecodedBytes ) || !bKnownCodec || chunk.nCodecVersion != 1 ||
 			     chunk.nDictionaryId != 0 || !sirPackZeroBytes( pChunk + 76, 4 ) || ( j > 0 && chunk.nChunkId <= nPreviousId ) ) {
-				return chunk.eCodec != SIRPackCodec::SIR_PACK_CODEC_NONE ? SIRPackResult::SIR_PACK_UNSUPPORTED_CODEC : SIRPackResult::SIR_PACK_INVALID_FORMAT;
+				return !bKnownCodec ? SIRPackResult::SIR_PACK_UNSUPPORTED_CODEC : SIRPackResult::SIR_PACK_INVALID_FORMAT;
 			}
 			sirPackShard_t shard {};
 			shardAt( chunk.nShardIndex, &shard );
@@ -437,9 +438,6 @@ SIRPackResult SIRPackCatalog::verifyDecodedChunk( uint32_t iChunk, const void *p
 	}
 	sirPackChunk_t chunk {};
 	chunkAt( iChunk, &chunk );
-	if ( chunk.eCodec != SIRPackCodec::SIR_PACK_CODEC_NONE ) {
-		return SIRPackResult::SIR_PACK_UNSUPPORTED_CODEC;
-	}
 	if ( chunk.nDecodedBytes != nBytes ) {
 		return SIRPackResult::SIR_PACK_INVALID_FORMAT;
 	}

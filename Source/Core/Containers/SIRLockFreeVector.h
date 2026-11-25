@@ -14,6 +14,12 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 #include <Core/SIRPCH.h>
 
+// clang-format off
+#ifdef SIR_PRAGMA_ONCE_SUPPORTED
+	#pragma once
+#endif
+// clang-format on
+
 #include <Core/Containers/SIRRawStorage.h>
 #include <Core/Containers/SIRReadOnlyVectorView.h>
 #include <atomic>
@@ -27,22 +33,15 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 template <typename T>
 class SIRLockFreeVector
 {
-private:
-	static constexpr uint64_t SEALED = uint64_t( 1 ) << 63;
-	static_assert( std::is_nothrow_destructible<T>::value, "Concurrent elements must be nothrow destructible" );
-	const sirContainerAllocator_t *m_pAllocator;
-	T *m_pValues = nullptr;
-	std::atomic<uint8_t> *m_pReady = nullptr;
-	uint32_t m_nCapacity = 0;
-	std::atomic<uint64_t> m_nClaimAndSeal;
-	std::atomic<uint32_t> m_nPublished;
-
 public:
 	explicit SIRLockFreeVector( const sirContainerAllocator_t *pAllocator ) noexcept
-	    : m_pAllocator( pAllocator ), m_nClaimAndSeal( 0 ), m_nPublished( 0 )
+	    : m_pAllocator( pAllocator ),
+	      m_nClaimAndSeal( 0 ),
+	      m_nPublished( 0 )
 	{
 	}
-	~SIRLockFreeVector( void ) noexcept
+
+	~SIRLockFreeVector() noexcept
 	{
 		if ( m_pReady != nullptr ) {
 			clearAfterQuiescence();
@@ -50,10 +49,11 @@ public:
 				m_pReady[i - 1].~atomic();
 			}
 		}
-		SIRRawStorage::deallocate( m_pAllocator, m_pReady, static_cast<size_t>(m_nCapacity * sizeof(  std::atomic<uint8_t>  )),
-		                           alignof( std::atomic<uint8_t> ) );
-		SIRRawStorage::deallocate( m_pAllocator, m_pValues, static_cast<size_t>(m_nCapacity * sizeof(  T  )), alignof( T ) );
+		SIRRawStorage::deallocate(
+		    m_pAllocator, m_pReady, static_cast<size_t>( m_nCapacity * sizeof( std::atomic<uint8_t> ) ), alignof( std::atomic<uint8_t> ) );
+		SIRRawStorage::deallocate( m_pAllocator, m_pValues, static_cast<size_t>( m_nCapacity * sizeof( T ) ), alignof( T ) );
 	}
+
 	SIRLockFreeVector( const SIRLockFreeVector& ) = delete;
 	SIRLockFreeVector& operator=( const SIRLockFreeVector& ) = delete;
 
@@ -79,7 +79,7 @@ public:
 			SIRRawStorage::deallocate( m_pAllocator, pValues, nValueBytes, alignof( T ) );
 			return eResult;
 		}
-		m_pValues = static_cast<T *>(pValues);
+		m_pValues = static_cast<T *>( pValues );
 		m_pReady = ( std::atomic<uint8_t> * )pReady;
 		m_nCapacity = nCapacity;
 		for ( uint32_t i = 0; i < nCapacity; ++i ) {
@@ -103,22 +103,23 @@ public:
 			if ( nObserved >= m_nCapacity ) {
 				return SIRContainerResult::SIR_CONTAINER_FULL;
 			}
-			if ( m_nClaimAndSeal.compare_exchange_weak( nObserved, nObserved + 1, std::memory_order_acq_rel,
-			                                          std::memory_order_relaxed ) ) {
+			if ( m_nClaimAndSeal.compare_exchange_weak( nObserved, nObserved + 1, std::memory_order_acq_rel, std::memory_order_relaxed ) ) {
 				break;
 			}
 		}
-		const uint32_t iIndex = static_cast<uint32_t>(nObserved);
+		const uint32_t iIndex = static_cast<uint32_t>( nObserved );
 		new ( m_pValues + iIndex ) T( std::forward<Args>( args )... );
 		m_pReady[iIndex].store( 1, std::memory_order_release );
 		m_nPublished.fetch_add( 1, std::memory_order_release );
 		*pIndex = iIndex;
 		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
+
 	SIRContainerResult tryPushBack( const T& rValue, uint32_t *pIndex ) noexcept
 	{
 		return tryEmplaceBack( pIndex, rValue );
 	}
+
 	const T *tryGetPublished( uint32_t iIndex ) const noexcept
 	{
 		if ( iIndex >= getClaimedCount() ) {
@@ -126,18 +127,22 @@ public:
 		}
 		return m_pReady[iIndex].load( std::memory_order_acquire ) != 0 ? m_pValues + iIndex : nullptr;
 	}
+
 	uint32_t getClaimedCount( void ) const noexcept
 	{
-		return static_cast<uint32_t>(  m_nClaimAndSeal.load( std::memory_order_acquire ) & ~SEALED  );
+		return static_cast<uint32_t>( m_nClaimAndSeal.load( std::memory_order_acquire ) & ~SEALED );
 	}
+
 	uint32_t getPublishedCount( void ) const noexcept
 	{
 		return m_nPublished.load( std::memory_order_acquire );
 	}
+
 	uint32_t getCapacity( void ) const noexcept
 	{
 		return m_nCapacity;
 	}
+
 	SIRContainerResult trySeal( void ) noexcept
 	{
 		if ( m_pReady == nullptr ) {
@@ -145,13 +150,14 @@ public:
 		}
 		uint64_t nObserved = m_nClaimAndSeal.load( std::memory_order_acquire );
 		while ( ( nObserved & SEALED ) == 0 ) {
-			if ( m_nClaimAndSeal.compare_exchange_weak( nObserved, nObserved | SEALED, std::memory_order_acq_rel,
-			                                          std::memory_order_acquire ) ) {
+			if ( m_nClaimAndSeal.compare_exchange_weak(
+			         nObserved, nObserved | SEALED, std::memory_order_acq_rel, std::memory_order_acquire ) ) {
 				break;
 			}
 		}
 		return getClaimedCount() == getPublishedCount() ? SIRContainerResult::SIR_CONTAINER_OK : SIRContainerResult::SIR_CONTAINER_BUSY;
 	}
+
 	SIRContainerResult tryGetSealedView( SIRReadOnlyVectorView<T> *pView ) const noexcept
 	{
 		if ( pView == nullptr ) {
@@ -165,6 +171,7 @@ public:
 		*pView = { m_pValues, nClaimed };
 		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
+
 	void clearAfterQuiescence( void ) noexcept
 	{
 		if ( m_pReady == nullptr ) {
@@ -180,6 +187,16 @@ public:
 		m_nPublished.store( 0, std::memory_order_relaxed );
 		m_nClaimAndSeal.store( 0, std::memory_order_release );
 	}
+
+private:
+	static constexpr uint64_t SEALED = uint64_t( 1 ) << 63;
+	static_assert( std::is_nothrow_destructible<T>::value, "Concurrent elements must be nothrow destructible" );
+	const sirContainerAllocator_t *m_pAllocator;
+	T *m_pValues = nullptr;
+	std::atomic<uint8_t> *m_pReady = nullptr;
+	uint32_t m_nCapacity = 0;
+	std::atomic<uint64_t> m_nClaimAndSeal;
+	std::atomic<uint32_t> m_nPublished;
 };
 
 #endif // __SIR_LOCKFREEVECTOR_H__

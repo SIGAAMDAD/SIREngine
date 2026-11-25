@@ -1,6 +1,7 @@
 include("${CMAKE_CURRENT_LIST_DIR}/../../Build/CMake/SIRBuildTreeGuard.cmake")
 # Native SIREngine editor authoring services; source scene import is a codec.
 add_library(SIREditorAuthoring STATIC
+    Assets/SIRResourceCatalog.cpp
     Scene/SIREditorSceneDocument.cpp
     Scene/SIREditorTextScene.cpp
     Scene/SIREditorTextProperties.cpp

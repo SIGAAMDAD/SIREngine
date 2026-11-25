@@ -1,6 +1,14 @@
 /* SIREngine - MPL-2.0. Immutable Eytzinger-order lookup for sorted unique keys. */
-#ifndef SIR_FROZEN_SORTED_INDEX_H
-#define SIR_FROZEN_SORTED_INDEX_H
+#ifndef __SIR_FROZENSORTEDINDEX_H__
+#define __SIR_FROZENSORTEDINDEX_H__
+
+#include <Core/SIRPCH.h>
+
+// clang-format off
+#ifdef SIR_PRAGMA_ONCE_SUPPORTED
+	#pragma once
+#endif
+// clang-format on
 #include <Core/Containers/SIRVector.h>
 #include <optional>
 #include <functional>
@@ -16,27 +24,13 @@ public:
 		V value;
 	};
 
-private:
-	SIRVector<std::optional<Entry>> m_nodes;
-	uint32_t m_nSize = 0;
-	Less m_less;
-
-	static void layout( SIRVector<std::optional<Entry>>& nodes, const Entry *pSorted, uint32_t nCount, uint64_t iHeap, uint32_t& iInput )
-	{
-		if ( iHeap > nCount ) {
-			return;
-		}
-		layout( nodes, pSorted, nCount, iHeap * 2, iInput );
-		nodes[iHeap - 1].emplace( pSorted[iInput] );
-		++iInput;
-		layout( nodes, pSorted, nCount, iHeap * 2 + 1, iInput );
-	}
-
-public:
 	explicit SIRFrozenSortedIndex( const sirContainerAllocator_t *pAllocator, Less less = Less() )
-	    : m_nodes( pAllocator ), m_less( std::move( less ) ), m_pAllocatorStore( pAllocator )
+	    : m_nodes( pAllocator ),
+	      m_less( std::move( less ) ),
+	      m_pAllocatorStore( pAllocator )
 	{
 	}
+
 	SIRContainerResult tryBuildSorted( const Entry *pSorted, uint32_t nCount )
 	{
 		if ( nCount != 0 && pSorted == nullptr ) {
@@ -58,11 +52,12 @@ public:
 		m_nSize = nCount;
 		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
+
 	const V *find( const K& key ) const
 	{
 		uint64_t iHeap = 1;
 		while ( iHeap <= m_nSize ) {
-			const Entry& entry = *m_nodes[static_cast<uint32_t>(iHeap) - 1];
+			const Entry& entry = *m_nodes[static_cast<uint32_t>( iHeap ) - 1];
 			if ( m_less( key, entry.key ) ) {
 				iHeap *= 2;
 			} else if ( m_less( entry.key, key ) ) {
@@ -73,20 +68,40 @@ public:
 		}
 		return nullptr;
 	}
+
 	uint32_t getSize( void ) const noexcept
 	{
 		return m_nSize;
 	}
+
 	sirContainerFootprint_t getFootprint( void ) const noexcept
 	{
 		return m_nodes.getFootprint();
 	}
 
-private:
+	publicprivate :
+
+	    SIRVector<std::optional<Entry>>
+	        m_nodes;
+	uint32_t m_nSize = 0;
+	Less m_less;
+
+	static void layout( SIRVector<std::optional<Entry>>& nodes, const Entry *pSorted, uint32_t nCount, uint64_t iHeap, uint32_t& iInput )
+	{
+		if ( iHeap > nCount ) {
+			return;
+		}
+		layout( nodes, pSorted, nCount, iHeap * 2, iInput );
+		nodes[iHeap - 1].emplace( pSorted[iInput] );
+		++iInput;
+		layout( nodes, pSorted, nCount, iHeap * 2 + 1, iInput );
+	}
+
 	const sirContainerAllocator_t *m_pAllocator( void ) const noexcept
 	{
 		return m_pAllocatorStore;
 	}
+
 	const sirContainerAllocator_t *m_pAllocatorStore = nullptr;
 };
-#endif
+#endif /* __SIR_FROZENSORTEDINDEX_H__ */

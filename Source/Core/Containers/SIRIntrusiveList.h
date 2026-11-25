@@ -37,17 +37,14 @@ typedef struct sirIntrusiveLink_s
 
 class SIRIntrusiveList
 {
-private:
-	sirIntrusiveLink_t *m_pHead = nullptr;
-	sirIntrusiveLink_t *m_pTail = nullptr;
-	uint32_t m_nSize = 0;
-
 public:
-	SIRIntrusiveList( void ) noexcept = default;
-	~SIRIntrusiveList( void ) noexcept
+	explicit SIRIntrusiveList( void ) noexcept = default;
+
+	~SIRIntrusiveList() noexcept
 	{
 		clear();
 	}
+
 	SIRIntrusiveList( const SIRIntrusiveList& ) = delete;
 	SIRIntrusiveList& operator=( const SIRIntrusiveList& ) = delete;
 	SIRIntrusiveList( SIRIntrusiveList&& ) = delete;
@@ -57,14 +54,17 @@ public:
 	{
 		return m_nSize;
 	}
+
 	bool isEmpty( void ) const noexcept
 	{
 		return m_nSize == 0;
 	}
+
 	sirIntrusiveLink_t *front( void ) const noexcept
 	{
 		return m_pHead;
 	}
+
 	sirIntrusiveLink_t *back( void ) const noexcept
 	{
 		return m_pTail;
@@ -148,6 +148,11 @@ public:
 		m_pTail = nullptr;
 		m_nSize = 0;
 	}
+
+private:
+	sirIntrusiveLink_t *m_pHead = nullptr;
+	sirIntrusiveLink_t *m_pTail = nullptr;
+	uint32_t m_nSize = 0;
 };
 
 #endif // __SIR_INTRUSIVELIST_H__

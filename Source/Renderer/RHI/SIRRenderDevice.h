@@ -27,64 +27,93 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Renderer/RHI/SIRRenderCommandList.h>
 #include <Renderer/SIRGraphicsTypes.h>
 
+// Driver-neutral contract. No D3D, Vulkan, OpenGL, DXGI, SDL, or GRDG types.
+// Explicit capability results govern APIs with no compute/descriptor support.
+enum class SIRRenderingBackend : uint8_t {
+	SIR_RENDERING_BACKEND_AUTO = 0,
+	SIR_RENDERING_BACKEND_VULKAN = 1,
+	SIR_RENDERING_BACKEND_D3D12 = 2,
+	SIR_RENDERING_BACKEND_D3D11 = 3,
+	SIR_RENDERING_BACKEND_D3D10 = 4,
+	SIR_RENDERING_BACKEND_D3D9 = 5,
+	SIR_RENDERING_BACKEND_D3D8 = 6,
+	SIR_RENDERING_BACKEND_D3D7 = 7,
+	SIR_RENDERING_BACKEND_OPENGL = 8
+};
+
+enum class SIRRenderingDriver : uint8_t {
+	SIR_RENDERING_DRIVER_AMD = 0,
+	SIR_RENDERING_DRIVER_NVIDIA = 1,
+	SIR_RENDERING_DRIVER_INTEL = 2,
+	SIR_RENDERING_DRIVER_APPLE = 3
+};
+
+enum class SIRRenderingFeature : uint64_t {
+	SIR_RENDERING_FEATURE_GRAPHICS = 1ULL << 0,
+	SIR_RENDERING_FEATURE_COMPUTE = 1ULL << 1,
+	SIR_RENDERING_FEATURE_ASYNC_COMPUTE = 1ULL << 2,
+	SIR_RENDERING_FEATURE_COPY_QUEUE = 1ULL << 3,
+	SIR_RENDERING_FEATURE_SHADER_STORAGE = 1ULL << 4,
+	SIR_RENDERING_FEATURE_DESCRIPTOR_INDEXING = 1ULL << 5,
+	SIR_RENDERING_FEATURE_INDIRECT_DRAW = 1ULL << 6,
+	SIR_RENDERING_FEATURE_MRT = 1ULL << 7,
+	SIR_RENDERING_FEATURE_MULTISAMPLE = 1ULL << 8,
+	SIR_RENDERING_FEATURE_TESSELLATION = 1ULL << 9,
+
+	SIR_RENDERING_FEATURE_GEOMETRY_SHADER = 1ULL << 10,
+	SIR_RENDERING_FEATURE_MESH_SHADER = 1ULL << 11,
+	SIR_RENDERING_FEATURE_RAY_TRACING = 1ULL << 12,
+	SIR_RENDERING_FEATURE_SPARSE_RESOURCES = 1ULL << 13,
+	SIR_RENDERING_FEATURE_SAMPLER_FEEDBACK = 1ULL << 14,
+	SIR_RENDERING_FEATURE_ENHANCED_BARRIERS = 1ULL << 15,
+	SIR_RENDERING_FEATURE_GPU_UPLOAD = 1ULL << 16,
+	SIR_RENDERING_FEATURE_HDR_OUTPUT = 1ULL << 17,
+	SIR_RENDERING_FEATURE_FIXED_FUNCTION = 1ULL << 18,
+	SIR_RENDERING_FEATURE_PRESENT = 1ULL << 19
+};
+
+typedef struct sirRenderDriverVersion_s
+{
+	uint32_t nMajor;
+	uint32_t nMinor;
+	uint32_t nPatch;
+} sirRenderDriverVersion_t;
+
+typedef struct sirRenderDriverCapabilities_s
+{
+	sirRenderDriverVersion_t nApiVersion;
+	SIRRenderingBackend eBackend;
+
+	uint64_t nFeatureMask;
+	uint32_t nQueueMask;
+	uint32_t nPipelineModelMask;
+	uint32_t nMaximumTextureDimension;
+	uint32_t nMaximumColorAttachments;
+	uint32_t nMaximumFramesInFlight;
+	uint32_t nMaximumBindingSlots;
+	uint32_t nMaximumSampleCount;
+	uint32_t nDeviceGeneration;
+
+	bool bUnifiedMemory : 1;
+	bool bSoftwareAdapter : 1;
+} sirRenderDriverCapabilities_t;
+
 class SIRRenderDevice
 {
 public:
 	constexpr explicit SIRRenderDevice( void ) noexcept = default;
 	constexpr explicit SIRRenderDevice( const SIRRenderDevice& ) noexcept = delete;
 	constexpr explicit SIRRenderDevice( SIRRenderDevice&& ) noexcept = delete;
+	virtual ~SIRRenderDevice() noexcept = default;
 
 	const SIRRenderDevice& operator=( const SIRRenderDevice& ) noexcept = delete;
 	const SIRRenderDevice& operator=( SIRRenderDevice&& ) noexcept = delete;
 
-	virtual SIRGraphicsBackend getBackend( void ) const noexcept = 0;
+	virtual SIRRenderingBackend getBackend( void ) const noexcept = 0;
 	virtual uint32_t getDeviceGeneration( void ) const noexcept = 0;
-	virtual SIRGraphicsResult queryCapabilities( sirGraphicsCapabilities_t *pCapabilities ) const noexcept = 0;
-
-	// Device-advertised pipeline-era support; no inference from backend or API version.
-	virtual SIRGraphicsResult queryPipelineModelCaps( SIRGraphicsPipelineModel eModel,
-	                                                    sirGraphicsABIPipelineModelCaps_t *pCaps ) const noexcept = 0;
-	virtual SIRGraphicsResult queryMemoryBudget( sirGraphicsMemoryBudget_t *pBudget ) const noexcept = 0;
-
-	virtual SIRGraphicsResult createBuffer( const sirGraphicsBufferDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept = 0;
-	virtual SIRGraphicsResult createTexture( const sirGraphicsTextureDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept = 0;
-	virtual SIRGraphicsResult createView( const sirGraphicsViewDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept = 0;
-	virtual SIRGraphicsResult createSampler( const sirGraphicsSamplerDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept = 0;
-	virtual SIRGraphicsResult createPipeline( const sirGraphicsPipelineDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept = 0;
-	virtual SIRGraphicsResult createBindingSet( sirGraphicsHandle_t hPipeline, uint32_t nSetIndex,
-	                                              sirGraphicsHandle_t *pHandle ) noexcept = 0;
-	virtual SIRGraphicsResult updateBindings( sirGraphicsHandle_t hSet, const sirGraphicsDescriptorWrite_t *pWrites,
-	                                            uint32_t nWriteCount ) noexcept = 0;
-	virtual SIRGraphicsResult mapBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffsetBytes, uint64_t nBytes,
-	                                       sirGraphicsMappedBuffer_t *pMapped ) noexcept = 0;
-	virtual SIRGraphicsResult unmapBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffsetBytes, uint64_t nBytes ) noexcept = 0;
-	virtual SIRGraphicsResult flushBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffsetBytes, uint64_t nBytes ) noexcept = 0;
-	virtual SIRGraphicsResult invalidateBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffsetBytes, uint64_t nBytes ) noexcept = 0;
-
-	virtual SIRGraphicsResult acquireCommands( SIRGraphicsQueue eQueue, SIRRenderCommandList **ppCommands ) noexcept = 0;
-	virtual SIRGraphicsResult submit( SIRGraphicsQueue eQueue, const sirGraphicsSubmission_t& submission,
-	                                    sirGraphicsCompletion_t *pCompletion ) noexcept = 0;
-	virtual SIRGraphicsResult poll( const sirGraphicsCompletion_t& completion, bool *pCompleted ) noexcept = 0;
-	virtual SIRGraphicsResult wait( const sirGraphicsCompletion_t& completion, uint64_t nTimeoutNanoseconds ) noexcept = 0;
-
-	/// @brief Invalidates the public handle immediately. Defers native destruction
-	/// until every queue fence named in the completion set has retired.
-	virtual SIRGraphicsResult retireResource( sirGraphicsHandle_t hResource, const sirGraphicsCompletionSet_t& completion ) noexcept = 0;
-
-	// Window creation and events remain owned by the platform layer.
-	virtual SIRGraphicsResult createSurface( const sirGraphicsNativeSurface_t& native, const sirGraphicsPresentDesc_t& present,
-	                                           sirGraphicsHandle_t *pSurface ) noexcept = 0;
-	virtual SIRGraphicsResult resizeSurface( sirGraphicsHandle_t hSurface, const sirGraphicsNativeSurface_t& native,
-	                                           const sirGraphicsPresentDesc_t& present ) noexcept = 0;
-	virtual SIRGraphicsResult acquireSurfaceImage( sirGraphicsHandle_t hSurface, sirGraphicsSurfaceImage_t *pImage ) noexcept = 0;
-
-	virtual SIRGraphicsResult present( const sirGraphicsSurfaceImage_t& image, const sirGraphicsCompletion_t& renderComplete ) noexcept = 0;
 
 	/// @brief Must return BUSY rather than waiting behind the caller's back.
 	virtual SIRGraphicsResult shutdown( void ) noexcept = 0;
-
-protected:
-	virtual ~SIRRenderDevice() noexcept = default;
 };
 
 #endif // __SIR_RENDER_DEVICE_H__
