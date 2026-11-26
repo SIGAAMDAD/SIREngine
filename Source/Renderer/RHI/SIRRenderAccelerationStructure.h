@@ -4,7 +4,7 @@ SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
 This Source Code Form is subject to the terms of the Mozilla Public
-License, v2. If a copy of the MPL was not distributed with this
+License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 This software is provided "as is", without warranty of any kind,
@@ -24,38 +24,65 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-#include <Renderer/SIRRenderTypes.h>
+#include <Renderer/RHI/SIRRenderResource.h>
+#include <Renderer/RHI/SIRRenderTypes.h>
 
-// Optional GPU ray-tracing object. The backing SIRRenderStorageBuffer is
-// borrowed; the acceleration-structure object is not another asset copy.
-// Vulkan may allocate native AS metadata; D3D12 uses its buffer storage.
-class SIRRenderAccelerationStructure final
+class SIRRenderStorageBuffer;
+
+class SIRRenderAccelerationStructure : public SIRRenderResource
 {
 public:
-	SIRRenderAccelerationStructure( void ) noexcept = default;
-	SIRRenderAccelerationStructure( sirGraphicsHandle_t hStructure, sirGraphicsHandle_t hBacking ) noexcept
-	    : m_hStructure( hStructure ), m_hBacking( hBacking )
+	explicit SIRRenderAccelerationStructure( const SIRRenderAccelerationStructure& ) = delete;
+	explicit SIRRenderAccelerationStructure( SIRRenderAccelerationStructure&& ) = delete;
+	virtual ~SIRRenderAccelerationStructure() noexcept = default;
+	SIRRenderAccelerationStructure& operator=( const SIRRenderAccelerationStructure& ) = delete;
+	SIRRenderAccelerationStructure& operator=( SIRRenderAccelerationStructure&& ) = delete;
+
+	SIRRenderAccelerationStructureType getType( void ) const noexcept
 	{
+		return m_eType;
 	}
 
-	sirGraphicsHandle_t getHandle( void ) const noexcept
+	const SIRRenderStorageBuffer& getBackingBuffer( void ) const noexcept
 	{
-		return m_hStructure;
+		return *m_pBackingBuffer;
 	}
-	sirGraphicsHandle_t getBackingBuffer( void ) const noexcept
+
+	uint64_t getBackingOffset( void ) const noexcept
 	{
-		return m_hBacking;
+		return m_nBackingOffset;
 	}
-	bool isValid( void ) const noexcept
+
+	uint64_t getBackingSize( void ) const noexcept
 	{
-		return m_hStructure.nGeneration != 0 && m_hStructure.nDeviceGeneration != 0 &&
-		       m_hStructure.eType == SIR_RENDER_HANDLE_ACCELERATION_STRUCTURE && m_hBacking.nGeneration != 0 &&
-		       m_hBacking.nDeviceGeneration == m_hStructure.nDeviceGeneration && m_hBacking.eType == SIRGraphicsHandleType::SIR_GRAPHICS_HANDLE_BUFFER;
+		return m_nBackingSize;
+	}
+
+	uint32_t getBuildFlags( void ) const noexcept
+	{
+		return m_nBuildFlags;
+	}
+
+	virtual uint64_t getDeviceAddress( void ) const noexcept = 0;
+
+protected:
+	explicit SIRRenderAccelerationStructure( const SIRSharedPtr<SIRRenderDevice>& device,
+	                                         const SIRSharedPtr<SIRRenderStorageBuffer>& backingBuffer,
+	                                         const sirRenderAccelerationStructureDescription_t& description ) noexcept
+	    : SIRRenderResource( device ),
+	      m_eType( description.eType ),
+	      m_pBackingBuffer( backingBuffer ),
+	      m_nBackingOffset( description.nBackingOffset ),
+	      m_nBackingSize( description.nBackingSize ),
+	      m_nBuildFlags( description.nBuildFlags )
+	{
 	}
 
 private:
-	sirGraphicsHandle_t m_hStructure {};
-	sirGraphicsHandle_t m_hBacking {};
+	SIRRenderAccelerationStructureType m_eType{};
+	SIRSharedPtr<SIRRenderStorageBuffer> m_pBackingBuffer;
+	uint64_t m_nBackingOffset{};
+	uint64_t m_nBackingSize{};
+	uint32_t m_nBuildFlags{};
 };
-
 #endif // __SIR_RENDER_ACCELERATION_STRUCTURE_H__

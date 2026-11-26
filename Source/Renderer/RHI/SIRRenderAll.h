@@ -4,7 +4,7 @@ SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
 This Source Code Form is subject to the terms of the Mozilla Public
-License, v2. If a copy of the MPL was not distributed with this
+License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 This software is provided "as is", without warranty of any kind,
@@ -24,8 +24,13 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
+#include <Renderer/RHI/SIRRenderTypes.h>
+#include <Renderer/RHI/SIRRenderCapabilities.h>
 #include <Renderer/RHI/SIRRenderStorageBuffer.h>
+#include <Renderer/RHI/SIRRenderStorageBufferView.h>
 #include <Renderer/RHI/SIRRenderTexture.h>
+#include <Renderer/RHI/SIRRenderTextureView.h>
+#include <Renderer/RHI/SIRRenderRenderbuffer.h>
 #include <Renderer/RHI/SIRRenderResourceView.h>
 #include <Renderer/RHI/SIRRenderShader.h>
 #include <Renderer/RHI/SIRRenderSampler.h>

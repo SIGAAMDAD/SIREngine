@@ -1,3 +1,16 @@
+# ===========================================================================
+# SIREngine MPLv2 Source Code
+# Copyright (C) 2023-2027 Noah Van Til
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+#
+# This software is provided "as is", without warranty of any kind,
+# express or implied, including but not limited to the warranties
+# of merchantability, fitness for a particular purpose and noninfringement.
+# ===========================================================================
+
 include("${CMAKE_CURRENT_LIST_DIR}/../../Build/CMake/SIRBuildTreeGuard.cmake")
 # Shared, platform-independent rendering ABI. Always compiled, even when no
 # native driver is enabled, so backends cannot silently fork its contracts.
@@ -97,22 +110,24 @@ if(NOT EXISTS "${PROJECT_SOURCE_DIR}/ThirdParty/VulkanMemoryAllocator/include/vk
 endif()
 
 add_library(SIRVulkan STATIC
+    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanShared.cpp
     ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanDevice.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanStorageBuffer.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanShader.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanProgram.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanPipeline.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanBindingLayout.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanBindingSet.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanTexture.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanCommandList.cpp
     ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanPools.cpp
     ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanShaders.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanPipelines.cpp
     ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanRaster.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanDraw.cpp
     ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanDescriptors.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanBindings.cpp
     ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanCommands.cpp
     ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanRecordedCommands.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanGraphics.cpp
     ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanImages.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanTextures.cpp
     ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanTextureTransfer.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanBarriers.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanBufferBarriers.cpp
     ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanTransferLayout.cpp)
 add_library(SIR::Vulkan ALIAS SIRVulkan)
 target_include_directories(SIRVulkan PUBLIC

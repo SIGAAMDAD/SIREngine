@@ -4,7 +4,7 @@ SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
 This Source Code Form is subject to the terms of the Mozilla Public
-License, v2. If a copy of the MPL was not distributed with this
+License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 This software is provided "as is", without warranty of any kind,
@@ -27,7 +27,6 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Containers/SIRContainerResult.h>
 #include <limits.h>
 #include <string.h>
-#include <new>
 #include <type_traits>
 #include <utility>
 
@@ -82,31 +81,22 @@ public:
 		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
-	static bool tryExpandInPlace( const sirContainerAllocatorCapabilities_t *pCapabilities,
-	                              void *pMemory,
-	                              size_t nOldBytes,
-	                              size_t nRequestedBytes,
-	                              size_t nAlignment,
-	                              size_t *pActualBytes ) noexcept
+	static bool tryExpandInPlace(
+	    const sirContainerAllocatorCapabilities_t *pCapabilities, void *pMemory, size_t nOldBytes, size_t nRequestedBytes, size_t nAlignment, size_t *pActualBytes ) noexcept
 	{
-		if ( pActualBytes == nullptr || pMemory == nullptr || pCapabilities == nullptr || pCapabilities->pfnTryExpandInPlace == nullptr ||
-		     nRequestedBytes < nOldBytes ) {
+		if ( pActualBytes == nullptr || pMemory == nullptr || pCapabilities == nullptr || pCapabilities->pfnTryExpandInPlace == nullptr || nRequestedBytes < nOldBytes ) {
 			return false;
 		}
 		size_t nActual = 0;
-		if ( !pCapabilities->pfnTryExpandInPlace( pCapabilities->pContext, pMemory, nOldBytes, nRequestedBytes, nAlignment, &nActual ) ||
-		     nActual < nRequestedBytes ) {
+		if ( !pCapabilities->pfnTryExpandInPlace( pCapabilities->pContext, pMemory, nOldBytes, nRequestedBytes, nAlignment, &nActual ) || nActual < nRequestedBytes ) {
 			return false;
 		}
 		*pActualBytes = nActual;
 		return true;
 	}
 
-	static bool tryGetUsableSize( const sirContainerAllocatorCapabilities_t *pCapabilities,
-	                              const void *pMemory,
-	                              size_t nRequestedBytes,
-	                              size_t nAlignment,
-	                              size_t *pActualBytes ) noexcept
+	static bool
+	tryGetUsableSize( const sirContainerAllocatorCapabilities_t *pCapabilities, const void *pMemory, size_t nRequestedBytes, size_t nAlignment, size_t *pActualBytes ) noexcept
 	{
 		if ( pActualBytes == nullptr || pMemory == nullptr || pCapabilities == nullptr || pCapabilities->pfnGetUsableSize == nullptr ) {
 			return false;
@@ -140,8 +130,7 @@ template <typename T>
 class SIRLifetimeOps
 {
 public:
-	static constexpr bool CAN_RELOCATE =
-	    SIRRelocationTraits<T>::CAN_BYTE_RELOCATE || std::is_nothrow_move_constructible<T>::value || std::is_copy_constructible<T>::value;
+	static constexpr bool CAN_RELOCATE = SIRRelocationTraits<T>::CAN_BYTE_RELOCATE || std::is_nothrow_move_constructible<T>::value || std::is_copy_constructible<T>::value;
 
 	static constexpr bool DESTROY_SOURCE_AFTER_RELOCATE = !SIRRelocationTraits<T>::CAN_BYTE_RELOCATE;
 

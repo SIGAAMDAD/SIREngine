@@ -5,7 +5,11 @@ Copyright (C) 2023-2027 Noah Van Til
 
 This Source Code Form is subject to the terms of the Mozilla Public
 License, v. 2.0. If a copy of the MPL was not distributed with this
-file, You can obtain one at https://www.mozilla.org/MPL/2.0/.
+file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+This software is provided "as is", without warranty of any kind,
+express or implied, including but not limited to the warranties
+of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
@@ -88,19 +92,13 @@ SIRCompressionResult SIRZstdCodec::decode( const SIRSpan<uint8_t>& rInput, SIRSp
 	return SIRCompressionResult::SIR_COMPRESSION_SUCCESS;
 }
 
-SIRCompressionResult SIRZstdCodec::encode( const SIRSpan<uint8_t>& rInput,
-                                           SIRSpan<uint8_t>& rOutput,
-                                           SIRSpan<uint8_t>& rScratch,
-                                           size_t& nBytesWritten ) noexcept
+SIRCompressionResult SIRZstdCodec::encode( const SIRSpan<uint8_t>& rInput, SIRSpan<uint8_t>& rOutput, SIRSpan<uint8_t>& rScratch, size_t& nBytesWritten ) noexcept
 {
 	static_cast<void>( rScratch );
 	return encode( rInput, rOutput, nBytesWritten );
 }
 
-SIRCompressionResult SIRZstdCodec::decode( const SIRSpan<uint8_t>& rInput,
-                                           SIRSpan<uint8_t>& rOutput,
-                                           SIRSpan<uint8_t>& rScratch,
-                                           size_t& nBytesWritten ) noexcept
+SIRCompressionResult SIRZstdCodec::decode( const SIRSpan<uint8_t>& rInput, SIRSpan<uint8_t>& rOutput, SIRSpan<uint8_t>& rScratch, size_t& nBytesWritten ) noexcept
 {
 	static_cast<void>( rScratch );
 	return decode( rInput, rOutput, nBytesWritten );

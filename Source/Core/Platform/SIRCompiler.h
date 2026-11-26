@@ -4,7 +4,7 @@ SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
 This Source Code Form is subject to the terms of the Mozilla Public
-License, v2. If a copy of the MPL was not distributed with this
+License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 This software is provided "as is", without warranty of any kind,
@@ -757,17 +757,17 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 // Promises, not checks. Passing a false condition causes undefined behavior.
 #if SIR_COMPILER_MSVC_ABI
-#define SIR_UNREACHABLE() __assume( 0 )
+#define SIR_COMPILER_UNREACHABLE() __assume( 0 )
 #define SIR_ASSUME( expression ) __assume( expression )
 #elif SIR_COMPILER_HAS_BUILTIN( __builtin_assume )
-#define SIR_UNREACHABLE() __builtin_unreachable()
+#define SIR_COMPILER_UNREACHABLE() __builtin_unreachable()
 #define SIR_ASSUME( expression ) __builtin_assume( expression )
 #else
-#define SIR_UNREACHABLE() __builtin_unreachable()
+#define SIR_COMPILER_UNREACHABLE() __builtin_unreachable()
 #define SIR_ASSUME( expression )                                                                                                           \
 	do {                                                                                                                                   \
 		if ( !( expression ) ) {                                                                                                           \
-			SIR_UNREACHABLE();                                                                                                             \
+			SIR_COMPILER_UNREACHABLE();                                                                                                     \
 		}                                                                                                                                  \
 	} while ( 0 )
 #endif

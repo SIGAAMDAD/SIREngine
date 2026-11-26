@@ -4,7 +4,7 @@ SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
 This Source Code Form is subject to the terms of the Mozilla Public
-License, v2. If a copy of the MPL was not distributed with this
+License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 This software is provided "as is", without warranty of any kind,
@@ -27,20 +27,12 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 
 
-enum class SIRGraphicsResult : uint32_t {
-	SIR_GRAPHICS_SUCCESS = 0,
-	SIR_GRAPHICS_INVALID_ARGUMENT = 1,
-	SIR_GRAPHICS_INVALID_HANDLE = 2,
-	SIR_GRAPHICS_UNSUPPORTED = 3,
-	SIR_GRAPHICS_OUT_OF_MEMORY = 4,
-	SIR_GRAPHICS_CAPACITY_EXCEEDED = 5,
-	SIR_GRAPHICS_BUSY = 6,
-	SIR_GRAPHICS_TIMEOUT = 7,
-	SIR_GRAPHICS_SURFACE_CHANGED = 8,
-	SIR_GRAPHICS_DEVICE_LOST = 9,
-	SIR_GRAPHICS_DRIVER_ERROR = 10,
-	SIR_GRAPHICS_VERSION_MISMATCH = 11
-};
+typedef struct sirGraphicsVersion_s
+{
+	uint32_t nMajor;
+	uint32_t nMinor;
+	uint32_t nPatch;
+} sirGraphicsVersion_t;
 
 
 enum class SIRGraphicsQueue : uint32_t {
@@ -438,31 +430,6 @@ typedef struct sirGraphicsBlendState_s
 	bool bEnabled;
 } sirGraphicsBlendState_t;
 
-typedef struct sirGraphicsPipelineDesc_s
-{
-	SIRGraphicsPipelineType eType;
-	sirGraphicsShaderCode_t vertexShader;
-	sirGraphicsShaderCode_t pixelShader;
-	sirGraphicsShaderCode_t computeShader;
-	const sirGraphicsBindingDesc_t *pBindings;
-	const sirGraphicsVertexAttribute_t *pAttributes;
-	uint32_t nBindingCount;
-	uint32_t nAttributeCount;
-	uint32_t nColorFormatCount;
-	SIRGraphicsFormat szColorFormats[8];
-	SIRGraphicsFormat eDepthFormat;
-	uint32_t nSampleCount;
-	SIRGraphicsTopology eTopology;
-	SIRGraphicsCullMode eCullMode;
-	SIRGraphicsCompareOp eDepthCompare;
-	sirGraphicsBlendState_t szBlendStates[8];
-	bool bDepthTest;
-	bool bDepthWrite;
-	SIRGraphicsPipelineModel eModel;
-	const sirGraphicsABIModernRecipe_t *pModern;
-	const sirGraphicsABIProgrammableRecipe_t *pProgrammable;
-	const sirGraphicsABIFixedRecipe_t *pFixed;
-} sirGraphicsPipelineDesc_t;
 
 typedef struct sirGraphicsDescriptorWrite_s
 {
@@ -566,17 +533,6 @@ typedef struct sirGraphicsNativeSurface_s
 	void *pDisplayOrInstance;
 	uint64_t nWindowGeneration;
 } sirGraphicsNativeSurface_t;
-
-typedef struct sirGraphicsPresentDesc_s
-{
-	uint32_t nWidth;
-	uint32_t nHeight;
-	uint32_t nBackbufferCount;
-	SIRGraphicsFormat eFormat;
-	SIRGraphicsPresentMode eMode;
-	bool bAllowTearing;
-	bool bHdr;
-} sirGraphicsPresentDesc_t;
 
 // A surface acquisition owns a one-use backend synchronization reservation.
 // The opaque acquisition ID is not a GPU fence; submit must consume it and

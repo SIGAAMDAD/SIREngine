@@ -1,3 +1,18 @@
+add_executable(SIRAssertTests ${PROJECT_SOURCE_DIR}/Tests/Unit/SIRAssertTests.cpp)
+target_link_libraries(SIRAssertTests PRIVATE SIR::Core)
+add_test(NAME core.diagnostics.assert COMMAND SIRAssertTests)
+sir_configure_owned_target(SIRAssertTests)
+
+add_executable(SIRLoggerTests ${PROJECT_SOURCE_DIR}/Tests/Unit/SIRLoggerTests.cpp)
+target_link_libraries(SIRLoggerTests PRIVATE SIR::Core)
+add_test(NAME core.logger.system COMMAND SIRLoggerTests)
+sir_configure_owned_target(SIRLoggerTests)
+
+add_executable(SIRHardwareCatalogTests ${PROJECT_SOURCE_DIR}/Tests/Unit/SIRHardwareCatalogTests.cpp)
+target_link_libraries(SIRHardwareCatalogTests PRIVATE SIR::Core)
+add_test(NAME core.hardware.descriptors COMMAND SIRHardwareCatalogTests)
+sir_configure_owned_target(SIRHardwareCatalogTests)
+
 # Core-owned file, mapped-file, and anonymous-pipe services.
 foreach(sirTest IN ITEMS SIRPlatformFileTests SIRPlatformFileMappingTests SIRPlatformPipeTests)
     add_executable(${sirTest} ${PROJECT_SOURCE_DIR}/Tests/Unit/${sirTest}.cpp)

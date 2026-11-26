@@ -1,3 +1,18 @@
+/*
+===========================================================================
+SIREngine MPLv2 Source Code
+Copyright (C) 2023-2027 Noah Van Til
+
+This Source Code Form is subject to the terms of the Mozilla Public
+License, v. 2.0. If a copy of the MPL was not distributed with this
+file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+This software is provided "as is", without warranty of any kind,
+express or implied, including but not limited to the warranties
+of merchantability, fitness for a particular purpose and noninfringement.
+===========================================================================
+*/
+
 # SIREngine Core Events: migration and bounded high-throughput variants
 
 This directory contains the native C++17 event migration from NomadFramework plus throughput-oriented event transport and phase-delivery specializations. SIREngine-owned interfaces live in the global namespace. All fast-path buffers are embedded in their owning objects; the owning subsystem is responsible for constructing those objects from the appropriate SIR memory domain. No queue or dispatcher allocates memory while delivering events.

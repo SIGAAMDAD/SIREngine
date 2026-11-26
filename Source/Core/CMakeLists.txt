@@ -1,10 +1,31 @@
+# ===========================================================================
+# SIREngine MPLv2 Source Code
+# Copyright (C) 2023-2027 Noah Van Til
+# 
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+# 
+# This software is provided "as is", without warranty of any kind,
+# express or implied, including but not limited to the warranties
+# of merchantability, fitness for a particular purpose and noninfringement.
+# ===========================================================================
+
 include("${CMAKE_CURRENT_LIST_DIR}/../../Build/CMake/SIRBuildTreeGuard.cmake")
-add_library(SIRCore STATIC SIRApplication.cpp SIRApplicationScheduling.cpp Systems/SIREngineSystem.cpp)
+add_library(SIRCore STATIC SIRApplication.cpp SIRApplicationScheduling.cpp Systems/SIREngineSystem.cpp
+    Diagnostics/Assertions/SIRAssert.cpp
+    Diagnostics/SIREmergencyDiagnostics.cpp
+    Diagnostics/Logging/SIRLoggerSystem.cpp
+    Console/SIRConsoleLogSink.cpp
+    Hardware/SIRHardwareCatalog.cpp)
 add_library(SIR::Core ALIAS SIRCore)
 target_include_directories(SIRCore PUBLIC
     "${PROJECT_SOURCE_DIR}/Source"
     "${PROJECT_SOURCE_DIR}/Build/CMake")
 target_compile_features(SIRCore PUBLIC cxx_std_17)
+set(SIR_DIAGNOSTIC_ASSERT_ENABLED "1" CACHE STRING "Enable active diagnostic assertions for SIREngine targets")
+set_property(CACHE SIR_DIAGNOSTIC_ASSERT_ENABLED PROPERTY STRINGS 0 1)
+target_compile_definitions(SIRCore PUBLIC SIR_DIAGNOSTIC_ASSERT_ENABLED=${SIR_DIAGNOSTIC_ASSERT_ENABLED})
 
 find_package(BZip2 REQUIRED)
 find_package(ZLIB REQUIRED)
@@ -65,6 +86,7 @@ set(SIR_CORE_PLATFORM_COMMON
     ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Headless/SIRWindowDriverHeadless.cpp
     ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Shared/Memory/SIRVirtualMemory.cpp
     ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Shared/Diagnostics/SIRCPUInfo.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/Storage/SIRPlatformStorageQueryLinux.cpp
     ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Shared/Threading/SIRSync.cpp
     ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Shared/Threading/SIRSyncAdvanced.cpp
     ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Shared/File/SIRPlatformRootDirectory.cpp
@@ -79,6 +101,10 @@ if(WIN32)
         ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/Threading/SIRSyncWindows.cpp
         ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/File/SIRPlatformFileWindows.cpp
         ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/Diagnostics/SIRPlatformContextWindows.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/Diagnostics/SIRPlatformDebugWindows.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/Logging/SIRPlatformLogFileSink.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/Logging/SIRPlatformLogConsoleSink.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/Storage/SIRPlatformStorageQueryWindows.cpp
         ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/File/SIRPlatformRootDirectoryWindows.cpp
         ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/File/SIRPlatformFileMappingWindows.cpp
         ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/Process/SIRPlatformPipeWindows.cpp
@@ -147,6 +173,9 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/Threading/SIRSyncLinux.cpp
         ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/File/SIRPlatformFileLinux.cpp
         ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/Diagnostics/SIRPlatformContextLinux.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/Diagnostics/SIRPlatformDebugLinux.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/Logging/SIRPlatformLogFileSink.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/Logging/SIRPlatformLogConsoleSink.cpp
         ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/File/SIRPlatformRootDirectoryLinux.cpp
         ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/File/SIRPlatformFileMappingLinux.cpp
         ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/Process/SIRPlatformPipeLinux.cpp
@@ -353,16 +382,8 @@ block(SCOPE_FOR VARIABLES)
 target_sources(SIRCore PRIVATE ${PROJECT_SOURCE_DIR}/Source/Core/Strings/SIRStringPool.cpp)
 endblock()
 block(SCOPE_FOR VARIABLES)
-# -- Core/Registration --
-target_sources(SIRCore PRIVATE ${PROJECT_SOURCE_DIR}/Source/Core/Registration/SIRRegistrationTypes.cpp ${PROJECT_SOURCE_DIR}/Source/Core/Registration/SIRRegistrationStringBridge.cpp ${PROJECT_SOURCE_DIR}/Source/Core/Registration/SIRRegistrationCatalog.cpp)
-endblock()
-block(SCOPE_FOR VARIABLES)
-# -- Core/CVars --
-target_sources(SIRCore PRIVATE ${PROJECT_SOURCE_DIR}/Source/Core/CVars/SIRCVarRegistry.cpp ${PROJECT_SOURCE_DIR}/Source/Core/CVars/SIRCVarValueCodec.cpp ${PROJECT_SOURCE_DIR}/Source/Core/CVars/SIRCVarConfigAdapter.cpp)
-endblock()
-block(SCOPE_FOR VARIABLES)
 # -- Core/Console --
-target_sources(SIRCore PRIVATE ${PROJECT_SOURCE_DIR}/Source/Core/Console/SIRConsoleService.cpp ${PROJECT_SOURCE_DIR}/Source/Core/Console/SIRConsoleConfigAdapter.cpp ${PROJECT_SOURCE_DIR}/Source/Core/Console/SIRConsoleSystem.cpp)
+target_sources(SIRCore PRIVATE ${PROJECT_SOURCE_DIR}/Source/Core/Console/SIRConsoleLogSink.cpp ${PROJECT_SOURCE_DIR}/Source/Core/Console/SIRConsoleSystem.cpp)
 endblock()
 block(SCOPE_FOR VARIABLES)
 # -- Core/Jobs --

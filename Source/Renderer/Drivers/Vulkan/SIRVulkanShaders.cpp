@@ -4,7 +4,7 @@ SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
 This Source Code Form is subject to the terms of the Mozilla Public
-License, v2. If a copy of the MPL was not distributed with this
+License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 This software is provided "as is", without warranty of any kind,
@@ -14,6 +14,27 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Renderer/Drivers/Vulkan/SIRVulkanDevice.h>
+
+SIRVulkanResult SIRVulkanDevice::createShaderModule( const void *pCode, uint64_t nCodeBytes, const char *pszEntryPoint, VkShaderModule *pModule ) noexcept
+{
+	if ( !m_bReady || pCode == nullptr || pModule == nullptr || nCodeBytes == 0 || ( nCodeBytes & 3U ) != 0 || m_Procs.vkCreateShaderModule == nullptr ) {
+		return SIRVulkanResult::SIR_VULKAN_INVALID_ARGUMENT;
+	}
+	if ( !sirVulkanValidateSpirv( pCode, nCodeBytes, pszEntryPoint ) ) return SIRVulkanResult::SIR_VULKAN_INVALID_ARGUMENT;
+	VkShaderModuleCreateInfo info{};
+	info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+	info.codeSize = nCodeBytes;
+	info.pCode = static_cast<const uint32_t *>( pCode );
+	return m_Procs.vkCreateShaderModule( m_Device, &info, nullptr, pModule ) == VK_SUCCESS ? SIRVulkanResult::SIR_VULKAN_SUCCESS : SIRVulkanResult::SIR_VULKAN_NATIVE_FAILURE;
+}
+
+SIRVulkanResult SIRVulkanDevice::destroyShaderModule( VkShaderModule *pModule ) noexcept
+{
+	if ( pModule == nullptr ) return SIRVulkanResult::SIR_VULKAN_INVALID_ARGUMENT;
+	if ( *pModule != VK_NULL_HANDLE && m_Procs.vkDestroyShaderModule != nullptr ) m_Procs.vkDestroyShaderModule( m_Device, *pModule, nullptr );
+	*pModule = VK_NULL_HANDLE;
+	return SIRVulkanResult::SIR_VULKAN_SUCCESS;
+}
 
 #include <stdint.h>
 #include <string.h>
@@ -42,48 +63,35 @@ bool sirVulkanValidateSpirv( const void *pBytes, uint64_t nByteCount, const char
 	return false;
 }
 
-SIRVulkanResult SIRVulkanDevice::createComputePipeline( const void *pCode, uint64_t nCodeBytes, const char *pszEntryPoint,
+SIRVulkanResult SIRVulkanDevice::createComputePipeline( VkShaderModule hShader, const char *pszEntryPoint,
+                                                          const VkDescriptorSetLayout *pSetLayouts, uint32_t nSetLayoutCount,
                                                           sirVulkanComputePipeline_t *pPipeline ) noexcept
 {
 	if ( !m_bReady || m_bDeviceLost ) {
 		return SIRVulkanResult::SIR_VULKAN_INVALID_STATE;
 	}
-	if ( pPipeline == nullptr || pPipeline->hPipeline != VK_NULL_HANDLE || pPipeline->hLayout != VK_NULL_HANDLE ||
-	     !sirVulkanValidateSpirv( pCode, nCodeBytes, pszEntryPoint ) ) {
+	if ( pPipeline == nullptr || pPipeline->hPipeline != VK_NULL_HANDLE || pPipeline->hLayout != VK_NULL_HANDLE || hShader == VK_NULL_HANDLE ||
+	     ( nSetLayoutCount != 0 && pSetLayouts == nullptr ) || nSetLayoutCount > 4 ||
+	     pszEntryPoint == nullptr || pszEntryPoint[0] == '\0' ) {
 		return SIRVulkanResult::SIR_VULKAN_INVALID_ARGUMENT;
 	}
-	const PFN_vkCreateShaderModule pfnCreateShaderModule =
-	    static_cast<PFN_vkCreateShaderModule>(m_pfnGetDeviceProcAddr( m_Device, "vkCreateShaderModule" ));
-	const PFN_vkDestroyShaderModule pfnDestroyShaderModule =
-	    static_cast<PFN_vkDestroyShaderModule>(m_pfnGetDeviceProcAddr( m_Device, "vkDestroyShaderModule" ));
 	const PFN_vkCreatePipelineLayout pfnCreatePipelineLayout =
-	    static_cast<PFN_vkCreatePipelineLayout>(m_pfnGetDeviceProcAddr( m_Device, "vkCreatePipelineLayout" ));
+	    m_Procs.vkCreatePipelineLayout;
 	const PFN_vkDestroyPipelineLayout pfnDestroyPipelineLayout =
-	    static_cast<PFN_vkDestroyPipelineLayout>(m_pfnGetDeviceProcAddr( m_Device, "vkDestroyPipelineLayout" ));
+	    m_Procs.vkDestroyPipelineLayout;
 	const PFN_vkCreateComputePipelines pfnCreateComputePipelines =
-	    static_cast<PFN_vkCreateComputePipelines>(m_pfnGetDeviceProcAddr( m_Device, "vkCreateComputePipelines" ));
-	if ( pfnCreateShaderModule == nullptr || pfnDestroyShaderModule == nullptr || pfnCreatePipelineLayout == nullptr ||
-	     pfnDestroyPipelineLayout == nullptr || pfnCreateComputePipelines == nullptr ) {
+	    m_Procs.vkCreateComputePipelines;
+	if ( pfnCreatePipelineLayout == nullptr || pfnDestroyPipelineLayout == nullptr || pfnCreateComputePipelines == nullptr ) {
 		return SIRVulkanResult::SIR_VULKAN_API_UNSUPPORTED;
-	}
-
-	VkShaderModuleCreateInfo shaderInfo {};
-	shaderInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-	shaderInfo.codeSize = static_cast<size_t>(nCodeBytes);
-	shaderInfo.pCode = static_cast<const uint32_t *>(pCode);
-	VkShaderModule hModule = VK_NULL_HANDLE;
-	const VkResult eModule = pfnCreateShaderModule( m_Device, &shaderInfo, nullptr, &hModule );
-	if ( eModule != VK_SUCCESS ) {
-		m_bDeviceLost = eModule == VK_ERROR_DEVICE_LOST;
-		return SIRVulkanResult::SIR_VULKAN_NATIVE_FAILURE;
 	}
 
 	VkPipelineLayoutCreateInfo layoutInfo {};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+	layoutInfo.setLayoutCount = nSetLayoutCount;
+	layoutInfo.pSetLayouts = pSetLayouts;
 	VkPipelineLayout hLayout = VK_NULL_HANDLE;
 	const VkResult eLayout = pfnCreatePipelineLayout( m_Device, &layoutInfo, nullptr, &hLayout );
 	if ( eLayout != VK_SUCCESS ) {
-		pfnDestroyShaderModule( m_Device, hModule, nullptr );
 		m_bDeviceLost = eLayout == VK_ERROR_DEVICE_LOST;
 		return SIRVulkanResult::SIR_VULKAN_NATIVE_FAILURE;
 	}
@@ -91,7 +99,7 @@ SIRVulkanResult SIRVulkanDevice::createComputePipeline( const void *pCode, uint6
 	VkPipelineShaderStageCreateInfo stage {};
 	stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 	stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-	stage.module = hModule;
+	stage.module = hShader;
 	stage.pName = pszEntryPoint;
 	VkComputePipelineCreateInfo computeInfo {};
 	computeInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
@@ -99,9 +107,8 @@ SIRVulkanResult SIRVulkanDevice::createComputePipeline( const void *pCode, uint6
 	computeInfo.layout = hLayout;
 	VkPipeline hPipeline = VK_NULL_HANDLE;
 	const VkResult eCreate = pfnCreateComputePipelines( m_Device, VK_NULL_HANDLE, 1, &computeInfo, nullptr, &hPipeline );
-	pfnDestroyShaderModule( m_Device, hModule, nullptr );
 	if ( eCreate != VK_SUCCESS || hPipeline == VK_NULL_HANDLE ) {
-		const PFN_vkDestroyPipeline pfnDestroyPipeline = static_cast<PFN_vkDestroyPipeline>(m_pfnGetDeviceProcAddr( m_Device, "vkDestroyPipeline" ));
+		const PFN_vkDestroyPipeline pfnDestroyPipeline = m_Procs.vkDestroyPipeline;
 		if ( hPipeline != VK_NULL_HANDLE && pfnDestroyPipeline != nullptr ) {
 			pfnDestroyPipeline( m_Device, hPipeline, nullptr );
 		}
@@ -113,6 +120,10 @@ SIRVulkanResult SIRVulkanDevice::createComputePipeline( const void *pCode, uint6
 	pPipeline->hPipeline = hPipeline;
 	pPipeline->hLayout = hLayout;
 	pPipeline->nDeviceSerial = m_nDeviceSerial;
+	pPipeline->nSetLayoutCount = nSetLayoutCount;
+	pPipeline->bOwnsSetLayouts = false;
+	for ( uint32_t i = 0; i < nSetLayoutCount; ++i )
+		pPipeline->szSetLayouts[i] = pSetLayouts[i];
 	++m_nLivePipelines;
 	return SIRVulkanResult::SIR_VULKAN_SUCCESS;
 }
@@ -137,17 +148,17 @@ SIRVulkanResult SIRVulkanDevice::destroyComputePipeline( sirVulkanComputePipelin
 			return SIRVulkanResult::SIR_VULKAN_BUSY;
 		}
 	}
-	const PFN_vkDestroyPipeline pfnDestroyPipeline = static_cast<PFN_vkDestroyPipeline>(m_pfnGetDeviceProcAddr( m_Device, "vkDestroyPipeline" ));
+	const PFN_vkDestroyPipeline pfnDestroyPipeline = m_Procs.vkDestroyPipeline;
 	const PFN_vkDestroyPipelineLayout pfnDestroyPipelineLayout =
-	    static_cast<PFN_vkDestroyPipelineLayout>(m_pfnGetDeviceProcAddr( m_Device, "vkDestroyPipelineLayout" ));
+	    m_Procs.vkDestroyPipelineLayout;
 	if ( pfnDestroyPipeline == nullptr || pfnDestroyPipelineLayout == nullptr ) {
 		return SIRVulkanResult::SIR_VULKAN_API_UNSUPPORTED;
 	}
 	pfnDestroyPipeline( m_Device, pPipeline->hPipeline, nullptr );
 	pfnDestroyPipelineLayout( m_Device, pPipeline->hLayout, nullptr );
-	if ( pPipeline->nSetLayoutCount != 0 ) {
+	if ( pPipeline->bOwnsSetLayouts && pPipeline->nSetLayoutCount != 0 ) {
 		const PFN_vkDestroyDescriptorSetLayout pfnDestroySetLayout =
-		    static_cast<PFN_vkDestroyDescriptorSetLayout>(m_pfnGetDeviceProcAddr( m_Device, "vkDestroyDescriptorSetLayout" ));
+		    m_Procs.vkDestroyDescriptorSetLayout;
 		if ( pfnDestroySetLayout != nullptr ) {
 			for ( uint32_t i = 0; i < pPipeline->nSetLayoutCount; ++i ) {
 				pfnDestroySetLayout( m_Device, pPipeline->szSetLayouts[i], nullptr );

@@ -1,4 +1,18 @@
-/* SIREngine MPLv2 - lazy-lifetime, heterogeneous array-of-structures-of-arrays. */
+/*
+===========================================================================
+SIREngine MPLv2 Source Code
+Copyright (C) 2023-2027 Noah Van Til
+
+This Source Code Form is subject to the terms of the Mozilla Public
+License, v. 2.0. If a copy of the MPL was not distributed with this
+file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+This software is provided "as is", without warranty of any kind,
+express or implied, including but not limited to the warranties
+of merchantability, fitness for a particular purpose and noninfringement.
+===========================================================================
+*/
+
 #ifndef __SIR_AOSOAMULTIVECTOR_H__
 #define __SIR_AOSOAMULTIVECTOR_H__
 
@@ -9,11 +23,11 @@
 	#pragma once
 #endif
 // clang-format on
+
 #include <Core/Containers/SIRVector.h>
 #include <Core/Containers/SIRReadOnlyVectorView.h>
 #include <new>
 #include <tuple>
-#include <type_traits>
 #include <stdint.h>
 
 // Stable block addresses mean vector-directory reallocation never relocates
@@ -23,81 +37,6 @@ class SIRAoSoAMultiVector
 {
 	static_assert( LANES > 0 && LANES <= 256, "AoSoA lane width out of range" );
 	static_assert( sizeof...( Fields ) > 0, "AoSoA requires at least one column" );
-
-	template <typename T>
-	struct Column
-	{
-		alignas( T ) unsigned char szData[LANES * sizeof( T )];
-
-		T *slot( uint32_t iLane ) noexcept
-		{
-			return ( T * )( szData + static_cast<size_t>( iLane * sizeof( T ) ) );
-		}
-
-		T *at( uint32_t iLane ) noexcept
-		{
-			return std::launder( slot( iLane ) );
-		}
-
-		const T *at( uint32_t iLane ) const noexcept
-		{
-			return std::launder( ( const T * )( szData + static_cast<size_t>( iLane * sizeof( T ) ) ) );
-		}
-	};
-
-	struct alignas( 64 ) Block
-	{
-		std::tuple<Column<Fields>...> Columns;
-		uint32_t nUsed = 0;
-
-		template <size_t I = 0>
-		void destroyFields( uint32_t iLane, uint32_t nConstructed ) noexcept
-		{
-			if constexpr ( I < sizeof...( Fields ) ) {
-				if ( I < nConstructed ) {
-					using Value = typename std::tuple_element<I, std::tuple<Fields...>>::type;
-					std::get<I>( Columns ).at( iLane )->~Value();
-				}
-				destroyFields<I + 1>( iLane, nConstructed );
-			}
-		}
-
-		template <size_t I = 0>
-		void constructFields( uint32_t iLane, const std::tuple<const Fields&...>& rValues, uint32_t *pConstructed )
-		{
-			if constexpr ( I < sizeof...( Fields ) ) {
-				using Value = typename std::tuple_element<I, std::tuple<Fields...>>::type;
-				new ( std::get<I>( Columns ).slot( iLane ) ) Value( std::get<I>( rValues ) );
-				++*pConstructed;
-				constructFields<I + 1>( iLane, rValues, pConstructed );
-			}
-		}
-
-		void emplace( const Fields&...values )
-		{
-			const std::tuple<const Fields&...> args( values... );
-			uint32_t nConstructed = 0;
-			try {
-				constructFields( nUsed, args, &nConstructed );
-			} catch ( ... ) {
-				destroyFields( nUsed, nConstructed );
-				throw;
-			}
-			++nUsed;
-		}
-
-		~Block() noexcept
-		{
-			while ( nUsed != 0 ) {
-				--nUsed;
-				destroyFields( nUsed, sizeof...( Fields ) );
-			}
-		}
-	};
-
-	SIRVector<Block *> m_Blocks;
-	const sirContainerAllocator_t *m_pAllocator;
-	uint32_t m_nSize = 0;
 
 public:
 	explicit SIRAoSoAMultiVector( const sirContainerAllocator_t *pAllocator ) noexcept
@@ -176,15 +115,96 @@ public:
 		return { std::get<I>( pBlock->Columns ).at( 0 ), pBlock->nUsed };
 	}
 
-	uint32_t getSize( void ) const noexcept
-	{
-		return m_nSize;
-	}
+	uint32_t getSize( void ) const noexcept;
+	uint32_t getBlockCount( void ) const noexcept;
 
-	uint32_t getBlockCount( void ) const noexcept
+private:
+	template <typename T>
+	struct Column
 	{
-		return m_Blocks.getSize();
-	}
+		alignas( T ) unsigned char szData[LANES * sizeof( T )];
+
+		T *slot( uint32_t iLane ) noexcept
+		{
+			return ( T * )( szData + static_cast<size_t>( iLane * sizeof( T ) ) );
+		}
+
+		T *at( uint32_t iLane ) noexcept
+		{
+			return std::launder( slot( iLane ) );
+		}
+
+		const T *at( uint32_t iLane ) const noexcept
+		{
+			return std::launder( ( const T * )( szData + static_cast<size_t>( iLane * sizeof( T ) ) ) );
+		}
+	};
+
+	struct alignas( 64 ) Block
+	{
+		std::tuple<Column<Fields>...> Columns;
+		uint32_t nUsed = 0;
+
+		template <size_t I = 0>
+		void destroyFields( uint32_t iLane, uint32_t nConstructed ) noexcept
+		{
+			if constexpr ( I < sizeof...( Fields ) ) {
+				if ( I < nConstructed ) {
+					using Value = typename std::tuple_element<I, std::tuple<Fields...>>::type;
+					std::get<I>( Columns ).at( iLane )->~Value();
+				}
+				destroyFields<I + 1>( iLane, nConstructed );
+			}
+		}
+
+		template <size_t I = 0>
+		void constructFields( uint32_t iLane, const std::tuple<const Fields&...>& rValues, uint32_t *pConstructed )
+		{
+			if constexpr ( I < sizeof...( Fields ) ) {
+				using Value = typename std::tuple_element<I, std::tuple<Fields...>>::type;
+				new ( std::get<I>( Columns ).slot( iLane ) ) Value( std::get<I>( rValues ) );
+				++*pConstructed;
+				constructFields<I + 1>( iLane, rValues, pConstructed );
+			}
+		}
+
+		void emplace( const Fields&...values )
+		{
+			const std::tuple<const Fields&...> args( values... );
+			uint32_t nConstructed = 0;
+			try {
+				constructFields( nUsed, args, &nConstructed );
+			} catch ( ... ) {
+				destroyFields( nUsed, nConstructed );
+				throw;
+			}
+			++nUsed;
+		}
+
+		~Block() noexcept
+		{
+			while ( nUsed != 0 ) {
+				--nUsed;
+				destroyFields( nUsed, sizeof...( Fields ) );
+			}
+		}
+	};
+
+	SIRVector<Block *> m_Blocks;
+	const sirContainerAllocator_t *m_pAllocator;
+	uint32_t m_nSize = 0;
 };
+
+template <uint32_t LANES, typename... Fields>
+SIR_FORCEINLINE uint32_t SIRAoSoAMultiVector<LANES, Fields...>::getSize( void ) const noexcept
+{
+	return m_nSize;
+}
+
+template <uint32_t LANES, typename... Fields>
+SIR_FORCEINLINE uint32_t SIRAoSoAMultiVector<LANES, Fields...>::getBlockCount( void ) const noexcept
+{
+	return m_Blocks.getSize();
+}
 
 #endif // __SIR_AOSOAMULTIVECTOR_H__

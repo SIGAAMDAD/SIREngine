@@ -4,7 +4,7 @@ SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
 This Source Code Form is subject to the terms of the Mozilla Public
-License, v2. If a copy of the MPL was not distributed with this
+License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 This software is provided "as is", without warranty of any kind,
@@ -29,7 +29,6 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Containers/SIRWriteOnlyVectorView.h>
 #include <assert.h>
 #include <string.h>
-#include <new>
 #include <type_traits>
 #include <utility>
 
@@ -54,8 +53,8 @@ public:
 		SIRRawStorage::deallocate( m_pAllocator, m_pData, static_cast<size_t>( m_nCapacity * sizeof( T ) ), alignof( T ) );
 	}
 
-	SIRVector( const SIRVector& ) = delete;
-	SIRVector& operator=( const SIRVector& ) = delete;
+	SIRVector( const SIRVector& ) noexcept = default;
+	SIRVector& operator=( const SIRVector& ) noexcept = default;
 
 	SIRVector( SIRVector&& other ) noexcept
 	    : m_pData( other.m_pData ),
@@ -289,8 +288,7 @@ public:
 			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
 		size_t nActual = 0;
-		if ( SIRRawStorage::tryExpandInPlace(
-		         pCapabilities, m_pData, static_cast<size_t>( m_nCapacity * sizeof( T ) ), nNewBytes, alignof( T ), &nActual ) ) {
+		if ( SIRRawStorage::tryExpandInPlace( pCapabilities, m_pData, static_cast<size_t>( m_nCapacity * sizeof( T ) ), nNewBytes, alignof( T ), &nActual ) ) {
 			// Never exceed the exact usable size provided by the allocator.
 			m_nCapacity = nCapacity;
 			return SIRContainerResult::SIR_CONTAINER_OK;

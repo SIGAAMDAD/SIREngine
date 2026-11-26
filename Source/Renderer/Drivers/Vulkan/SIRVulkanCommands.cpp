@@ -4,7 +4,7 @@ SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
 This Source Code Form is subject to the terms of the Mozilla Public
-License, v2. If a copy of the MPL was not distributed with this
+License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 This software is provided "as is", without warranty of any kind,
@@ -22,33 +22,12 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // warmed transfer path. There is intentionally no second CPU submission owner.
 bool SIRVulkanDevice::initializeTransferQueue( void ) noexcept
 {
-#define SIR_LOAD_DEVICE_PROC( Name ) m_pfn##Name = ( PFN_vk##Name )m_pfnGetDeviceProcAddr( m_Device, "vk" #Name )
-	SIR_LOAD_DEVICE_PROC( DeviceWaitIdle );
-	SIR_LOAD_DEVICE_PROC( CreateCommandPool );
-	SIR_LOAD_DEVICE_PROC( DestroyCommandPool );
-	SIR_LOAD_DEVICE_PROC( AllocateCommandBuffers );
-	SIR_LOAD_DEVICE_PROC( ResetCommandBuffer );
-	SIR_LOAD_DEVICE_PROC( BeginCommandBuffer );
-	SIR_LOAD_DEVICE_PROC( EndCommandBuffer );
-	SIR_LOAD_DEVICE_PROC( CmdPipelineBarrier2 );
-	SIR_LOAD_DEVICE_PROC( CmdCopyBuffer2 );
-	SIR_LOAD_DEVICE_PROC( CmdBindPipeline );
-	SIR_LOAD_DEVICE_PROC( CmdDispatch );
-	SIR_LOAD_DEVICE_PROC( CmdCopyBufferToImage2 );
-	SIR_LOAD_DEVICE_PROC( CmdCopyImageToBuffer2 );
-	SIR_LOAD_DEVICE_PROC( QueueSubmit2 );
-	SIR_LOAD_DEVICE_PROC( CreateSemaphore );
-	SIR_LOAD_DEVICE_PROC( DestroySemaphore );
-	SIR_LOAD_DEVICE_PROC( GetSemaphoreCounterValue );
-	SIR_LOAD_DEVICE_PROC( WaitSemaphores );
-#undef SIR_LOAD_DEVICE_PROC
-
-	if ( m_pfnDeviceWaitIdle == nullptr || m_pfnCreateCommandPool == nullptr || m_pfnDestroyCommandPool == nullptr ||
-	     m_pfnAllocateCommandBuffers == nullptr || m_pfnResetCommandBuffer == nullptr || m_pfnBeginCommandBuffer == nullptr ||
-	     m_pfnEndCommandBuffer == nullptr || m_pfnCmdPipelineBarrier2 == nullptr || m_pfnCmdCopyBuffer2 == nullptr ||
-	     m_pfnCmdBindPipeline == nullptr || m_pfnCmdDispatch == nullptr || m_pfnCmdCopyBufferToImage2 == nullptr ||
-	     m_pfnCmdCopyImageToBuffer2 == nullptr || m_pfnQueueSubmit2 == nullptr || m_pfnCreateSemaphore == nullptr ||
-	     m_pfnDestroySemaphore == nullptr || m_pfnGetSemaphoreCounterValue == nullptr || m_pfnWaitSemaphores == nullptr ) {
+	if ( m_Procs.vkDeviceWaitIdle == nullptr || m_Procs.vkCreateCommandPool == nullptr || m_Procs.vkDestroyCommandPool == nullptr ||
+	     m_Procs.vkAllocateCommandBuffers == nullptr || m_Procs.vkResetCommandBuffer == nullptr || m_Procs.vkBeginCommandBuffer == nullptr ||
+	     m_Procs.vkEndCommandBuffer == nullptr || m_Procs.vkCmdPipelineBarrier2 == nullptr || m_Procs.vkCmdCopyBuffer2 == nullptr ||
+	     m_Procs.vkCmdBindPipeline == nullptr || m_Procs.vkCmdDispatch == nullptr || m_Procs.vkCmdCopyBufferToImage2 == nullptr ||
+	     m_Procs.vkCmdCopyImageToBuffer2 == nullptr || m_Procs.vkQueueSubmit2 == nullptr || m_Procs.vkCreateSemaphore == nullptr ||
+	     m_Procs.vkDestroySemaphore == nullptr || m_Procs.vkGetSemaphoreCounterValue == nullptr || m_Procs.vkWaitSemaphores == nullptr ) {
 		return false;
 	}
 
@@ -56,7 +35,7 @@ bool SIRVulkanDevice::initializeTransferQueue( void ) noexcept
 	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 	poolInfo.queueFamilyIndex = m_Adapter.nQueueFamilyIndex;
 	poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-	if ( m_pfnCreateCommandPool( m_Device, &poolInfo, nullptr, &m_TransferCommandPool ) != VK_SUCCESS ) {
+	if ( m_Procs.vkCreateCommandPool( m_Device, &poolInfo, nullptr, &m_TransferCommandPool ) != VK_SUCCESS ) {
 		return false;
 	}
 
@@ -67,7 +46,7 @@ bool SIRVulkanDevice::initializeTransferQueue( void ) noexcept
 	allocationInfo.commandPool = m_TransferCommandPool;
 	allocationInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 	allocationInfo.commandBufferCount = SIR_VULKAN_TRANSFER_SLOT_COUNT;
-	if ( m_pfnAllocateCommandBuffers( m_Device, &allocationInfo, hBuffers ) != VK_SUCCESS ) {
+	if ( m_Procs.vkAllocateCommandBuffers( m_Device, &allocationInfo, hBuffers ) != VK_SUCCESS ) {
 		return false;
 	}
 	for ( uint32_t iSlot = 0; iSlot < SIR_VULKAN_TRANSFER_SLOT_COUNT; ++iSlot ) {
@@ -82,7 +61,7 @@ bool SIRVulkanDevice::initializeTransferQueue( void ) noexcept
 	VkSemaphoreCreateInfo semaphoreInfo {};
 	semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 	semaphoreInfo.pNext = &timelineInfo;
-	return m_pfnCreateSemaphore( m_Device, &semaphoreInfo, nullptr, &m_TransferTimeline ) == VK_SUCCESS;
+	return m_Procs.vkCreateSemaphore( m_Device, &semaphoreInfo, nullptr, &m_TransferTimeline ) == VK_SUCCESS;
 }
 
 void SIRVulkanDevice::destroyTransferQueue( void ) noexcept
@@ -90,12 +69,12 @@ void SIRVulkanDevice::destroyTransferQueue( void ) noexcept
 	if ( m_Device == VK_NULL_HANDLE ) {
 		return;
 	}
-	if ( m_TransferTimeline != VK_NULL_HANDLE && m_pfnDestroySemaphore != nullptr ) {
-		m_pfnDestroySemaphore( m_Device, m_TransferTimeline, nullptr );
+	if ( m_TransferTimeline != VK_NULL_HANDLE && m_Procs.vkDestroySemaphore != nullptr ) {
+		m_Procs.vkDestroySemaphore( m_Device, m_TransferTimeline, nullptr );
 		m_TransferTimeline = VK_NULL_HANDLE;
 	}
-	if ( m_TransferCommandPool != VK_NULL_HANDLE && m_pfnDestroyCommandPool != nullptr ) {
-		m_pfnDestroyCommandPool( m_Device, m_TransferCommandPool, nullptr );
+	if ( m_TransferCommandPool != VK_NULL_HANDLE && m_Procs.vkDestroyCommandPool != nullptr ) {
+		m_Procs.vkDestroyCommandPool( m_Device, m_TransferCommandPool, nullptr );
 		m_TransferCommandPool = VK_NULL_HANDLE;
 	}
 	memset( m_TransferSlots, 0, sizeof( m_TransferSlots ) );
@@ -111,7 +90,7 @@ bool SIRVulkanDevice::isBufferIdle( const sirVulkanBuffer_t *pBuffer ) const noe
 		return true;
 	}
 	uint64_t nCompleted = 0;
-	return m_pfnGetSemaphoreCounterValue( m_Device, m_TransferTimeline, &nCompleted ) == VK_SUCCESS && nCompleted >= pBuffer->nLastGpuUse;
+	return m_Procs.vkGetSemaphoreCounterValue( m_Device, m_TransferTimeline, &nCompleted ) == VK_SUCCESS && nCompleted >= pBuffer->nLastGpuUse;
 }
 
 SIRVulkanResult SIRVulkanDevice::queryCompletion( const sirVulkanCompletion_t *pCompletion, bool *pComplete ) const noexcept
@@ -127,7 +106,7 @@ SIRVulkanResult SIRVulkanDevice::queryCompletion( const sirVulkanCompletion_t *p
 		return SIRVulkanResult::SIR_VULKAN_INVALID_ARGUMENT;
 	}
 	uint64_t nCompleted = 0;
-	const VkResult eResult = m_pfnGetSemaphoreCounterValue( m_Device, m_TransferTimeline, &nCompleted );
+	const VkResult eResult = m_Procs.vkGetSemaphoreCounterValue( m_Device, m_TransferTimeline, &nCompleted );
 	if ( eResult != VK_SUCCESS ) {
 		return SIRVulkanResult::SIR_VULKAN_NATIVE_FAILURE;
 	}
@@ -150,7 +129,7 @@ SIRVulkanResult SIRVulkanDevice::waitCompletion( const sirVulkanCompletion_t *pC
 	waitInfo.semaphoreCount = 1;
 	waitInfo.pSemaphores = &m_TransferTimeline;
 	waitInfo.pValues = &pCompletion->nValue;
-	const VkResult eResult = m_pfnWaitSemaphores( m_Device, &waitInfo, nTimeoutNs );
+	const VkResult eResult = m_Procs.vkWaitSemaphores( m_Device, &waitInfo, nTimeoutNs );
 	if ( eResult == VK_TIMEOUT ) {
 		return SIRVulkanResult::SIR_VULKAN_TIMEOUT;
 	}
@@ -171,14 +150,15 @@ SIRVulkanResult SIRVulkanDevice::readBuffer( sirVulkanBuffer_t *pBuffer, uint64_
 		return SIRVulkanResult::SIR_VULKAN_BUSY;
 	}
 
-	if ( pBuffer->pMappedData == nullptr ) {
-		return SIRVulkanResult::SIR_VULKAN_INVALID_STATE;
+	void *pMapped = nullptr;
+	const SIRVulkanResult eMap = mapBuffer( pBuffer, nOffset, nBytes, &pMapped );
+	if ( eMap != SIRVulkanResult::SIR_VULKAN_SUCCESS ) return eMap;
+	const SIRVulkanResult eInvalidate = invalidateBuffer( pBuffer, nOffset, nBytes );
+	if ( eInvalidate == SIRVulkanResult::SIR_VULKAN_SUCCESS ) {
+		memcpy( pData, pMapped, static_cast<size_t>( nBytes ) );
 	}
-	const VkResult eResult = vmaInvalidateAllocation( m_Allocator, pBuffer->pAllocation, nOffset, nBytes );
-	if ( eResult == VK_SUCCESS ) {
-		memcpy( pData, static_cast<const uint8_t *>(pBuffer->pMappedData) + nOffset, static_cast<size_t>(nBytes) );
-	}
-	return eResult == VK_SUCCESS ? SIRVulkanResult::SIR_VULKAN_SUCCESS : SIRVulkanResult::SIR_VULKAN_NATIVE_FAILURE;
+	const SIRVulkanResult eUnmap = unmapBuffer( pBuffer );
+	return eInvalidate != SIRVulkanResult::SIR_VULKAN_SUCCESS ? eInvalidate : eUnmap;
 }
 
 SIRVulkanResult sirVulkanValidateBufferCopies( const sirVulkanBufferCopy_t *pCopies, uint32_t nCount ) noexcept
@@ -233,7 +213,7 @@ SIRVulkanResult SIRVulkanDevice::submitBufferCopies( const sirVulkanBufferCopy_t
 	}
 
 	uint64_t nCompleted = 0;
-	const VkResult ePoll = m_pfnGetSemaphoreCounterValue( m_Device, m_TransferTimeline, &nCompleted );
+	const VkResult ePoll = m_Procs.vkGetSemaphoreCounterValue( m_Device, m_TransferTimeline, &nCompleted );
 	if ( ePoll != VK_SUCCESS ) {
 		m_bDeviceLost = ePoll == VK_ERROR_DEVICE_LOST;
 		return SIRVulkanResult::SIR_VULKAN_NATIVE_FAILURE;
@@ -250,7 +230,7 @@ SIRVulkanResult SIRVulkanDevice::submitBufferCopies( const sirVulkanBufferCopy_t
 	if ( pSlot == nullptr ) {
 		return SIRVulkanResult::SIR_VULKAN_BUSY;
 	}
-	const VkResult eReset = m_pfnResetCommandBuffer( pSlot->hCommandBuffer, 0 );
+	const VkResult eReset = m_Procs.vkResetCommandBuffer( pSlot->hCommandBuffer, 0 );
 	if ( eReset != VK_SUCCESS ) {
 		m_bDeviceLost = eReset == VK_ERROR_DEVICE_LOST;
 		return SIRVulkanResult::SIR_VULKAN_NATIVE_FAILURE;
@@ -259,7 +239,7 @@ SIRVulkanResult SIRVulkanDevice::submitBufferCopies( const sirVulkanBufferCopy_t
 	VkCommandBufferBeginInfo beginInfo {};
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-	const VkResult eBegin = m_pfnBeginCommandBuffer( pSlot->hCommandBuffer, &beginInfo );
+	const VkResult eBegin = m_Procs.vkBeginCommandBuffer( pSlot->hCommandBuffer, &beginInfo );
 	if ( eBegin != VK_SUCCESS ) {
 		m_bDeviceLost = eBegin == VK_ERROR_DEVICE_LOST;
 		return SIRVulkanResult::SIR_VULKAN_NATIVE_FAILURE;
@@ -280,7 +260,7 @@ SIRVulkanResult SIRVulkanDevice::submitBufferCopies( const sirVulkanBufferCopy_t
 	dependency.pMemoryBarriers = &barrier;
 	for ( uint32_t iCopy = 0; iCopy < nCount; ++iCopy ) {
 		const sirVulkanBufferCopy_t& copy = pCopies[iCopy];
-		m_pfnCmdPipelineBarrier2( pSlot->hCommandBuffer, &dependency );
+		m_Procs.vkCmdPipelineBarrier2( pSlot->hCommandBuffer, &dependency );
 		VkBufferCopy2 region {};
 		region.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
 		region.srcOffset = copy.nSourceOffset;
@@ -292,9 +272,9 @@ SIRVulkanResult SIRVulkanDevice::submitBufferCopies( const sirVulkanBufferCopy_t
 		copyInfo.dstBuffer = copy.pDestination->hBuffer;
 		copyInfo.regionCount = 1;
 		copyInfo.pRegions = &region;
-		m_pfnCmdCopyBuffer2( pSlot->hCommandBuffer, &copyInfo );
+		m_Procs.vkCmdCopyBuffer2( pSlot->hCommandBuffer, &copyInfo );
 	}
-	const VkResult eEnd = m_pfnEndCommandBuffer( pSlot->hCommandBuffer );
+	const VkResult eEnd = m_Procs.vkEndCommandBuffer( pSlot->hCommandBuffer );
 	if ( eEnd != VK_SUCCESS ) {
 		m_bDeviceLost = eEnd == VK_ERROR_DEVICE_LOST;
 		return SIRVulkanResult::SIR_VULKAN_NATIVE_FAILURE;
@@ -315,7 +295,7 @@ SIRVulkanResult SIRVulkanDevice::submitBufferCopies( const sirVulkanBufferCopy_t
 	submitInfo.pCommandBufferInfos = &commandInfo;
 	submitInfo.signalSemaphoreInfoCount = 1;
 	submitInfo.pSignalSemaphoreInfos = &signalInfo;
-	const VkResult eSubmit = m_pfnQueueSubmit2( m_GraphicsQueue, 1, &submitInfo, VK_NULL_HANDLE );
+	const VkResult eSubmit = m_Procs.vkQueueSubmit2( m_GraphicsQueue, 1, &submitInfo, VK_NULL_HANDLE );
 	if ( eSubmit != VK_SUCCESS ) {
 		m_bDeviceLost = eSubmit == VK_ERROR_DEVICE_LOST;
 		return SIRVulkanResult::SIR_VULKAN_NATIVE_FAILURE;

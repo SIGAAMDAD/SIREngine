@@ -4,7 +4,7 @@ SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
 This Source Code Form is subject to the terms of the Mozilla Public
-License, v2. If a copy of the MPL was not distributed with this
+License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 This software is provided "as is", without warranty of any kind,
@@ -19,12 +19,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 bool SIRVulkanDevice::loadImageDispatch( void ) noexcept
 {
-	m_pfnCreateImageView = static_cast<PFN_vkCreateImageView>(m_pfnGetDeviceProcAddr( m_Device, "vkCreateImageView" ));
-	m_pfnDestroyImageView = static_cast<PFN_vkDestroyImageView>(m_pfnGetDeviceProcAddr( m_Device, "vkDestroyImageView" ));
-	m_pfnCreateSampler = static_cast<PFN_vkCreateSampler>(m_pfnGetDeviceProcAddr( m_Device, "vkCreateSampler" ));
-	m_pfnDestroySampler = static_cast<PFN_vkDestroySampler>(m_pfnGetDeviceProcAddr( m_Device, "vkDestroySampler" ));
-	return m_pfnCreateImageView != nullptr && m_pfnDestroyImageView != nullptr && m_pfnCreateSampler != nullptr &&
-	       m_pfnDestroySampler != nullptr;
+	return m_Procs.vkCreateImageView != nullptr && m_Procs.vkDestroyImageView != nullptr && m_Procs.vkCreateSampler != nullptr &&
+	       m_Procs.vkDestroySampler != nullptr;
 }
 
 SIRVulkanResult SIRVulkanDevice::createImage( const VkImageCreateInfo& info, sirVulkanImage_t *pImage ) noexcept
@@ -59,6 +55,7 @@ SIRVulkanResult SIRVulkanDevice::createImage( const VkImageCreateInfo& info, sir
 	pImage->nDeviceSerial = m_nDeviceSerial;
 	pImage->eFormat = info.format;
 	pImage->eType = info.imageType;
+	pImage->eTiling = info.tiling;
 	pImage->nLastGpuUse = 0;
 	pImage->nLayers = info.arrayLayers;
 	pImage->nMips = info.mipLevels;
@@ -114,7 +111,7 @@ SIRVulkanResult SIRVulkanDevice::createImageView( const sirVulkanImage_t *pImage
 	     info.subresourceRange.layerCount > pImage->nLayers - info.subresourceRange.baseArrayLayer ) {
 		return SIRVulkanResult::SIR_VULKAN_INVALID_ARGUMENT;
 	}
-	const VkResult eCreate = m_pfnCreateImageView( m_Device, &info, nullptr, &pView->hView );
+	const VkResult eCreate = m_Procs.vkCreateImageView( m_Device, &info, nullptr, &pView->hView );
 	if ( eCreate != VK_SUCCESS ) {
 		return eCreate == VK_ERROR_OUT_OF_DEVICE_MEMORY || eCreate == VK_ERROR_OUT_OF_HOST_MEMORY ? SIRVulkanResult::SIR_VULKAN_ALLOCATION_FAILED
 		                                                                                          : SIRVulkanResult::SIR_VULKAN_NATIVE_FAILURE;
@@ -133,7 +130,7 @@ SIRVulkanResult SIRVulkanDevice::destroyImageView( sirVulkanImageView_t *pView )
 	if ( pView == nullptr || pView->hView == VK_NULL_HANDLE || pView->nDeviceSerial != m_nDeviceSerial || m_nLiveImageViews == 0 ) {
 		return SIRVulkanResult::SIR_VULKAN_INVALID_ARGUMENT;
 	}
-	m_pfnDestroyImageView( m_Device, pView->hView, nullptr );
+	m_Procs.vkDestroyImageView( m_Device, pView->hView, nullptr );
 	memset( pView, 0, sizeof( *pView ) );
 	--m_nLiveImageViews;
 	return SIRVulkanResult::SIR_VULKAN_SUCCESS;
@@ -148,7 +145,7 @@ SIRVulkanResult SIRVulkanDevice::createSampler( const VkSamplerCreateInfo& info,
 	     info.anisotropyEnable != VK_FALSE ) {
 		return SIRVulkanResult::SIR_VULKAN_INVALID_ARGUMENT;
 	}
-	const VkResult eCreate = m_pfnCreateSampler( m_Device, &info, nullptr, &pSampler->hSampler );
+	const VkResult eCreate = m_Procs.vkCreateSampler( m_Device, &info, nullptr, &pSampler->hSampler );
 	if ( eCreate != VK_SUCCESS ) {
 		return eCreate == VK_ERROR_OUT_OF_DEVICE_MEMORY || eCreate == VK_ERROR_OUT_OF_HOST_MEMORY ? SIRVulkanResult::SIR_VULKAN_ALLOCATION_FAILED
 		                                                                                          : SIRVulkanResult::SIR_VULKAN_NATIVE_FAILURE;
@@ -167,7 +164,7 @@ SIRVulkanResult SIRVulkanDevice::destroySampler( sirVulkanSampler_t *pSampler ) 
 	     m_nLiveSamplers == 0 ) {
 		return SIRVulkanResult::SIR_VULKAN_INVALID_ARGUMENT;
 	}
-	m_pfnDestroySampler( m_Device, pSampler->hSampler, nullptr );
+	m_Procs.vkDestroySampler( m_Device, pSampler->hSampler, nullptr );
 	memset( pSampler, 0, sizeof( *pSampler ) );
 	--m_nLiveSamplers;
 	return SIRVulkanResult::SIR_VULKAN_SUCCESS;

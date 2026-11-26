@@ -4,7 +4,7 @@ SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
 This Source Code Form is subject to the terms of the Mozilla Public
-License, v2. If a copy of the MPL was not distributed with this
+License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 This software is provided "as is", without warranty of any kind,
@@ -30,7 +30,6 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <assert.h>
 #include <string.h>
-#include <new>
 #include <type_traits>
 #include <utility>
 
@@ -41,6 +40,7 @@ template <typename T, uint32_t N>
 class SIRInlineVector
 {
 public:
+	explicit SIRInlineVector( void ) noexcept = default;
 	explicit SIRInlineVector( const sirContainerAllocator_t *pAllocator ) noexcept
 	    : m_pData( inlineData() ),
 	      m_nSize( 0 ),
@@ -121,11 +121,8 @@ public:
 
 	sirContainerFootprint_t getFootprint( void ) const noexcept
 	{
-		return { static_cast<uint64_t>( N * sizeof( T ) ),
-		         isInline() ? 0u : static_cast<uint64_t>( m_nCapacity * sizeof( T ) ),
-		         0,
-		         0,
-		         static_cast<uint64_t>( m_nSize * sizeof( T ) ) };
+		return {
+		    static_cast<uint64_t>( N * sizeof( T ) ), isInline() ? 0u : static_cast<uint64_t>( m_nCapacity * sizeof( T ) ), 0, 0, static_cast<uint64_t>( m_nSize * sizeof( T ) ) };
 	}
 
 	SIRContainerResult tryReserve( uint32_t nCapacity )
@@ -209,9 +206,7 @@ public:
 			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
 		size_t nActualBytes = 0;
-		if ( !isInline() &&
-		     SIRRawStorage::tryExpandInPlace(
-		         pCapabilities, m_pData, static_cast<size_t>( m_nCapacity * sizeof( T ) ), nBytes, alignof( T ), &nActualBytes ) ) {
+		if ( !isInline() && SIRRawStorage::tryExpandInPlace( pCapabilities, m_pData, static_cast<size_t>( m_nCapacity * sizeof( T ) ), nBytes, alignof( T ), &nActualBytes ) ) {
 			m_nCapacity = nCapacity;
 			return SIRContainerResult::SIR_CONTAINER_OK;
 		}

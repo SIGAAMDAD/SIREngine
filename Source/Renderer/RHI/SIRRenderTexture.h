@@ -4,7 +4,7 @@ SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
 This Source Code Form is subject to the terms of the Mozilla Public
-License, v2. If a copy of the MPL was not distributed with this
+License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 This software is provided "as is", without warranty of any kind,
@@ -23,42 +23,92 @@ of merchantability, fitness for a particular purpose and noninfringement.
 	#pragma once
 #endif
 // clang-format on
+#include <Renderer/RHI/SIRRenderResource.h>
+#include <Renderer/RHI/SIRRenderTypes.h>
 
-#include <Renderer/SIRRenderTypes.h>
-#include "Renderer/SIRGraphicsTypes.h"
-
-// One GPU image/texture; array, mip, aspect and format views are separate.
-// Nonowning, zero-allocation typed façade; the device owns resource lifetime.
-class SIRRenderTexture
+class SIRRenderTexture : public SIRRenderResource
 {
 public:
-	SIRRenderTexture( void ) noexcept = default;
-	explicit SIRRenderTexture( sirGraphicsHandle_t hHandle ) noexcept : m_hHandle( hHandle )
+	explicit SIRRenderTexture( const SIRRenderTexture& ) = delete;
+	explicit SIRRenderTexture( SIRRenderTexture&& ) = delete;
+	virtual ~SIRRenderTexture() noexcept = default;
+	SIRRenderTexture& operator=( const SIRRenderTexture& ) = delete;
+	SIRRenderTexture& operator=( SIRRenderTexture&& ) = delete;
+
+	uint32_t getWidth( void ) const noexcept
 	{
+		return m_Description.nWidth;
 	}
 
-	sirGraphicsHandle_t getHandle( void ) const noexcept
+	uint32_t getHeight( void ) const noexcept
 	{
-		return m_hHandle;
-	}
-	bool isValid( void ) const noexcept
-	{
-		return m_hHandle.nGeneration != 0 && m_hHandle.nDeviceGeneration != 0 && m_hHandle.eType == SIRGraphicsHandleType::SIR_GRAPHICS_HANDLE_TEXTURE;
+		return m_Description.nHeight;
 	}
 
-	uint32_t getWidth( void ) const noexcept;
-	uint32_t getHeight( void ) const noexcept;
-	uint32_t getMipLevels( void ) const noexcept;
-	SIRGraphicsFormat getFormat( void ) const noexcept;
-	SIRGraphicsTextureDimension getTextureType( void ) const noexcept;
+	uint32_t getDepth( void ) const noexcept
+	{
+		return m_Description.nDepth;
+	}
+
+	uint32_t getMipLevels( void ) const noexcept
+	{
+		return m_Description.nMipLevels;
+	}
+
+	uint32_t getArrayLayers( void ) const noexcept
+	{
+		return m_Description.nLayers;
+	}
+
+	uint32_t getSampleCount( void ) const noexcept
+	{
+		return m_Description.nSamples;
+	}
+
+	uint32_t getUsage( void ) const noexcept
+	{
+		return static_cast<uint32_t>( m_Description.nUsage );
+	}
+
+	SIRRenderFormat getFormat( void ) const noexcept
+	{
+		return m_Description.eFormat;
+	}
+
+	SIRRenderTextureDimension getDimension( void ) const noexcept
+	{
+		return m_Description.eDimension;
+	}
+
+	SIRRenderMemoryType getMemoryType( void ) const noexcept
+	{
+		return m_Description.eMemory;
+	}
+
+	bool isExternallyOwned( void ) const noexcept
+	{
+		return m_Description.bExternallyOwned;
+	}
+
+	bool isSparse( void ) const noexcept
+	{
+		return m_Description.bSparse;
+	}
+
+	const sirRenderTextureDescription_t& getDescription( void ) const noexcept
+	{
+		return m_Description;
+	}
+
+	virtual SIRRenderResult getSubresourceLayout( const sirRenderSubresourceRange_t& subresources, sirRenderBufferRange_t *pLayout ) const noexcept = 0;
 
 protected:
-	sirGraphicsHandle_t m_hHandle = {};
-	uint32_t m_nWidth = {};
-	uint32_t m_nHeight = {};
-	uint32_t m_nMipLevels = {};
-	SIRGraphicsFormat m_eFormat = {};
-	SIRGraphicsTextureDimension m_eType = {};
-};
+	explicit SIRRenderTexture( const SIRSharedPtr<SIRRenderDevice>& device, const sirRenderTextureDescription_t& description ) noexcept
+	    : SIRRenderResource( device ),
+	      m_Description( description )
+	{
+	}
 
+	sirRenderTextureDescription_t m_Description{};
+};
 #endif // __SIR_RENDER_TEXTURE_H__

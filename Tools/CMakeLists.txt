@@ -1,15 +1,17 @@
+# ===========================================================================
+# SIREngine MPLv2 Source Code
+# Copyright (C) 2023-2027 Noah Van Til
+# 
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+# 
+# This software is provided "as is", without warranty of any kind,
+# express or implied, including but not limited to the warranties
+# of merchantability, fitness for a particular purpose and noninfringement.
+# ===========================================================================
+
 # Tools and offline cookers own their target declarations here.
-
-# -- Tools/RegistrationCooker --
-add_library(SIRRegistrationCookerLib STATIC ${PROJECT_SOURCE_DIR}/Tools/RegistrationCooker/SIRRegistrationCooker.cpp ${PROJECT_SOURCE_DIR}/Tools/StringCatalogCooker/SIRStringCatalogCooker.cpp)
-target_include_directories(SIRRegistrationCookerLib PUBLIC "${PROJECT_SOURCE_DIR}" "${PROJECT_SOURCE_DIR}/Source" "${PROJECT_SOURCE_DIR}/Build/CMake")
-target_link_libraries(SIRRegistrationCookerLib PUBLIC SIR::Core)
-target_compile_features(SIRRegistrationCookerLib PUBLIC cxx_std_17)
-sir_configure_owned_target(SIRRegistrationCookerLib)
-
-add_executable(SIRRegistrationCooker ${PROJECT_SOURCE_DIR}/Tools/RegistrationCooker/SIRRegistrationCookerMain.cpp)
-target_link_libraries(SIRRegistrationCooker PRIVATE SIRRegistrationCookerLib)
-sir_configure_owned_target(SIRRegistrationCooker)
 
 # -- Tools/SceneCooker/Animation --
 add_library(SIRAnimationCook STATIC ${PROJECT_SOURCE_DIR}/Tools/SceneCooker/Animation/SIRAnimationCooker.cpp)

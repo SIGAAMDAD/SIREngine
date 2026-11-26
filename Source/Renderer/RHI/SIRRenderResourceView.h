@@ -4,7 +4,7 @@ SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
 This Source Code Form is subject to the terms of the Mozilla Public
-License, v2. If a copy of the MPL was not distributed with this
+License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 This software is provided "as is", without warranty of any kind,
@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIR_RENDERRESOURCEVIEW_H__
-#define __SIR_RENDERRESOURCEVIEW_H__
+#ifndef __SIR_RENDER_RESOURCE_VIEW_H__
+#define __SIR_RENDER_RESOURCE_VIEW_H__
 
 #include <Core/SIRPCH.h>
 
@@ -24,29 +24,31 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-#include <Renderer/SIRRenderTypes.h>
+#include <Renderer/RHI/SIRRenderResource.h>
 
-// Typed borrowed view of a buffer or texture; no second GPU memory backing.
-// Nonowning, zero-allocation typed façade; the device owns resource lifetime.
-class SIRRenderResourceView final
+class SIRRenderResourceView : public SIRRenderResource
 {
 public:
-	SIRRenderResourceView( void ) noexcept = default;
-	explicit SIRRenderResourceView( sirGraphicsHandle_t hHandle ) noexcept : m_hHandle( hHandle )
+	explicit SIRRenderResourceView( const SIRRenderResourceView& ) = delete;
+	explicit SIRRenderResourceView( SIRRenderResourceView&& ) = delete;
+	virtual ~SIRRenderResourceView() noexcept = default;
+	SIRRenderResourceView& operator=( const SIRRenderResourceView& ) = delete;
+	SIRRenderResourceView& operator=( SIRRenderResourceView&& ) = delete;
+
+	SIRRenderFormat getFormat( void ) const noexcept
+	{
+		return m_eFormat;
+	}
+
+	virtual const SIRRenderResource& getResource( void ) const noexcept = 0;
+
+protected:
+	explicit SIRRenderResourceView( const SIRSharedPtr<SIRRenderDevice>& device, SIRRenderFormat eFormat ) noexcept
+	    : SIRRenderResource( device ),
+	      m_eFormat( eFormat )
 	{
 	}
 
-	sirGraphicsHandle_t getHandle( void ) const noexcept
-	{
-		return m_hHandle;
-	}
-	bool isValid( void ) const noexcept
-	{
-		return m_hHandle.nGeneration != 0 && m_hHandle.nDeviceGeneration != 0 && m_hHandle.eType == SIRGraphicsHandleType::SIR_GRAPHICS_HANDLE_VIEW;
-	}
-
-private:
-	sirGraphicsHandle_t m_hHandle {};
+	SIRRenderFormat m_eFormat{};
 };
-
-#endif // __SIR_RENDERRESOURCEVIEW_H__
+#endif // __SIR_RENDER_RESOURCE_VIEW_H__

@@ -1,4 +1,18 @@
-/* SIREngine - MPL-2.0. Bounded multi-producer multi-consumer ring with atomic batch claims. */
+/*
+===========================================================================
+SIREngine MPLv2 Source Code
+Copyright (C) 2023-2027 Noah Van Til
+
+This Source Code Form is subject to the terms of the Mozilla Public
+License, v. 2.0. If a copy of the MPL was not distributed with this
+file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+This software is provided "as is", without warranty of any kind,
+express or implied, including but not limited to the warranties
+of merchantability, fitness for a particular purpose and noninfringement.
+===========================================================================
+*/
+
 #ifndef __SIR_BATCHMPMCQUEUE_H__
 #define __SIR_BATCHMPMCQUEUE_H__
 
@@ -9,6 +23,7 @@
 	#pragma once
 #endif
 // clang-format on
+
 #include <atomic>
 #include <Core/Containers/SIRRawStorage.h>
 #include <new>
@@ -19,18 +34,6 @@ class SIRBatchMpmcQueue
 {
 	static_assert( std::is_trivially_copyable<T>::value && std::is_trivially_default_constructible<T>::value,
 	               "Batch queue requires trivially copyable default-constructible values" );
-
-	struct alignas( 64 ) Cell
-	{
-		std::atomic<uint64_t> nSequence{ 0 };
-		T value{};
-	};
-
-	const sirContainerAllocator_t *m_pAllocator;
-	Cell *m_pCells = nullptr;
-	uint32_t m_nCapacity = 0;
-	alignas( 64 ) std::atomic<uint64_t> m_nEnqueue{ 0 };
-	alignas( 64 ) std::atomic<uint64_t> m_nDequeue{ 0 };
 
 public:
 	explicit SIRBatchMpmcQueue( const sirContainerAllocator_t *pAllocator ) noexcept
@@ -179,5 +182,18 @@ public:
 	{
 		return m_nCapacity;
 	}
+
+private:
+	struct alignas( 64 ) Cell
+	{
+		std::atomic<uint64_t> nSequence{ 0 };
+		T value{};
+	};
+
+	const sirContainerAllocator_t *m_pAllocator;
+	Cell *m_pCells = nullptr;
+	uint32_t m_nCapacity = 0;
+	alignas( 64 ) std::atomic<uint64_t> m_nEnqueue{ 0 };
+	alignas( 64 ) std::atomic<uint64_t> m_nDequeue{ 0 };
 };
 #endif /* __SIR_BATCHMPMCQUEUE_H__ */

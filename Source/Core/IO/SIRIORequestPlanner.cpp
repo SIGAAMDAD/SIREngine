@@ -1,3 +1,18 @@
+/*
+===========================================================================
+SIREngine MPLv2 Source Code
+Copyright (C) 2023-2027 Noah Van Til
+
+This Source Code Form is subject to the terms of the Mozilla Public
+License, v. 2.0. If a copy of the MPL was not distributed with this
+file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+This software is provided "as is", without warranty of any kind,
+express or implied, including but not limited to the warranties
+of merchantability, fitness for a particular purpose and noninfringement.
+===========================================================================
+*/
+
 #include <Core/IO/SIRIORequestPlanner.h>
 SIRIORequestPlanner::SIRIORequestPlanner( void ) noexcept:m_pPending(nullptr),m_nCount(0),m_nCapacity(0),m_nNextGeneration(0),m_nBuiltCount(0),m_nMergeGap(0),m_nMaxMerged(0),m_bInitialized(false),m_bBuilt(false){}
 sirIOResult_t SIRIORequestPlanner::initialize(const sirIOPlannerConfig_t& c) noexcept{if(m_bInitialized||c.pPending==nullptr||c.nPendingCapacity==0)return SIR_IO_INVALID_ARGUMENT;m_pPending=c.pPending;m_nCapacity=c.nPendingCapacity;m_nMergeGap=c.nMaxMergeGap;m_nMaxMerged=c.nMaxMergedBytes;m_nCount=0;m_bBuilt=false;m_bInitialized=true;return SIR_IO_OK;}

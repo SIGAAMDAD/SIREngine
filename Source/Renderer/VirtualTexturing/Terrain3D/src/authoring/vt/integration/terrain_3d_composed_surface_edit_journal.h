@@ -1,3 +1,18 @@
+/*
+===========================================================================
+SIREngine MPLv2 Source Code
+Copyright (C) 2023-2027 Noah Van Til
+
+This Source Code Form is subject to the terms of the Mozilla Public
+License, v. 2.0. If a copy of the MPL was not distributed with this
+file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+This software is provided "as is", without warranty of any kind,
+express or implied, including but not limited to the warranties
+of merchantability, fitness for a particular purpose and noninfringement.
+===========================================================================
+*/
+
 // CS07: editor-owner only composed-surface invalidation; no render-thread RID access.
 #ifndef TERRAIN3D_COMPOSED_SURFACE_EDIT_JOURNAL_H
 #define TERRAIN3D_COMPOSED_SURFACE_EDIT_JOURNAL_H

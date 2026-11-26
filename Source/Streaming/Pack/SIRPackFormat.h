@@ -4,7 +4,7 @@ SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
 This Source Code Form is subject to the terms of the Mozilla Public
-License, v2. If a copy of the MPL was not distributed with this
+License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 This software is provided "as is", without warranty of any kind,
@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIR_PACKFORMAT_H__
-#define __SIR_PACKFORMAT_H__
+#ifndef __SIR_PACK_FORMAT_H__
+#define __SIR_PACK_FORMAT_H__
 
 #include <Core/SIRPCH.h>
 
@@ -25,6 +25,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <Resources/SIRResourceTypes.h>
+#include <Core/Compression/SIRCompressionCodec.h>
 
 constexpr uint16_t SIR_PACK_VERSION = 1;
 constexpr uint32_t SIR_PACK_ENDIAN_MARKER = 0x01020304U;
@@ -55,14 +56,6 @@ enum class SIRPackResult : uint8_t
 	SIR_PACK_BUSY,
 	SIR_PACK_IO_ERROR
 };
-typedef SIRPackResult sirPackResult_t;
-
-typedef enum sirPackCodec_e : uint16_t
-{
-	SIR_PACK_CODEC_NONE = 0,
-	SIR_PACK_CODEC_ZSTD = 1,
-	SIR_PACK_CODEC_LZ4 = 2
-} sirPackCodec_t;
 
 typedef struct sirPackResource_s
 {
@@ -87,7 +80,7 @@ typedef struct sirPackChunk_s
 	uint64_t nEncodedBytes;
 	uint64_t nDecodedBytes;
 
-	sirPackCodec_t eCodec;
+	SIRCompressionType eCodec;
 
 	uint16_t nCodecVersion;
 	uint32_t nAlignment;
@@ -129,4 +122,4 @@ void sirPackSha256Init( sirPackSha256State_t *pState ) noexcept;
 void sirPackSha256Update( sirPackSha256State_t *pState, const uint8_t *pBytes, uint64_t nBytes ) noexcept;
 void sirPackSha256Final( sirPackSha256State_t *pState, uint8_t *pDigest ) noexcept;
 
-#endif // __SIR_PACKFORMAT_H__
+#endif // __SIR_PACK_FORMAT_H__

@@ -4,7 +4,7 @@ SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
 This Source Code Form is subject to the terms of the Mozilla Public
-License, v2. If a copy of the MPL was not distributed with this
+License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 This software is provided "as is", without warranty of any kind,
@@ -15,6 +15,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/Platform/Shared/Process/SIRPlatformPipe.h>
 
+#include <cstddef>
 #include <cstdint>
 #include <errno.h>
 #include <fcntl.h>
@@ -104,7 +105,9 @@ sirPipeResult SIRPlatformPipe::read( void *pDestination, uint64_t nBytes, uint64
 	if ( nBytes == 0 ) {
 		return sirPipeResult::SIR_PIPE_OK;
 	}
-	const size_t nStep = static_cast<size_t>( nBytes < 1024 * 1024 ? nBytes : 1024 * 1024 );
+
+	constexpr const size_t MB = static_cast<size_t>( 1024 * 1024 );
+	const size_t nStep = static_cast<size_t>( nBytes < MB ? nBytes : MB );
 	for ( ;; ) {
 		const ssize_t nRead = ::read( static_cast<int>( m_nReadHandle ), pDestination, nStep );
 		if ( nRead < 0 && errno == EINTR ) {

@@ -4,7 +4,7 @@ SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
 This Source Code Form is subject to the terms of the Mozilla Public
-License, v2. If a copy of the MPL was not distributed with this
+License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 This software is provided "as is", without warranty of any kind,
@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIR_RENDERPIPELINE_H__
-#define __SIR_RENDERPIPELINE_H__
+#ifndef __SIR_RENDER_PIPELINE_H__
+#define __SIR_RENDER_PIPELINE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -24,29 +24,55 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-#include <Renderer/SIRRenderTypes.h>
+#include <Core/Containers/SIRVector.h>
+#include <Renderer/RHI/SIRRenderResource.h>
+#include <Renderer/RHI/SIRRenderTypes.h>
+#include "SIRRenderProgram.h"
+#include "SIRRenderShader.h"
 
-// Executable graphics/compute/fixed-function recipe compiled for the native backend.
-// Nonowning, zero-allocation typed façade; the device owns resource lifetime.
-class SIRRenderPipeline final
+class SIRRenderBindingLayout;
+
+class SIRRenderPipeline : public SIRRenderResource
 {
 public:
-	SIRRenderPipeline( void ) noexcept = default;
-	explicit SIRRenderPipeline( sirGraphicsHandle_t hHandle ) noexcept : m_hHandle( hHandle )
+	explicit SIRRenderPipeline( const SIRRenderPipeline& ) = delete;
+	explicit SIRRenderPipeline( SIRRenderPipeline&& ) = delete;
+	virtual ~SIRRenderPipeline() noexcept = default;
+
+	SIRRenderPipeline& operator=( const SIRRenderPipeline& ) = delete;
+	SIRRenderPipeline& operator=( SIRRenderPipeline&& ) = delete;
+
+	SIRRenderPipelineType getType( void ) const noexcept
+	{
+		return m_eType;
+	}
+
+	const SIRRenderBindingLayout& getBindingLayout( void ) const noexcept
+	{
+		return *m_pBindingLayout;
+	}
+
+	const SIRVector<SIRSharedPtr<SIRRenderShader>>& getShaders( void ) const noexcept
+	{
+		return m_Shaders;
+	}
+
+protected:
+	explicit SIRRenderPipeline( const SIRSharedPtr<SIRRenderDevice>& device,
+	                            SIRRenderPipelineType eType,
+	                            const SIRSharedPtr<SIRRenderBindingLayout>& layout,
+	                            const sirContainerAllocator_t *pAllocator ) noexcept
+	    : SIRRenderResource( device ),
+	      m_eType( eType ),
+	      m_pBindingLayout( layout ),
+	      m_Shaders( pAllocator )
 	{
 	}
 
-	sirGraphicsHandle_t getHandle( void ) const noexcept
-	{
-		return m_hHandle;
-	}
-	bool isValid( void ) const noexcept
-	{
-		return m_hHandle.nGeneration != 0 && m_hHandle.nDeviceGeneration != 0 && m_hHandle.eType == SIRGraphicsHandleType::SIR_GRAPHICS_HANDLE_PIPELINE;
-	}
-
-private:
-	sirGraphicsHandle_t m_hHandle {};
+	SIRRenderPipelineType m_eType{};
+	SIRSharedPtr<SIRRenderBindingLayout> m_pBindingLayout;
+	SIRSharedPtr<SIRRenderProgram> m_Program;
+	SIRVector<SIRSharedPtr<SIRRenderShader>> m_Shaders;
 };
 
-#endif // __SIR_RENDERPIPELINE_H__
+#endif // __SIR_RENDER_PIPELINE_H__

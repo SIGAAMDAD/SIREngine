@@ -4,7 +4,7 @@ SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
 This Source Code Form is subject to the terms of the Mozilla Public
-License, v2. If a copy of the MPL was not distributed with this
+License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 This software is provided "as is", without warranty of any kind,
@@ -67,14 +67,14 @@ SIRVulkanResult SIRVulkanDevice::chooseResidentMemoryType( uint32_t *pMemoryType
 		return SIRVulkanResult::SIR_VULKAN_INVALID_ARGUMENT;
 	}
 	*pMemoryType = UINT32_MAX;
-	const PFN_vkCreateBuffer pfnCreateBuffer = static_cast<PFN_vkCreateBuffer>(m_pfnGetDeviceProcAddr( m_Device, "vkCreateBuffer" ));
-	const PFN_vkDestroyBuffer pfnDestroyBuffer = static_cast<PFN_vkDestroyBuffer>(m_pfnGetDeviceProcAddr( m_Device, "vkDestroyBuffer" ));
+	const PFN_vkCreateBuffer pfnCreateBuffer = m_Procs.vkCreateBuffer;
+	const PFN_vkDestroyBuffer pfnDestroyBuffer = m_Procs.vkDestroyBuffer;
 	const PFN_vkGetBufferMemoryRequirements pfnGetBufferRequirements =
-	    static_cast<PFN_vkGetBufferMemoryRequirements>(m_pfnGetDeviceProcAddr( m_Device, "vkGetBufferMemoryRequirements" ));
-	const PFN_vkCreateImage pfnCreateImage = static_cast<PFN_vkCreateImage>(m_pfnGetDeviceProcAddr( m_Device, "vkCreateImage" ));
-	const PFN_vkDestroyImage pfnDestroyImage = static_cast<PFN_vkDestroyImage>(m_pfnGetDeviceProcAddr( m_Device, "vkDestroyImage" ));
+	    m_Procs.vkGetBufferMemoryRequirements;
+	const PFN_vkCreateImage pfnCreateImage = m_Procs.vkCreateImage;
+	const PFN_vkDestroyImage pfnDestroyImage = m_Procs.vkDestroyImage;
 	const PFN_vkGetImageMemoryRequirements pfnGetImageRequirements =
-	    static_cast<PFN_vkGetImageMemoryRequirements>(m_pfnGetDeviceProcAddr( m_Device, "vkGetImageMemoryRequirements" ));
+	    m_Procs.vkGetImageMemoryRequirements;
 	if ( pfnCreateBuffer == nullptr || pfnDestroyBuffer == nullptr || pfnGetBufferRequirements == nullptr || pfnCreateImage == nullptr ||
 	     pfnDestroyImage == nullptr || pfnGetImageRequirements == nullptr ) {
 		return SIRVulkanResult::SIR_VULKAN_API_UNSUPPORTED;
@@ -212,10 +212,10 @@ bool SIRVulkanDevice::isSealedMemoryType( const VkImageCreateInfo& info ) const 
 	if ( !m_bSealedPools ) {
 		return true;
 	}
-	const PFN_vkCreateImage pfnCreateImage = static_cast<PFN_vkCreateImage>(m_pfnGetDeviceProcAddr( m_Device, "vkCreateImage" ));
+	const PFN_vkCreateImage pfnCreateImage = m_Procs.vkCreateImage;
 	const PFN_vkGetImageMemoryRequirements pfnGetRequirements =
-	    static_cast<PFN_vkGetImageMemoryRequirements>(m_pfnGetDeviceProcAddr( m_Device, "vkGetImageMemoryRequirements" ));
-	const PFN_vkDestroyImage pfnDestroyImage = static_cast<PFN_vkDestroyImage>(m_pfnGetDeviceProcAddr( m_Device, "vkDestroyImage" ));
+	    m_Procs.vkGetImageMemoryRequirements;
+	const PFN_vkDestroyImage pfnDestroyImage = m_Procs.vkDestroyImage;
 	if ( pfnCreateImage == nullptr || pfnGetRequirements == nullptr || pfnDestroyImage == nullptr ) {
 		return false;
 	}
@@ -238,10 +238,10 @@ bool SIRVulkanDevice::isSealedBufferMemoryType( const VkBufferCreateInfo& info, 
 	if ( iPool >= 3 ) {
 		return false;
 	}
-	const PFN_vkCreateBuffer pfnCreateBuffer = static_cast<PFN_vkCreateBuffer>(m_pfnGetDeviceProcAddr( m_Device, "vkCreateBuffer" ));
+	const PFN_vkCreateBuffer pfnCreateBuffer = m_Procs.vkCreateBuffer;
 	const PFN_vkGetBufferMemoryRequirements pfnGetRequirements =
-	    static_cast<PFN_vkGetBufferMemoryRequirements>(m_pfnGetDeviceProcAddr( m_Device, "vkGetBufferMemoryRequirements" ));
-	const PFN_vkDestroyBuffer pfnDestroyBuffer = static_cast<PFN_vkDestroyBuffer>(m_pfnGetDeviceProcAddr( m_Device, "vkDestroyBuffer" ));
+	    m_Procs.vkGetBufferMemoryRequirements;
+	const PFN_vkDestroyBuffer pfnDestroyBuffer = m_Procs.vkDestroyBuffer;
 	if ( pfnCreateBuffer == nullptr || pfnGetRequirements == nullptr || pfnDestroyBuffer == nullptr ) {
 		return false;
 	}

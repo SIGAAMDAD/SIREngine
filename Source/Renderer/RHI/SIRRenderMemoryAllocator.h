@@ -4,7 +4,7 @@ SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
 This Source Code Form is subject to the terms of the Mozilla Public
-License, v2. If a copy of the MPL was not distributed with this
+License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 This software is provided "as is", without warranty of any kind,
@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIR_RENDERMEMORYALLOCATOR_H__
-#define __SIR_RENDERMEMORYALLOCATOR_H__
+#ifndef __SIR_RENDER_MEMORY_ALLOCATOR_H__
+#define __SIR_RENDER_MEMORY_ALLOCATOR_H__
 
 #include <Core/SIRPCH.h>
 
@@ -23,24 +23,36 @@ of merchantability, fitness for a particular purpose and noninfringement.
 	#pragma once
 #endif
 // clang-format on
+#include <Renderer/RHI/SIRRenderTypes.h>
+class SIRRenderDevice;
 
-#include <Renderer/SIRRenderTypes.h>
-
-// Device-owned policy/requirements interface; ONLY the native device creates
-// and destroys allocations. No standalone allocator can create GPU backings.
-// Implementations report API-specific requirements without exposing SDK types.
 class SIRRenderMemoryAllocator
 {
 public:
-	virtual SIRGraphicsResult queryBufferRequirements( const sirGraphicsBufferDesc_t& desc,
-	                                                     sirRenderMemoryRequirements_t *pInfo ) const noexcept = 0;
-	virtual SIRGraphicsResult queryTextureRequirements( const sirGraphicsTextureDesc_t& desc,
-	                                                      sirRenderMemoryRequirements_t *pInfo ) const noexcept = 0;
-	virtual SIRGraphicsResult queryResourceResidency( sirGraphicsHandle_t hResource, sirRenderMemoryStatus_t *pInfo ) const noexcept = 0;
-	virtual SIRGraphicsResult queryBudget( sirGraphicsMemoryBudget_t *pBudget ) const noexcept = 0;
+	explicit SIRRenderMemoryAllocator( const SIRRenderMemoryAllocator& ) = delete;
+	explicit SIRRenderMemoryAllocator( SIRRenderMemoryAllocator&& ) = delete;
+	virtual ~SIRRenderMemoryAllocator() noexcept = default;
+	SIRRenderMemoryAllocator& operator=( const SIRRenderMemoryAllocator& ) = delete;
+	SIRRenderMemoryAllocator& operator=( SIRRenderMemoryAllocator&& ) = delete;
+
+	SIRRenderDevice& getDevice( void ) const noexcept
+	{
+		return *m_pDevice;
+	}
+
+	virtual SIRRenderResult getBufferRequirements( const sirRenderBufferDescription_t& description, sirRenderMemoryRequirements_t *pRequirements ) const noexcept = 0;
+	virtual SIRRenderResult getTextureRequirements( const sirRenderTextureDescription_t& description, sirRenderMemoryRequirements_t *pRequirements ) const noexcept = 0;
+	virtual SIRRenderResult getRenderbufferRequirements( const sirRenderTextureDescription_t& description, sirRenderMemoryRequirements_t *pRequirements ) const noexcept = 0;
+	virtual SIRRenderResult getAccelerationStructureRequirements( uint64_t nSizeBytes, sirRenderMemoryRequirements_t *pRequirements ) const noexcept = 0;
+	virtual SIRRenderResult getMemoryBudget( sirRenderMemoryBudget_t *pBudget ) const noexcept = 0;
 
 protected:
-	virtual ~SIRRenderMemoryAllocator( void ) noexcept = default;
-};
+	explicit SIRRenderMemoryAllocator( SIRRenderDevice& device ) noexcept
+	    : m_pDevice( &device )
+	{
+	}
 
-#endif // __SIR_RENDERMEMORYALLOCATOR_H__
+private:
+	SIRRenderDevice *m_pDevice;
+};
+#endif // __SIR_RENDER_MEMORY_ALLOCATOR_H__

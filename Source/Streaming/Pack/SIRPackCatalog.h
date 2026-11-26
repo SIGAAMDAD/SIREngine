@@ -4,7 +4,7 @@ SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
 This Source Code Form is subject to the terms of the Mozilla Public
-License, v2. If a copy of the MPL was not distributed with this
+License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 This software is provided "as is", without warranty of any kind,
@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIR_PACKCATALOG_H__
-#define __SIR_PACKCATALOG_H__
+#ifndef __SIR_PACK_CATALOG_H__
+#define __SIR_PACK_CATALOG_H__
 
 #include <Core/SIRPCH.h>
 
@@ -33,6 +33,12 @@ class SIRPackCatalog
 {
 public:
 	SIRPackCatalog( void ) noexcept;
+	SIRPackCatalog( const SIRPackCatalog& ) noexcept = delete;
+	SIRPackCatalog( SIRPackCatalog&& ) noexcept = delete;
+	~SIRPackCatalog() noexcept;
+
+	SIRPackCatalog& operator=( const SIRPackCatalog& ) noexcept = delete;
+	SIRPackCatalog& operator=( SIRPackCatalog&& ) noexcept = delete;
 
 	bool isOpen( void ) const noexcept;
 
@@ -55,10 +61,8 @@ public:
 	SIRPackResult validateShard( uint32_t iShard, const void *pBytes, uint64_t nBytes ) const noexcept;
 	SIRPackResult verifyDecodedChunk( uint32_t iChunk, const void *pBytes, uint64_t nBytes ) const noexcept;
 
-protected:
 private:
-	const uint8_t *m_pBytes;
-	uint64_t m_nBytes;
+	SIRSpan<const uint8_t> m_Bytes;
 	uint64_t m_nPackageId;
 	uint64_t m_nGeneration;
 	uint64_t m_nShardOffset;
@@ -74,4 +78,4 @@ private:
 	SIRPackResult validateTables( uint8_t *pScratch, uint64_t nScratchBytes ) const noexcept;
 };
 
-#endif // __SIR_PACKCATALOG_H__
+#endif // __SIR_PACK_CATALOG_H__

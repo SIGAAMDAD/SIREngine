@@ -14,5 +14,6 @@
   ],
   "clangd.fallbackFlags": ["-I${workspaceFolder}/Source", "-std=c++23"],
 
-  "C_Cpp.intelliSenseEngine": "disabled"
+  "C_Cpp.intelliSenseEngine": "disabled",
+  "python-envs.defaultEnvManager": "ms-python.python:system"
 }

@@ -4,7 +4,7 @@ SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
 This Source Code Form is subject to the terms of the Mozilla Public
-License, v2. If a copy of the MPL was not distributed with this
+License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 This software is provided "as is", without warranty of any kind,
@@ -51,25 +51,30 @@ static sirFileResult sirFileErrorLinux( int nError ) noexcept
 
 static bool sirFileValidFlags( uint32_t nFlags ) noexcept
 {
-	const uint32_t nKnown = static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_READ ) | static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_WRITE ) | static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_CREATE ) | static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_TRUNCATE ) |
+	const uint32_t nKnown = static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_READ ) | static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_WRITE ) |
+	                        static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_CREATE ) | static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_TRUNCATE ) |
 	                        static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_APPEND ) | static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_EXCLUSIVE );
-	return ( ( nFlags & ~nKnown ) == 0 ) && ( ( nFlags & ( static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_READ ) | static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_WRITE ) ) ) != 0 ) &&
-	       ( ( nFlags & ( static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_CREATE ) | static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_TRUNCATE ) | static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_APPEND ) ) ) == 0 ||
+	return ( ( nFlags & ~nKnown ) == 0 ) &&
+	       ( ( nFlags & ( static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_READ ) | static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_WRITE ) ) ) != 0 ) &&
+	       ( ( nFlags & ( static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_CREATE ) | static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_TRUNCATE ) |
+	                      static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_APPEND ) ) ) == 0 ||
 	         ( nFlags & static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_WRITE ) ) != 0 ) &&
-	       ( ( nFlags & static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_EXCLUSIVE ) ) == 0 || ( nFlags & static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_CREATE ) ) != 0 ) &&
-	       ( ( nFlags & static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_APPEND ) ) == 0 || ( nFlags & static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_TRUNCATE ) ) == 0 );
+	       ( ( nFlags & static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_EXCLUSIVE ) ) == 0 ||
+	         ( nFlags & static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_CREATE ) ) != 0 ) &&
+	       ( ( nFlags & static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_APPEND ) ) == 0 ||
+	         ( nFlags & static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_TRUNCATE ) ) == 0 );
 }
 
 static bool sirFileApplyOffset( uint64_t nBase, int64_t nDelta, uint64_t *pResult ) noexcept
 {
 	if ( nDelta >= 0 ) {
-		if ( nBase > static_cast<uint64_t>(INT64_MAX) - static_cast<uint64_t>(nDelta) ) {
+		if ( nBase > static_cast<uint64_t>( INT64_MAX ) - static_cast<uint64_t>( nDelta ) ) {
 			return false;
 		}
-		*pResult = nBase + static_cast<uint64_t>(nDelta);
+		*pResult = nBase + static_cast<uint64_t>( nDelta );
 		return true;
 	}
-	const uint64_t nMagnitude = static_cast<uint64_t>(  -( nDelta + 1 )  ) + 1;
+	const uint64_t nMagnitude = static_cast<uint64_t>( -( nDelta + 1 ) ) + 1;
 	if ( nMagnitude > nBase ) {
 		return false;
 	}
@@ -77,12 +82,17 @@ static bool sirFileApplyOffset( uint64_t nBase, int64_t nDelta, uint64_t *pResul
 	return true;
 }
 
-SIRPlatformFile::SIRPlatformFile( void ) noexcept : m_nNativeHandle( UINTPTR_MAX ), m_nCursor( 0 ), m_nFlags( 0 )
+SIRPlatformFile::SIRPlatformFile( void ) noexcept
+    : m_nNativeHandle( UINTPTR_MAX ),
+      m_nCursor( 0 ),
+      m_nFlags( 0 )
 {
 }
 
 SIRPlatformFile::SIRPlatformFile( SIRPlatformFile&& other ) noexcept
-    : m_nNativeHandle( other.m_nNativeHandle ), m_nCursor( other.m_nCursor ), m_nFlags( other.m_nFlags )
+    : m_nNativeHandle( other.m_nNativeHandle ),
+      m_nCursor( other.m_nCursor ),
+      m_nFlags( other.m_nFlags )
 {
 	other.m_nNativeHandle = UINTPTR_MAX;
 	other.m_nCursor = 0;
@@ -123,14 +133,17 @@ sirFileResult SIRPlatformFile::open( const char *pszUtf8Path, uint32_t nFlags ) 
 		return sirFileErrorLinux( errno );
 	}
 
-	struct stat info{};
+	struct stat info
+	{
+	};
+
 	if ( fstat( nHandle, &info ) != 0 || !S_ISREG( info.st_mode ) || info.st_size < 0 ) {
 		::close( nHandle );
 		return sirFileResult::SIR_FILE_IO_ERROR;
 	}
 
 	m_nNativeHandle = static_cast<uintptr_t>( nHandle );
-	m_nCursor = ( nFlags & static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_APPEND ) ) ? static_cast<uint64_t>(info.st_size) : 0;
+	m_nCursor = ( nFlags & static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_APPEND ) ) ? static_cast<uint64_t>( info.st_size ) : 0;
 	m_nFlags = nFlags;
 	return sirFileResult::SIR_FILE_OK;
 }
@@ -140,7 +153,7 @@ sirFileResult SIRPlatformFile::close( void ) noexcept
 	if ( !isOpen() ) {
 		return sirFileResult::SIR_FILE_OK;
 	}
-	const int nHandle = static_cast<int>(m_nNativeHandle);
+	const int nHandle = static_cast<int>( m_nNativeHandle );
 	m_nNativeHandle = UINTPTR_MAX;
 	m_nFlags = 0;
 	m_nCursor = 0;
@@ -168,14 +181,14 @@ sirFileResult SIRPlatformFile::readAt( uint64_t nOffset, void *pDestination, uin
 	if ( nBytes != 0 && pDestination == nullptr ) {
 		return sirFileResult::SIR_FILE_INVALID_ARGUMENT;
 	}
-	if ( nOffset > static_cast<uint64_t>(INT64_MAX) || nBytes > static_cast<uint64_t>(INT64_MAX) - nOffset ) {
+	if ( nOffset > static_cast<uint64_t>( INT64_MAX ) || nBytes > static_cast<uint64_t>( INT64_MAX ) - nOffset ) {
 		return sirFileResult::SIR_FILE_OUT_OF_RANGE;
 	}
-	uint8_t *pOutput = static_cast<uint8_t *>(pDestination);
+	uint8_t *pOutput = static_cast<uint8_t *>( pDestination );
 	while ( *pTransferred < nBytes ) {
 		uint64_t nRemaining = nBytes - *pTransferred;
 		size_t nStep = static_cast<size_t>( nRemaining < 1024 * 1024 ? nRemaining : 1024 * 1024 );
-		const ssize_t nRead = pread( static_cast<int>(m_nNativeHandle), pOutput + *pTransferred, nStep, static_cast<off_t>( nOffset + *pTransferred ) );
+		const ssize_t nRead = pread( static_cast<int>( m_nNativeHandle ), pOutput + *pTransferred, nStep, static_cast<off_t>( nOffset + *pTransferred ) );
 		if ( nRead < 0 && errno == EINTR ) {
 			continue;
 		}
@@ -185,7 +198,7 @@ sirFileResult SIRPlatformFile::readAt( uint64_t nOffset, void *pDestination, uin
 		if ( nRead == 0 ) {
 			return sirFileResult::SIR_FILE_END_OF_FILE;
 		}
-		*pTransferred += static_cast<uint64_t>(nRead);
+		*pTransferred += static_cast<uint64_t>( nRead );
 	}
 	return sirFileResult::SIR_FILE_OK;
 }
@@ -208,14 +221,14 @@ sirFileResult SIRPlatformFile::writeAt( uint64_t nOffset, const void *pSource, u
 	if ( nBytes != 0 && pSource == nullptr ) {
 		return sirFileResult::SIR_FILE_INVALID_ARGUMENT;
 	}
-	if ( nOffset > static_cast<uint64_t>(INT64_MAX) || nBytes > static_cast<uint64_t>(INT64_MAX) - nOffset ) {
+	if ( nOffset > static_cast<uint64_t>( INT64_MAX ) || nBytes > static_cast<uint64_t>( INT64_MAX ) - nOffset ) {
 		return sirFileResult::SIR_FILE_OUT_OF_RANGE;
 	}
-	const uint8_t *pInput = static_cast<const uint8_t *>(pSource);
+	const uint8_t *pInput = static_cast<const uint8_t *>( pSource );
 	while ( *pTransferred < nBytes ) {
 		uint64_t nRemaining = nBytes - *pTransferred;
 		size_t nStep = static_cast<size_t>( nRemaining < 1024 * 1024 ? nRemaining : 1024 * 1024 );
-		const ssize_t nWritten = pwrite( static_cast<int>(m_nNativeHandle), pInput + *pTransferred, nStep, static_cast<off_t>( nOffset + *pTransferred ) );
+		const ssize_t nWritten = pwrite( static_cast<int>( m_nNativeHandle ), pInput + *pTransferred, nStep, static_cast<off_t>( nOffset + *pTransferred ) );
 		if ( nWritten < 0 && errno == EINTR ) {
 			continue;
 		}
@@ -225,7 +238,7 @@ sirFileResult SIRPlatformFile::writeAt( uint64_t nOffset, const void *pSource, u
 		if ( nWritten == 0 ) {
 			return sirFileResult::SIR_FILE_IO_ERROR;
 		}
-		*pTransferred += static_cast<uint64_t>(nWritten);
+		*pTransferred += static_cast<uint64_t>( nWritten );
 	}
 	return sirFileResult::SIR_FILE_OK;
 }
@@ -257,11 +270,11 @@ sirFileResult SIRPlatformFile::write( const void *pSource, uint64_t nBytes, uint
 	if ( nBytes != 0 && pSource == nullptr ) {
 		return sirFileResult::SIR_FILE_INVALID_ARGUMENT;
 	}
-	const uint8_t *pInput = static_cast<const uint8_t *>(pSource);
+	const uint8_t *pInput = static_cast<const uint8_t *>( pSource );
 	while ( *pTransferred < nBytes ) {
 		uint64_t nRemaining = nBytes - *pTransferred;
 		size_t nStep = static_cast<size_t>( nRemaining < 1024 * 1024 ? nRemaining : 1024 * 1024 );
-		const ssize_t nWritten = ::write( static_cast<int>(m_nNativeHandle), pInput + *pTransferred, nStep );
+		const ssize_t nWritten = ::write( static_cast<int>( m_nNativeHandle ), pInput + *pTransferred, nStep );
 		if ( nWritten < 0 && errno == EINTR ) {
 			continue;
 		}
@@ -271,7 +284,7 @@ sirFileResult SIRPlatformFile::write( const void *pSource, uint64_t nBytes, uint
 		if ( nWritten == 0 ) {
 			return sirFileResult::SIR_FILE_IO_ERROR;
 		}
-		*pTransferred += static_cast<uint64_t>(nWritten);
+		*pTransferred += static_cast<uint64_t>( nWritten );
 	}
 	uint64_t nFileBytes = 0;
 	if ( getSize( &nFileBytes ) == sirFileResult::SIR_FILE_OK ) {
@@ -326,14 +339,18 @@ sirFileResult SIRPlatformFile::getSize( uint64_t *pBytes ) const noexcept
 	if ( !isOpen() ) {
 		return sirFileResult::SIR_FILE_CLOSED;
 	}
-	struct stat info {};
-	if ( fstat( static_cast<int>(m_nNativeHandle), &info ) != 0 ) {
+
+	struct stat info
+	{
+	};
+
+	if ( fstat( static_cast<int>( m_nNativeHandle ), &info ) != 0 ) {
 		return sirFileErrorLinux( errno );
 	}
 	if ( info.st_size < 0 ) {
 		return sirFileResult::SIR_FILE_OUT_OF_RANGE;
 	}
-	*pBytes = static_cast<uint64_t>(info.st_size);
+	*pBytes = static_cast<uint64_t>( info.st_size );
 	return sirFileResult::SIR_FILE_OK;
 }
 
@@ -342,7 +359,7 @@ sirFileResult SIRPlatformFile::flush( void ) const noexcept
 	if ( !isOpen() ) {
 		return sirFileResult::SIR_FILE_CLOSED;
 	}
-	return fsync( static_cast<int>(m_nNativeHandle) ) == 0 ? sirFileResult::SIR_FILE_OK : sirFileErrorLinux( errno );
+	return fsync( static_cast<int>( m_nNativeHandle ) ) == 0 ? sirFileResult::SIR_FILE_OK : sirFileErrorLinux( errno );
 }
 
 sirFileResult SIRPlatformFile::truncate( uint64_t nBytes ) noexcept
@@ -353,10 +370,10 @@ sirFileResult SIRPlatformFile::truncate( uint64_t nBytes ) noexcept
 	if ( !( m_nFlags & static_cast<uint32_t>( sirFileOpenFlag::SIR_FILE_OPEN_WRITE ) ) ) {
 		return sirFileResult::SIR_FILE_ACCESS_DENIED;
 	}
-	if ( nBytes > static_cast<uint64_t>(INT64_MAX) ) {
+	if ( nBytes > static_cast<uint64_t>( INT64_MAX ) ) {
 		return sirFileResult::SIR_FILE_OUT_OF_RANGE;
 	}
-	return ftruncate( static_cast<int>(m_nNativeHandle), static_cast<off_t>(nBytes) ) == 0 ? sirFileResult::SIR_FILE_OK : sirFileErrorLinux( errno );
+	return ftruncate( static_cast<int>( m_nNativeHandle ), static_cast<off_t>( nBytes ) ) == 0 ? sirFileResult::SIR_FILE_OK : sirFileErrorLinux( errno );
 }
 
 sirFileResult SIRPlatformFileSystem::getFileInfo( const char *pszUtf8Path, sirFileInfo_t *pInfo ) noexcept
@@ -364,16 +381,20 @@ sirFileResult SIRPlatformFileSystem::getFileInfo( const char *pszUtf8Path, sirFi
 	if ( pszUtf8Path == nullptr || pszUtf8Path[0] == '\0' || pInfo == nullptr ) {
 		return sirFileResult::SIR_FILE_INVALID_ARGUMENT;
 	}
-	struct stat info {};
+
+	struct stat info
+	{
+	};
+
 	if ( stat( pszUtf8Path, &info ) != 0 ) {
 		return sirFileErrorLinux( errno );
 	}
-	sirFileInfo_t result {};
+	sirFileInfo_t result{};
 	if ( info.st_size >= 0 ) {
-		result.nSizeBytes = static_cast<uint64_t>(info.st_size);
+		result.nSizeBytes = static_cast<uint64_t>( info.st_size );
 	}
-	if ( info.st_mtim.tv_sec >= 0 && static_cast<uint64_t>(info.st_mtim.tv_sec) <= UINT64_MAX / 1000000000u ) {
-		result.nModifiedUnixNanoseconds = static_cast<uint64_t>(info.st_mtim.tv_sec) * 1000000000u + static_cast<uint64_t>(info.st_mtim.tv_nsec);
+	if ( info.st_mtim.tv_sec >= 0 && static_cast<uint64_t>( info.st_mtim.tv_sec ) <= UINT64_MAX / 1000000000u ) {
+		result.nModifiedUnixNanoseconds = static_cast<uint64_t>( info.st_mtim.tv_sec ) * 1000000000u + static_cast<uint64_t>( info.st_mtim.tv_nsec );
 	}
 	result.bRegularFile = S_ISREG( info.st_mode );
 	result.bDirectory = S_ISDIR( info.st_mode );

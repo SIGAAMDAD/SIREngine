@@ -4,7 +4,7 @@ SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
 This Source Code Form is subject to the terms of the Mozilla Public
-License, v2. If a copy of the MPL was not distributed with this
+License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 This software is provided "as is", without warranty of any kind,
@@ -52,13 +52,8 @@ SIRCompressionResult SIRBZip2Codec::encode( const SIRSpan<uint8_t>& rInput, SIRS
 	uint8_t nEmpty = 0;
 	uint8_t *pInput = rInput.getData() == nullptr ? &nEmpty : rInput.getData();
 	unsigned int nEncoded = static_cast<unsigned int>( rOutput.getSize() );
-	const int nResult = BZ2_bzBuffToBuffCompress( reinterpret_cast<char *>( rOutput.getData() ),
-	                                              &nEncoded,
-	                                              reinterpret_cast<char *>( pInput ),
-	                                              static_cast<unsigned int>( rInput.getSize() ),
-	                                              9,
-	                                              0,
-	                                              30 );
+	const int nResult = BZ2_bzBuffToBuffCompress(
+	    reinterpret_cast<char *>( rOutput.getData() ), &nEncoded, reinterpret_cast<char *>( pInput ), static_cast<unsigned int>( rInput.getSize() ), 9, 0, 30 );
 	if ( nResult != BZ_OK ) {
 		if ( nResult == BZ_OUTBUFF_FULL ) {
 			return SIRCompressionResult::SIR_COMPRESSION_INSUFFICIENT_CAPACITY;
@@ -88,12 +83,8 @@ SIRCompressionResult SIRBZip2Codec::decode( const SIRSpan<uint8_t>& rInput, SIRS
 		return SIRCompressionResult::SIR_COMPRESSION_INSUFFICIENT_CAPACITY;
 	}
 	unsigned int nDecoded = static_cast<unsigned int>( rOutput.getSize() );
-	const int nResult = BZ2_bzBuffToBuffDecompress( reinterpret_cast<char *>( rOutput.getData() ),
-	                                                &nDecoded,
-	                                                reinterpret_cast<char *>( rInput.getData() ),
-	                                                static_cast<unsigned int>( rInput.getSize() ),
-	                                                0,
-	                                                0 );
+	const int nResult = BZ2_bzBuffToBuffDecompress(
+	    reinterpret_cast<char *>( rOutput.getData() ), &nDecoded, reinterpret_cast<char *>( rInput.getData() ), static_cast<unsigned int>( rInput.getSize() ), 0, 0 );
 	if ( nResult != BZ_OK ) {
 		if ( nResult == BZ_OUTBUFF_FULL ) {
 			return SIRCompressionResult::SIR_COMPRESSION_INSUFFICIENT_CAPACITY;
@@ -113,19 +104,13 @@ SIRCompressionResult SIRBZip2Codec::decode( const SIRSpan<uint8_t>& rInput, SIRS
 	return SIRCompressionResult::SIR_COMPRESSION_SUCCESS;
 }
 
-SIRCompressionResult SIRBZip2Codec::encode( const SIRSpan<uint8_t>& rInput,
-                                            SIRSpan<uint8_t>& rOutput,
-                                            SIRSpan<uint8_t>& rScratch,
-                                            size_t& nBytesWritten ) noexcept
+SIRCompressionResult SIRBZip2Codec::encode( const SIRSpan<uint8_t>& rInput, SIRSpan<uint8_t>& rOutput, SIRSpan<uint8_t>& rScratch, size_t& nBytesWritten ) noexcept
 {
 	static_cast<void>( rScratch );
 	return encode( rInput, rOutput, nBytesWritten );
 }
 
-SIRCompressionResult SIRBZip2Codec::decode( const SIRSpan<uint8_t>& rInput,
-                                            SIRSpan<uint8_t>& rOutput,
-                                            SIRSpan<uint8_t>& rScratch,
-                                            size_t& nBytesWritten ) noexcept
+SIRCompressionResult SIRBZip2Codec::decode( const SIRSpan<uint8_t>& rInput, SIRSpan<uint8_t>& rOutput, SIRSpan<uint8_t>& rScratch, size_t& nBytesWritten ) noexcept
 {
 	static_cast<void>( rScratch );
 	return decode( rInput, rOutput, nBytesWritten );

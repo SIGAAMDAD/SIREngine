@@ -4,7 +4,7 @@ SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
 This Source Code Form is subject to the terms of the Mozilla Public
-License, v2. If a copy of the MPL was not distributed with this
+License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 This software is provided "as is", without warranty of any kind,
@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIR_RENDERQUEUE_H__
-#define __SIR_RENDERQUEUE_H__
+#ifndef __SIR_RENDER_QUEUE_H__
+#define __SIR_RENDER_QUEUE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -24,37 +24,52 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-#include <Renderer/SIRRenderingDevice.h>
-#include <Renderer/SIRRenderTypes.h>
+#include <Core/Containers/SIRSpan.h>
+#include <Renderer/RHI/SIRRenderTypes.h>
 
-class SIRRenderingDevice;
+class SIRRenderCommandList;
+class SIRRenderSynchronization;
+class SIRRenderDevice;
 
-// Borrowed queue interface for one logical execution class; no second queue
-// or submission engine is created. Calls delegate to SIRRenderingDevice.
-class SIRRenderQueue final
+struct SIRRenderSubmission
 {
-public:
-	SIRRenderQueue( void ) noexcept = default;
-	SIRRenderQueue( SIRRenderingDevice& device, SIRGraphicsQueue eQueue ) noexcept : m_pDevice( &device ), m_eQueue( eQueue )
-	{
-	}
-
-	SIRGraphicsQueue getType( void ) const noexcept
-	{
-		return m_eQueue;
-	}
-	bool isValid( void ) const noexcept
-	{
-		return m_pDevice != nullptr && m_eQueue < SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT;
-	}
-
-	SIRGraphicsResult submit( const sirGraphicsSubmission_t& submission, sirGraphicsCompletion_t *pCompletion ) noexcept;
-	SIRGraphicsResult poll( const sirGraphicsCompletion_t& completion, bool *pComplete ) noexcept;
-	SIRGraphicsResult wait( const sirGraphicsCompletion_t& completion, uint64_t nTimeoutNanoseconds ) noexcept;
-
-private:
-	SIRRenderingDevice *m_pDevice = nullptr;
-	SIRGraphicsQueue m_eQueue = SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_DIRECT;
+	SIRSpan<SIRRenderCommandList *const> commands{};
+	SIRSpan<const SIRRenderSynchronization *const> waits{};
+	SIRSpan<SIRRenderSynchronization *const> signals{};
 };
 
-#endif // __SIR_RENDERQUEUE_H__
+class SIRRenderQueue
+{
+public:
+	explicit SIRRenderQueue( const SIRRenderQueue& ) = delete;
+	explicit SIRRenderQueue( SIRRenderQueue&& ) = delete;
+	virtual ~SIRRenderQueue() noexcept = default;
+	SIRRenderQueue& operator=( const SIRRenderQueue& ) = delete;
+	SIRRenderQueue& operator=( SIRRenderQueue&& ) = delete;
+
+	SIRRenderQueueType getType( void ) const noexcept
+	{
+		return m_eType;
+	}
+
+	SIRRenderDevice& getDevice( void ) const noexcept
+	{
+		return *m_pDevice;
+	}
+
+	virtual SIRRenderResult submit( const SIRRenderSubmission& submission ) noexcept = 0;
+	virtual SIRRenderResult waitIdle( void ) noexcept = 0;
+	virtual SIRRenderResult collectCompleted( void ) noexcept = 0;
+
+protected:
+	SIRRenderQueue( SIRRenderDevice& device, SIRRenderQueueType eType ) noexcept
+	    : m_pDevice( &device ),
+	      m_eType( eType )
+	{
+	}
+
+private:
+	SIRRenderDevice *m_pDevice;
+	SIRRenderQueueType m_eType;
+};
+#endif // __SIR_RENDER_QUEUE_H__

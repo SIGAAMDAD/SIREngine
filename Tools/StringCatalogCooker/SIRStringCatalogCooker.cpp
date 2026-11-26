@@ -4,7 +4,7 @@ SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
 This Source Code Form is subject to the terms of the Mozilla Public
-License, v2. If a copy of the MPL was not distributed with this
+License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 This software is provided "as is", without warranty of any kind,
@@ -14,9 +14,26 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Tools/StringCatalogCooker/SIRStringCatalogCooker.h>
-#include <Core/Registration/SIRRegistrationTypes.h>
 #include <limits.h>
 #include <string.h>
+
+constexpr uint32_t SIR_STRING_COOKER_MAX_RECORDS = 65535;
+constexpr uint64_t SIR_STRING_COOKER_HASH_BASIS = 1469598103934665603ULL;
+constexpr uint64_t SIR_STRING_COOKER_HASH_PRIME = 1099511628211ULL;
+
+static bool sirStringCookValidateName( const char *pszName, size_t nBytes ) noexcept
+{
+	if ( pszName == nullptr || nBytes == 0 || nBytes > 96 ) {
+		return false;
+	}
+	for ( size_t i = 0; i < nBytes; ++i ) {
+		const char nCharacter = pszName[i];
+		if ( !( nCharacter >= 'a' && nCharacter <= 'z' ) && !( nCharacter >= '0' && nCharacter <= '9' ) && nCharacter != '.' && nCharacter != '_' ) {
+			return false;
+		}
+	}
+	return true;
+}
 
 static void sirStringCookWrite16( uint8_t *pBytes, uint16_t nValue )
 {
@@ -40,20 +57,20 @@ static uint64_t sirStringCookHash( const uint8_t *pBytes, size_t nBytes, uint64_
 {
 	uint64_t nHash = nSeed;
 	for ( size_t iByte = 0; iByte < nBytes; ++iByte ) {
-		nHash = ( nHash ^ pBytes[iByte] ) * SIR_REGISTRATION_HASH_PRIME;
+		nHash = ( nHash ^ pBytes[iByte] ) * SIR_STRING_COOKER_HASH_PRIME;
 	}
 	return nHash;
 }
 
 bool sirCookStringCatalog( const std::vector<std::string>& names, std::vector<uint8_t>& output, uint64_t *pContentHash )
 {
-	if ( pContentHash == nullptr || names.size() > SIR_REGISTRATION_MAX_RECORDS ) {
+	if ( pContentHash == nullptr || names.size() > SIR_STRING_COOKER_MAX_RECORDS ) {
 		return false;
 	}
 	size_t nTextBytes = 0;
 	std::string sPrevious;
 	for ( const std::string& sName : names ) {
-		if ( !sirValidateConsoleName( sName.data(), sName.size() ) || ( !sPrevious.empty() && sName <= sPrevious ) ) {
+		if ( !sirStringCookValidateName( sName.data(), sName.size() ) || ( !sPrevious.empty() && sName <= sPrevious ) ) {
 			return false;
 		}
 		for ( char nCharacter : sName ) {
@@ -75,7 +92,7 @@ bool sirCookStringCatalog( const std::vector<std::string>& names, std::vector<ui
 	sirStringCookWrite32( result.data() + 12, ( uint32_t )nRecordBytes );
 	sirStringCookWrite32( result.data() + 24, ( uint32_t )nTextBytes );
 	sirStringCookWrite32( result.data() + 44, 48 );
-	uint64_t nCorpus = SIR_REGISTRATION_HASH_BASIS;
+	uint64_t nCorpus = SIR_STRING_COOKER_HASH_BASIS;
 	uint32_t nOffset = 0;
 	for ( size_t iName = 0; iName < names.size(); ++iName ) {
 		const std::string& sName = names[iName];
@@ -89,7 +106,7 @@ bool sirCookStringCatalog( const std::vector<std::string>& names, std::vector<ui
 		nCorpus = sirStringCookHash( &nSeparator, 1, nCorpus );
 		nOffset += ( uint32_t )sName.size() + 1;
 	}
-	sirStringCookWrite64( result.data() + 28, sirStringCookHash( result.data() + 48, result.size() - 48, SIR_REGISTRATION_HASH_BASIS ) );
+	sirStringCookWrite64( result.data() + 28, sirStringCookHash( result.data() + 48, result.size() - 48, SIR_STRING_COOKER_HASH_BASIS ) );
 	sirStringCookWrite64( result.data() + 36, nCorpus );
 	output.swap( result );
 	*pContentHash = nCorpus;

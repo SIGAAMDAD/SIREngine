@@ -4,7 +4,7 @@ SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
 This Source Code Form is subject to the terms of the Mozilla Public
-License, v2. If a copy of the MPL was not distributed with this
+License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 This software is provided "as is", without warranty of any kind,
@@ -12,106 +12,94 @@ express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
+
 #include <Renderer/Drivers/Vulkan/SIRVulkanDevice.h>
+#include <Renderer/RHI/SIRRenderBindingLayout.h>
 
-// Graphics descriptor sets are allocated outside the frame submission path.
-// Each bounded allocation owns a Vulkan pool so its retirement has no effect
-// on unrelated live sets. Device timeline completion fences all mutations.
-SIRVulkanResult SIRVulkanDevice::createDescriptorSet( const sirVulkanComputePipeline_t *pPipeline, uint32_t nSetIndex,
-                                                        sirVulkanDescriptorSet_t *pSet ) noexcept
+static VkDescriptorType sirVulkanRHIType( uint32_t nType ) noexcept
 {
-	if ( !m_bReady || m_bDeviceLost )
-		return SIRVulkanResult::SIR_VULKAN_INVALID_STATE;
-	if ( pSet == nullptr || pSet->hSet != VK_NULL_HANDLE || pSet->hPool != VK_NULL_HANDLE || pPipeline == nullptr ||
-	     !pPipeline->bGraphics || pPipeline->hLayout == VK_NULL_HANDLE || pPipeline->nDeviceSerial != m_nDeviceSerial ||
-	     nSetIndex >= pPipeline->nSetLayoutCount ) {
-		return SIRVulkanResult::SIR_VULKAN_INVALID_ARGUMENT;
+	switch ( nType ) {
+	case 0: return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	case 1: return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+	case 2: return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	case 3: return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+	case 4: return VK_DESCRIPTOR_TYPE_SAMPLER;
+	default: return VK_DESCRIPTOR_TYPE_MAX_ENUM;
 	}
-	const PFN_vkCreateDescriptorPool pfnCreatePool =
-	    static_cast<PFN_vkCreateDescriptorPool>(m_pfnGetDeviceProcAddr( m_Device, "vkCreateDescriptorPool" ));
-	const PFN_vkDestroyDescriptorPool pfnDestroyPool =
-	    static_cast<PFN_vkDestroyDescriptorPool>(m_pfnGetDeviceProcAddr( m_Device, "vkDestroyDescriptorPool" ));
-	const PFN_vkAllocateDescriptorSets pfnAllocateSets =
-	    static_cast<PFN_vkAllocateDescriptorSets>(m_pfnGetDeviceProcAddr( m_Device, "vkAllocateDescriptorSets" ));
-	if ( pfnCreatePool == nullptr || pfnDestroyPool == nullptr || pfnAllocateSets == nullptr )
-		return SIRVulkanResult::SIR_VULKAN_API_UNSUPPORTED;
+}
 
-	VkDescriptorPoolSize sizes[5];
-	memset( sizes, 0, sizeof( sizes ) );
-	uint32_t nSizes = 0;
-	for ( uint32_t i = 0; i < pPipeline->nBindingCount; ++i ) {
-		const sirGraphicsBindingDesc_t& binding = pPipeline->szBindings[i];
-		if ( binding.nSpace != nSetIndex )
-			continue;
-		VkDescriptorType eType = VK_DESCRIPTOR_TYPE_MAX_ENUM;
-		switch ( binding.eType ) {
-		case SIRGraphicsBindingType::SIR_GRAPHICS_BINDING_CONSTANT_BUFFER:
-			eType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-			break;
-		case SIRGraphicsBindingType::SIR_GRAPHICS_BINDING_SAMPLED_TEXTURE:
-			eType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-			break;
-		case SIRGraphicsBindingType::SIR_GRAPHICS_BINDING_STORAGE_BUFFER:
-			eType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-			break;
-		case SIRGraphicsBindingType::SIR_GRAPHICS_BINDING_STORAGE_TEXTURE:
-			eType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-			break;
-		case SIRGraphicsBindingType::SIR_GRAPHICS_BINDING_SAMPLER:
-			eType = VK_DESCRIPTOR_TYPE_SAMPLER;
-			break;
-		default:
+SIRVulkanResult SIRVulkanDevice::createDescriptorSetLayout( const SIRRenderBinding *pBindings, uint32_t nBindingCount,
+                                                              VkDescriptorSetLayout *pLayout ) noexcept
+{
+	if ( !m_bReady || m_bDeviceLost || pLayout == nullptr || *pLayout != VK_NULL_HANDLE ||
+	     ( nBindingCount != 0 && pBindings == nullptr ) || nBindingCount > 32 )
+		return SIRVulkanResult::SIR_VULKAN_INVALID_ARGUMENT;
+	VkDescriptorSetLayoutBinding bindings[32]{};
+	for ( uint32_t i = 0; i < nBindingCount; ++i ) {
+		const SIRRenderBinding& binding = pBindings[i];
+		const VkDescriptorType type = sirVulkanRHIType( binding.nType );
+		if ( type == VK_DESCRIPTOR_TYPE_MAX_ENUM || binding.nArrayLength == 0 || binding.nStageMask == 0 )
 			return SIRVulkanResult::SIR_VULKAN_INVALID_ARGUMENT;
-		}
-		uint32_t iType = 0;
-		while ( iType < nSizes && sizes[iType].type != eType )
-			++iType;
-		if ( iType == nSizes ) {
-			if ( nSizes >= 5 )
-				return SIRVulkanResult::SIR_VULKAN_INVALID_ARGUMENT;
-			sizes[nSizes].type = eType;
-			sizes[nSizes++].descriptorCount = 0;
-		}
-		sizes[iType].descriptorCount += binding.nArrayCount;
+		bindings[i].binding = binding.nBinding;
+		bindings[i].descriptorType = type;
+		bindings[i].descriptorCount = binding.nArrayLength;
+		bindings[i].stageFlags = ( binding.nStageMask & ( 1U << 0 ) ? VK_SHADER_STAGE_VERTEX_BIT : 0 ) |
+		                         ( binding.nStageMask & ( 1U << 1 ) ? VK_SHADER_STAGE_FRAGMENT_BIT : 0 ) |
+		                         ( binding.nStageMask & ( 1U << 5 ) ? VK_SHADER_STAGE_COMPUTE_BIT : 0 );
+		if ( bindings[i].stageFlags == 0 ) return SIRVulkanResult::SIR_VULKAN_INVALID_ARGUMENT;
+		for ( uint32_t j = 0; j < i; ++j ) if ( bindings[j].binding == bindings[i].binding ) return SIRVulkanResult::SIR_VULKAN_INVALID_ARGUMENT;
 	}
-	// Vulkan requires a positive descriptorPoolSizeCount for some drivers.
-	// Empty sets are legal; reserve one unused uniform descriptor for them.
-	if ( nSizes == 0 ) {
-		sizes[0] = { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 };
-		nSizes = 1;
+	if ( m_Procs.vkCreateDescriptorSetLayout == nullptr ) return SIRVulkanResult::SIR_VULKAN_API_UNSUPPORTED;
+	VkDescriptorSetLayoutCreateInfo info{};
+	info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	info.bindingCount = nBindingCount;
+	info.pBindings = bindings;
+	const VkResult result = m_Procs.vkCreateDescriptorSetLayout( m_Device, &info, nullptr, pLayout );
+	if ( result != VK_SUCCESS ) {
+		m_bDeviceLost = result == VK_ERROR_DEVICE_LOST;
+		return result == VK_ERROR_OUT_OF_HOST_MEMORY || result == VK_ERROR_OUT_OF_DEVICE_MEMORY ? SIRVulkanResult::SIR_VULKAN_ALLOCATION_FAILED : SIRVulkanResult::SIR_VULKAN_NATIVE_FAILURE;
 	}
-	VkDescriptorPoolCreateInfo poolInfo {};
-	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	poolInfo.maxSets = 1;
-	poolInfo.poolSizeCount = nSizes;
-	poolInfo.pPoolSizes = sizes;
-	VkDescriptorPool hPool = VK_NULL_HANDLE;
-	const VkResult ePool = pfnCreatePool( m_Device, &poolInfo, nullptr, &hPool );
-	if ( ePool != VK_SUCCESS || hPool == VK_NULL_HANDLE ) {
-		m_bDeviceLost = ePool == VK_ERROR_DEVICE_LOST;
-		return ePool == VK_ERROR_OUT_OF_HOST_MEMORY || ePool == VK_ERROR_OUT_OF_DEVICE_MEMORY ? SIRVulkanResult::SIR_VULKAN_ALLOCATION_FAILED
-		                                                                                      : SIRVulkanResult::SIR_VULKAN_NATIVE_FAILURE;
+	return SIRVulkanResult::SIR_VULKAN_SUCCESS;
+}
+
+SIRVulkanResult SIRVulkanDevice::destroyDescriptorSetLayout( VkDescriptorSetLayout *pLayout ) noexcept
+{
+	if ( pLayout == nullptr || *pLayout == VK_NULL_HANDLE ) return SIRVulkanResult::SIR_VULKAN_INVALID_ARGUMENT;
+	if ( !m_bReady || m_bDeviceLost || m_Procs.vkDestroyDescriptorSetLayout == nullptr ) return SIRVulkanResult::SIR_VULKAN_INVALID_STATE;
+	m_Procs.vkDestroyDescriptorSetLayout( m_Device, *pLayout, nullptr );
+	*pLayout = VK_NULL_HANDLE;
+	return SIRVulkanResult::SIR_VULKAN_SUCCESS;
+}
+
+SIRVulkanResult SIRVulkanDevice::createDescriptorSet( VkDescriptorSetLayout layout, const SIRRenderBinding *pBindings,
+                                                       uint32_t nBindingCount, sirVulkanDescriptorSet_t *pSet ) noexcept
+{
+	if ( !m_bReady || m_bDeviceLost || layout == VK_NULL_HANDLE || pSet == nullptr || pSet->hSet != VK_NULL_HANDLE ||
+	     ( nBindingCount != 0 && pBindings == nullptr ) || nBindingCount > 32 ) return SIRVulkanResult::SIR_VULKAN_INVALID_ARGUMENT;
+	VkDescriptorPoolSize sizes[5]{};
+	uint32_t nSizes = 0;
+	for ( uint32_t i = 0; i < nBindingCount; ++i ) {
+		const VkDescriptorType type = sirVulkanRHIType( pBindings[i].nType );
+		if ( type == VK_DESCRIPTOR_TYPE_MAX_ENUM ) return SIRVulkanResult::SIR_VULKAN_INVALID_ARGUMENT;
+		uint32_t j = 0; while ( j < nSizes && sizes[j].type != type ) ++j;
+		if ( j == nSizes ) { if ( nSizes == 5 ) return SIRVulkanResult::SIR_VULKAN_INVALID_ARGUMENT; sizes[j].type = type; ++nSizes; }
+		sizes[j].descriptorCount += pBindings[i].nArrayLength;
 	}
-	VkDescriptorSetAllocateInfo allocation {};
-	allocation.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	allocation.descriptorPool = hPool;
-	allocation.descriptorSetCount = 1;
-	allocation.pSetLayouts = &pPipeline->szSetLayouts[nSetIndex];
-	VkDescriptorSet hSet = VK_NULL_HANDLE;
-	const VkResult eSet = pfnAllocateSets( m_Device, &allocation, &hSet );
-	if ( eSet != VK_SUCCESS || hSet == VK_NULL_HANDLE ) {
-		pfnDestroyPool( m_Device, hPool, nullptr );
-		m_bDeviceLost = eSet == VK_ERROR_DEVICE_LOST;
-		return eSet == VK_ERROR_OUT_OF_HOST_MEMORY || eSet == VK_ERROR_OUT_OF_DEVICE_MEMORY || eSet == VK_ERROR_OUT_OF_POOL_MEMORY
-		           ? SIRVulkanResult::SIR_VULKAN_ALLOCATION_FAILED
-				   : SIRVulkanResult::SIR_VULKAN_NATIVE_FAILURE;
-	}
-	pSet->hPool = hPool;
-	pSet->hSet = hSet;
-	pSet->hPipelineLayout = pPipeline->hLayout;
-	pSet->nSetIndex = nSetIndex;
+	if ( nSizes == 0 ) { sizes[0] = { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 }; nSizes = 1; }
+	if ( m_Procs.vkCreateDescriptorPool == nullptr || m_Procs.vkAllocateDescriptorSets == nullptr ) return SIRVulkanResult::SIR_VULKAN_API_UNSUPPORTED;
+	VkDescriptorPoolCreateInfo poolInfo{}; poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO; poolInfo.maxSets = 1; poolInfo.poolSizeCount = nSizes; poolInfo.pPoolSizes = sizes;
+	VkDescriptorPool pool = VK_NULL_HANDLE;
+	VkResult result = m_Procs.vkCreateDescriptorPool( m_Device, &poolInfo, nullptr, &pool );
+	if ( result != VK_SUCCESS ) return result == VK_ERROR_OUT_OF_HOST_MEMORY || result == VK_ERROR_OUT_OF_DEVICE_MEMORY ? SIRVulkanResult::SIR_VULKAN_ALLOCATION_FAILED : SIRVulkanResult::SIR_VULKAN_NATIVE_FAILURE;
+	VkDescriptorSetAllocateInfo allocation{}; allocation.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO; allocation.descriptorPool = pool; allocation.descriptorSetCount = 1; allocation.pSetLayouts = &layout;
+	VkDescriptorSet set = VK_NULL_HANDLE;
+	result = m_Procs.vkAllocateDescriptorSets( m_Device, &allocation, &set );
+	if ( result != VK_SUCCESS ) { if ( m_Procs.vkDestroyDescriptorPool ) m_Procs.vkDestroyDescriptorPool( m_Device, pool, nullptr ); return result == VK_ERROR_OUT_OF_HOST_MEMORY || result == VK_ERROR_OUT_OF_DEVICE_MEMORY || result == VK_ERROR_OUT_OF_POOL_MEMORY ? SIRVulkanResult::SIR_VULKAN_ALLOCATION_FAILED : SIRVulkanResult::SIR_VULKAN_NATIVE_FAILURE; }
+	*pSet = {};
+	pSet->hSet = set;
+	pSet->hPool = pool;
+	pSet->hSetLayout = layout;
 	pSet->nDeviceSerial = m_nDeviceSerial;
-	pSet->nLastGpuUse = 0;
 	++m_nLiveDescriptorSets;
 	return SIRVulkanResult::SIR_VULKAN_SUCCESS;
 }
@@ -138,7 +126,7 @@ SIRVulkanResult SIRVulkanDevice::updateDescriptorSet( const sirVulkanDescriptorS
 		if ( pWrites[i].dstSet != pSet->hSet || pWrites[i].descriptorCount != 1 )
 			return SIRVulkanResult::SIR_VULKAN_INVALID_ARGUMENT;
 	}
-	const PFN_vkUpdateDescriptorSets pfnUpdate = static_cast<PFN_vkUpdateDescriptorSets>(m_pfnGetDeviceProcAddr( m_Device, "vkUpdateDescriptorSets" ));
+	const PFN_vkUpdateDescriptorSets pfnUpdate = m_Procs.vkUpdateDescriptorSets;
 	if ( pfnUpdate == nullptr )
 		return SIRVulkanResult::SIR_VULKAN_API_UNSUPPORTED;
 	pfnUpdate( m_Device, nCount, pWrites, 0, nullptr );
@@ -162,7 +150,7 @@ SIRVulkanResult SIRVulkanDevice::destroyDescriptorSet( sirVulkanDescriptorSet_t 
 			return SIRVulkanResult::SIR_VULKAN_BUSY;
 	}
 	const PFN_vkDestroyDescriptorPool pfnDestroyPool =
-	    static_cast<PFN_vkDestroyDescriptorPool>(m_pfnGetDeviceProcAddr( m_Device, "vkDestroyDescriptorPool" ));
+	    m_Procs.vkDestroyDescriptorPool;
 	if ( pfnDestroyPool == nullptr )
 		return SIRVulkanResult::SIR_VULKAN_API_UNSUPPORTED;
 	pfnDestroyPool( m_Device, pSet->hPool, nullptr );

@@ -1,7 +1,21 @@
+/*
+===========================================================================
+SIREngine MPLv2 Source Code
+Copyright (C) 2023-2027 Noah Van Til
+
+This Source Code Form is subject to the terms of the Mozilla Public
+License, v. 2.0. If a copy of the MPL was not distributed with this
+file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+This software is provided "as is", without warranty of any kind,
+express or implied, including but not limited to the warranties
+of merchantability, fitness for a particular purpose and noninfringement.
+===========================================================================
+*/
+
 #ifndef __SIR_RENDER_RESOURCE_H__
 #define __SIR_RENDER_RESOURCE_H__
 
-#include "Core/Platform/SIRCompiler.h"
 #include <Core/SIRPCH.h>
 
 // clang-format off
@@ -10,65 +24,39 @@
 #endif
 // clang-format on
 
-#include "Core/Memory/Pointers/SIRSharedPtr.h"
-#include <Renderer/RHI/SIRRenderDevice.h>
-#include <Renderer/SIRGraphicsTypes.h>
+#include <Core/Memory/Pointers/SIRSharedPtr.h>
 
-enum class SIRRenderResourceType : uint8_t
-{
-	SIR_RENDER_RESOURCE_VERTEX_BUFFER,
-	SIR_RENDER_RESOURCE_INDEX_BUFFER,
-	SIR_RENDER_RESOURCE_SHADER_STORAGE_BUFFER,
-	SIR_RENDER_RESOURCE_TEXTURE_BUFFER,
-	SIR_RENDER_RESOURCE_SHADER,
-	SIR_RENDER_RESOURCE_FRAMEBUFFER,
-};
+class SIRRenderDevice;
 
 class SIRRenderResource
 {
 public:
-	constexpr explicit SIRRenderResource( const SIRRenderResource& ) noexcept = delete;
-	constexpr explicit SIRRenderResource( SIRRenderResource&& ) noexcept = delete;
+	SIRRenderResource( const SIRRenderResource& ) = delete;
+	SIRRenderResource( SIRRenderResource&& ) = delete;
+	SIRRenderResource& operator=( const SIRRenderResource& ) = delete;
+	SIRRenderResource& operator=( SIRRenderResource&& ) = delete;
 	virtual ~SIRRenderResource() noexcept = default;
 
-	const SIRRenderResource& operator=( const SIRRenderResource& ) = delete;
-	const SIRRenderResource& operator=( SIRRenderResource&& ) = delete;
+	SIR_FORCEINLINE const SIRSharedPtr<SIRRenderDevice>& getDevice( void ) const noexcept
+	{
+		return m_pDevice;
+	}
 
-	const SIRWeakPtr<SIRRenderDevice>& getDevice( void ) const noexcept;
-
-	SIRSharedPtr<SIRRenderDevice> lockDevice( void ) const noexcept;
-
-	uint32_t getDeviceGeneration( void ) const noexcept;
-
-	virtual SIRRenderResourceType getType( void ) const noexcept = 0;
-	virtual bool isValid( void ) const noexcept = 0;
+	template<typename TDevice = SIRRenderDevice>
+	SIR_FORCEINLINE TDevice& getDevice() const noexcept
+	{
+		static_assert( std::is_base_of_v<SIRRenderDevice, TDevice> );
+		return static_cast<TDevice&>( m_pDevice.get() );
+	}
 
 protected:
-	explicit SIRRenderResource( const SIRWeakPtr<SIRRenderDevice>& pDevice, uint32_t nDeviceGeneration ) noexcept;
+	explicit SIRRenderResource( const SIRSharedPtr<SIRRenderDevice>& pDevice ) noexcept
+	    : m_pDevice( pDevice )
+	{
+	}
 
 private:
-	SIRWeakPtr<SIRRenderDevice> m_pDevice;
-	uint32_t m_nDeviceGeneration;
+	SIRSharedPtr<SIRRenderDevice> m_pDevice;
 };
-
-SIR_FORCEINLINE SIRRenderResource::SIRRenderResource( const SIRWeakPtr<SIRRenderDevice>& pDevice, uint32_t nDeviceGeneration ) noexcept
-	: m_pDevice( pDevice ), m_nDeviceGeneration( nDeviceGeneration )
-{
-}
-
-SIR_FORCEINLINE const SIRWeakPtr<SIRRenderDevice>& SIRRenderResource::getDevice( void ) const noexcept
-{
-	return m_pDevice;
-}
-
-SIR_FORCEINLINE SIRSharedPtr<SIRRenderDevice> SIRRenderResource::lockDevice( void ) const noexcept
-{
-	return m_pDevice.lock();
-}
-
-SIR_FORCEINLINE uint32_t SIRRenderResource::getDeviceGeneration( void ) const noexcept
-{
-	return m_nDeviceGeneration;
-}
 
 #endif // __SIR_RENDER_RESOURCE_H__

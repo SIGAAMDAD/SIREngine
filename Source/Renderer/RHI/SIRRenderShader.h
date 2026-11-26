@@ -4,7 +4,7 @@ SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
 This Source Code Form is subject to the terms of the Mozilla Public
-License, v2. If a copy of the MPL was not distributed with this
+License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 This software is provided "as is", without warranty of any kind,
@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIR_RENDERSHADER_H__
-#define __SIR_RENDERSHADER_H__
+#ifndef __SIR_RENDER_SHADER_H__
+#define __SIR_RENDER_SHADER_H__
 
 #include <Core/SIRPCH.h>
 
@@ -24,30 +24,55 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-#include <Renderer/SIRRenderTypes.h>
+#include <Renderer/RHI/SIRRenderResource.h>
+#include <Renderer/RHI/SIRRenderTypes.h>
 
-// CPU-side immutable shader-stage reference. The canonical cooked artifact
-// remains owned by ShaderCooker/ShaderLibrary; this facade does not copy bytes.
-// Driver pipeline creation may compile/cache native shader representations.
-class SIRRenderShader final
+class SIRRenderShader : public SIRRenderResource
 {
 public:
-	SIRRenderShader( void ) noexcept = default;
-	explicit SIRRenderShader( const sirRenderShaderDesc_t& desc ) noexcept : m_Desc( desc )
+	explicit SIRRenderShader( const SIRRenderShader& ) = delete;
+	explicit SIRRenderShader( SIRRenderShader&& ) = delete;
+	virtual ~SIRRenderShader() noexcept = default;
+
+	SIRRenderShader& operator=( const SIRRenderShader& ) = delete;
+	SIRRenderShader& operator=( SIRRenderShader&& ) = delete;
+
+	uint32_t getStage( void ) const noexcept
+	{
+		return m_nStageMask;
+	}
+
+	SIRRenderShaderFormat getFormat( void ) const noexcept
+	{
+		return m_eFormat;
+	}
+
+	const char *getEntryPoint( void ) const noexcept
+	{
+		return m_Description.pszEntryPoint;
+	}
+
+	uint64_t getReflection( void ) const noexcept
+	{
+		return m_Description.nReflectionHash;
+	}
+
+	const sirRenderShaderDescription_t& getDescription( void ) const noexcept
+	{
+		return m_Description;
+	}
+
+protected:
+	explicit SIRRenderShader( const SIRSharedPtr<SIRRenderDevice>& device, const sirRenderShaderDescription_t& description, SIRRenderShaderFormat eFormat ) noexcept
+	    : SIRRenderResource( device ),
+	      m_Description( description ),
+	      m_nStageMask( description.nStageMask ),
+	      m_eFormat( eFormat )
 	{
 	}
 
-	const sirRenderShaderDesc_t& getDesc( void ) const noexcept
-	{
-		return m_Desc;
-	}
-	bool isValid( void ) const noexcept
-	{
-		return m_Desc.nStageMask != 0 && m_Desc.code.pBytes != nullptr && m_Desc.code.nByteCount != 0;
-	}
-
-private:
-	sirRenderShaderDesc_t m_Desc {};
+	sirRenderShaderDescription_t m_Description{};
+	uint32_t m_nStageMask{};
+	SIRRenderShaderFormat m_eFormat{};
 };
-
-#endif // __SIR_RENDERSHADER_H__
+#endif // __SIR_RENDER_SHADER_H__

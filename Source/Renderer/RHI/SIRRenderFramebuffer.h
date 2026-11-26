@@ -4,7 +4,7 @@ SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
 This Source Code Form is subject to the terms of the Mozilla Public
-License, v2. If a copy of the MPL was not distributed with this
+License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 This software is provided "as is", without warranty of any kind,
@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIR_RENDERFRAMEBUFFER_H__
-#define __SIR_RENDERFRAMEBUFFER_H__
+#ifndef __SIR_RENDER_FRAMEBUFFER_H__
+#define __SIR_RENDER_FRAMEBUFFER_H__
 
 #include <Core/SIRPCH.h>
 
@@ -24,64 +24,55 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-#include <Renderer/SIRRenderTypes.h>
-#include <Renderer/RHI/SIRRenderResource.h>
+#include <Core/Containers/SIRInlineVector.h>
+#include <Core/Containers/SIRVector.h>
+#include <Core/Containers/SIRSpan.h>
+#include "SIRRenderTypes.h"
+#include "SIRRenderResource.h"
+#include "SIRRenderResourceView.h"
 
-// hView and hResolveView are borrowed views. A framebuffer owns no texture
-// memory. Load/store operations are per attachment, not per texture.
-typedef struct sirRenderAttachmentDesc_s
-{
-	sirGraphicsHandle_t hView;
-	sirGraphicsHandle_t hResolveView;
-	SIRRenderLoadOp eLoad;
-	SIRRenderStoreOp eStore;
-	float szClearColor[4];
-	uint32_t nAspectMask;
-} sirRenderAttachmentDesc_t;
-
-// Depth and stencil have distinct load/store semantics on modern APIs.
-typedef struct sirRenderDepthStencilAttachmentDesc_s
-{
-	sirGraphicsHandle_t hView;
-	SIRRenderLoadOp eDepthLoad;
-	SIRRenderStoreOp eDepthStore;
-	SIRRenderLoadOp eStencilLoad;
-	SIRRenderStoreOp eStencilStore;
-	float fClearDepth;
-	uint32_t nClearStencil;
-} sirRenderDepthStencilAttachmentDesc_t;
-
-typedef struct sirRenderFramebufferDesc_s
-{
-	const sirRenderAttachmentDesc_t *pColors;
-	uint32_t nColorCount;
-	sirRenderDepthStencilAttachmentDesc_t depthStencil;
-	uint32_t nWidth;
-	uint32_t nHeight;
-	uint32_t nLayers;
-	uint32_t nSampleCount;
-} sirRenderFramebufferDesc_t;
-
-// Logical render-target attachment collection. It does not allocate images.
-// Vulkan may use dynamic rendering, D3D12 RTV/DSV and OpenGL a cached FBO.
-// The descriptor borrows attachment arrays for the duration of command record.
 class SIRRenderFramebuffer : public SIRRenderResource
 {
 public:
-	explicit SIRRenderFramebuffer( void ) noexcept = default;
-	explicit SIRRenderFramebuffer( const sirRenderFramebufferDesc_t& rDesc ) noexcept;
+	static constexpr const size_t MAX_FRAMEBUFFER_COLOR_ATTACHMENTS = 16;
 
-	const sirRenderFramebufferDesc_t& getDesc( void ) const noexcept;
+public:
+	explicit SIRRenderFramebuffer( const SIRRenderFramebuffer& ) = delete;
+	explicit SIRRenderFramebuffer( SIRRenderFramebuffer&& ) = delete;
+	virtual ~SIRRenderFramebuffer() noexcept = default;
 
-	bool isValid( void ) const noexcept
+	SIRRenderFramebuffer& operator=( const SIRRenderFramebuffer& ) = delete;
+	SIRRenderFramebuffer& operator=( SIRRenderFramebuffer&& ) = delete;
+
+	uint32_t getWidth( void ) const noexcept;
+	uint32_t getHeight( void ) const noexcept;
+	uint32_t getLayerCount( void ) const noexcept;
+	uint32_t getSampleCount( void ) const noexcept;
+	uint32_t getColorAttachmentCount( void ) const noexcept;
+
+	const SIRInlineVector<const SIRRenderResourceView *, MAX_FRAMEBUFFER_COLOR_ATTACHMENTS>& getColorAttachments( void ) const noexcept;
+	const SIRRenderResourceView *getDepthAttachment( void ) const noexcept;
+	const SIRRenderResourceView *getStencilAttachment( void ) const noexcept;
+
+protected:
+	explicit SIRRenderFramebuffer( const SIRSharedPtr<SIRRenderDevice>& device, const sirRenderFramebufferDescription_t& description ) noexcept
+	    : SIRRenderResource( device ),
+	      m_ColorAttachments(),
+	      m_pDepthStencil( nullptr ),
+	      m_nWidth( description.nWidth ),
+	      m_nHeight( description.nHeight ),
+	      m_nLayerCount( description.nLayerCount ),
+	      m_nSampleCount( description.nSampleCount )
 	{
-		return m_Desc.nWidth != 0 && m_Desc.nHeight != 0 && m_Desc.nLayers != 0 && m_Desc.nSampleCount != 0 && m_Desc.nColorCount <= 8 &&
-		       ( m_Desc.nColorCount == 0 || m_Desc.pColors != nullptr ) &&
-		       ( m_Desc.nColorCount != 0 || m_Desc.depthStencil.hView.nGeneration != 0 );
 	}
 
-private:
-	sirRenderFramebufferDesc_t m_Desc = {};
+	SIRInlineVector<const SIRRenderResourceView *, MAX_FRAMEBUFFER_COLOR_ATTACHMENTS> m_ColorAttachments{};
+	const SIRRenderResourceView *m_pDepthStencil{};
+
+	uint32_t m_nWidth{};
+	uint32_t m_nHeight{};
+	uint32_t m_nLayerCount{};
+	uint32_t m_nSampleCount{};
 };
 
-#endif // __SIR_RENDERFRAMEBUFFER_H__
+#endif // __SIR_RENDER_FRAMEBUFFER_H__

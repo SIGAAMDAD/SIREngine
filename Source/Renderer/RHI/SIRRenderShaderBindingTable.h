@@ -4,7 +4,7 @@ SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
 This Source Code Form is subject to the terms of the Mozilla Public
-License, v2. If a copy of the MPL was not distributed with this
+License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 This software is provided "as is", without warranty of any kind,
@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIR_RENDERSHADERBINDINGTABLE_H__
-#define __SIR_RENDERSHADERBINDINGTABLE_H__
+#ifndef __SIR_RENDER_SHADER_BINDING_TABLE_H__
+#define __SIR_RENDER_SHADER_BINDING_TABLE_H__
 
 #include <Core/SIRPCH.h>
 
@@ -23,31 +23,70 @@ of merchantability, fitness for a particular purpose and noninfringement.
 	#pragma once
 #endif
 // clang-format on
+#include <Renderer/RHI/SIRRenderResource.h>
+#include <Renderer/RHI/SIRRenderTypes.h>
+class SIRRenderStorageBuffer;
+class SIRRenderPipeline;
 
-#include <Renderer/SIRRenderTypes.h>
-
-// Optional ray-tracing shader record layout, backed by one existing GPU
-// buffer. No separate CPU/GPU copy is created by this descriptor wrapper.
-class SIRRenderShaderBindingTable final
+class SIRRenderShaderBindingTable : public SIRRenderResource
 {
 public:
-	SIRRenderShaderBindingTable( void ) noexcept = default;
-	explicit SIRRenderShaderBindingTable( const sirRenderShaderBindingTableDesc_t& desc ) noexcept : m_Desc( desc )
+	explicit SIRRenderShaderBindingTable( const SIRRenderShaderBindingTable& ) = delete;
+	explicit SIRRenderShaderBindingTable( SIRRenderShaderBindingTable&& ) = delete;
+	virtual ~SIRRenderShaderBindingTable() noexcept = default;
+	SIRRenderShaderBindingTable& operator=( const SIRRenderShaderBindingTable& ) = delete;
+	SIRRenderShaderBindingTable& operator=( SIRRenderShaderBindingTable&& ) = delete;
+
+	const SIRRenderStorageBuffer& getBuffer( void ) const noexcept
+	{
+		return *m_pBuffer;
+	}
+
+	const SIRRenderPipeline& getPipeline( void ) const noexcept
+	{
+		return *m_pPipeline;
+	}
+
+	sirRenderShaderBindingRegion_t getRayGenerationRange( void ) const noexcept
+	{
+		return m_RayGeneration;
+	}
+
+	sirRenderShaderBindingRegion_t getMissRange( void ) const noexcept
+	{
+		return m_Miss;
+	}
+
+	sirRenderShaderBindingRegion_t getHitRange( void ) const noexcept
+	{
+		return m_Hit;
+	}
+
+	sirRenderShaderBindingRegion_t getCallableRange( void ) const noexcept
+	{
+		return m_Callable;
+	}
+
+protected:
+	explicit SIRRenderShaderBindingTable( const SIRSharedPtr<SIRRenderDevice>& device,
+	                                      const SIRSharedPtr<SIRRenderStorageBuffer>& buffer,
+	                                      const SIRSharedPtr<SIRRenderPipeline>& pipeline,
+	                                      const sirRenderShaderBindingTableDescription_t& description ) noexcept
+	    : SIRRenderResource( device ),
+	      m_pBuffer( buffer ),
+	      m_pPipeline( pipeline ),
+	      m_RayGeneration( description.rayGeneration ),
+	      m_Miss( description.miss ),
+	      m_Hit( description.hit ),
+	      m_Callable( description.callable )
 	{
 	}
 
-	const sirRenderShaderBindingTableDesc_t& getDesc( void ) const noexcept
-	{
-		return m_Desc;
-	}
-	bool isValid( void ) const noexcept
-	{
-		return m_Desc.hBackingBuffer.nGeneration != 0 && m_Desc.hBackingBuffer.nDeviceGeneration != 0 &&
-		       m_Desc.hBackingBuffer.eType == SIRGraphicsHandleType::SIR_GRAPHICS_HANDLE_BUFFER && m_Desc.rayGeneration.nSizeBytes != 0;
-	}
-
-private:
-	sirRenderShaderBindingTableDesc_t m_Desc {};
+	SIRSharedPtr<SIRRenderStorageBuffer> m_pBuffer;
+	SIRSharedPtr<SIRRenderPipeline> m_pPipeline;
+	sirRenderShaderBindingRegion_t m_RayGeneration{};
+	sirRenderShaderBindingRegion_t m_Miss{};
+	sirRenderShaderBindingRegion_t m_Hit{};
+	sirRenderShaderBindingRegion_t m_Callable{};
 };
-
-#endif // __SIR_RENDERSHADERBINDINGTABLE_H__
+#endif // __SIR_RENDER_SHADER_BINDING_TABLE_H__

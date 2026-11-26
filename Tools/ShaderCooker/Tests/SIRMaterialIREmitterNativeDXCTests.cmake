@@ -1,3 +1,16 @@
+# ===========================================================================
+# SIREngine MPLv2 Source Code
+# Copyright (C) 2023-2027 Noah Van Til
+# 
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+# 
+# This software is provided "as is", without warranty of any kind,
+# express or implied, including but not limited to the warranties
+# of merchantability, fitness for a particular purpose and noninfringement.
+# ===========================================================================
+
 # The fixture tool emits real material IR HLSL, not handwritten stand-ins.
 foreach(SIR_REQUIRED SIR_EMITTER_FIXTURE SIR_DXC SIR_SPIRV_VAL SIR_SPIRV_DIS SIR_OUTPUT_DIR)
     if(NOT DEFINED ${SIR_REQUIRED} OR "${${SIR_REQUIRED}}" STREQUAL "")

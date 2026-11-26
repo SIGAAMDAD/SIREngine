@@ -4,7 +4,7 @@ SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
 This Source Code Form is subject to the terms of the Mozilla Public
-License, v2. If a copy of the MPL was not distributed with this
+License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 This software is provided "as is", without warranty of any kind,
@@ -51,8 +51,7 @@ SIRCompressionResult SIRZlibCodec::encode( const SIRSpan<uint8_t>& rInput, SIRSp
 	uint8_t nEmpty = 0;
 	const Bytef *pInput = rInput.getData() == nullptr ? &nEmpty : rInput.getData();
 	uLongf nEncoded = static_cast<uLongf>( rOutput.getSize() );
-	const int nResult = compress2(
-	    reinterpret_cast<Bytef *>( rOutput.getData() ), &nEncoded, pInput, static_cast<uLong>( rInput.getSize() ), Z_DEFAULT_COMPRESSION );
+	const int nResult = compress2( reinterpret_cast<Bytef *>( rOutput.getData() ), &nEncoded, pInput, static_cast<uLong>( rInput.getSize() ), Z_DEFAULT_COMPRESSION );
 	if ( nResult != Z_OK ) {
 		if ( nResult == Z_MEM_ERROR ) {
 			return SIRCompressionResult::SIR_COMPRESSION_OUT_OF_MEMORY;
@@ -82,8 +81,7 @@ SIRCompressionResult SIRZlibCodec::decode( const SIRSpan<uint8_t>& rInput, SIRSp
 		return SIRCompressionResult::SIR_COMPRESSION_INSUFFICIENT_CAPACITY;
 	}
 	uLongf nDecoded = static_cast<uLongf>( rOutput.getSize() );
-	const int nResult =
-	    uncompress( reinterpret_cast<Bytef *>( rOutput.getData() ), &nDecoded, rInput.getData(), static_cast<uLong>( rInput.getSize() ) );
+	const int nResult = uncompress( reinterpret_cast<Bytef *>( rOutput.getData() ), &nDecoded, rInput.getData(), static_cast<uLong>( rInput.getSize() ) );
 	if ( nResult != Z_OK ) {
 		if ( nResult == Z_BUF_ERROR ) {
 			return SIRCompressionResult::SIR_COMPRESSION_INSUFFICIENT_CAPACITY;
@@ -103,19 +101,13 @@ SIRCompressionResult SIRZlibCodec::decode( const SIRSpan<uint8_t>& rInput, SIRSp
 	return SIRCompressionResult::SIR_COMPRESSION_SUCCESS;
 }
 
-SIRCompressionResult SIRZlibCodec::encode( const SIRSpan<uint8_t>& rInput,
-                                           SIRSpan<uint8_t>& rOutput,
-                                           SIRSpan<uint8_t>& rScratch,
-                                           size_t& nBytesWritten ) noexcept
+SIRCompressionResult SIRZlibCodec::encode( const SIRSpan<uint8_t>& rInput, SIRSpan<uint8_t>& rOutput, SIRSpan<uint8_t>& rScratch, size_t& nBytesWritten ) noexcept
 {
 	static_cast<void>( rScratch );
 	return encode( rInput, rOutput, nBytesWritten );
 }
 
-SIRCompressionResult SIRZlibCodec::decode( const SIRSpan<uint8_t>& rInput,
-                                           SIRSpan<uint8_t>& rOutput,
-                                           SIRSpan<uint8_t>& rScratch,
-                                           size_t& nBytesWritten ) noexcept
+SIRCompressionResult SIRZlibCodec::decode( const SIRSpan<uint8_t>& rInput, SIRSpan<uint8_t>& rOutput, SIRSpan<uint8_t>& rScratch, size_t& nBytesWritten ) noexcept
 {
 	static_cast<void>( rScratch );
 	return decode( rInput, rOutput, nBytesWritten );

@@ -4,7 +4,7 @@ SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
 This Source Code Form is subject to the terms of the Mozilla Public
-License, v2. If a copy of the MPL was not distributed with this
+License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 This software is provided "as is", without warranty of any kind,
@@ -23,30 +23,33 @@ of merchantability, fitness for a particular purpose and noninfringement.
 	#pragma once
 #endif
 // clang-format on
+#include <Renderer/RHI/SIRRenderTypes.h>
 
-#include <Renderer/SIRRenderTypes.h>
-
-// One generation-scoped completion token. Actual queue wait/poll and barrier
-// execution are delegated to SIRRenderingDevice/SIRGraphicsCommandList.
-class SIRRenderSynchronization final
+class SIRRenderSynchronization
 {
 public:
-	SIRRenderSynchronization( void ) noexcept = default;
-	explicit SIRRenderSynchronization( const sirGraphicsCompletion_t& completion ) noexcept : m_Completion( completion )
+	explicit SIRRenderSynchronization( const SIRRenderSynchronization& ) = delete;
+	explicit SIRRenderSynchronization( SIRRenderSynchronization&& ) = delete;
+	virtual ~SIRRenderSynchronization() noexcept = default;
+	SIRRenderSynchronization& operator=( const SIRRenderSynchronization& ) = delete;
+	SIRRenderSynchronization& operator=( SIRRenderSynchronization&& ) = delete;
+
+	SIRRenderSynchronizationType getType( void ) const noexcept
 	{
+		return m_eType;
 	}
 
-	sirGraphicsCompletion_t getCompletion( void ) const noexcept
+	virtual SIRRenderResult signal( uint64_t nValue ) noexcept = 0;
+	virtual SIRRenderResult wait( uint64_t nValue, uint64_t nTimeoutNanoseconds ) noexcept = 0;
+	virtual uint64_t getCompletedValue( void ) const noexcept = 0;
+
+protected:
+	explicit SIRRenderSynchronization( SIRRenderSynchronizationType eType ) noexcept
+	    : m_eType( eType )
 	{
-		return m_Completion;
-	}
-	bool isValid( void ) const noexcept
-	{
-		return m_Completion.nDeviceGeneration != 0 && m_Completion.nValue != 0 && m_Completion.eQueue < SIRGraphicsQueue::SIR_GRAPHICS_QUEUE_COUNT;
 	}
 
 private:
-	sirGraphicsCompletion_t m_Completion {};
+	SIRRenderSynchronizationType m_eType;
 };
-
 #endif // __SIR_RENDER_SYNCHRONIZATION_H__

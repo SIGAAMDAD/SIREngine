@@ -2,7 +2,7 @@
 BasedOnStyle: LLVM
 Language: Cpp
 Standard: Latest
-ColumnLimit: 160
+ColumnLimit: 180
 UseTab: ForIndentation
 IndentWidth: 4
 TabWidth: 4

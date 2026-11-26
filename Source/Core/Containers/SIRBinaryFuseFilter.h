@@ -1,4 +1,18 @@
-/* SIREngine - MPL-2.0. Static segmented XOR8 filter with three adjacent fuse segments. */
+/*
+===========================================================================
+SIREngine MPLv2 Source Code
+Copyright (C) 2023-2027 Noah Van Til
+
+This Source Code Form is subject to the terms of the Mozilla Public
+License, v. 2.0. If a copy of the MPL was not distributed with this
+file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+This software is provided "as is", without warranty of any kind,
+express or implied, including but not limited to the warranties
+of merchantability, fitness for a particular purpose and noninfringement.
+===========================================================================
+*/
+
 #ifndef __SIR_BINARYFUSEFILTER_H__
 #define __SIR_BINARYFUSEFILTER_H__
 
@@ -9,6 +23,7 @@
 	#pragma once
 #endif
 // clang-format on
+
 #include <Core/Containers/SIRVector.h>
 #include <algorithm>
 
@@ -55,7 +70,7 @@ public:
 		if ( nCount != 0 && pValues == nullptr ) {
 			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
 		}
-		if ( nCount > UINT32_MAX / 6 - 16 ) {
+		if ( nCount > std::numeric_limits<uint32_t>::max() / 6 - 16 ) {
 			return SIRContainerResult::SIR_CONTAINER_SIZE_OVERFLOW;
 		}
 		SIRVector<uint64_t> keys( m_pAllocator );

@@ -4,7 +4,7 @@ SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
 This Source Code Form is subject to the terms of the Mozilla Public
-License, v2. If a copy of the MPL was not distributed with this
+License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 This software is provided "as is", without warranty of any kind,
@@ -34,14 +34,16 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // Legacy input-attached pump is preserved for existing Input tests.
 // The window owner uses a single unconditional pump, including headless/no-input applications.
 typedef bool ( *sirAppInputPump_t )( SIRInputService& input, void *pContext );
-enum class SIRAppWindowPumpResult : uint8_t {
+enum class SIRAppWindowPumpResult : uint8_t
+{
 	SIR_APP_WINDOW_CONTINUE = 0,
 	SIR_APP_WINDOW_STOP = 1,
 	SIR_APP_WINDOW_ERROR = 2
 };
 typedef SIRAppWindowPumpResult ( *sirAppWindowPump_t )( void *pContext );
 
-enum class SIRAppRunResult : uint8_t {
+enum class SIRAppRunResult : uint8_t
+{
 	SIR_APP_RUN_OK = 0,
 	SIR_APP_RUN_STOPPED = 1,
 	SIR_APP_RUN_ERROR = 2
@@ -51,7 +53,8 @@ constexpr uint32_t SIR_APPLICATION_MAX_SYSTEMS = 16;
 constexpr uint32_t SIR_APPLICATION_MAX_SYSTEM_ACCESSES = 8;
 constexpr uint32_t SIR_APPLICATION_MAX_SYSTEM_EDGES = SIR_APPLICATION_MAX_SYSTEMS * SIR_APPLICATION_MAX_SYSTEMS;
 
-enum class SIRAppState : uint8_t {
+enum class SIRAppState : uint8_t
+{
 	SIR_APP_UNINITIALIZED = 0,
 	SIR_APP_READY = 1,
 	SIR_APP_STOPPED = 2,
@@ -59,7 +62,8 @@ enum class SIRAppState : uint8_t {
 	SIR_APP_STOPPING = 4
 };
 
-enum class SIRAppScheduledState : uint8_t {
+enum class SIRAppScheduledState : uint8_t
+{
 	SIR_APP_SCHEDULE_IDLE = 0,
 	SIR_APP_SCHEDULE_PENDING = 1,
 	SIR_APP_SCHEDULE_SUCCEEDED = 2,
@@ -99,8 +103,7 @@ public:
 	bool attachTaskSchedule( SIRSimulationSchedule& schedule ) noexcept;
 	// Opted-in systems declare their complete hazards. Unconfigured systems
 	// remain ordered against every registered system in a scheduled phase.
-	bool configureScheduledSystem( uint32_t iSystem, SIRTaskExecutor eExecutor, const sirTaskGraphAccess_t *pAccesses,
-	                               uint32_t nAccesses ) noexcept;
+	bool configureScheduledSystem( uint32_t iSystem, SIRTaskExecutor eExecutor, const sirTaskGraphAccess_t *pAccesses, uint32_t nAccesses ) noexcept;
 	bool configureScheduledPriority( uint32_t iSystem, SIRTaskPriority ePriority ) noexcept;
 	bool addScheduledDependency( uint32_t iBefore, uint32_t iAfter ) noexcept;
 	// Nonblocking submitted phase. MAIN and zero-worker CPU tasks may be pumped

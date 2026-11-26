@@ -4,7 +4,7 @@ SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
 This Source Code Form is subject to the terms of the Mozilla Public
-License, v2. If a copy of the MPL was not distributed with this
+License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 This software is provided "as is", without warranty of any kind,
@@ -24,36 +24,79 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-enum class SIRRenderMemoryType : uint8_t {
-	SIR_RENDER_MEMORY_TYPE_GPU_LOCAL,
-	SIR_RENDER_MEMORY_TYPE_CPU_UPLOAD,
-	SIR_RENDER_MEMORY_TYPE_CPU_READBACK,
-	SIR_RENDER_MEMORY_TYPE_GPU_UPLOAD,
-	SIR_RENDER_MEMORY_TYPE_TRANSIENT
-};
+#include <Renderer/RHI/SIRRenderResource.h>
+#include <Renderer/RHI/SIRRenderTypes.h>
 
-#include <Renderer/SIRRenderTypes.h>
-
-// One GPU buffer. Usage bits select vertex/index/constant/storage/indirect/transfer roles.
-// Nonowning, zero-allocation typed façade; the device owns resource lifetime.
-class SIRRenderStorageBuffer
+class SIRRenderStorageBuffer : public SIRRenderResource
 {
 public:
-	explicit SIRRenderStorageBuffer( const SIRRenderStorageBuffer& ) noexcept = delete;
-	explicit SIRRenderStorageBuffer( SIRRenderStorageBuffer&& ) noexcept = delete;
+	explicit SIRRenderStorageBuffer( const SIRRenderStorageBuffer& ) = delete;
+	explicit SIRRenderStorageBuffer( SIRRenderStorageBuffer&& ) = delete;
+	virtual ~SIRRenderStorageBuffer() noexcept = default;
+	SIRRenderStorageBuffer& operator=( const SIRRenderStorageBuffer& ) = delete;
+	SIRRenderStorageBuffer& operator=( SIRRenderStorageBuffer&& ) = delete;
 
-	bool isValid( void ) const noexcept;
-	uint32_t getReservedSize( void ) const noexcept;
-	uint32_t getCommittedBytes( void ) const noexcept;
+	uint64_t getSize( void ) const noexcept
+	{
+		return m_nSize;
+	}
+
+	uint64_t getCommittedBytes( void ) const noexcept
+	{
+		return m_nCommittedBytes;
+	}
+
+	uint32_t getUsage( void ) const noexcept
+	{
+		return m_nUsage;
+	}
+
+	SIRRenderMemoryType getMemoryType( void ) const noexcept
+	{
+		return m_eMemoryType;
+	}
+
+	bool isHostVisible( void ) const noexcept
+	{
+		return m_bHostVisible;
+	}
+
+	bool isHostCoherent( void ) const noexcept
+	{
+		return m_bHostCoherent;
+	}
+
+	bool isPersistentlyMapped( void ) const noexcept
+	{
+		return m_bPersistentlyMapped;
+	}
+
+	virtual SIRRenderResult map( uint64_t nOffsetBytes, uint64_t nSizeBytes, sirRenderBufferMapping_t *pMapping ) noexcept = 0;
+	virtual SIRRenderResult unmap( void ) noexcept = 0;
+	virtual SIRRenderResult flush( uint64_t nOffsetBytes, uint64_t nSizeBytes ) noexcept = 0;
+	virtual SIRRenderResult invalidate( uint64_t nOffsetBytes, uint64_t nSizeBytes ) noexcept = 0;
+	virtual uint64_t getDeviceAddress( void ) const noexcept = 0;
 
 protected:
-	explicit SIRRenderStorageBuffer( void ) noexcept = default;
-	virtual ~SIRRenderStorageBuffer() noexcept = default;
+	explicit SIRRenderStorageBuffer( const SIRSharedPtr<SIRRenderDevice>& device, const sirRenderBufferDescription_t& description, uint64_t nCommittedBytes ) noexcept
+	    : SIRRenderResource( device ),
+	      m_nSize( description.nSize ),
+	      m_nCommittedBytes( nCommittedBytes ),
+	      m_nUsage( static_cast<uint32_t>( description.nUsage ) ),
+	      m_eMemoryType( description.eMemory ),
+	      m_bHostVisible( description.bHostVisible ),
+	      m_bHostCoherent( description.bHostCoherent ),
+	      m_bPersistentlyMapped( description.bPersistentlyMapped )
+	{
+	}
 
-	uint32_t m_nReservedBytes;
-	uint32_t m_nCommittedBytes;
-
-	SIRRenderMemoryType m_eMemoryType;
+	uint64_t m_nSize{};
+	uint64_t m_nCommittedBytes{};
+	uint32_t m_nUsage{};
+	SIRRenderMemoryType m_eMemoryType{};
+	bool m_bHostVisible{};
+	bool m_bHostCoherent{};
+	bool m_bPersistentlyMapped{};
 };
 
 #endif // __SIR_RENDER_STORAGE_BUFFER_H__
