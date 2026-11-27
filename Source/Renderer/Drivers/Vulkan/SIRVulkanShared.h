@@ -25,6 +25,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <vulkan/vulkan.h>
+#include <vulkan/vulkan.hpp>
 
 // Generated procedure inventory: Vulkan SDK 1.4.363.1.
 // Compile all users with the same Vulkan platform/beta macros.

@@ -18,6 +18,12 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 int32_t SIRNativeWindowHost::runNative( const sirWindowCreateDesc_t *pDescs, uint32_t nWindows ) noexcept
 {
+	return runNativeWithFrame( pDescs, nWindows, nullptr, nullptr );
+}
+
+int32_t SIRNativeWindowHost::runNativeWithFrame( const sirWindowCreateDesc_t *pDescs, uint32_t nWindows,
+	                                               sirNativeWindowFrameFn_t pFrame, void *pContext ) noexcept
+{
 	SIRWindowDriverWin32 driver;
-	return runWithDriver( driver, pDescs, nWindows );
+	return runWithDriverFrame( driver, pDescs, nWindows, pFrame, pContext );
 }

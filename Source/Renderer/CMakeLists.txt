@@ -101,50 +101,58 @@ target_link_libraries(SIRD3D12 PUBLIC SIR::Graphics SIR::Core d3d12 dxgi d3dcomp
 target_compile_features(SIRD3D12 PUBLIC cxx_std_17)
 sir_configure_owned_target(SIRD3D12)
 endif()
-if(SIR_WITH_VULKAN)
-    if(NOT EXISTS "${PROJECT_SOURCE_DIR}/ThirdParty/VulkanHeaders/include/vulkan/vulkan.h")
-    message(FATAL_ERROR "Missing pinned Vulkan-Headers; run git submodule update --init ThirdParty/VulkanHeaders")
-endif()
-if(NOT EXISTS "${PROJECT_SOURCE_DIR}/ThirdParty/VulkanMemoryAllocator/include/vk_mem_alloc.h")
-    message(FATAL_ERROR "Missing pinned VMA; run git submodule update --init ThirdParty/VulkanMemoryAllocator")
-endif()
+#if(SIR_WITH_VULKAN)
+#    if(NOT EXISTS "${PROJECT_SOURCE_DIR}/ThirdParty/VulkanHeaders/include/vulkan/vulkan.h")
+#    message(FATAL_ERROR "Missing pinned Vulkan-Headers; run git submodule update --init ThirdParty/VulkanHeaders")
+#endif()
+#if(NOT EXISTS "${PROJECT_SOURCE_DIR}/ThirdParty/VulkanMemoryAllocator/include/vk_mem_alloc.h")
+#    message(FATAL_ERROR "Missing pinned VMA; run git submodule update --init ThirdParty/VulkanMemoryAllocator")
+#endif()
 
-add_library(SIRVulkan STATIC
-    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanShared.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanDevice.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanStorageBuffer.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanShader.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanProgram.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanPipeline.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanBindingLayout.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanBindingSet.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanTexture.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanCommandList.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanPools.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanShaders.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanRaster.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanDescriptors.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanCommands.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanRecordedCommands.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanImages.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanTextureTransfer.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanTransferLayout.cpp)
-add_library(SIR::Vulkan ALIAS SIRVulkan)
-target_include_directories(SIRVulkan PUBLIC
-    "${PROJECT_SOURCE_DIR}/Source"
-    "${PROJECT_SOURCE_DIR}/ThirdParty/VulkanHeaders/include"
-    "${PROJECT_SOURCE_DIR}/ThirdParty/VulkanMemoryAllocator/include")
-target_link_libraries(SIRVulkan PUBLIC SIR::Core SIR::Graphics)
-target_compile_features(SIRVulkan PUBLIC cxx_std_17)
-if(MSVC)
-    target_compile_options(SIRVulkan PRIVATE /W4)
-else()
-    target_compile_options(SIRVulkan PRIVATE -Wall -Wextra -Wpedantic)
-endif()
-sir_configure_owned_target(SIRVulkan)
-endif()
+#add_library(SIRVulkan STATIC
+#    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanShared.cpp
+#    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanDevice.cpp
+#    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanQueue.cpp
+#    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanSynchronization.cpp
+#    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanSwapchain.cpp
+#    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanStorageBuffer.cpp
+#    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanShader.cpp
+#    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanProgram.cpp
+#    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanPipeline.cpp
+#    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanBindingLayout.cpp
+#    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanBindingSet.cpp
+#    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanTexture.cpp
+#    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanCommandList.cpp
+#    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanPools.cpp
+#    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanShaders.cpp
+#    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanRaster.cpp
+#    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanDescriptors.cpp
+#    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanCommands.cpp
+#    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanRecordedCommands.cpp
+#    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanImages.cpp
+#    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanTextureTransfer.cpp
+#    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/Vulkan/SIRVulkanTransferLayout.cpp)
+#add_library(SIR::Vulkan ALIAS SIRVulkan)
+#target_include_directories(SIRVulkan PUBLIC
+#    "${PROJECT_SOURCE_DIR}/Source"
+#    "${PROJECT_SOURCE_DIR}/ThirdParty/VulkanHeaders/include"
+#    "${PROJECT_SOURCE_DIR}/ThirdParty/VulkanMemoryAllocator/include")
+#target_link_libraries(SIRVulkan PUBLIC SIR::Core SIR::Graphics)
+#target_compile_features(SIRVulkan PUBLIC cxx_std_17)
+#if(WIN32)
+#    target_compile_definitions(SIRVulkan PUBLIC VK_USE_PLATFORM_WIN32_KHR)
+#elseif(UNIX AND NOT APPLE)
+#    target_compile_definitions(SIRVulkan PUBLIC VK_USE_PLATFORM_XLIB_KHR VK_USE_PLATFORM_WAYLAND_KHR)
+#endif()
+#if(MSVC)
+#    target_compile_options(SIRVulkan PRIVATE /W4)
+#else()
+#    target_compile_options(SIRVulkan PRIVATE -Wall -Wextra -Wpedantic)
+#endif()
+#sir_configure_owned_target(SIRVulkan)
+#endif()
 
-# Opt-in legacy drivers and OpenGL 4.6 consume the same shared renderer contract.
+# Opt-in graphics drivers consume the same shared renderer contract.
 
 # -- Drivers/D3D9 --
 add_library(SIRD3D9Portable STATIC ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/D3D9/SIRD3D9UploadRing.cpp ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/D3D9/SIRD3D9Validation.cpp ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/D3D9/SIRD3D9Resources.cpp ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/D3D9/SIRD3D9FixedPipelines.cpp ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/D3D9/SIRD3D9Mapping.cpp ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/D3D9/SIRD3D9Barriers.cpp ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/D3D9/SIRD3D9Attachments.cpp)
@@ -228,29 +236,23 @@ if(SIR_WITH_D3D11)
 endif()
 
 if(SIR_WITH_OPENGL)
-    # Native OpenGL 4.6 core-profile module; never adds GL types to SIR::Graphics.
-add_library(SIRGL46Driver MODULE
-    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLDriver.cpp
+add_library(SIRGLProgrammableRHI STATIC
     ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLContext.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLCapabilities.cpp
     ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLFunctionLoader.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLHandlePool.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLBuffers.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLSamplers.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLTextures.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLFormats.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLFramebuffers.cpp
-    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLFramebufferCache.cpp)
-target_include_directories(SIRGL46Driver PRIVATE
+    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLProgrammableDevice.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLResources.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLSceneFixtureRenderer.cpp)
+add_library(SIR::GLProgrammableRHI ALIAS SIRGLProgrammableRHI)
+target_include_directories(SIRGLProgrammableRHI PUBLIC
     "${PROJECT_SOURCE_DIR}/Source"
     "${PROJECT_SOURCE_DIR}/Build/CMake")
-target_compile_features(SIRGL46Driver PRIVATE cxx_std_17)
+target_compile_features(SIRGLProgrammableRHI PUBLIC cxx_std_23)
 if(WIN32)
-    target_link_libraries(SIRGL46Driver PRIVATE SIR::Core opengl32 gdi32 user32)
+    target_link_libraries(SIRGLProgrammableRHI PUBLIC SIR::Core opengl32 gdi32 user32)
 elseif(UNIX AND NOT APPLE)
-    target_link_libraries(SIRGL46Driver PRIVATE "${CMAKE_DL_LIBS}")
+    target_link_libraries(SIRGLProgrammableRHI PUBLIC SIR::Core "${CMAKE_DL_LIBS}")
 else()
     message(FATAL_ERROR "SIR_WITH_OPENGL currently supports Windows and Linux only")
 endif()
-sir_configure_owned_target(SIRGL46Driver)
+sir_configure_owned_target(SIRGLProgrammableRHI)
 endif()

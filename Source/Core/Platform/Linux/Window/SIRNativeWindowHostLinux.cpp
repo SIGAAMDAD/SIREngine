@@ -25,19 +25,27 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 int32_t SIRNativeWindowHost::runNative( const sirWindowCreateDesc_t *pDescs, uint32_t nWindows ) noexcept
 {
+	return runNativeWithFrame( pDescs, nWindows, nullptr, nullptr );
+}
+
+int32_t SIRNativeWindowHost::runNativeWithFrame( const sirWindowCreateDesc_t *pDescs, uint32_t nWindows,
+	                                               sirNativeWindowFrameFn_t pFrame, void *pContext ) noexcept
+{
+	static_cast<void>( pFrame );
+	static_cast<void>( pContext );
 #if defined( SIR_WINDOW_WAYLAND_AVAILABLE )
 	const char *pszDisplay = getenv( "WAYLAND_DISPLAY" );
 	if ( pszDisplay != nullptr && pszDisplay[0] != 0 ) {
 		SIRWindowDriverWayland driver;
-		return runWithDriver( driver, pDescs, nWindows );
+		return runWithDriverFrame( driver, pDescs, nWindows, pFrame, pContext );
 	}
 #endif
 #if defined( SIR_WINDOW_X11_AVAILABLE )
 	SIRWindowDriverX11 driver;
-	return runWithDriver( driver, pDescs, nWindows );
+	return runWithDriverFrame( driver, pDescs, nWindows, pFrame, pContext );
 #elif defined( SIR_WINDOW_WAYLAND_AVAILABLE )
 	SIRWindowDriverWayland driver;
-	return runWithDriver( driver, pDescs, nWindows );
+	return runWithDriverFrame( driver, pDescs, nWindows, pFrame, pContext );
 #else
 	static_cast<void>( pDescs );
 	static_cast<void>( nWindows );

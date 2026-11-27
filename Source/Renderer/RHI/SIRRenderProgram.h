@@ -16,7 +16,20 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #ifndef __SIR_RENDER_PROGRAM_H__
 #define __SIR_RENDER_PROGRAM_H__
 
-#include <Renderer/RHI/SIRRenderResource.h>
+#include <Core/SIRPCH.h>
+
+// clang-format off
+#ifdef SIR_PRAGMA_ONCE_SUPPORTED
+	#pragma once
+#endif
+// clang-format on
+
+#include <Resources/SIRResourcePtr.h>
+#include <Core/Containers/SIRArray.h>
+#include <Core/Containers/SIRString.h>
+#include "SIRRenderTypes.h"
+#include "SIRRenderResource.h"
+#include "SIRRenderShader.h"
 
 class SIRRenderProgram : public SIRRenderResource
 {
@@ -27,11 +40,24 @@ public:
 	SIRRenderProgram& operator=( SIRRenderProgram&& ) = delete;
 	virtual ~SIRRenderProgram() noexcept = default;
 
+	uint32_t getStageMask( void ) const noexcept
+	{
+		return m_nStageMask;
+	}
+
+	const SIRArray<SIRResourcePtr<SIRRenderShader>, static_cast<size_t>( SIRRenderShaderStage::SIR_RENDER_STAGE_COUNT )>& getShaders( void ) const noexcept
+	{
+		return m_Shaders;
+	}
+
 protected:
-	explicit SIRRenderProgram( const SIRSharedPtr<SIRRenderDevice>& device ) noexcept
+	explicit SIRRenderProgram( const SIRSharedPtr<SIRRenderDevice>& device, const SIRString& shaderFile ) noexcept
 	    : SIRRenderResource( device )
 	{
 	}
+
+	uint32_t m_nStageMask{};
+	SIRArray<SIRResourcePtr<SIRRenderShader>, static_cast<size_t>( SIRRenderShaderStage::SIR_RENDER_STAGE_COUNT )> m_Shaders;
 };
 
 #endif // __SIR_RENDER_PROGRAM_H__

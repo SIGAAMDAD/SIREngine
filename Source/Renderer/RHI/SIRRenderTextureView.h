@@ -24,6 +24,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 #include <Renderer/RHI/SIRRenderResourceView.h>
+#include <Renderer/RHI/SIRRenderTexture.h>
 class SIRRenderTexture;
 
 class SIRRenderTextureView : public SIRRenderResourceView
@@ -65,7 +66,7 @@ public:
 		return m_nAspectMask;
 	}
 
-	uint32_t getUsage( void ) const noexcept
+	uint64_t getUsage( void ) const noexcept
 	{
 		return m_nUsage;
 	}
@@ -83,15 +84,15 @@ public:
 protected:
 	explicit SIRRenderTextureView( const SIRSharedPtr<SIRRenderDevice>& device,
 	                               const SIRSharedPtr<SIRRenderTexture>& texture,
-	                               const sirRenderTextureViewDescription_t& description ) noexcept
+	                               const SIRRenderViewDesc& description ) noexcept
 	    : SIRRenderResourceView( device, description.eFormat ),
 	      m_pTexture( texture ),
-	      m_nBaseMip( description.range.nBaseMip ),
-	      m_nMipCount( description.range.nMipCount ),
-	      m_nBaseLayer( description.range.nBaseLayer ),
-	      m_nLayerCount( description.range.nLayerCount ),
-	      m_nAspectMask( description.range.nAspectMask ),
-	      m_nUsage( description.nUsage ),
+	      m_nBaseMip( description.subresources.nBaseMip ),
+	      m_nMipCount( description.subresources.nMipCount ),
+	      m_nBaseLayer( description.subresources.nBaseLayer ),
+	      m_nLayerCount( description.subresources.nLayerCount ),
+	      m_nAspectMask( description.subresources.nAspectMask ),
+	      m_nUsage( description.nUsageMask ),
 	      m_eDimension( description.eDimension )
 	{
 	}
@@ -102,7 +103,7 @@ protected:
 	uint32_t m_nBaseLayer{};
 	uint32_t m_nLayerCount{};
 	uint32_t m_nAspectMask{};
-	uint32_t m_nUsage{};
+	uint64_t m_nUsage{};
 	SIRRenderTextureDimension m_eDimension{};
 };
 #endif // __SIR_RENDER_TEXTURE_VIEW_H__

@@ -36,6 +36,9 @@ struct SIRRenderSubmission
 	SIRSpan<SIRRenderCommandList *const> commands{};
 	SIRSpan<const SIRRenderSynchronization *const> waits{};
 	SIRSpan<SIRRenderSynchronization *const> signals{};
+	// Each value corresponds to the synchronization object at the same index.
+	SIRSpan<const uint64_t> waitValues{};
+	SIRSpan<const uint64_t> signalValues{};
 };
 
 class SIRRenderQueue

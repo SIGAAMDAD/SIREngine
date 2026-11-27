@@ -50,7 +50,7 @@ public:
 		return m_nSampleCount;
 	}
 
-	uint32_t getUsage( void ) const noexcept
+	uint64_t getUsage( void ) const noexcept
 	{
 		return m_nUsage;
 	}
@@ -60,18 +60,18 @@ public:
 		return m_eFormat;
 	}
 
-	SIRRenderMemoryType getMemoryType( void ) const noexcept
+	SIRRenderMemoryClass getMemoryType( void ) const noexcept
 	{
 		return m_eMemoryType;
 	}
 
 protected:
-	explicit SIRRenderRenderbuffer( const SIRSharedPtr<SIRRenderDevice>& device, const sirRenderRenderbufferDescription_t& description ) noexcept
+	explicit SIRRenderRenderbuffer( const SIRSharedPtr<SIRRenderDevice>& device, const SIRRenderRenderbufferDesc& description ) noexcept
 	    : SIRRenderResource( device ),
 	      m_nWidth( description.nWidth ),
 	      m_nHeight( description.nHeight ),
 	      m_nSampleCount( description.nSampleCount ),
-	      m_nUsage( description.nUsage ),
+	      m_nUsage( description.nUsageMask ),
 	      m_eFormat( description.eFormat ),
 	      m_eMemoryType( description.eMemory )
 	{
@@ -80,8 +80,8 @@ protected:
 	uint32_t m_nWidth{};
 	uint32_t m_nHeight{};
 	uint32_t m_nSampleCount{};
-	uint32_t m_nUsage{};
+	uint64_t m_nUsage{};
 	SIRRenderFormat m_eFormat{};
-	SIRRenderMemoryType m_eMemoryType{};
+	SIRRenderMemoryClass m_eMemoryType{};
 };
 #endif // __SIR_RENDER_RENDERBUFFER_H__

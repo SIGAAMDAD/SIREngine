@@ -31,6 +31,7 @@ add_library(SIREditorAuthoring STATIC
     Widgets/SIREditorVirtualList.cpp
     Widgets/SIREditorHierarchyModel.cpp
     Host/SIREditorSceneWorkspace.cpp
+    Host/SIREditorAuthoringSession.cpp
     Host/SIREditorApplication.cpp
     Host/SIREditorWorkflow.cpp
     Host/SIREditorObjectInspector.cpp)
@@ -43,6 +44,11 @@ sir_configure_owned_target(SIREditorAuthoring)
 # Native SIREditor process; the graphical UI subsystem will be linked here.
 add_executable(SIREditor Main.cpp)
 target_link_libraries(SIREditor PRIVATE SIR::EditorAuthoring SIR::UI)
+if(SIR_WITH_IMGUI_OPENGL)
+    target_sources(SIREditor PRIVATE SIREditorOpenGL.cpp)
+    target_link_libraries(SIREditor PRIVATE SIR::ImGuiOpenGL)
+    target_compile_definitions(SIREditor PRIVATE SIR_WITH_IMGUI_OPENGL=1)
+endif()
 target_compile_definitions(SIREditor PRIVATE SIR_VERSION="${PROJECT_VERSION}")
 sir_configure_owned_target(SIREditor)
 

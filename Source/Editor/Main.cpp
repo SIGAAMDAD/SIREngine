@@ -17,6 +17,9 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Editor/Host/SIREditorApplication.h>
 #include <Editor/Host/SIREditorSceneWorkspace.h>
 #include <Editor/Host/SIREditorWorkflow.h>
+#if defined( SIR_WITH_IMGUI_OPENGL )
+#include <Editor/SIREditorOpenGL.h>
+#endif
 
 #include <Core/Memory/SIRMemoryManager.h>
 #include <Core/Memory/SIRMemorySegment.h>
@@ -29,12 +32,13 @@ static void sirEditorPrintHelp( void ) noexcept
 {
 	puts( "Usage: SIREditor --inspect-scene <path.tscn>" );
 	puts( "       SIREditor --native-window" );
+	puts( "       SIREditor --editor" );
 	puts( "       SIREditor --version" );
 	puts( "       SIREditor --headless-frames <positive count>" );
 	puts( "       SIREditor --headless-scene <path.tscn> <positive count>" );
 	puts( "       SIREditor --help" );
 	puts( "Inspect the native SIREngine scene intake without altering the source file." );
-	puts( "--native-window starts a native window host; graphical editor widgets are not yet connected." );
+	puts( "--editor starts the OpenGL 3.3 Core ImGui editor when built with SIR_WITH_IMGUI_OPENGL." );
 }
 
 static void sirEditorPrintSceneNodes( const SIREditorSceneWorkspace& workspace ) noexcept
@@ -254,6 +258,14 @@ int main( int nArgs, char **pszArgs )
 	if ( nArgs == 2 && strcmp( pszArgs[1], "--native-window" ) == 0 ) {
 		const sirWindowCreateDesc_t window{ "SIREngine Editor", 1280, 720 };
 		return SIRNativeWindowHost::runNative( &window, 1 );
+	}
+	if ( nArgs == 2 && strcmp( pszArgs[1], "--editor" ) == 0 ) {
+#if defined( SIR_WITH_IMGUI_OPENGL )
+		return sirEditorRunOpenGL();
+#else
+		fputs( "SIREditor: graphical editor is disabled; configure with SIR_WITH_OPENGL=ON and SIR_WITH_IMGUI_OPENGL=ON\n", stderr );
+		return 3;
+#endif
 	}
 	sirEditorPrintHelp();
 	return 2;

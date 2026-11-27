@@ -56,7 +56,7 @@ public:
 	virtual SIRRenderResult bindBindingSet( uint32_t nSetIndex, const SIRRenderBindingSet& bindingSet ) noexcept = 0;
 	virtual SIRRenderResult bindVertexBuffer( uint32_t nSlot, const SIRRenderStorageBuffer& buffer, uint64_t nOffsetBytes, uint32_t nStrideBytes ) noexcept = 0;
 	virtual SIRRenderResult bindIndexBuffer( const SIRRenderStorageBuffer& buffer, uint64_t nOffsetBytes, uint32_t nIndexStrideBytes ) noexcept = 0;
-	virtual SIRRenderResult setViewport( const sirRenderViewport_t& viewport, const sirRenderRect_t& scissor ) noexcept = 0;
+	virtual SIRRenderResult setViewport( const SIRRenderViewport& viewport, const SIRRenderRect& scissor ) noexcept = 0;
 	virtual SIRRenderResult setConstants( uint32_t nOffsetBytes, SIRSpan<const uint8_t> constants ) noexcept = 0;
 	virtual SIRRenderResult draw( uint32_t nVertexCount, uint32_t nInstanceCount, uint32_t nFirstVertex, uint32_t nFirstInstance ) noexcept = 0;
 	virtual SIRRenderResult drawIndexed( uint32_t nIndexCount, uint32_t nInstanceCount, uint32_t nFirstIndex, int32_t nVertexOffset, uint32_t nFirstInstance ) noexcept = 0;
@@ -64,20 +64,20 @@ public:
 	virtual SIRRenderResult drawIndexedIndirect( const SIRRenderStorageBuffer& buffer, uint64_t nOffsetBytes, uint32_t nDrawCount, uint32_t nStrideBytes ) noexcept = 0;
 	virtual SIRRenderResult copyBuffer( const SIRRenderStorageBuffer& destination,
 	                                    const SIRRenderStorageBuffer& source,
-	                                    const sirRenderBufferRange_t& destinationRange,
-	                                    const sirRenderBufferRange_t& sourceRange ) noexcept = 0;
+	                                    const SIRRenderBufferRange& destinationRange,
+	                                    const SIRRenderBufferRange& sourceRange ) noexcept = 0;
 	virtual SIRRenderResult copyTexture( const SIRRenderTexture& destination,
 	                                     const SIRRenderTexture& source,
-	                                     const sirRenderSubresourceRange_t& destinationRange,
-	                                     const sirRenderSubresourceRange_t& sourceRange ) noexcept = 0;
+	                                     const SIRRenderSubresourceRange& destinationRange,
+	                                     const SIRRenderSubresourceRange& sourceRange ) noexcept = 0;
 	virtual SIRRenderResult copyBufferToTexture( const SIRRenderStorageBuffer& source,
 	                                             const SIRRenderTexture& destination,
-	                                             const sirRenderBufferRange_t& sourceRange,
-	                                             const sirRenderSubresourceRange_t& destinationRange ) noexcept = 0;
+	                                             const SIRRenderBufferRange& sourceRange,
+	                                             const SIRRenderSubresourceRange& destinationRange ) noexcept = 0;
 	virtual SIRRenderResult copyTextureToBuffer( const SIRRenderTexture& source,
 	                                             const SIRRenderStorageBuffer& destination,
-	                                             const sirRenderSubresourceRange_t& sourceRange,
-	                                             const sirRenderBufferRange_t& destinationRange ) noexcept = 0;
+	                                             const SIRRenderSubresourceRange& sourceRange,
+	                                             const SIRRenderBufferRange& destinationRange ) noexcept = 0;
 	virtual SIRRenderResult fillBuffer( const SIRRenderStorageBuffer& buffer, uint64_t nOffsetBytes, uint64_t nSizeBytes, uint32_t nValue ) noexcept = 0;
 	virtual SIRRenderResult clearTexture( const SIRRenderTexture& texture ) noexcept = 0;
 	virtual SIRRenderResult resolveTexture( const SIRRenderTexture& destination, const SIRRenderTexture& source ) noexcept = 0;

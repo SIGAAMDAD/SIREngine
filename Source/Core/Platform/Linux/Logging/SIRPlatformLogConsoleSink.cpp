@@ -15,10 +15,16 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/Platform/Shared/Logging/SIRPlatformLogConsoleSink.h>
 #include <cstdio>
+
 sirLogSinkResult SIRPlatformLogConsoleSink::write( const sirLogRecord_t& record ) noexcept
 {
 	const size_t n = std::fwrite( record.szMessage, 1, record.nMessageBytes, stderr );
-	if ( n != record.nMessageBytes || std::fputc( '\n', stderr ) == EOF ) return sirLogSinkResult::SIR_LOG_SINK_ERROR;
+	if ( n != record.nMessageBytes || std::fputc( '\n', stderr ) == EOF )
+		return sirLogSinkResult::SIR_LOG_SINK_ERROR;
 	return sirLogSinkResult::SIR_LOG_SINK_OK;
 }
-sirLogSinkResult SIRPlatformLogConsoleSink::flush( void ) noexcept { return std::fflush( stderr ) == 0 ? sirLogSinkResult::SIR_LOG_SINK_OK : sirLogSinkResult::SIR_LOG_SINK_ERROR; }
+
+sirLogSinkResult SIRPlatformLogConsoleSink::flush( void ) noexcept
+{
+	return std::fflush( stderr ) == 0 ? sirLogSinkResult::SIR_LOG_SINK_OK : sirLogSinkResult::SIR_LOG_SINK_ERROR;
+}

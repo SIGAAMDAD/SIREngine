@@ -37,24 +37,24 @@ public:
 	SIRHardwareCatalog& operator=( const SIRHardwareCatalog& ) = delete;
 	SIRHardwareCatalog& operator=( SIRHardwareCatalog&& ) = delete;
 
-	[[nodiscard]] sirHardwareResult initialize( void ) noexcept;
-	[[nodiscard]] sirHardwareResult refresh( void ) noexcept;
+	[[nodiscard]] SIRHardwareResult initialize( void ) noexcept;
+	[[nodiscard]] SIRHardwareResult refresh( void ) noexcept;
 	// If refresh fails, copies the previous generation and returns STALE.
-	[[nodiscard]] sirHardwareResult copySnapshot( sirHardwareSnapshot_t *pSnapshot ) const noexcept;
+	[[nodiscard]] SIRHardwareResult copySnapshot( sirHardwareSnapshot_t *pSnapshot ) const noexcept;
 	// Cold, uncached advisory lookup. The requested generation must still be current on return.
-	[[nodiscard]] sirHardwareResult queryStorage( const sirStorageQuery_t& rQuery, sirStorageDescriptor_t *pDescriptor ) const noexcept;
+	[[nodiscard]] SIRHardwareResult queryStorage( const sirStorageQuery_t& rQuery, sirStorageDescriptor_t *pDescriptor ) const noexcept;
 	void shutdown( void ) noexcept;
 
 private:
-	[[nodiscard]] sirHardwareResult discover( void ) noexcept;
-	[[nodiscard]] sirHardwareResult validateGeneration( uint32_t nGeneration ) const noexcept;
+	[[nodiscard]] SIRHardwareResult discover( void ) noexcept;
+	[[nodiscard]] SIRHardwareResult validateGeneration( uint32_t nGeneration ) const noexcept;
 	static void readCPU( sirCPUDescriptor_t *pCPU ) noexcept;
-	static sirHardwareResult storageResult( sirPlatformStorageResult eResult ) noexcept;
+	static SIRHardwareResult storageResult( sirPlatformStorageResult eResult ) noexcept;
 
 	mutable SIRSpinLock m_MetadataLock;
 	sirHardwareSnapshot_t m_Snapshot{};
 	uint32_t m_nLastGeneration{};
-	sirHardwareResult m_eSnapshotResult{ sirHardwareResult::SIR_HARDWARE_INVALID };
+	SIRHardwareResult m_eSnapshotResult{ SIRHardwareResult::SIR_HARDWARE_INVALID };
 };
 
 #endif // __SIR_HARDWARECATALOG_H__

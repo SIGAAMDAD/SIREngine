@@ -52,27 +52,26 @@ public:
 		return *m_pBindingLayout;
 	}
 
-	const SIRVector<SIRSharedPtr<SIRRenderShader>>& getShaders( void ) const noexcept
+	const SIRRenderProgram& getProgram( void ) const noexcept
 	{
-		return m_Shaders;
+		return *m_Program;
 	}
 
 protected:
 	explicit SIRRenderPipeline( const SIRSharedPtr<SIRRenderDevice>& device,
 	                            SIRRenderPipelineType eType,
 	                            const SIRSharedPtr<SIRRenderBindingLayout>& layout,
-	                            const sirContainerAllocator_t *pAllocator ) noexcept
+	                            const SIRSharedPtr<SIRRenderProgram>& program ) noexcept
 	    : SIRRenderResource( device ),
 	      m_eType( eType ),
 	      m_pBindingLayout( layout ),
-	      m_Shaders( pAllocator )
+	      m_Program( program )
 	{
 	}
 
 	SIRRenderPipelineType m_eType{};
 	SIRSharedPtr<SIRRenderBindingLayout> m_pBindingLayout;
 	SIRSharedPtr<SIRRenderProgram> m_Program;
-	SIRVector<SIRSharedPtr<SIRRenderShader>> m_Shaders;
 };
 
 #endif // __SIR_RENDER_PIPELINE_H__

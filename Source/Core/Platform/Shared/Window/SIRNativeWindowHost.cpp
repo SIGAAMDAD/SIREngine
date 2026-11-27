@@ -16,6 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Platform/Shared/Window/SIRNativeWindowHost.h>
 #include <Core/SIRApplication.h>
 #include <Core/Platform/Shared/Window/SIRWindowSystem.h>
+#include <Core/Platform/Shared/Window/SIRNativeWindowLease.h>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -27,6 +28,12 @@ static SIRAppWindowPumpResult sirNativeWindowHostPump( void *pContext )
 }
 
 int32_t SIRNativeWindowHost::runWithDriver( SIRWindowDriver& driver, const sirWindowCreateDesc_t *pDescs, uint32_t nWindows ) noexcept
+{
+	return runWithDriverFrame( driver, pDescs, nWindows, nullptr, nullptr );
+}
+
+int32_t SIRNativeWindowHost::runWithDriverFrame( SIRWindowDriver& driver, const sirWindowCreateDesc_t *pDescs,
+	                                               uint32_t nWindows, sirNativeWindowFrameFn_t pFrame, void *pContext ) noexcept
 {
 	if ( nWindows > SIR_WINDOW_MAX_WINDOWS || ( nWindows != 0 && pDescs == nullptr ) ) {
 		return 1;
@@ -62,6 +69,26 @@ int32_t SIRNativeWindowHost::runWithDriver( SIRWindowDriver& driver, const sirWi
 			if ( windows.querySnapshot( handles[i], &snapshot ) != sirWindowResult::SIR_WINDOW_OK ) {
 				bSucceeded = false;
 				break;
+			}
+			if ( bSucceeded && pFrame != nullptr && snapshot.bReady ) {
+				SIRNativeWindowLease lease;
+				if ( windows.acquireNativeLease( handles[i], lease ) != sirWindowResult::SIR_WINDOW_OK ) {
+					bSucceeded = false;
+					break;
+				}
+				const bool bContinue = pFrame( windows, handles[i], snapshot, lease.getView(), pContext );
+				if ( !bContinue ) {
+					// The callback receives a borrowed native view. Release the lease
+					// before destroying the window so terminal cleanup can succeed.
+					if ( lease.reset() != sirWindowResult::SIR_WINDOW_OK ) {
+						bSucceeded = false;
+						break;
+					}
+					if ( windows.destroyWindow( handles[i] ) != sirWindowResult::SIR_WINDOW_OK ) bSucceeded = false;
+					handles[i] = {};
+					--nOpen;
+					continue;
+				}
 			}
 			if ( snapshot.bCloseRequested ) {
 				if ( windows.destroyWindow( handles[i] ) != sirWindowResult::SIR_WINDOW_OK ) {

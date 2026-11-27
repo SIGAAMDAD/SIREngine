@@ -47,20 +47,20 @@ public:
 		return m_Bindings.getSize();
 	}
 
-	SIRSpan<const SIRRenderBinding> getBindings( void ) const noexcept
+	SIRSpan<const SIRRenderBindingDesc> getBindings( void ) const noexcept
 	{
-		return SIRSpan<const SIRRenderBinding>( m_Bindings.data(), m_Bindings.getSize() );
+		return SIRSpan<const SIRRenderBindingDesc>( m_Bindings.data(), m_Bindings.getSize() );
 	}
 
 protected:
-	explicit SIRRenderBindingSet( const SIRSharedPtr<SIRRenderDevice>& device, const SIRSharedPtr<SIRRenderBindingLayout>& layout, SIRVector<SIRRenderBinding>&& bindings ) noexcept
+	explicit SIRRenderBindingSet( const SIRSharedPtr<SIRRenderDevice>& device, const SIRSharedPtr<SIRRenderBindingLayout>& layout, SIRVector<SIRRenderBindingDesc>&& bindings ) noexcept
 	    : SIRRenderResource( device ),
 	      m_pLayout( layout ),
-	      m_Bindings( static_cast<SIRVector<SIRRenderBinding>&&>( bindings ) )
+	      m_Bindings( static_cast<SIRVector<SIRRenderBindingDesc>&&>( bindings ) )
 	{
 	}
 
 	SIRSharedPtr<SIRRenderBindingLayout> m_pLayout;
-	SIRVector<SIRRenderBinding> m_Bindings;
+	SIRVector<SIRRenderBindingDesc> m_Bindings;
 };
 #endif // __SIR_RENDER_BINDING_SET_H__

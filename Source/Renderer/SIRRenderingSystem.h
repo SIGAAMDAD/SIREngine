@@ -26,38 +26,38 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Memory/Pointers/SIRSharedPtr.h>
 #include <Renderer/RHI/SIRRenderDevice.h>
 
-struct sirRenderingSystemConfig_t
+struct SIRRenderingSystemConfig
 {
-	SIRRenderBackend eBackend{ SIRRenderBackend::SIR_RENDER_AUTO };
-	uint32_t nAdapterIndex{};
+	SIRRenderBackend eBackend{};
+	SIRPipelineEra ePipelineEra{};
 };
 
 class SIRRenderingSystem : public SIREngineSystem
 {
 public:
-	explicit SIRRenderingSystem( const sirRenderingSystemConfig_t& config ) noexcept
+	explicit SIRRenderingSystem( const SIRRenderingSystemConfig& config ) noexcept
 	    : m_Config( config )
 	{
 	}
 
 	SIRRenderingSystem( const SIRRenderingSystem& ) = delete;
 	SIRRenderingSystem( SIRRenderingSystem&& ) = delete;
+
 	SIRRenderingSystem& operator=( const SIRRenderingSystem& ) = delete;
 	SIRRenderingSystem& operator=( SIRRenderingSystem&& ) = delete;
+
 	SIRSystemResult initialize( void ) noexcept override;
 	void update( float fDeltaSeconds ) noexcept override;
 	SIRSystemResult shutdown( void ) noexcept override;
 
-	const SIRSharedPtr<SIRRenderDevice>& getDevice( void ) const noexcept
-	{
-		return m_pDevice;
-	}
+	const SIRSharedPtr<SIRRenderDevice>& getDevice( void ) const noexcept;
 
 protected:
-	~SIRRenderingSystem( void ) noexcept override = default;
+	~SIRRenderingSystem() noexcept override = default;
 
 private:
-	sirRenderingSystemConfig_t m_Config;
+	const SIRRenderingSystemConfig m_Config;
 	SIRSharedPtr<SIRRenderDevice> m_pDevice;
 };
-#endif
+
+#endif // __SIR_RENDERING_SYSTEM_H__

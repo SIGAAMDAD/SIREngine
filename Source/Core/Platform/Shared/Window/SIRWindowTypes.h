@@ -15,21 +15,25 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #ifndef __SIR_WINDOWTYPES_H__
 #define __SIR_WINDOWTYPES_H__
+
 #include <Core/SIRPCH.h>
+
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
 	#pragma once
 #endif
 // clang-format on
 
-enum class sirWindowPlatform : uint8_t {
+enum class SIRWindowPlatform : uint8_t
+{
 	SIR_WINDOW_PLATFORM_WIN32 = 1,
 	SIR_WINDOW_PLATFORM_X11 = 2,
 	SIR_WINDOW_PLATFORM_WAYLAND = 3,
 	SIR_WINDOW_PLATFORM_HEADLESS = 4
 };
 
-enum class sirWindowResult : uint8_t {
+enum class SIRWindowResult : uint8_t
+{
 	SIR_WINDOW_OK = 0,
 	SIR_WINDOW_INVALID_ARGUMENT,
 	SIR_WINDOW_INVALID_HANDLE,
@@ -43,7 +47,8 @@ enum class sirWindowResult : uint8_t {
 	SIR_WINDOW_STOPPED
 };
 
-enum class sirWindowEventKind : uint8_t {
+enum class SIRWindowEventKind : uint8_t
+{
 	SIR_WINDOW_EVENT_CREATED = 1,
 	SIR_WINDOW_EVENT_READY,
 	SIR_WINDOW_EVENT_CLOSE_REQUESTED,
@@ -69,13 +74,14 @@ typedef struct sirWindowHandle_s
 
 typedef struct sirWindowNativeView_s
 {
-	sirWindowPlatform ePlatform;
+	SIRWindowPlatform ePlatform;
 	uintptr_t nNativeWindow;
 	uintptr_t nDisplayOrInstance;
 	uint64_t nWindowGeneration;
 } sirWindowNativeView_t;
 
-enum class sirWindowMutationKind : uint8_t {
+enum class SIRWindowMutationKind : uint8_t
+{
 	SIR_WINDOW_MUTATION_TITLE = 1,
 	SIR_WINDOW_MUTATION_RESIZE,
 	SIR_WINDOW_MUTATION_SHOW,
@@ -89,7 +95,7 @@ enum class sirWindowMutationKind : uint8_t {
 
 typedef struct sirWindowMutation_s
 {
-	sirWindowMutationKind eKind;
+	SIRWindowMutationKind eKind;
 	const char *pszTitle;
 	uint32_t nWidth;
 	uint32_t nHeight;
@@ -100,6 +106,7 @@ typedef struct sirWindowMutation_s
 // byte count permits a nonterminated caller buffer; WindowSystem copies and
 // terminates it before crossing the internal native driver boundary.
 constexpr uint32_t SIR_WINDOW_TITLE_CAPACITY = 128;
+
 typedef struct sirWindowCreateDesc_s
 {
 	const char *pszTitle;
@@ -127,7 +134,7 @@ typedef struct sirWindowBackendEvent_s
 {
 	uint32_t nSlot;
 	uintptr_t nNativeWindow;
-	sirWindowEventKind eKind;
+	SIRWindowEventKind eKind;
 	uint32_t nWidth;
 	uint32_t nHeight;
 } sirWindowBackendEvent_t;
@@ -135,7 +142,7 @@ typedef struct sirWindowBackendEvent_s
 typedef struct sirWindowEvent_s
 {
 	sirWindowHandle_t hWindow;
-	sirWindowEventKind eKind;
+	SIRWindowEventKind eKind;
 	uint32_t nWidth;
 	uint32_t nHeight;
 	uint64_t nSequence;

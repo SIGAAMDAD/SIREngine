@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef SIR_CORE_PLATFORM_COMPILER_H
-#define SIR_CORE_PLATFORM_COMPILER_H
+#ifndef __SIR_COMPILER_H__
+#define __SIR_COMPILER_H__
 
 #include <Core/SIRPCH.h>
 
@@ -213,8 +213,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #define SIR_COMPILER_MAKE_VERSION( nMajor, nMinor, nPatch ) ( ( nMajor ) * 10000 + ( nMinor ) * 100 + ( nPatch ) )
 #define SIR_COMPILER_VERSION SIR_COMPILER_MAKE_VERSION( SIR_COMPILER_VERSION_MAJOR, SIR_COMPILER_VERSION_MINOR, SIR_COMPILER_VERSION_PATCH )
-#define SIR_COMPILER_VERSION_AT_LEAST( nMajor, nMinor, nPatch )                                                                            \
-	( SIR_COMPILER_VERSION >= SIR_COMPILER_MAKE_VERSION( nMajor, nMinor, nPatch ) )
+#define SIR_COMPILER_VERSION_AT_LEAST( nMajor, nMinor, nPatch ) ( SIR_COMPILER_VERSION >= SIR_COMPILER_MAKE_VERSION( nMajor, nMinor, nPatch ) )
 #define SIR_COMPILER_VERSION_BEFORE( nMajor, nMinor, nPatch ) ( SIR_COMPILER_VERSION < SIR_COMPILER_MAKE_VERSION( nMajor, nMinor, nPatch ) )
 
 // MSVC compatibility version can be queried even under clang-cl.
@@ -764,11 +763,11 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #define SIR_ASSUME( expression ) __builtin_assume( expression )
 #else
 #define SIR_COMPILER_UNREACHABLE() __builtin_unreachable()
-#define SIR_ASSUME( expression )                                                                                                           \
-	do {                                                                                                                                   \
-		if ( !( expression ) ) {                                                                                                           \
-			SIR_COMPILER_UNREACHABLE();                                                                                                     \
-		}                                                                                                                                  \
+#define SIR_ASSUME( expression ) \
+	do { \
+		if ( !( expression ) ) { \
+			SIR_COMPILER_UNREACHABLE(); \
+		} \
 	} while ( 0 )
 #endif
 
@@ -807,7 +806,9 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 
 #define SIR_EXTERN_C extern "C"
-#define SIR_EXTERN_C_BEGIN extern "C" {
+#define SIR_EXTERN_C_BEGIN \
+	extern "C" \
+	{
 #define SIR_EXTERN_C_END }
 
 #if defined( _WIN32 ) && ( defined( _M_IX86 ) || defined( __i386__ ) )
@@ -841,4 +842,125 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #define SIR_PACK_POP() SIR_COMPILER_DO_PRAGMA( pack( pop ) )
 #endif
 
-#endif // SIR_CORE_PLATFORM_COMPILER_H
+// ========================================================================================================
+// Utility functionality
+//
+
+template<typename T>
+struct enabled : std::true_type
+{
+};
+
+template<typename T>
+using underlying_t = std::underlying_type_t<T>;
+
+// Do not enable these operators for arbitrary enum classes.
+#if SIR_CPP_HAS_CONCEPTS == 1
+template<typename T>
+concept bitmask_enum = std::is_enum_v<T> && enabled<T>::value;
+
+#define SIR_FLAGS_TEMPLATE(T) template<bitmask_enum T>
+
+#else
+
+template<typename T>
+using enable_t = std::enable_if_t<std::is_enum<T>::value && enabled<T>::value, int>;
+
+#define SIR_FLAGS_TEMPLATE(T) template<typename T, enable_t<T> = 0>
+#endif // SIR_CPP_HAS_CONCEPTS
+
+SIR_FLAGS_TEMPLATE(T)
+constexpr T operator|(T lhs, T rhs) noexcept
+{
+    return static_cast<T>(static_cast<underlying_t<T>>(lhs) | static_cast<underlying_t<T>>(rhs));
+}
+
+SIR_FLAGS_TEMPLATE(T)
+constexpr T operator&(T lhs, T rhs) noexcept
+{
+    return static_cast<T>(static_cast<underlying_t<T>>(lhs) & static_cast<underlying_t<T>>(rhs));
+}
+
+SIR_FLAGS_TEMPLATE(T)
+constexpr T operator^(T lhs, T rhs) noexcept
+{
+    return static_cast<T>(static_cast<underlying_t<T>>(lhs) ^ static_cast<underlying_t<T>>(rhs));
+}
+
+SIR_FLAGS_TEMPLATE(T)
+constexpr T operator~(T value) noexcept
+{
+    return static_cast<T>(~static_cast<underlying_t<T>>(value));
+}
+
+SIR_FLAGS_TEMPLATE(T)
+constexpr T& operator|=(T& lhs, T rhs) noexcept
+{
+    lhs = lhs | rhs;
+    return lhs;
+}
+
+SIR_FLAGS_TEMPLATE(T)
+constexpr T& operator&=(T& lhs, T rhs) noexcept
+{
+    lhs = lhs & rhs;
+    return lhs;
+}
+
+SIR_FLAGS_TEMPLATE(T)
+constexpr T& operator^=(T& lhs, T rhs) noexcept
+{
+    lhs = lhs ^ rhs;
+    return lhs;
+}
+
+SIR_FLAGS_TEMPLATE(T)
+constexpr bool any(T value) noexcept
+{
+    return static_cast<underlying_t<T>>(value) != underlying_t<T>{0};
+}
+
+SIR_FLAGS_TEMPLATE(T)
+constexpr bool none(T value) noexcept
+{
+    return !any(value);
+}
+
+SIR_FLAGS_TEMPLATE(T)
+constexpr bool has_all(T value, T mask) noexcept
+{
+    return (value & mask) == mask;
+}
+
+SIR_FLAGS_TEMPLATE(T)
+constexpr bool has_any(T value, T mask) noexcept
+{
+    return any(value & mask);
+}
+
+SIR_FLAGS_TEMPLATE(T)
+constexpr T set(T value, T mask) noexcept
+{
+    return value | mask;
+}
+
+SIR_FLAGS_TEMPLATE(T)
+constexpr T clear(T value, T mask) noexcept
+{
+    return value & ~mask;
+}
+
+SIR_FLAGS_TEMPLATE(T)
+constexpr T toggle(T value, T mask) noexcept
+{
+    return value ^ mask;
+}
+
+#undef SIR_FLAGS_TEMPLATE
+
+// Declare at global namespace scope, after the enum definition.
+// The semicolon is supplied at the call site.
+#define SIR_ENABLE_ENUM_FLAGS(EnumType) \
+    template<> struct enabled<EnumType> : std::true_type {}
+
+#endif // __SIR_COMPILER_H__

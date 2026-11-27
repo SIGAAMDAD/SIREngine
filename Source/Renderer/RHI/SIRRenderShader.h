@@ -24,6 +24,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
+#include <Core/Strings/SIRString.h>
 #include <Renderer/RHI/SIRRenderResource.h>
 #include <Renderer/RHI/SIRRenderTypes.h>
 
@@ -37,9 +38,9 @@ public:
 	SIRRenderShader& operator=( const SIRRenderShader& ) = delete;
 	SIRRenderShader& operator=( SIRRenderShader&& ) = delete;
 
-	uint32_t getStage( void ) const noexcept
+	SIRRenderShaderStageMask getStage( void ) const noexcept
 	{
-		return m_nStageMask;
+		return m_eStage;
 	}
 
 	SIRRenderShaderFormat getFormat( void ) const noexcept
@@ -49,30 +50,34 @@ public:
 
 	const char *getEntryPoint( void ) const noexcept
 	{
-		return m_Description.pszEntryPoint;
+		return m_EntryPoint.c_str();
 	}
 
 	uint64_t getReflection( void ) const noexcept
 	{
-		return m_Description.nReflectionHash;
+		return m_nReflectionHash;
 	}
 
-	const sirRenderShaderDescription_t& getDescription( void ) const noexcept
+	uint64_t getContentHash( void ) const noexcept
 	{
-		return m_Description;
+		return m_nContentHash;
 	}
 
 protected:
-	explicit SIRRenderShader( const SIRSharedPtr<SIRRenderDevice>& device, const sirRenderShaderDescription_t& description, SIRRenderShaderFormat eFormat ) noexcept
+	explicit SIRRenderShader( const SIRSharedPtr<SIRRenderDevice>& device, const SIRRenderShaderCode& description ) noexcept
 	    : SIRRenderResource( device ),
-	      m_Description( description ),
-	      m_nStageMask( description.nStageMask ),
-	      m_eFormat( eFormat )
+	      m_eStage( description.eStage ),
+	      m_eFormat( description.eFormat ),
+	      m_EntryPoint( description.pszEntryPoint == nullptr ? "" : description.pszEntryPoint ),
+	      m_nContentHash( description.nContentHash ),
+	      m_nReflectionHash( description.nReflectionHash )
 	{
 	}
 
-	sirRenderShaderDescription_t m_Description{};
-	uint32_t m_nStageMask{};
+	SIRRenderShaderStageMask m_eStage{};
 	SIRRenderShaderFormat m_eFormat{};
+	SIRString m_EntryPoint;
+	uint64_t m_nContentHash{};
+	uint64_t m_nReflectionHash{};
 };
 #endif // __SIR_RENDER_SHADER_H__

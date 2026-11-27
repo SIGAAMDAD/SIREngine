@@ -27,11 +27,6 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Renderer/RHI/SIRRenderQueue.h>
 #include <Renderer/RHI/SIRRenderTypes.h>
 
-struct SIRRenderNativeWindow
-{
-	void *pHandle{};
-};
-
 class SIRRenderSwapchain : public SIRRenderResource
 {
 public:
@@ -71,7 +66,7 @@ public:
 	virtual SIRRenderResult resize( uint32_t nWidth, uint32_t nHeight ) noexcept = 0;
 
 protected:
-	explicit SIRRenderSwapchain( const SIRSharedPtr<SIRRenderDevice>& device, const sirRenderSwapchainDescription_t& description ) noexcept
+	explicit SIRRenderSwapchain( const SIRSharedPtr<SIRRenderDevice>& device, const SIRRenderSwapchainDesc& description ) noexcept
 	    : SIRRenderResource( device ),
 	      m_nWidth( description.nWidth ),
 	      m_nHeight( description.nHeight ),
@@ -81,7 +76,7 @@ protected:
 	{
 	}
 
-	void setPresentationProperties( const sirRenderSwapchainDescription_t& description ) noexcept
+	void setPresentationProperties( const SIRRenderSwapchainDesc& description ) noexcept
 	{
 		m_nWidth = description.nWidth;
 		m_nHeight = description.nHeight;

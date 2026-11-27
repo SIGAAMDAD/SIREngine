@@ -47,22 +47,22 @@ public:
 		return *m_pPipeline;
 	}
 
-	sirRenderShaderBindingRegion_t getRayGenerationRange( void ) const noexcept
+	SIRRenderShaderBindingRegion getRayGenerationRange( void ) const noexcept
 	{
 		return m_RayGeneration;
 	}
 
-	sirRenderShaderBindingRegion_t getMissRange( void ) const noexcept
+	SIRRenderShaderBindingRegion getMissRange( void ) const noexcept
 	{
 		return m_Miss;
 	}
 
-	sirRenderShaderBindingRegion_t getHitRange( void ) const noexcept
+	SIRRenderShaderBindingRegion getHitRange( void ) const noexcept
 	{
 		return m_Hit;
 	}
 
-	sirRenderShaderBindingRegion_t getCallableRange( void ) const noexcept
+	SIRRenderShaderBindingRegion getCallableRange( void ) const noexcept
 	{
 		return m_Callable;
 	}
@@ -71,7 +71,7 @@ protected:
 	explicit SIRRenderShaderBindingTable( const SIRSharedPtr<SIRRenderDevice>& device,
 	                                      const SIRSharedPtr<SIRRenderStorageBuffer>& buffer,
 	                                      const SIRSharedPtr<SIRRenderPipeline>& pipeline,
-	                                      const sirRenderShaderBindingTableDescription_t& description ) noexcept
+	                                      const SIRRenderShaderBindingTableDesc& description ) noexcept
 	    : SIRRenderResource( device ),
 	      m_pBuffer( buffer ),
 	      m_pPipeline( pipeline ),
@@ -84,9 +84,9 @@ protected:
 
 	SIRSharedPtr<SIRRenderStorageBuffer> m_pBuffer;
 	SIRSharedPtr<SIRRenderPipeline> m_pPipeline;
-	sirRenderShaderBindingRegion_t m_RayGeneration{};
-	sirRenderShaderBindingRegion_t m_Miss{};
-	sirRenderShaderBindingRegion_t m_Hit{};
-	sirRenderShaderBindingRegion_t m_Callable{};
+	SIRRenderShaderBindingRegion m_RayGeneration{};
+	SIRRenderShaderBindingRegion m_Miss{};
+	SIRRenderShaderBindingRegion m_Hit{};
+	SIRRenderShaderBindingRegion m_Callable{};
 };
 #endif // __SIR_RENDER_SHADER_BINDING_TABLE_H__

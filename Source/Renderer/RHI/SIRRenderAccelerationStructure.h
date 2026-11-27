@@ -25,6 +25,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <Renderer/RHI/SIRRenderResource.h>
+#include <Renderer/RHI/SIRRenderStorageBuffer.h>
 #include <Renderer/RHI/SIRRenderTypes.h>
 
 class SIRRenderStorageBuffer;
@@ -68,12 +69,12 @@ public:
 protected:
 	explicit SIRRenderAccelerationStructure( const SIRSharedPtr<SIRRenderDevice>& device,
 	                                         const SIRSharedPtr<SIRRenderStorageBuffer>& backingBuffer,
-	                                         const sirRenderAccelerationStructureDescription_t& description ) noexcept
+	                                         const SIRRenderAccelerationStructureDesc& description ) noexcept
 	    : SIRRenderResource( device ),
 	      m_eType( description.eType ),
 	      m_pBackingBuffer( backingBuffer ),
-	      m_nBackingOffset( description.nBackingOffset ),
-	      m_nBackingSize( description.nBackingSize ),
+	      m_nBackingOffset( description.nBackingOffsetBytes ),
+	      m_nBackingSize( description.nBackingSizeBytes ),
 	      m_nBuildFlags( description.nBuildFlags )
 	{
 	}

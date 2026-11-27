@@ -23,6 +23,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 	#pragma once
 #endif
 // clang-format on
+
 #include <Renderer/RHI/SIRRenderResource.h>
 #include <Renderer/RHI/SIRRenderTypes.h>
 
@@ -32,6 +33,7 @@ public:
 	explicit SIRRenderTexture( const SIRRenderTexture& ) = delete;
 	explicit SIRRenderTexture( SIRRenderTexture&& ) = delete;
 	virtual ~SIRRenderTexture() noexcept = default;
+
 	SIRRenderTexture& operator=( const SIRRenderTexture& ) = delete;
 	SIRRenderTexture& operator=( SIRRenderTexture&& ) = delete;
 
@@ -57,17 +59,17 @@ public:
 
 	uint32_t getArrayLayers( void ) const noexcept
 	{
-		return m_Description.nLayers;
+		return m_Description.nArrayLayers;
 	}
 
 	uint32_t getSampleCount( void ) const noexcept
 	{
-		return m_Description.nSamples;
+		return m_Description.nSampleCount;
 	}
 
-	uint32_t getUsage( void ) const noexcept
+	uint64_t getUsage( void ) const noexcept
 	{
-		return static_cast<uint32_t>( m_Description.nUsage );
+		return m_Description.nUsageMask;
 	}
 
 	SIRRenderFormat getFormat( void ) const noexcept
@@ -80,35 +82,31 @@ public:
 		return m_Description.eDimension;
 	}
 
-	SIRRenderMemoryType getMemoryType( void ) const noexcept
+	SIRRenderMemoryClass getMemoryType( void ) const noexcept
 	{
 		return m_Description.eMemory;
 	}
 
-	bool isExternallyOwned( void ) const noexcept
-	{
-		return m_Description.bExternallyOwned;
-	}
-
 	bool isSparse( void ) const noexcept
 	{
-		return m_Description.bSparse;
+		return ( m_Description.nResourceFlags & static_cast<uint32_t>( SIRRenderResourceFlag::Sparse ) ) != 0;
 	}
 
-	const sirRenderTextureDescription_t& getDescription( void ) const noexcept
+	const SIRRenderTextureDesc& getDescription( void ) const noexcept
 	{
 		return m_Description;
 	}
 
-	virtual SIRRenderResult getSubresourceLayout( const sirRenderSubresourceRange_t& subresources, sirRenderBufferRange_t *pLayout ) const noexcept = 0;
+	virtual SIRRenderResult getSubresourceLayout( const SIRRenderSubresourceRange& subresources, SIRRenderBufferRange *pLayout ) const noexcept = 0;
 
 protected:
-	explicit SIRRenderTexture( const SIRSharedPtr<SIRRenderDevice>& device, const sirRenderTextureDescription_t& description ) noexcept
+	explicit SIRRenderTexture( const SIRSharedPtr<SIRRenderDevice>& device, const SIRRenderTextureDesc& description ) noexcept
 	    : SIRRenderResource( device ),
 	      m_Description( description )
 	{
 	}
 
-	sirRenderTextureDescription_t m_Description{};
+	SIRRenderTextureDesc m_Description{};
 };
+
 #endif // __SIR_RENDER_TEXTURE_H__

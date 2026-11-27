@@ -16,6 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #ifndef __SIR_RENDER_STORAGE_BUFFER_VIEW_H__
 #define __SIR_RENDER_STORAGE_BUFFER_VIEW_H__
 
+#include "Renderer/RHI/SIRRenderTypes.h"
 #include <Core/SIRPCH.h>
 
 // clang-format off
@@ -25,9 +26,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <Renderer/RHI/SIRRenderResourceView.h>
+#include <Renderer/RHI/SIRRenderStorageBuffer.h>
+#include <Resources/SIRResourcePtr.h>
 
-class SIRRenderStorageBuffer;
-
+// Manages a suballocation of a SIRRenderStorageBuffer
 class SIRRenderStorageBufferView : public SIRRenderResourceView
 {
 public:
@@ -58,7 +60,7 @@ public:
 		return m_nStride;
 	}
 
-	uint32_t getUsage( void ) const noexcept
+	uint64_t getUsage( void ) const noexcept
 	{
 		return m_nUsage;
 	}
@@ -70,14 +72,14 @@ public:
 
 protected:
 	explicit SIRRenderStorageBufferView( const SIRSharedPtr<SIRRenderDevice>& device,
-	                                     const SIRSharedPtr<SIRRenderStorageBuffer>& buffer,
-	                                     const sirRenderStorageBufferViewDescription_t& description ) noexcept
+	                                     const SIRResourcePtr<SIRRenderStorageBuffer>& buffer,
+	                                     const SIRRenderBufferRange& description ) noexcept
 	    : SIRRenderResourceView( device, description.eFormat ),
 	      m_pBuffer( buffer ),
-	      m_nOffset( description.nOffset ),
-	      m_nSize( description.nSize ),
-	      m_nStride( description.nStride ),
-	      m_nUsage( description.nUsage )
+	      m_nOffset( description.bufferRange.nOffsetBytes ),
+	      m_nSize( description.bufferRange.nSizeBytes ),
+	      m_nStride( description.nStrideBytes ),
+	      m_nUsage( description.nUsageMask )
 	{
 	}
 
@@ -85,6 +87,6 @@ protected:
 	uint64_t m_nOffset{};
 	uint64_t m_nSize{};
 	uint32_t m_nStride{};
-	uint32_t m_nUsage{};
+	uint64_t m_nUsage{};
 };
 #endif // __SIR_RENDER_STORAGE_BUFFER_VIEW_H__

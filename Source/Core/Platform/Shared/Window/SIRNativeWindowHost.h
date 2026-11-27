@@ -26,6 +26,11 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/Platform/Shared/Window/SIRWindowDriver.h>
 
+class SIRWindowSystem;
+struct sirWindowSnapshot_s;
+struct sirWindowNativeView_s;
+typedef bool ( *sirNativeWindowFrameFn_t )( SIRWindowSystem&, sirWindowHandle_t, const sirWindowSnapshot_s&, const sirWindowNativeView_s&, void * ) noexcept;
+
 // Driver lifetime is borrowed for the duration of runWithDriver.
 class SIRNativeWindowHost final
 {
@@ -40,6 +45,10 @@ public:
 	[[nodiscard]] static int32_t runInput( bool bMultiwindow, uint64_t nMaxFrames ) noexcept;
 	[[nodiscard]] static int32_t runNative( const sirWindowCreateDesc_t *pDescs, uint32_t nWindows ) noexcept;
 	[[nodiscard]] static int32_t runWithDriver( SIRWindowDriver& driver, const sirWindowCreateDesc_t *pDescs, uint32_t nWindows ) noexcept;
+	[[nodiscard]] static int32_t runNativeWithFrame( const sirWindowCreateDesc_t *pDescs, uint32_t nWindows,
+	                                                  sirNativeWindowFrameFn_t pFrame, void *pContext ) noexcept;
+	[[nodiscard]] static int32_t runWithDriverFrame( SIRWindowDriver& driver, const sirWindowCreateDesc_t *pDescs,
+	                                                  uint32_t nWindows, sirNativeWindowFrameFn_t pFrame, void *pContext ) noexcept;
 };
 
 #endif // __SIR_NATIVE_WINDOW_HOST_H__

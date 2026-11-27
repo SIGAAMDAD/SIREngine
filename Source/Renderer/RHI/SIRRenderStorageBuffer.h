@@ -26,6 +26,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Renderer/RHI/SIRRenderResource.h>
 #include <Renderer/RHI/SIRRenderTypes.h>
+#include <Core/Containers/SIRSpan.h>
 
 class SIRRenderStorageBuffer : public SIRRenderResource
 {
@@ -46,12 +47,12 @@ public:
 		return m_nCommittedBytes;
 	}
 
-	uint32_t getUsage( void ) const noexcept
+	uint64_t getUsage( void ) const noexcept
 	{
 		return m_nUsage;
 	}
 
-	SIRRenderMemoryType getMemoryType( void ) const noexcept
+	SIRRenderMemoryClass getMemoryType( void ) const noexcept
 	{
 		return m_eMemoryType;
 	}
@@ -71,29 +72,39 @@ public:
 		return m_bPersistentlyMapped;
 	}
 
-	virtual SIRRenderResult map( uint64_t nOffsetBytes, uint64_t nSizeBytes, sirRenderBufferMapping_t *pMapping ) noexcept = 0;
+	// advanced pipeline features
+	virtual SIRRenderResult map( uint64_t nOffsetBytes, uint64_t nSizeBytes, SIRRenderMappedBuffer *pMapping ) noexcept = 0;
 	virtual SIRRenderResult unmap( void ) noexcept = 0;
 	virtual SIRRenderResult flush( uint64_t nOffsetBytes, uint64_t nSizeBytes ) noexcept = 0;
 	virtual SIRRenderResult invalidate( uint64_t nOffsetBytes, uint64_t nSizeBytes ) noexcept = 0;
 	virtual uint64_t getDeviceAddress( void ) const noexcept = 0;
 
+	virtual SIRRenderResult updateBufferRange( uint64_t nOffsetBytes, uint64_t nSizeBytes, const SIRSpan<uint8_t>& memory ) noexcept = 0;
+	virtual SIRRenderResult copyBufferRange( SIRRenderStorageBuffer& copyTarget, uint64_t nOffsetBytes, uint64_t nSizeBytes ) noexcept = 0;
+	virtual SIRRenderResult clearBufferRange( uint64_t nOffsetBytes, uint64_t nSizeBytes ) noexcept = 0;
+	virtual SIRRenderResult clear( void ) noexcept = 0;
+
+	virtual SIRRenderResult bind( void ) const noexcept = 0;
+	virtual SIRRenderResult unbind( void ) const noexcept = 0;
+
 protected:
-	explicit SIRRenderStorageBuffer( const SIRSharedPtr<SIRRenderDevice>& device, const sirRenderBufferDescription_t& description, uint64_t nCommittedBytes ) noexcept
+	explicit SIRRenderStorageBuffer( const SIRSharedPtr<SIRRenderDevice>& device, const SIRRenderBufferDesc& desc ) noexcept
 	    : SIRRenderResource( device ),
-	      m_nSize( description.nSize ),
-	      m_nCommittedBytes( nCommittedBytes ),
-	      m_nUsage( static_cast<uint32_t>( description.nUsage ) ),
-	      m_eMemoryType( description.eMemory ),
-	      m_bHostVisible( description.bHostVisible ),
-	      m_bHostCoherent( description.bHostCoherent ),
-	      m_bPersistentlyMapped( description.bPersistentlyMapped )
+	      m_nSize( desc.nSizeBytes ),
+	      m_nCommittedBytes( 0 ),
+	      m_eUsage( desc.eUsageMask ),
+	      m_eMemoryType( desc.eMemory ),
+	      m_bHostVisible( ( desc.nRequiredMemoryProperties & static_cast<uint32_t>( SIRRenderMemoryProperty::HostVisible ) ) != 0 ),
+	      m_bHostCoherent( ( desc.nRequiredMemoryProperties & static_cast<uint32_t>( SIRRenderMemoryProperty::HostCoherent ) ) != 0 ),
+	      m_bPersistentlyMapped( ( desc.nRequiredMemoryProperties & static_cast<uint32_t>( SIRRenderMemoryProperty::PersistentMapped ) ) != 0 )
 	{
 	}
 
 	uint64_t m_nSize{};
 	uint64_t m_nCommittedBytes{};
-	uint32_t m_nUsage{};
-	SIRRenderMemoryType m_eMemoryType{};
+	SIRRenderBufferUsage m_eUsage{};
+	SIRRenderMemoryClass m_eMemoryType{};
+
 	bool m_bHostVisible{};
 	bool m_bHostCoherent{};
 	bool m_bPersistentlyMapped{};

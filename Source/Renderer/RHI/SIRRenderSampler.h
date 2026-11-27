@@ -24,21 +24,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 #include <Renderer/RHI/SIRRenderResource.h>
-
-struct SIRRenderSamplerDescription
-{
-	uint8_t nMinFilter{};
-	uint8_t nMagFilter{};
-	uint8_t nMipmapFilter{};
-	uint8_t nAddressU{};
-	uint8_t nAddressV{};
-	uint8_t nAddressW{};
-	float fAnisotropy{};
-	float fMinLod{};
-	float fMaxLod{};
-	float fLodBias{};
-	bool bCompare{};
-};
+#include <Renderer/RHI/SIRRenderTypes.h>
 
 class SIRRenderSampler : public SIRRenderResource
 {
@@ -49,18 +35,18 @@ public:
 	SIRRenderSampler& operator=( const SIRRenderSampler& ) = delete;
 	SIRRenderSampler& operator=( SIRRenderSampler&& ) = delete;
 
-	const SIRRenderSamplerDescription& getDescription( void ) const noexcept
+	const SIRRenderSamplerDesc& getDescription( void ) const noexcept
 	{
 		return m_Description;
 	}
 
 protected:
-	explicit SIRRenderSampler( const SIRSharedPtr<SIRRenderDevice>& device, const SIRRenderSamplerDescription& description ) noexcept
+	explicit SIRRenderSampler( const SIRSharedPtr<SIRRenderDevice>& device, const SIRRenderSamplerDesc& description ) noexcept
 	    : SIRRenderResource( device ),
 	      m_Description( description )
 	{
 	}
 
-	SIRRenderSamplerDescription m_Description{};
+	SIRRenderSamplerDesc m_Description{};
 };
 #endif // __SIR_RENDER_SAMPLER_H__

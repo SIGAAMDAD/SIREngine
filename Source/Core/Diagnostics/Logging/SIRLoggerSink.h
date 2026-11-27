@@ -15,8 +15,19 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #ifndef __SIR_LOGGERSINK_H__
 #define __SIR_LOGGERSINK_H__
+
 #include <Core/Diagnostics/Logging/SIRLogTypes.h>
-enum class sirLogSinkResult : uint8_t { SIR_LOG_SINK_OK, SIR_LOG_SINK_FULL, SIR_LOG_SINK_BUSY, SIR_LOG_SINK_ERROR, SIR_LOG_SINK_INVALID, SIR_LOG_SINK_UNSUPPORTED };
+
+enum class sirLogSinkResult : uint8_t
+{
+	SIR_LOG_SINK_OK,
+	SIR_LOG_SINK_FULL,
+	SIR_LOG_SINK_BUSY,
+	SIR_LOG_SINK_ERROR,
+	SIR_LOG_SINK_INVALID,
+	SIR_LOG_SINK_UNSUPPORTED
+};
+
 class SIRLoggerSink
 {
 public:
@@ -29,4 +40,5 @@ public:
 	[[nodiscard]] virtual sirLogSinkResult write( const sirLogRecord_t& record ) noexcept = 0;
 	[[nodiscard]] virtual sirLogSinkResult flush( void ) noexcept = 0;
 };
+
 #endif

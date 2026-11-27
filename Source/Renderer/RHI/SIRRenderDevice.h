@@ -36,6 +36,7 @@ public:
 	SIRRenderDevice( const SIRRenderDevice& ) = delete;
 	SIRRenderDevice( SIRRenderDevice&& ) = delete;
 	virtual ~SIRRenderDevice() noexcept = default;
+
 	SIRRenderDevice& operator=( const SIRRenderDevice& ) = delete;
 	SIRRenderDevice& operator=( SIRRenderDevice&& ) = delete;
 

@@ -46,8 +46,10 @@ public:
 	SIR_FORCEINLINE TDevice& getDevice() const noexcept
 	{
 		static_assert( std::is_base_of_v<SIRRenderDevice, TDevice> );
-		return static_cast<TDevice&>( m_pDevice.get() );
+		return static_cast<TDevice&>( *m_pDevice.get() );
 	}
+
+	virtual bool isValid( void ) const noexcept = 0;
 
 protected:
 	explicit SIRRenderResource( const SIRSharedPtr<SIRRenderDevice>& pDevice ) noexcept

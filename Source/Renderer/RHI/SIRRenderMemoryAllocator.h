@@ -40,11 +40,11 @@ public:
 		return *m_pDevice;
 	}
 
-	virtual SIRRenderResult getBufferRequirements( const sirRenderBufferDescription_t& description, sirRenderMemoryRequirements_t *pRequirements ) const noexcept = 0;
-	virtual SIRRenderResult getTextureRequirements( const sirRenderTextureDescription_t& description, sirRenderMemoryRequirements_t *pRequirements ) const noexcept = 0;
-	virtual SIRRenderResult getRenderbufferRequirements( const sirRenderTextureDescription_t& description, sirRenderMemoryRequirements_t *pRequirements ) const noexcept = 0;
-	virtual SIRRenderResult getAccelerationStructureRequirements( uint64_t nSizeBytes, sirRenderMemoryRequirements_t *pRequirements ) const noexcept = 0;
-	virtual SIRRenderResult getMemoryBudget( sirRenderMemoryBudget_t *pBudget ) const noexcept = 0;
+	virtual SIRRenderResult getBufferRequirements( const SIRRenderBufferDesc& description, SIRRenderMemoryRequirements *pRequirements ) const noexcept = 0;
+	virtual SIRRenderResult getTextureRequirements( const SIRRenderTextureDesc& description, SIRRenderMemoryRequirements *pRequirements ) const noexcept = 0;
+	virtual SIRRenderResult getRenderbufferRequirements( const SIRRenderRenderbufferDesc& description, SIRRenderMemoryRequirements *pRequirements ) const noexcept = 0;
+	virtual SIRRenderResult getAccelerationStructureRequirements( uint64_t nSizeBytes, SIRRenderMemoryRequirements *pRequirements ) const noexcept = 0;
+	virtual SIRRenderResult getMemoryBudget( SIRRenderMemoryBudget *pBudget ) const noexcept = 0;
 
 protected:
 	explicit SIRRenderMemoryAllocator( SIRRenderDevice& device ) noexcept
