@@ -51,6 +51,25 @@ class SIREliasFanoSet
 	}
 
 public:
+	using size_type = uint32_t;
+
+	using value_type = uint64_t;
+
+	uint32_t size( void ) const noexcept
+	{
+		return getSize();
+	}
+
+	bool empty( void ) const noexcept
+	{
+		return getSize() == 0;
+	}
+
+	bool isEmpty( void ) const noexcept
+	{
+		return empty();
+	}
+
 	explicit SIREliasFanoSet( const sirContainerAllocator_t *pAllocator )
 	    : m_pAllocator( pAllocator ),
 	      m_high( pAllocator ),
@@ -144,6 +163,20 @@ public:
 			}
 		}
 		return nLo < m_nSize && select( nLo ) == nValue;
+	}
+
+	uint64_t operator[]( uint32_t iIndex ) const noexcept
+	{
+		assert( iIndex < size() );
+		return select( iIndex );
+	}
+
+	template <typename Visitor>
+	void forEach( Visitor&& visitor ) const
+	{
+		for ( uint32_t iIndex = 0; iIndex < size(); ++iIndex ) {
+			visitor( select( iIndex ) );
+		}
 	}
 
 	uint32_t getSize( void ) const noexcept

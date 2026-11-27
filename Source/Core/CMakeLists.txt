@@ -1,11 +1,11 @@
 # ===========================================================================
 # SIREngine MPLv2 Source Code
 # Copyright (C) 2023-2027 Noah Van Til
-# 
+#
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
-# 
+#
 # This software is provided "as is", without warranty of any kind,
 # express or implied, including but not limited to the warranties
 # of merchantability, fitness for a particular purpose and noninfringement.
@@ -17,7 +17,8 @@ add_library(SIRCore STATIC SIRApplication.cpp SIRApplicationScheduling.cpp Syste
     Diagnostics/SIREmergencyDiagnostics.cpp
     Diagnostics/Logging/SIRLoggerSystem.cpp
     Console/SIRConsoleLogSink.cpp
-    Hardware/SIRHardwareCatalog.cpp)
+    Hardware/SIRHardwareCatalog.cpp
+    Input/SIRInputBindingMap.cpp)
 add_library(SIR::Core ALIAS SIRCore)
 target_include_directories(SIRCore PUBLIC
     "${PROJECT_SOURCE_DIR}/Source"
@@ -188,6 +189,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/Diagnostics/SIRPlatformTimeLinux.cpp
         ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/Threading/SIRThreadSchedulingLinux.cpp
         ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/Input/SIRLinuxEvdevBackend.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/Window/SIRNativeInputEvdevGamepadDriver.cpp
         ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/Process/SIRChildProcessLinux.cpp
         ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/File/SIRFileLockLinux.cpp
         ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/File/SIRPlatformFileSystemLinux.cpp
@@ -297,6 +299,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         if(X11_FOUND)
             if(SIR_WITH_X11_WINDOW)
                 list(APPEND SIR_CORE_PLATFORM_OS
+                    "${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRNativeWindowX11.cpp"
                     "${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/Window/SIRWindowDriverX11.cpp")
                 target_compile_definitions(SIRCore PUBLIC SIR_WINDOW_X11_AVAILABLE=1)
                 if(X11_Xrandr_FOUND AND TARGET X11::Xrandr)
@@ -306,6 +309,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
             endif()
             if(SIR_WITH_X11_INPUT)
                 list(APPEND SIR_CORE_PLATFORM_OS
+                    "${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/Window/SIRNativeInputDriverX11.cpp"
                     "${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/Input/SIRLinuxX11Backend.cpp"
                     "${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/Input/SIRX11InputBridge.cpp")
                 target_compile_definitions(SIRCore PUBLIC SIR_INPUT_X11_AVAILABLE=1)

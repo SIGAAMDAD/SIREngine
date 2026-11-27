@@ -114,85 +114,11 @@ if(SIR_WITH_GOOGLETEST)
 endif()
 
 if(SIR_WITH_OPENGL)
-    add_executable(SIRGL46FramebufferCacheTests
-        ${PROJECT_SOURCE_DIR}/Tests/Unit/Renderer/OpenGL/SIRGLFramebufferCacheTests.cpp
-        "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLFramebufferCache.cpp")
-    target_link_libraries(SIRGL46FramebufferCacheTests PRIVATE SIR::Graphics)
-    sir_configure_owned_target(SIRGL46FramebufferCacheTests)
-    add_test(NAME renderer.opengl46.framebuffer-cache COMMAND SIRGL46FramebufferCacheTests)
+    add_executable(SIRGLCore33Tests ${PROJECT_SOURCE_DIR}/Tests/Unit/Renderer/OpenGL/SIRGLCore33Tests.cpp)
+    target_link_libraries(SIRGLCore33Tests PRIVATE SIR::GLProgrammableRHI)
+    sir_configure_owned_target(SIRGLCore33Tests)
+    add_test(NAME renderer.opengl.core33 COMMAND SIRGLCore33Tests)
 
-    add_executable(SIRGL46FramebufferTests
-        ${PROJECT_SOURCE_DIR}/Tests/Unit/Renderer/OpenGL/SIRGLFramebuffersTests.cpp
-        "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLFramebuffers.cpp"
-        "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLFunctionLoader.cpp")
-    target_link_libraries(SIRGL46FramebufferTests PRIVATE SIR::Graphics)
-    sir_configure_owned_target(SIRGL46FramebufferTests)
-    add_test(NAME renderer.opengl46.framebuffers COMMAND SIRGL46FramebufferTests)
-
-    add_executable(SIRGL46FormatsTests
-        ${PROJECT_SOURCE_DIR}/Tests/Unit/Renderer/OpenGL/SIRGLFormatsTests.cpp
-        "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLFormats.cpp"
-        "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLFunctionLoader.cpp")
-    target_link_libraries(SIRGL46FormatsTests PRIVATE SIR::Graphics)
-    sir_configure_owned_target(SIRGL46FormatsTests)
-    add_test(NAME renderer.opengl46.formats COMMAND SIRGL46FormatsTests)
-
-    add_executable(SIRGL46TexturesTests
-        ${PROJECT_SOURCE_DIR}/Tests/Unit/Renderer/OpenGL/SIRGLTexturesTests.cpp
-        "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLTextures.cpp"
-        "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLFunctionLoader.cpp")
-    target_link_libraries(SIRGL46TexturesTests PRIVATE SIR::Graphics)
-    sir_configure_owned_target(SIRGL46TexturesTests)
-    add_test(NAME renderer.opengl46.textures COMMAND SIRGL46TexturesTests)
-
-    add_executable(SIRGL46SamplersTests
-        ${PROJECT_SOURCE_DIR}/Tests/Unit/Renderer/OpenGL/SIRGLSamplersTests.cpp
-        "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLSamplers.cpp"
-        "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLFunctionLoader.cpp")
-    target_link_libraries(SIRGL46SamplersTests PRIVATE SIR::Graphics)
-    sir_configure_owned_target(SIRGL46SamplersTests)
-    add_test(NAME renderer.opengl46.samplers COMMAND SIRGL46SamplersTests)
-
-    add_executable(SIRGL46BuffersTests
-        ${PROJECT_SOURCE_DIR}/Tests/Unit/Renderer/OpenGL/SIRGLBuffersTests.cpp
-        "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLBuffers.cpp"
-        "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLFunctionLoader.cpp")
-    target_link_libraries(SIRGL46BuffersTests PRIVATE SIR::Graphics)
-    sir_configure_owned_target(SIRGL46BuffersTests)
-    add_test(NAME renderer.opengl46.buffers COMMAND SIRGL46BuffersTests)
-
-    add_executable(SIRGL46HandlePoolTests
-        ${PROJECT_SOURCE_DIR}/Tests/Unit/Renderer/OpenGL/SIRGLHandlePoolTests.cpp
-        "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLHandlePool.cpp")
-    target_link_libraries(SIRGL46HandlePoolTests PRIVATE SIR::Graphics)
-    sir_configure_owned_target(SIRGL46HandlePoolTests)
-    add_test(NAME renderer.opengl46.handle-pool COMMAND SIRGL46HandlePoolTests)
-
-    add_executable(SIRGL46FunctionLoaderTests
-        ${PROJECT_SOURCE_DIR}/Tests/Unit/Renderer/OpenGL/SIRGLFunctionLoaderTests.cpp
-        "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLFunctionLoader.cpp")
-    target_link_libraries(SIRGL46FunctionLoaderTests PRIVATE SIR::Graphics)
-    sir_configure_owned_target(SIRGL46FunctionLoaderTests)
-    add_test(NAME renderer.opengl46.function-loader COMMAND SIRGL46FunctionLoaderTests)
-
-    add_executable(SIRGL46FoundationTests
-        ${PROJECT_SOURCE_DIR}/Tests/Unit/Renderer/OpenGL/SIRGLFoundationTests.cpp
-        "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLCapabilities.cpp")
-    target_link_libraries(SIRGL46FoundationTests PRIVATE SIR::Graphics)
-    sir_configure_owned_target(SIRGL46FoundationTests)
-    add_test(NAME renderer.opengl46.foundation COMMAND SIRGL46FoundationTests)
-
-    find_package(Threads REQUIRED)
-    add_executable(SIRGL46ModuleTests ${PROJECT_SOURCE_DIR}/Tests/Unit/Renderer/OpenGL/SIRGLModuleTests.cpp)
-    target_link_libraries(SIRGL46ModuleTests PRIVATE SIR::Graphics Threads::Threads "${CMAKE_DL_LIBS}")
-    target_compile_definitions(SIRGL46ModuleTests PRIVATE SIR_TEST_GL46_MODULE_PATH="$<TARGET_FILE:SIRGL46Driver>")
-    add_dependencies(SIRGL46ModuleTests SIRGL46Driver)
-    if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND X11_FOUND AND TARGET X11::X11)
-        target_link_libraries(SIRGL46ModuleTests PRIVATE X11::X11)
-        target_compile_definitions(SIRGL46ModuleTests PRIVATE SIR_GL_TEST_X11_AVAILABLE=1)
-    endif()
-    sir_configure_owned_target(SIRGL46ModuleTests)
-    add_test(NAME renderer.opengl46.module COMMAND SIRGL46ModuleTests)
 endif()
 
 

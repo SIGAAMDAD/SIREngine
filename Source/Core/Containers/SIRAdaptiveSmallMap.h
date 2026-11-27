@@ -17,6 +17,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #define __SIR_ADAPTIVESMALLMAP_H__
 
 #include <Core/SIRPCH.h>
+#include <iterator>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -35,6 +36,150 @@ class SIRAdaptiveSmallMap
 	using Entry = std::pair<K, V>;
 
 public:
+	using size_type = uint32_t;
+
+	uint32_t size( void ) const noexcept
+	{
+		return getSize();
+	}
+
+	bool empty( void ) const noexcept
+	{
+		return getSize() == 0;
+	}
+
+	bool isEmpty( void ) const noexcept
+	{
+		return empty();
+	}
+
+	using key_type = K;
+	using mapped_type = V;
+
+	bool contains( const K& rKey ) const
+	{
+		return find( rKey ) != nullptr;
+	}
+
+	size_type count( const K& rKey ) const
+	{
+		return contains( rKey ) ? 1 : 0;
+	}
+
+	using value_type = Entry;
+	using difference_type = ptrdiff_t;
+
+	class const_iterator
+	{
+	public:
+		using value_type = Entry;
+		using difference_type = ptrdiff_t;
+		using pointer = const Entry *;
+		using reference = const Entry&;
+		using iterator_category = std::forward_iterator_tag;
+
+		const_iterator( void ) noexcept = default;
+		const_iterator( const SIRAdaptiveSmallMap *pOwner, bool bEnd ) noexcept
+		    : m_pOwner( pOwner )
+		{
+			if ( pOwner == nullptr )
+			{
+				return;
+			}
+			if ( pOwner->m_pHash != nullptr ) {
+				m_hashIterator = bEnd ? pOwner->m_pHash->cend() : pOwner->m_pHash->cbegin();
+			} else {
+				m_iInline = bEnd ? pOwner->m_inline.size() : 0;
+			}
+		}
+
+		reference operator*( void ) const noexcept
+		{
+			assert( m_pOwner != nullptr );
+			return m_pOwner->m_pHash == nullptr ? m_pOwner->m_inline[m_iInline] : *m_hashIterator;
+		}
+		pointer operator->( void ) const noexcept
+		{
+			return &operator*();
+		}
+		const_iterator& operator++( void ) noexcept
+		{
+			if ( m_pOwner->m_pHash != nullptr ) {
+				++m_hashIterator;
+			} else {
+				++m_iInline;
+			}
+			return *this;
+		}
+		const_iterator operator++( int ) noexcept
+		{
+			const_iterator old( *this );
+			++*this;
+			return old;
+		}
+		bool operator==( const const_iterator& rOther ) const noexcept
+		{
+			if ( m_pOwner != rOther.m_pOwner )
+			{
+				return false;
+			}
+			if ( m_pOwner == nullptr )
+			{
+				return true;
+			}
+			return m_pOwner->m_pHash == nullptr ? m_iInline == rOther.m_iInline : m_hashIterator == rOther.m_hashIterator;
+		}
+		bool operator!=( const const_iterator& rOther ) const noexcept
+		{
+			return !( *this == rOther );
+		}
+
+	private:
+		const SIRAdaptiveSmallMap *m_pOwner = nullptr;
+		uint32_t m_iInline = 0;
+		typename SIRFlatHashMap<K, V, Hash, Equal>::const_iterator m_hashIterator;
+	};
+
+	using iterator = const_iterator;
+	iterator begin( void ) noexcept
+	{
+		return { this, false };
+	}
+	iterator end( void ) noexcept
+	{
+		return { this, true };
+	}
+	const_iterator begin( void ) const noexcept
+	{
+		return { this, false };
+	}
+	const_iterator end( void ) const noexcept
+	{
+		return { this, true };
+	}
+	const_iterator cbegin( void ) const noexcept
+	{
+		return begin();
+	}
+	const_iterator cend( void ) const noexcept
+	{
+		return end();
+	}
+
+	uint32_t capacity( void ) const noexcept
+	{
+		return m_pHash == nullptr ? INLINE_COUNT : m_pHash->capacity();
+	}
+
+	void clear( void ) noexcept
+	{
+		if ( m_pHash == nullptr ) {
+			m_inline.clear();
+		} else {
+			m_pHash->clear();
+		}
+	}
+
 	explicit SIRAdaptiveSmallMap( const sirContainerAllocator_t *pAllocator ) noexcept
 	    : m_pAllocator( pAllocator )
 	{

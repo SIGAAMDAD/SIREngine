@@ -457,7 +457,7 @@ sirShaderCookResult_t sirShaderCookPreprocess( const sirShaderCookRequest_t& req
 	if ( pManifest == nullptr || pDiagnostic == nullptr ) {
 		return SIR_SHADER_COOK_INVALID_ARGUMENT;
 	}
-	*pManifest = {};
+	*pManifest = sirShaderCookManifest_t{};
 	pDiagnostic->clear();
 	if ( !sirCookIsLogicalPath( request.sEntryFile ) || !sirCookIsIdentifier( request.sEntryPoint ) || request.szDefines.size() > 64 ) {
 		*pDiagnostic = "invalid entry path, entry point or define count";
@@ -520,7 +520,7 @@ sirShaderCookResult_t sirShaderCookPreprocess( const sirShaderCookRequest_t& req
 	}
 	const sirShaderCookResult_t eResult = sirCookExpand( &context, request.sEntryFile, 0 );
 	if ( eResult != SIR_SHADER_COOK_OK ) {
-		*pManifest = {};
+				*pManifest = sirShaderCookManifest_t{};
 		return eResult;
 	}
 	std::sort( pManifest->szFiles.begin(), pManifest->szFiles.end(),
@@ -538,6 +538,7 @@ sirShaderCookResult_t sirShaderCookPreprocess( const sirShaderCookRequest_t& req
 	pManifest->nSourceHash = sirCookHash( SIR_COOK_FNV_BASIS, pManifest->sExpandedSource );
 	pManifest->nClosureHash =
 	    sirCookHash( nClosure, request.sEntryPoint + ":" + pManifest->sProfile + ":" + std::to_string( pManifest->nDefinesHash ) + ":" +
-		                           std::to_string( ( uint32_t )request.eBackend ) + ":" + std::to_string( SIR_COOK_RECIPE_VERSION ) );
+		                           std::to_string( ( uint32_t )request.eBackend ) + ":" + std::to_string( target.eCompiler ) + ":" +
+		                           std::to_string( SIR_COOK_RECIPE_VERSION ) );
 	return SIR_SHADER_COOK_OK;
 }

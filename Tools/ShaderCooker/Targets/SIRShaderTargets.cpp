@@ -53,11 +53,19 @@ sirShaderCookResult_t sirShaderCookResolveTargetInfo( sirGraphicsBackend_t eBack
 	}
 	const char *pszVersion = nullptr;
 	switch ( eBackend ) {
+	case SIR_GRAPHICS_BACKEND_OPENGL:
+		if ( nStage != SIR_GRAPHICS_STAGE_VERTEX && nStage != SIR_GRAPHICS_STAGE_FRAGMENT ) return SIR_SHADER_COOK_UNSUPPORTED;
+		pTarget->eModel = SIR_GRAPHICS_PIPELINE_MODEL_PROGRAMMABLE;
+		pTarget->eCompiler = SIR_SHADER_COMPILER_SLANG;
+		pTarget->eFormat = SIR_GRAPHICS_SHADER_GLSL;
+		pTarget->bSpirv = false;
+		pTarget->sProfile = "glsl_330";
+		return SIR_SHADER_COOK_OK;
 	case SIR_GRAPHICS_BACKEND_VULKAN:
 	case SIR_GRAPHICS_BACKEND_D3D12:
 		pszVersion = "6_6";
 		pTarget->eModel = SIR_GRAPHICS_PIPELINE_MODEL_MODERN;
-		pTarget->eCompiler = SIR_SHADER_COMPILER_DXC;
+		pTarget->eCompiler = eBackend == SIR_GRAPHICS_BACKEND_VULKAN ? SIR_SHADER_COMPILER_SLANG : SIR_SHADER_COMPILER_DXC;
 		pTarget->eFormat = eBackend == SIR_GRAPHICS_BACKEND_VULKAN ? SIR_GRAPHICS_SHADER_SPIRV : SIR_GRAPHICS_SHADER_DXIL;
 		pTarget->bSpirv = eBackend == SIR_GRAPHICS_BACKEND_VULKAN;
 		break;

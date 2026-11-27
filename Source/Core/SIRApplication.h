@@ -16,6 +16,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #ifndef __SIR_APPLICATION_H__
 #define __SIR_APPLICATION_H__
 
+#include "Core/Memory/Pointers/SIRSharedPtr.h"
+#include "Core/Platform/Shared/Window/SIRNativeWindowDriver.h"
 #include <Core/SIRPCH.h>
 
 // clang-format off
@@ -128,6 +130,8 @@ private:
 	bool publishScheduledInput( uint64_t nNextTick, bool *pbPumped ) noexcept;
 	bool openTimelineFrame( float fDeltaSeconds ) noexcept;
 	bool finishTimelineFrame( void ) noexcept;
+
+	SIRLocalSharedPtr<SIRNativeWindowDriver> m_WindowDriver;
 
 	SIRAppState m_eState;
 	uint64_t m_nTicks;

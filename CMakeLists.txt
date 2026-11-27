@@ -37,8 +37,10 @@ option(SIR_WITH_OPENAL_SOFT "Build pinned OpenAL Soft" OFF)
 option(SIR_WITH_MESHOPTIMIZER "Build pinned meshoptimizer" OFF)
 option(SIR_WITH_MONO "Resolve Mono embedding SDK for C# scripting" OFF)
 option(SIR_WITH_VULKAN "Build native Vulkan 1.4 driver" OFF)
+option(SIR_WITH_IMGUI_VULKAN "Build pinned Dear ImGui with the native Vulkan backend" OFF)
+option(SIR_WITH_IMGUI_OPENGL "Build pinned Dear ImGui with the OpenGL 3 backend" OFF)
 option(SIR_WITH_D3D12 "Build native Direct3D 12 driver (Windows only)" OFF)
-option(SIR_WITH_OPENGL "Build native OpenGL 4.6 driver" OFF)
+option(SIR_WITH_OPENGL "Build the OpenGL 3.3 Core programmable RHI" OFF)
 
 include(Build/CMake/SIRBuildOptions.cmake)
 # libstdc++ selects its TBB execution backend when TBB headers are installed.

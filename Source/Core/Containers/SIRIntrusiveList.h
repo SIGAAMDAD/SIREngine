@@ -17,6 +17,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #define __SIR_INTRUSIVELIST_H__
 
 #include <Core/SIRPCH.h>
+#include <iterator>
+#include <type_traits>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -38,6 +40,126 @@ typedef struct sirIntrusiveLink_s
 class SIRIntrusiveList
 {
 public:
+	using size_type = uint32_t;
+
+	uint32_t size( void ) const noexcept
+	{
+		return getSize();
+	}
+
+	bool empty( void ) const noexcept
+	{
+		return getSize() == 0;
+	}
+
+	using value_type = sirIntrusiveLink_t;
+	using difference_type = ptrdiff_t;
+
+	template <bool IS_CONST>
+	class IteratorBase
+	{
+		template <bool> friend class IteratorBase;
+	public:
+		using value_type = sirIntrusiveLink_t;
+		using difference_type = ptrdiff_t;
+		using iterator_category = std::forward_iterator_tag;
+		using pointer = typename std::conditional<IS_CONST, const value_type *, value_type *>::type;
+		using reference = typename std::conditional<IS_CONST, const value_type&, value_type&>::type;
+
+		IteratorBase( void ) noexcept = default;
+		explicit IteratorBase( pointer pLink ) noexcept : m_pLink( pLink ) {}
+		template <bool OTHER_CONST, typename std::enable_if<IS_CONST && !OTHER_CONST, int>::type = 0>
+		IteratorBase( const IteratorBase<OTHER_CONST>& rOther ) noexcept : m_pLink( rOther.m_pLink ) {}
+		reference operator*( void ) const noexcept
+		{
+			assert( m_pLink != nullptr );
+			return *m_pLink;
+		}
+		pointer operator->( void ) const noexcept
+		{
+			return m_pLink;
+		}
+		IteratorBase& operator++( void ) noexcept
+		{
+			assert( m_pLink != nullptr );
+			m_pLink = m_pLink->pNext;
+			return *this;
+		}
+		IteratorBase operator++( int ) noexcept
+		{
+			IteratorBase old( *this );
+			++*this;
+			return old;
+		}
+		bool operator==( const IteratorBase& rOther ) const noexcept
+		{
+			return m_pLink == rOther.m_pLink;
+		}
+		bool operator!=( const IteratorBase& rOther ) const noexcept
+		{
+			return !( *this == rOther );
+		}
+	private:
+		pointer m_pLink = nullptr;
+	};
+
+	using iterator = IteratorBase<false>;
+	using const_iterator = IteratorBase<true>;
+	iterator begin( void ) noexcept
+	{
+		return iterator( m_pHead );
+	}
+	iterator end( void ) noexcept
+	{
+		return iterator();
+	}
+	const_iterator begin( void ) const noexcept
+	{
+		return const_iterator( m_pHead );
+	}
+	const_iterator end( void ) const noexcept
+	{
+		return const_iterator();
+	}
+	const_iterator cbegin( void ) const noexcept
+	{
+		return begin();
+	}
+	const_iterator cend( void ) const noexcept
+	{
+		return end();
+	}
+
+	SIRContainerResult tryPopFront( sirIntrusiveLink_t **ppLink ) noexcept
+	{
+		if ( ppLink == nullptr )
+		{
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
+		}
+		*ppLink = nullptr;
+		if ( m_pHead == nullptr )
+		{
+			return SIRContainerResult::SIR_CONTAINER_EMPTY;
+		}
+		*ppLink = m_pHead;
+		return tryRemove( m_pHead );
+	}
+
+	SIRContainerResult tryPopBack( sirIntrusiveLink_t **ppLink ) noexcept
+	{
+		if ( ppLink == nullptr )
+		{
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
+		}
+		*ppLink = nullptr;
+		if ( m_pTail == nullptr )
+		{
+			return SIRContainerResult::SIR_CONTAINER_EMPTY;
+		}
+		*ppLink = m_pTail;
+		return tryRemove( m_pTail );
+	}
+
 	explicit SIRIntrusiveList( void ) noexcept = default;
 
 	~SIRIntrusiveList() noexcept

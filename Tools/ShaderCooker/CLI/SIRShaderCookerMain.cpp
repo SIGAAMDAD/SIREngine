@@ -89,7 +89,7 @@ static bool sirCookValidateBinary( const std::filesystem::path& sBinary, sirGrap
 {
 	std::error_code eError;
 	const uintmax_t nBytes = std::filesystem::file_size( sBinary, eError );
-	if ( eError || nBytes < ( eFormat == SIR_GRAPHICS_SHADER_D3D_LEGACY_TOKENS ? 8U : 32U ) || nBytes > ( 64U << 20 ) ||
+	if ( eError || nBytes < ( eFormat == SIR_GRAPHICS_SHADER_D3D_LEGACY_TOKENS ? 8U : eFormat == SIR_GRAPHICS_SHADER_GLSL ? 16U : 32U ) || nBytes > ( 64U << 20 ) ||
 	     ( ( eFormat == SIR_GRAPHICS_SHADER_SPIRV || eFormat == SIR_GRAPHICS_SHADER_D3D_LEGACY_TOKENS ) && nBytes % 4 != 0 ) ) {
 		return false;
 	}
@@ -115,7 +115,70 @@ static bool sirCookValidateBinary( const std::filesystem::path& sBinary, sirGrap
 		stream.read( szEnd, 4 );
 		return stream.good() && std::memcmp( szEnd, "\xff\xff\x00\x00", 4 ) == 0;
 	}
+	if ( eFormat == SIR_GRAPHICS_SHADER_GLSL ) {
+		stream.seekg( 0 );
+		std::string source( static_cast<size_t>( nBytes ), '\0' );
+		stream.read( source.data(), static_cast<std::streamsize>( nBytes ) );
+		return stream.good() && source.find( "#version 330" ) != std::string::npos && source.find( "void main" ) != std::string::npos && sProfile == "glsl_330";
+	}
 	return ( eFormat == SIR_GRAPHICS_SHADER_DXBC || eFormat == SIR_GRAPHICS_SHADER_DXIL ) && std::memcmp( szMagic, "DXBC", 4 ) == 0;
+}
+
+static bool sirCookValidateReflection( const std::filesystem::path& sReflection )
+{
+	std::ifstream stream( sReflection, std::ios::binary );
+	if ( !stream ) {
+		return false;
+	}
+	stream.seekg( 0, std::ios::end );
+	const std::streamoff nBytes = stream.tellg();
+	if ( nBytes < 2 || nBytes > ( 16U << 20 ) ) {
+		return false;
+	}
+	stream.seekg( 0 );
+	char nFirst = 0;
+	stream >> nFirst;
+	return stream.good() && nFirst == '{';
+}
+
+static bool sirCookNormalizeOpenGL330( const std::filesystem::path& sOutput )
+{
+	std::ifstream input( sOutput, std::ios::binary );
+	if ( !input ) return false;
+	std::string source( ( std::istreambuf_iterator<char>( input ) ), std::istreambuf_iterator<char>() );
+	if ( source.empty() ) return false;
+	const auto replaceAll = [&source]( const std::string& from, const std::string& to ) {
+		size_t offset = 0;
+		while ( ( offset = source.find( from, offset ) ) != std::string::npos ) {
+			source.replace( offset, from.size(), to );
+			offset += to.size();
+		}
+	};
+	// Slang 2025 emits a 450 prologue for the glsl_330 profile. These
+	// declarations are metadata-only in this output and are not legal in
+	// core 3.3; strip them at the existing target-conversion seam.
+	replaceAll( "#version 450", "#version 330" );
+	replaceAll( "layout(row_major) uniform;\n", "" );
+	replaceAll( "layout(row_major) buffer;\n", "" );
+	replaceAll( "layout(binding = 0)\n", "" );
+	std::ofstream output( sOutput, std::ios::binary | std::ios::trunc );
+	output.write( source.data(), static_cast<std::streamsize>( source.size() ) );
+	return static_cast<bool>( output );
+}
+
+static const char *sirCookSlangStage( uint32_t nStage ) noexcept
+{
+	switch ( nStage ) {
+	case SIR_GRAPHICS_STAGE_VERTEX: return "vertex";
+	case SIR_GRAPHICS_STAGE_FRAGMENT: return "fragment";
+	case SIR_GRAPHICS_STAGE_COMPUTE: return "compute";
+	case SIR_GRAPHICS_STAGE_GEOMETRY: return "geometry";
+	case SIR_GRAPHICS_STAGE_TESS_CONTROL: return "hull";
+	case SIR_GRAPHICS_STAGE_TESS_EVALUATION: return "domain";
+	case SIR_GRAPHICS_STAGE_MESH: return "mesh";
+	case SIR_GRAPHICS_STAGE_TASK: return "task";
+	default: return nullptr;
+	}
 }
 
 static bool sirCookParseCommand( int nArgs, const char *const *pszArgs, sirShaderCookRequest_t *pRequest, std::filesystem::path *pCompiler,
@@ -144,6 +207,7 @@ static bool sirCookParseCommand( int nArgs, const char *const *pszArgs, sirShade
 			                     : sValue == "d3d10" ? SIR_GRAPHICS_BACKEND_D3D10
 			                     : sValue == "d3d9"  ? SIR_GRAPHICS_BACKEND_D3D9
 			                     : sValue == "d3d8"  ? SIR_GRAPHICS_BACKEND_D3D8
+			                     : sValue == "opengl" ? SIR_GRAPHICS_BACKEND_OPENGL
 			                                         : SIR_GRAPHICS_BACKEND_AUTO;
 		} else if ( sFlag == "--shader-model" ) {
 			if ( sValue != "2" && sValue != "3" ) {
@@ -181,8 +245,8 @@ int main( int nArgs, const char *const *pszArgs )
 	std::filesystem::path sOutput;
 	if ( !sirCookParseCommand( nArgs, pszArgs, &request, &sCompiler, &sOutput ) ) {
 		std::fprintf( stderr,
-		              "Usage: SIRShaderCooker --root dir --source relative.hlsl --entry name --backend vulkan|d3d12|d3d11|d3d10|d3d9|d3d8 "
-		              "--stage compute|vertex|fragment|geometry|hull|domain|mesh|task --compiler /abs/path/dxc-or-fxc "
+		              "Usage: SIRShaderCooker --root dir --source relative.hlsl --entry name --backend vulkan|d3d12|d3d11|d3d10|d3d9|d3d8|opengl "
+		              "--stage compute|vertex|fragment|geometry|hull|domain|mesh|task --compiler /abs/path/slangc-dxc-or-fxc "
 		              "--output file [--shader-model 2|3] [--define NAME=VALUE]\n" );
 		return 2;
 	}
@@ -210,8 +274,10 @@ int main( int nArgs, const char *const *pszArgs )
 		return 5;
 	}
 	const std::filesystem::path sManifest = sOutput.string() + ".manifest";
+	const std::filesystem::path sReflection = sOutput.string() + ".reflection.json";
 	std::filesystem::remove( sManifest, eError );
 	std::filesystem::remove( sOutput, eError );
+	std::filesystem::remove( sReflection, eError );
 	const std::filesystem::path sInput = sOutput.string() + ".input.hlsl";
 	{
 		std::ofstream input( sInput, std::ios::binary | std::ios::trunc );
@@ -239,6 +305,18 @@ int main( int nArgs, const char *const *pszArgs )
 			szArgs.push_back( "/D" );
 			szArgs.push_back( definition.sName + "=" + definition.sValue );
 		}
+	} else if ( manifest.nCompilerKind == SIR_SHADER_COMPILER_SLANG ) {
+		const char *pszStage = sirCookSlangStage( request.nStage );
+		if ( pszStage == nullptr ) {
+			std::filesystem::remove( sInput, eError );
+			return 4;
+		}
+		const bool bGlsl = request.eBackend == SIR_GRAPHICS_BACKEND_OPENGL;
+		szArgs = { sCompiler.string(), "-target", bGlsl ? "glsl" : "spirv", "-profile", bGlsl ? "glsl_330" : "sm_6_6", "-entry", manifest.sEntryPoint,
+		           "-stage", pszStage, "-O3", "-o", sOutput.string(), "-reflection-json", sReflection.string() };
+		for ( const sirShaderCookDefine_t& definition : manifest.szDefines ) {
+			szArgs.push_back( "-D" + definition.sName + "=" + definition.sValue );
+		}
 	} else {
 		std::filesystem::remove( sInput, eError );
 		return 4;
@@ -248,12 +326,22 @@ int main( int nArgs, const char *const *pszArgs )
 	std::filesystem::remove( sInput, eError );
 	if ( nCompilerResult != 0 ) {
 		std::filesystem::remove( sOutput, eError );
+		std::filesystem::remove( sReflection, eError );
 		std::fprintf( stderr, "ShaderCooker: offline compiler exited with %d\n", nCompilerResult );
 		return 6;
 	}
-	const uint64_t nBinaryHash = sirCookFileFingerprint( sOutput );
-	if ( nBinaryHash == 0 || !sirCookValidateBinary( sOutput, manifest.eFormat, manifest.sProfile ) ) {
+	if ( request.eBackend == SIR_GRAPHICS_BACKEND_OPENGL && manifest.nCompilerKind == SIR_SHADER_COMPILER_SLANG &&
+	     !sirCookNormalizeOpenGL330( sOutput ) ) {
 		std::filesystem::remove( sOutput, eError );
+		std::filesystem::remove( sReflection, eError );
+		std::fprintf( stderr, "ShaderCooker: failed to normalize GLSL 330 output\n" );
+		return 7;
+	}
+	const uint64_t nBinaryHash = sirCookFileFingerprint( sOutput );
+	if ( nBinaryHash == 0 || !sirCookValidateBinary( sOutput, manifest.eFormat, manifest.sProfile ) ||
+	     ( manifest.nCompilerKind == SIR_SHADER_COMPILER_SLANG && !sirCookValidateReflection( sReflection ) ) ) {
+		std::filesystem::remove( sOutput, eError );
+		std::filesystem::remove( sReflection, eError );
 		std::fprintf( stderr, "ShaderCooker: offline compiler did not emit a valid target binary\n" );
 		return 7;
 	}
@@ -268,6 +356,7 @@ int main( int nArgs, const char *const *pszArgs )
 	     << ( manifest.eFormat == SIR_GRAPHICS_SHADER_D3D_LEGACY_TOKENS ? "D3D9_TOKENS"
 	          : manifest.eFormat == SIR_GRAPHICS_SHADER_SPIRV           ? "SPIRV"
 	          : manifest.eFormat == SIR_GRAPHICS_SHADER_DXIL            ? "DXIL"
+	          : manifest.eFormat == SIR_GRAPHICS_SHADER_GLSL            ? "GLSL"
 	                                                                    : "DXBC" )
 	     << '\n'
 	     << "ENTRY=" << manifest.sEntryPoint << '\n'
@@ -275,11 +364,13 @@ int main( int nArgs, const char *const *pszArgs )
 	     << "INCLUDES=" << manifest.nClosureHash << '\n'
 	     << "DEFINES=" << manifest.nDefinesHash << '\n'
 	     << "COMPILER=" << nCompilerFingerprint << '\n'
+	     << "REFLECTION=" << ( manifest.nCompilerKind == SIR_SHADER_COMPILER_SLANG ? sirCookFileFingerprint( sReflection ) : 0 ) << '\n'
 	     << "BINARY=" << nBinaryHash << '\n';
 	if ( !meta ) {
 		meta.close();
 		std::filesystem::remove( sManifest, eError );
 		std::filesystem::remove( sOutput, eError );
+		std::filesystem::remove( sReflection, eError );
 		std::fprintf( stderr, "ShaderCooker: cannot write source-bound compiler manifest\n" );
 		return 8;
 	}

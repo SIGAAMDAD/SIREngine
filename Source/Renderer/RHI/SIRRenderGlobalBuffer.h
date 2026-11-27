@@ -1,0 +1,4 @@
+#ifndef __SIR_RENDER_GLOBAL_BUFFER_H__
+#define __SIR_RENDER_GLOBAL_BUFFER_H__
+
+#endif

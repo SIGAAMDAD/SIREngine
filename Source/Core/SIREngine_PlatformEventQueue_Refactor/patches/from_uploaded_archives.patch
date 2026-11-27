@@ -1,0 +1,479 @@
+--- a/Linux/Window/SIRNativeInputDriverWayland.cpp
++++ b/Linux/Window/SIRNativeInputDriverWayland.cpp
+@@ -18,7 +18,7 @@
+  *       |                                     |
+  *       |                             keyboard / pointer / touch
+  *       |                                     |
+- *       |                             SIREvent::publish()
++ *       |                         SIRSPSCEventRing::tryEnqueue()
+  *       |
+  *       +-- window lifecycle remains entirely with the window driver
+  *
+@@ -301,8 +301,8 @@
+ };
+ 
+ SIRNativeInputDriverWayland::SIRNativeInputDriverWayland(
+-	SIREvent<SIREventData>& eventPublisher, const SIRInputControllerProfiles *pProfiles ) noexcept
+-	: m_EventPublisher( eventPublisher ), m_Gamepads( eventPublisher, pProfiles )
++	SIRSPSCEventRing<SIREventData>& eventQueue, const SIRInputControllerProfiles *pProfiles ) noexcept
++	: SIRNativeInputDriver( eventQueue ), m_Gamepads( m_EventQueue, pProfiles )
+ {
+ }
+ 
+@@ -964,5 +964,17 @@
+ 	// Wayland's uint32 millisecond timestamps wrap and have an unspecified epoch.
+ 	// Match the existing input event ABI's monotonic nanosecond clock.
+ 	eventData.timestamp = SIRPlatformTime::getMonotonicNanoseconds();
+-	m_EventPublisher.publish( eventData );
+-}
++	if ( m_EventQueue.tryEnqueue( eventData ) != SIREventEnqueueStatus::SIR_EVENT_ENQUEUE_OK && m_nDroppedEvents != UINT32_MAX ) {
++		++m_nDroppedEvents;
++	}
++}
++
++uint32_t SIRNativeInputDriverWayland::droppedEventCount( void ) const noexcept
++{
++	const uint32_t nGamepadDrops = m_Gamepads.droppedEventCount();
++	if ( nGamepadDrops > UINT32_MAX - m_nDroppedEvents ) {
++		return UINT32_MAX;
++	}
++
++	return m_nDroppedEvents + nGamepadDrops;
++}
+--- a/Linux/Window/SIRNativeInputDriverWayland.h
++++ b/Linux/Window/SIRNativeInputDriverWayland.h
+@@ -24,7 +24,6 @@
+ #endif
+ // clang-format on
+ 
+-#include <Core/Events/SIREvent.h>
+ #include <Core/Platform/Shared/Window/SIRNativeInputDriver.h>
+ #include <Core/Containers/SIRArray.h>
+ #include "SIRNativeInputEvdevGamepadDriver.h"
+@@ -49,7 +48,8 @@
+ class SIRNativeInputDriverWayland final : public SIRNativeInputDriver
+ {
+ public:
+-	explicit SIRNativeInputDriverWayland( SIREvent<SIREventData>& eventPublisher ) noexcept;
++	explicit SIRNativeInputDriverWayland( SIRSPSCEventRing<SIREventData>& eventQueue,
++		const SIRInputControllerProfiles *pProfiles = nullptr ) noexcept;
+ 	~SIRNativeInputDriverWayland() noexcept;
+ 	SIRNativeInputDriverWayland( const SIRNativeInputDriverWayland& ) = delete;
+ 	SIRNativeInputDriverWayland& operator=( const SIRNativeInputDriverWayland& ) = delete;
+@@ -63,6 +63,7 @@
+ 
+ 	SIRNativeInputBackend getBackend( void ) const noexcept override;
+ 	void pumpEvents( void ) noexcept override;
++	uint32_t droppedEventCount( void ) const noexcept;
+ 	bool isKeyPressed( SIRKeycode eKey ) const noexcept override;
+ 	bool isMouseButtonPressed( SIRMouseButton eButton ) const noexcept override;
+ 
+@@ -122,7 +123,7 @@
+ 	SIRArray<SIRKeyboardEvent, 768> m_szKeys{};
+ 	SIRArray<Contact, 16> m_szContacts{};
+ 
+-	SIREvent<SIREventData>& m_EventPublisher;
++	uint32_t m_nDroppedEvents = 0;
+ 	SIRNativeInputEvdevGamepadDriver m_Gamepads;
+ 
+ 	wl_display *m_pDisplay = nullptr;
+--- a/Linux/Window/SIRNativeInputDriverX11.cpp
++++ b/Linux/Window/SIRNativeInputDriverX11.cpp
+@@ -475,9 +475,9 @@
+ }
+ #endif
+ 
+-SIRNativeInputDriverX11::SIRNativeInputDriverX11( SIREvent<SIREventData>& eventPublisher ) noexcept
+-    : m_EventPublisher( eventPublisher ),
+-      m_Gamepads( eventPublisher )
++SIRNativeInputDriverX11::SIRNativeInputDriverX11( SIRSPSCEventRing<SIREventData>& eventQueue ) noexcept
++    : SIRNativeInputDriver( eventQueue ),
++      m_Gamepads( m_EventQueue )
+ {
+ }
+ 
+@@ -646,7 +646,9 @@
+ 	// X server timestamps use a wrapping millisecond clock with an unspecified
+ 	// origin. The engine requires its own monotonic nanoseconds.
+ 	eventData.timestamp = SIRPlatformTime::getMonotonicNanoseconds();
+-	m_EventPublisher.publish( eventData );
++	if ( m_EventQueue.tryEnqueue( eventData ) != SIREventEnqueueStatus::SIR_EVENT_ENQUEUE_OK && m_nDroppedEvents != UINT32_MAX ) {
++		++m_nDroppedEvents;
++	}
+ }
+ 
+ void SIRNativeInputDriverX11::keyEvent( unsigned nCode, bool bDown, unsigned nState ) noexcept
+@@ -937,3 +939,13 @@
+ 	static_cast<void>( nativeEvent );
+ #endif
+ }
++
++uint32_t SIRNativeInputDriverX11::droppedEventCount( void ) const noexcept
++{
++	const uint32_t nGamepadDrops = m_Gamepads.droppedEventCount();
++	if ( nGamepadDrops > UINT32_MAX - m_nDroppedEvents ) {
++		return UINT32_MAX;
++	}
++
++	return m_nDroppedEvents + nGamepadDrops;
++}
+--- a/Linux/Window/SIRNativeInputDriverX11.h
++++ b/Linux/Window/SIRNativeInputDriverX11.h
+@@ -24,7 +24,6 @@
+ #endif
+ // clang-format on
+ 
+-#include <Core/Events/SIREvent.h>
+ #include <Core/Platform/Shared/Window/SIRNativeInputDriver.h>
+ #include <Core/Containers/SIRArray.h>
+ #include <Core/Containers/SIRVector.h>
+@@ -37,19 +36,20 @@
+ class SIRNativeInputDriverX11 final : public SIRNativeInputDriver
+ {
+ public:
+-	explicit SIRNativeInputDriverX11( SIREvent<SIREventData>& eventPublisher ) noexcept;
++	explicit SIRNativeInputDriverX11( SIRSPSCEventRing<SIREventData>& eventQueue ) noexcept;
+ 	~SIRNativeInputDriverX11() noexcept;
+ 	SIRNativeInputDriverX11( const SIRNativeInputDriverX11& ) = delete;
+ 	SIRNativeInputDriverX11& operator=( const SIRNativeInputDriverX11& ) = delete;
+ 
+-	// Borrow the window driver's connection. Register eventSink with setEventSink,
+-	// then unregister it and detach before destroying the window or connection.
++	// Borrow the window driver's connection. The platform owner must
++	// route X11 input events here and detach before window destruction.
+ 	bool attachWindow( _XDisplay *pDisplay, unsigned long hWindow, uint32_t nWindowId ) noexcept;
+ 	void detachWindow( bool bConnectionLost = false ) noexcept;
+ 	static void eventSink( const _XEvent& eventData, void *pContext ) noexcept;
+ 
+ 	SIRNativeInputBackend getBackend( void ) const noexcept override;
+ 	void pumpEvents( void ) noexcept override;
++	uint32_t droppedEventCount( void ) const noexcept;
+ 	bool isKeyPressed( SIRKeycode eKey ) const noexcept override;
+ 	bool isMouseButtonPressed( SIRMouseButton eButton ) const noexcept override;
+ 
+@@ -68,7 +68,7 @@
+ 
+ 	SIRVector<SIRTouchFingerEvent> m_Contacts;
+ 
+-	SIREvent<SIREventData>& m_EventPublisher;
++	uint32_t m_nDroppedEvents = 0;
+ 	SIRNativeInputEvdevGamepadDriver m_Gamepads;
+ 	_XDisplay *m_pDisplay = nullptr;
+ 	unsigned long m_hWindow = 0;
+--- a/Linux/Window/SIRNativeInputEvdevGamepadDriver.cpp
++++ b/Linux/Window/SIRNativeInputEvdevGamepadDriver.cpp
+@@ -17,7 +17,7 @@
+  * /dev/input/event* -> nonblocking evdev reads -> mapped device state
+  *                                                   |
+  *                                                   v
+- *                                  active desktop driver's SIREvent::publish
++ *                                  engine-owned SPSC event queue
+  *
+  * X11, Wayland and libinput can each own this reader on their input thread.
+  * Only the selected driver should construct and pump it.
+@@ -133,10 +133,13 @@
+ 	return SIRLinuxEvdevBackend::physicalKey( szPath, identity.vendor, identity.product );
+ }
+ 
+-SIRNativeInputEvdevGamepadDriver::SIRNativeInputEvdevGamepadDriver( SIREvent<SIREventData>& eventPublisher, const SIRInputControllerProfiles *pProfiles ) noexcept
+-    : m_Events( eventPublisher ),
++SIRNativeInputEvdevGamepadDriver::SIRNativeInputEvdevGamepadDriver( SIRSPSCEventRing<SIREventData>& eventQueue, const SIRInputControllerProfiles *pProfiles ) noexcept
++    : m_EventQueue( eventQueue ),
+       m_pProfiles( pProfiles )
+ {
++	for ( uint32_t iDevice = 0; iDevice < SIR_INPUT_DEVICE_CAPACITY; ++iDevice ) {
++		m_szDeviceGenerations[iDevice] = 1;
++	}
+ }
+ 
+ SIRNativeInputEvdevGamepadDriver::~SIRNativeInputEvdevGamepadDriver() noexcept
+@@ -158,7 +161,7 @@
+ 	eventData.timestamp = nTimestamp;
+ 	eventData.gdevice.deviceId = device.nEventId;
+ 
+-	m_Events.publish( eventData );
++	publish( eventData );
+ }
+ 
+ void SIRNativeInputEvdevGamepadDriver::closeDevice( Device& device ) noexcept
+@@ -166,8 +169,11 @@
+ 	if ( device.nFd >= 0 ) {
+ 		close( device.nFd );
+ 		device.nFd = -1;
+-		m_Registry.disconnect( device.deviceHandle );
+ 		publishDevice( SIREventType::GamepadRemoved, device, SIRPlatformTime::getMonotonicNanoseconds() );
++		++m_szDeviceGenerations[device.nSlot];
++		if ( m_szDeviceGenerations[device.nSlot] == 0 ) {
++			m_szDeviceGenerations[device.nSlot] = 1;
++		}
+ 	}
+ }
+ 
+@@ -190,7 +196,7 @@
+ 	eventData.timestamp = nTimestamp;
+ 	eventData.gbutton = { device.nEventId, nCode, bDown };
+ 
+-	m_Events.publish( eventData );
++	publish( eventData );
+ }
+ 
+ void SIRNativeInputEvdevGamepadDriver::setAxis( Device& device, size_t iIndex, int16_t nValue, uint64_t nTimestamp ) noexcept
+@@ -204,7 +210,7 @@
+ 		eventData.timestamp = nTimestamp;
+ 		eventData.gaxis = { device.nEventId, static_cast<uint8_t>( iIndex ), nValue };
+ 
+-		m_Events.publish( eventData );
++		publish( eventData );
+ 	}
+ }
+ 
+@@ -399,21 +405,37 @@
+ 
+ 	const bool bIdentified = ioctl( nFd, EVIOCGID, &identity ) == 0;
+ 	const uint64_t nNativeId = nativeId( info );
+-	sirInputDeviceId_t deviceHandle{};
+-	if ( !m_Registry.connect( { bIdentified ? physicalId( nFd, identity ) : 0, nNativeId, SIRInputBackendId::SIR_INPUT_LINUX_EVDEV, SIRInputDeviceClass::SIR_INPUT_CONTROLLER },
+-	                          &deviceHandle ) ) {
++	const uint64_t nPhysicalId = bIdentified ? physicalId( nFd, identity ) : 0;
++	uint32_t nSlot = SIR_INPUT_DEVICE_CAPACITY;
++
++	for ( uint32_t iDevice = 0; iDevice < SIR_INPUT_DEVICE_CAPACITY; ++iDevice ) {
++		const Device& existing = m_Devices[iDevice];
++		if ( existing.nFd < 0 ) {
++			if ( nSlot == SIR_INPUT_DEVICE_CAPACITY ) {
++				nSlot = iDevice;
++			}
++			continue;
++		}
++		if ( existing.nNativeId == nNativeId || ( nPhysicalId != 0 && existing.nPhysicalId == nPhysicalId ) ) {
++			close( nFd );
++			return;
++		}
++	}
++
++	if ( nNativeId == 0 || nSlot == SIR_INPUT_DEVICE_CAPACITY ) {
+ 		close( nFd );
+ 		return;
+ 	}
+ 
+-	Device& device = m_Devices[deviceHandle.nSlot];
++	Device& device = m_Devices[nSlot];
+ 	device = Device{};
+ 	device.nFd = nFd;
+-	device.deviceHandle = deviceHandle;
++	device.nSlot = nSlot;
+ 	// The window event payload has one 32-bit ID. Include the slot generation
+ 	// so reconnecting in a vacated slot yields a fresh public instance ID.
+-	device.nEventId = ( deviceHandle.nGeneration - 1 ) * SIR_INPUT_DEVICE_CAPACITY + deviceHandle.nSlot + 1;
++	device.nEventId = ( m_szDeviceGenerations[nSlot] - 1 ) * SIR_INPUT_DEVICE_CAPACITY + nSlot + 1;
+ 	device.nNativeId = nNativeId;
++	device.nPhysicalId = nPhysicalId;
+ 	snprintf( device.szPath, sizeof( device.szPath ), "%s", szPath );
+ 
+ 	const int nClock = CLOCK_MONOTONIC;
+@@ -421,10 +443,13 @@
+ 
+ 	configureDeviceControls( device, identity, bIdentified, szKeys );
+ 	if ( !snapshot( device, true ) ) {
+-		// Registration has not reached subscribers yet.
++		// No registration event was published for this device.
+ 		close( nFd );
+ 		device.nFd = -1;
+-		m_Registry.disconnect( deviceHandle );
++		++m_szDeviceGenerations[nSlot];
++		if ( m_szDeviceGenerations[nSlot] == 0 ) {
++			m_szDeviceGenerations[nSlot] = 1;
++		}
+ 	}
+ }
+ 
+@@ -644,3 +669,15 @@
+ 
+ 	m_bPumping = false;
+ }
++
++void SIRNativeInputEvdevGamepadDriver::publish( const SIREventData& eventData ) noexcept
++{
++	if ( m_EventQueue.tryEnqueue( eventData ) != SIREventEnqueueStatus::SIR_EVENT_ENQUEUE_OK && m_nDroppedEvents != UINT32_MAX ) {
++		++m_nDroppedEvents;
++	}
++}
++
++uint32_t SIRNativeInputEvdevGamepadDriver::droppedEventCount( void ) const noexcept
++{
++	return m_nDroppedEvents;
++}
+--- a/Linux/Window/SIRNativeInputEvdevGamepadDriver.h
++++ b/Linux/Window/SIRNativeInputEvdevGamepadDriver.h
+@@ -24,26 +24,26 @@
+ #endif
+ // clang-format on
+ 
+-#include <Core/Events/SIREvent.h>
++#include <Core/Events/SIRSPSCEventRing.h>
+ #include <Core/Input/SIRInputControllerProfiles.h>
+-#include <Core/Input/SIRInputDeviceRegistry.h>
+ #include <Core/Platform/Shared/Window/SIREventTypes.h>
+ 
+ struct input_event;
+ struct input_id;
+ 
+-// Owned and pumped by the selected desktop input driver. Its publisher and
+-// optional controller profile database must outlive this object.
++// Owned and pumped by the selected desktop input driver. The engine event
++// queue and optional controller profiles must outlive this object.
+ class SIRNativeInputEvdevGamepadDriver final
+ {
+ public:
+ 	explicit SIRNativeInputEvdevGamepadDriver(
+-		SIREvent<SIREventData>& eventPublisher, const SIRInputControllerProfiles *pProfiles = nullptr ) noexcept;
++		SIRSPSCEventRing<SIREventData>& eventQueue, const SIRInputControllerProfiles *pProfiles = nullptr ) noexcept;
+ 	~SIRNativeInputEvdevGamepadDriver() noexcept;
+ 	SIRNativeInputEvdevGamepadDriver( const SIRNativeInputEvdevGamepadDriver& ) = delete;
+ 	SIRNativeInputEvdevGamepadDriver& operator=( const SIRNativeInputEvdevGamepadDriver& ) = delete;
+ 
+ 	void pumpEvents( void ) noexcept;
++	uint32_t droppedEventCount( void ) const noexcept;
+ 
+ private:
+ 	static constexpr size_t BUTTON_COUNT = static_cast<size_t>( SIRInputControllerControl::SIR_INPUT_PAD_BUTTON_COUNT );
+@@ -69,9 +69,10 @@
+ 	struct Device
+ 	{
+ 		int nFd = -1;
+-		sirInputDeviceId_t deviceHandle{};
++		uint32_t nSlot{};
+ 		uint32_t nEventId{};
+ 		uint64_t nNativeId{};
++		uint64_t nPhysicalId{};
+ 		char szPath[288]{};
+ 		uint16_t szKeys[BUTTON_COUNT]{};
+ 		Axis szAxes[AXIS_COUNT]{};
+@@ -99,11 +100,13 @@
+ 	void setButton( Device& device, SIRGamepadButton eButton, bool bDown, uint64_t nTimestamp ) noexcept;
+ 	void setAxis( Device& device, size_t iIndex, int16_t nValue, uint64_t nTimestamp ) noexcept;
+ 	void publishDevice( SIREventType eType, const Device& device, uint64_t nTimestamp ) noexcept;
++	void publish( const SIREventData& eventData ) noexcept;
+ 
+-	SIREvent<SIREventData>& m_Events;
++	SIRSPSCEventRing<SIREventData>& m_EventQueue;
++	uint32_t m_nDroppedEvents = 0;
+ 	Device m_Devices[SIR_INPUT_DEVICE_CAPACITY];
++	uint32_t m_szDeviceGenerations[SIR_INPUT_DEVICE_CAPACITY] = {};
+ 	const SIRInputControllerProfiles *m_pProfiles;
+-	SIRInputDeviceRegistry m_Registry;
+ 	int m_nWatchFd = -1;
+ 	uint64_t m_nNextScan = 0;
+ 	bool m_bPumping = false;
+--- a/Linux/Window/SIRNativeWindowDriverX11.cpp
++++ b/Linux/Window/SIRNativeWindowDriverX11.cpp
+@@ -144,7 +144,7 @@
+ }
+ 
+ SIRNativeWindowDriverX11::SIRNativeWindowDriverX11( SIRSPSCEventRing<SIREventData>& eventQueue ) noexcept
+-	: m_pEventQueue( &eventQueue )
++	: SIRNativeWindowDriver( eventQueue )
+ {
+ }
+ 
+@@ -166,7 +166,7 @@
+ SIRWindowResult SIRNativeWindowDriverX11::flushPendingEvents( void ) noexcept
+ {
+ 	for ( uint32_t iEvent = 0; iEvent < m_nPendingCount; ++iEvent ) {
+-		const SIREventEnqueueStatus eResult = m_pEventQueue->tryEnqueue( m_PendingEvents[iEvent] );
++		const SIREventEnqueueStatus eResult = m_EventQueue.tryEnqueue( m_PendingEvents[iEvent] );
+ 		if ( eResult == SIREventEnqueueStatus::SIR_EVENT_ENQUEUE_STOPPED ) {
+ 			return SIRWindowResult::Stopped;
+ 		}
+@@ -204,7 +204,7 @@
+ 		m_PendingEvents[m_nPendingCount++] = event;
+ 		return SIRWindowResult::Busy;
+ 	}
+-	const SIREventEnqueueStatus eResult = m_pEventQueue->tryEnqueue( event );
++	const SIREventEnqueueStatus eResult = m_EventQueue.tryEnqueue( event );
+ 	if ( eResult == SIREventEnqueueStatus::SIR_EVENT_ENQUEUE_STOPPED ) {
+ 		return SIRWindowResult::Stopped;
+ 	}
+--- a/Linux/Window/SIRNativeWindowDriverX11.h
++++ b/Linux/Window/SIRNativeWindowDriverX11.h
+@@ -25,8 +25,7 @@
+ // clang-format on
+ 
+ #include <Core/Platform/Shared/Window/SIRNativeWindowDriver.h>
+-#include <Core/Events/SIRSPSCEventRing.h>
+-#include "SIREvent.h"
++#include <Core/Platform/Shared/Window/SIREventTypes.h>
+ #include <X11/Xlib.h>
+ #include <X11/Xatom.h>
+ 
+@@ -65,7 +64,6 @@
+ 	bool transportAlive( void ) noexcept;
+ 	void shutdownNative( void ) noexcept;
+ 
+-	SIRSPSCEventRing<SIREventData> *m_pEventQueue = nullptr;
+ 	Display *m_pDisplay = nullptr;
+ 	Window m_hWindow = 0;
+ 	Atom m_nDeleteWindow = 0;
+--- a/Shared/Window/SIRNativeInputDriver.h
++++ b/Shared/Window/SIRNativeInputDriver.h
+@@ -10,6 +10,7 @@
+ // clang-format on
+ 
+ #include "SIREventTypes.h"
++#include <Core/Events/SIRSPSCEventRing.h>
+ 
+ enum class SIRNativeInputBackend : uint8_t
+ {
+@@ -38,7 +39,16 @@
+ 	virtual bool isMouseButtonPressed( SIRMouseButton mouseButton ) const noexcept = 0;
+ 
+ protected:
+-	explicit SIRNativeInputDriver( void ) noexcept = default;
++	explicit SIRNativeInputDriver( SIRSPSCEventRing<SIREventData>& eventQueue ) noexcept;
++
++	// The platform host owns this queue. All native producers sharing it
++	// must publish on the same producer thread.
++	SIRSPSCEventRing<SIREventData>& m_EventQueue;
+ };
+ 
++SIR_FORCEINLINE SIRNativeInputDriver::SIRNativeInputDriver( SIRSPSCEventRing<SIREventData>& eventQueue ) noexcept
++	: m_EventQueue( eventQueue )
++{
++}
++
+ #endif // __SIR_NATIVE_INPUT_DRIVER_H__
+--- a/Shared/Window/SIRNativeWindowDriver.h
++++ b/Shared/Window/SIRNativeWindowDriver.h
+@@ -25,13 +25,15 @@
+ // clang-format on
+ 
+ #include "SIRWindowTypes.h"
++#include "SIREventTypes.h"
++#include <Core/Events/SIRSPSCEventRing.h>
+ #include <Core/Memory/Pointers/SIRSharedPtr.h>
+ 
+ /// The primary manager of the window instances.
+ class SIRNativeWindowDriver
+ {
+ public:
+-	explicit SIRNativeWindowDriver( void ) noexcept;
++	explicit SIRNativeWindowDriver( SIRSPSCEventRing<SIREventData>& eventQueue ) noexcept;
+ 	constexpr SIRNativeWindowDriver( const SIRNativeWindowDriver& ) noexcept = delete;
+ 	constexpr SIRNativeWindowDriver( SIRNativeWindowDriver&& ) noexcept = delete;
+ 	virtual ~SIRNativeWindowDriver() noexcept = default;
+@@ -50,6 +52,15 @@
+ 	virtual SIRWindowResult initialize( void ) noexcept = 0;
+ 	virtual SIRWindowResult createWindow( const SIRNativeWindowConfiguration& config ) noexcept = 0;
+ 	virtual void shutdown( void ) noexcept = 0;
++
++protected:
++	// Borrowed from the platform host; the queue outlives every native driver.
++	SIRSPSCEventRing<SIREventData>& m_EventQueue;
+ };
+ 
++SIR_FORCEINLINE SIRNativeWindowDriver::SIRNativeWindowDriver( SIRSPSCEventRing<SIREventData>& eventQueue ) noexcept
++	: m_EventQueue( eventQueue )
++{
++}
++
+ #endif // __SIR_NATIVE_WINDOW_DRIVER_H__

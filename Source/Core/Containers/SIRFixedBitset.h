@@ -31,6 +31,23 @@ template <uint32_t N>
 class SIRFixedBitset
 {
 public:
+	using size_type = uint32_t;
+
+	constexpr uint32_t size( void ) const noexcept
+	{
+		return getSize();
+	}
+
+	constexpr bool empty( void ) const noexcept
+	{
+		return getSize() == 0;
+	}
+
+	constexpr bool isEmpty( void ) const noexcept
+	{
+		return empty();
+	}
+
 	constexpr uint32_t getSize( void ) const noexcept
 	{
 		return N;
@@ -53,6 +70,59 @@ public:
 			m_szWords[iBit / 64] &= ~nMask;
 		}
 		return SIRContainerResult::SIR_CONTAINER_OK;
+	}
+
+	using value_type = bool;
+
+	bool any( void ) const noexcept
+	{
+		return findFirstSet() != UINT32_MAX;
+	}
+	bool none( void ) const noexcept
+	{
+		return !any();
+	}
+	bool all( void ) const noexcept
+	{
+		return count() == size();
+	}
+	bool contains( uint32_t iBit ) const noexcept
+	{
+		return test( iBit );
+	}
+
+	SIRContainerResult tryReset( uint32_t iBit ) noexcept
+	{
+		return trySet( iBit, false );
+	}
+	SIRContainerResult tryFlip( uint32_t iBit ) noexcept
+	{
+		if ( iBit >= size() )
+		{
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
+		}
+		return trySet( iBit, !test( iBit ) );
+	}
+
+	void setAll( void ) noexcept
+	{
+		for ( uint32_t iWord = 0; iWord < ( static_cast<uint64_t>( N ) + 63 ) / 64; ++iWord ) {
+			m_szWords[iWord] = UINT64_MAX;
+		}
+		m_szWords[( N - 1 ) / 64] &= SIRBitWords::maskTail( N % 64 );
+	}
+
+	void flipAll( void ) noexcept
+	{
+		for ( uint32_t iWord = 0; iWord < ( static_cast<uint64_t>( N ) + 63 ) / 64; ++iWord ) {
+			m_szWords[iWord] = ~m_szWords[iWord];
+		}
+		m_szWords[( N - 1 ) / 64] &= SIRBitWords::maskTail( N % 64 );
+	}
+
+	void reset( void ) noexcept
+	{
+		clear();
 	}
 
 	uint32_t count( void ) const noexcept

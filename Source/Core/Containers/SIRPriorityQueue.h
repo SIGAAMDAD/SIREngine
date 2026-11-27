@@ -44,6 +44,30 @@ template <typename T, typename Compare = SIRPriorityLess<T>>
 class SIRPriorityQueue
 {
 public:
+	using size_type = uint32_t;
+
+	uint32_t size( void ) const noexcept
+	{
+		return getSize();
+	}
+
+	bool empty( void ) const noexcept
+	{
+		return getSize() == 0;
+	}
+
+	using value_type = T;
+
+	size_type getCapacity( void ) const noexcept
+	{
+		return m_values.getCapacity();
+	}
+
+	size_type capacity( void ) const noexcept
+	{
+		return getCapacity();
+	}
+
 	explicit SIRPriorityQueue( const sirContainerAllocator_t *pAllocator, Compare compare = Compare() )
 	    : m_values( pAllocator ),
 	      m_compare( std::move( compare ) )
@@ -137,6 +161,26 @@ public:
 	SIRContainerResult tryShrinkToFit( void )
 	{
 		return m_values.tryShrinkToFit();
+	}
+
+	const T *tryPeek( void ) const noexcept
+	{
+		return top();
+	}
+
+	SIRContainerResult tryPopValue( T *pOutput ) noexcept
+	{
+		static_assert( std::is_nothrow_move_assignable<T>::value, "Pop into value requires noexcept move assignment" );
+		if ( pOutput == nullptr )
+		{
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
+		}
+		if ( m_values.isEmpty() )
+		{
+			return SIRContainerResult::SIR_CONTAINER_EMPTY;
+		}
+		*pOutput = std::move( m_values[0] );
+		return tryPop();
 	}
 
 	void clear( void ) noexcept

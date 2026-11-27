@@ -31,6 +31,50 @@ template <typename T>
 class SIRStack
 {
 public:
+	using size_type = uint32_t;
+
+	uint32_t size( void ) const noexcept
+	{
+		return getSize();
+	}
+
+	bool empty( void ) const noexcept
+	{
+		return getSize() == 0;
+	}
+
+	bool isEmpty( void ) const noexcept
+	{
+		return empty();
+	}
+
+	using value_type = T;
+
+	T *top( void ) noexcept
+	{
+		return peek();
+	}
+
+	const T *top( void ) const noexcept
+	{
+		return peek();
+	}
+
+	size_type getCapacity( void ) const noexcept
+	{
+		return m_elements.getCapacity();
+	}
+
+	size_type capacity( void ) const noexcept
+	{
+		return getCapacity();
+	}
+
+	SIRContainerResult tryReserve( uint32_t nCapacity )
+	{
+		return m_elements.tryReserve( nCapacity );
+	}
+
 	explicit SIRStack( const sirContainerAllocator_t *pAllocator ) noexcept
 	    : m_elements( pAllocator )
 	{
@@ -77,6 +121,32 @@ public:
 	SIRContainerResult tryShrinkToFit( void )
 	{
 		return m_elements.tryShrinkToFit();
+	}
+
+	// Non-owning peek; nullptr signifies an empty adapter.
+	T *tryPeek( void ) noexcept
+	{
+		return top();
+	}
+	const T *tryPeek( void ) const noexcept
+	{
+		return top();
+	}
+
+	SIRContainerResult tryPopValue( T *pOutput ) noexcept
+	{
+		static_assert( std::is_nothrow_move_assignable<T>::value, "Pop into value requires noexcept move assignment" );
+		if ( pOutput == nullptr )
+		{
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
+		}
+		T *pValue = top();
+		if ( pValue == nullptr )
+		{
+			return SIRContainerResult::SIR_CONTAINER_EMPTY;
+		}
+		*pOutput = std::move( *pValue );
+		return tryPop();
 	}
 
 	void clear( void ) noexcept

@@ -13,11 +13,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIR_STRINGOPS_H__
-#define __SIR_STRINGOPS_H__
+#ifndef __SIR_STRING_OPS_H__
+#define __SIR_STRING_OPS_H__
 
 #include <Core/SIRPCH.h>
-#include <Core/Containers/SIRString.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -25,14 +24,17 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
+#include <Core/Strings/SIRString.h>
+
 // Shared checked byte-range operations. A null pointer is valid only for an empty view.
 class SIRStringOps final
 {
 public:
-	explicit SIRStringOps() = delete;
+	explicit SIRStringOps( void ) = delete;
 	explicit SIRStringOps( const SIRStringOps& ) = delete;
 	explicit SIRStringOps( SIRStringOps&& ) = delete;
 	~SIRStringOps() = delete;
+
 	SIRStringOps& operator=( const SIRStringOps& ) = delete;
 	SIRStringOps& operator=( SIRStringOps&& ) = delete;
 
@@ -49,4 +51,4 @@ private:
 	[[nodiscard]] static uint32_t maximalSuffix( sirStringView_t pattern, bool bReverse, uint32_t& nPeriod ) noexcept;
 };
 
-#endif // __SIR_STRINGOPS_H__
+#endif // __SIR_STRING_OPS_H__

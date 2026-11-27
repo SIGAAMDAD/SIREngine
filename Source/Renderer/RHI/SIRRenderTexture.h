@@ -37,6 +37,9 @@ public:
 	SIRRenderTexture& operator=( const SIRRenderTexture& ) = delete;
 	SIRRenderTexture& operator=( SIRRenderTexture&& ) = delete;
 
+	virtual void bind( uint32_t nTextureSlot ) noexcept = 0;
+	virtual void unbind( void ) noexcept = 0;
+
 	uint32_t getWidth( void ) const noexcept
 	{
 		return m_Description.nWidth;
@@ -54,7 +57,7 @@ public:
 
 	uint32_t getMipLevels( void ) const noexcept
 	{
-		return m_Description.nMipLevels;
+		return m_Description.nMipCount;
 	}
 
 	uint32_t getArrayLayers( void ) const noexcept

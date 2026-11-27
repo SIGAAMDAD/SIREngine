@@ -17,6 +17,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #define __SIR_FLATHASHMAP_H__
 
 #include <Core/SIRPCH.h>
+#include <iterator>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -34,6 +35,143 @@ template <typename K, typename V, typename Hash = std::hash<K>, typename Equal =
 class SIRFlatHashMap
 {
 public:
+	using size_type = uint32_t;
+
+	uint32_t size( void ) const noexcept
+	{
+		return getSize();
+	}
+
+	bool empty( void ) const noexcept
+	{
+		return getSize() == 0;
+	}
+
+	bool isEmpty( void ) const noexcept
+	{
+		return empty();
+	}
+
+	size_type capacity( void ) const noexcept
+	{
+		return getCapacity();
+	}
+
+	using key_type = K;
+	using mapped_type = V;
+	using value_type = std::pair<K, V>;
+	using difference_type = ptrdiff_t;
+
+	bool contains( const K& rKey ) const
+	{
+		return find( rKey ) != nullptr;
+	}
+
+	size_type count( const K& rKey ) const
+	{
+		return contains( rKey ) ? 1 : 0;
+	}
+
+
+	// Keys are immutable through iterators to preserve the table's hash invariants.
+	// Mutable mapped values remain available through find().
+	class const_iterator
+	{
+	public:
+		using value_type = std::pair<K, V>;
+		using difference_type = ptrdiff_t;
+		using pointer = const value_type *;
+		using reference = const value_type&;
+		using iterator_category = std::forward_iterator_tag;
+
+		const_iterator( void ) noexcept = default;
+		const_iterator( const SIRFlatHashMap *pOwner, uint32_t iSlot ) noexcept
+		    : m_pOwner( pOwner ), m_iSlot( iSlot )
+		{
+			skipVacant();
+		}
+
+		reference operator*( void ) const noexcept
+		{
+			assert( m_pOwner != nullptr && m_iSlot < m_pOwner->m_nCapacity );
+			return m_pOwner->m_pEntries[m_iSlot];
+		}
+
+		pointer operator->( void ) const noexcept
+		{
+			return &operator*();
+		}
+		const_iterator& operator++( void ) noexcept
+		{
+			++m_iSlot;
+			skipVacant();
+			return *this;
+		}
+		const_iterator operator++( int ) noexcept
+		{
+			const_iterator old( *this );
+			++*this;
+			return old;
+		}
+		bool operator==( const const_iterator& rOther ) const noexcept
+		{
+			return m_pOwner == rOther.m_pOwner && m_iSlot == rOther.m_iSlot;
+		}
+		bool operator!=( const const_iterator& rOther ) const noexcept
+		{
+			return !( *this == rOther );
+		}
+
+	private:
+		const SIRFlatHashMap *m_pOwner = nullptr;
+		uint32_t m_iSlot = 0;
+		void skipVacant( void ) noexcept
+		{
+			if ( m_pOwner == nullptr )
+			{
+				return;
+			}
+			while ( m_iSlot < m_pOwner->m_nCapacity ) {
+				if ( SIRHashProbe::getControl<bCompactControl>( m_pOwner->m_pControl, m_iSlot ) == SIRHashProbe::OCCUPIED )
+				{
+					break;
+				}
+				++m_iSlot;
+			}
+		}
+	};
+
+	using iterator = const_iterator;
+	iterator begin( void ) noexcept
+	{
+		return { this, 0 };
+	}
+	iterator end( void ) noexcept
+	{
+		return { this, m_nCapacity };
+	}
+	const_iterator begin( void ) const noexcept
+	{
+		return { this, 0 };
+	}
+	const_iterator end( void ) const noexcept
+	{
+		return { this, m_nCapacity };
+	}
+	const_iterator cbegin( void ) const noexcept
+	{
+		return begin();
+	}
+	const_iterator cend( void ) const noexcept
+	{
+		return end();
+	}
+
+	float loadFactor( void ) const noexcept
+	{
+		return m_nCapacity == 0 ? 0.0f : static_cast<float>( m_nSize ) / m_nCapacity;
+	}
+
 	explicit SIRFlatHashMap( const sirContainerAllocator_t *pAllocator, Hash hash = Hash(), Equal equal = Equal() )
 	    : m_pAllocator( pAllocator ),
 	      m_hash( std::move( hash ) ),
@@ -169,7 +307,7 @@ public:
 	}
 
 private:
-	using Pair = std::pair<K, V>;
+	using Pair = value_type;
 	static_assert( SIRLifetimeOps<Pair>::CAN_RELOCATE, "Hash table growth requires copy or nothrow move" );
 	static_assert( std::is_nothrow_invocable_r<size_t, Hash, const K&>::value,
 	               "Hash must be noexcept to preserve strong rehash failure guarantee" );

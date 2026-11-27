@@ -59,6 +59,23 @@ class SIRBinaryFuseFilter
 	}
 
 public:
+	using size_type = uint32_t;
+
+	uint32_t size( void ) const noexcept
+	{
+		return getSize();
+	}
+
+	bool empty( void ) const noexcept
+	{
+		return getSize() == 0;
+	}
+
+	bool isEmpty( void ) const noexcept
+	{
+		return empty();
+	}
+
 	explicit SIRBinaryFuseFilter( const sirContainerAllocator_t *pAllocator )
 	    : m_pAllocator( pAllocator ),
 	      m_fingerprints( pAllocator )

@@ -36,6 +36,14 @@ class SIRBatchMpmcQueue
 	               "Batch queue requires trivially copyable default-constructible values" );
 
 public:
+	using value_type = T;
+	using size_type = uint32_t;
+
+	size_type capacity( void ) const noexcept
+	{
+		return getCapacity();
+	}
+
 	explicit SIRBatchMpmcQueue( const sirContainerAllocator_t *pAllocator ) noexcept
 	    : m_pAllocator( pAllocator )
 	{

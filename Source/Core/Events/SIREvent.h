@@ -25,11 +25,6 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <Core/Events/SIREventTypes.h>
-#include <atomic>
-
-#include <stdint.h>
-
-#include <type_traits>
 
 // Single-owner typed signal. subscribe/unsubscribe/clear and publish must all run
 // on the same owning thread. No callbacks are invoked under a registry lock.

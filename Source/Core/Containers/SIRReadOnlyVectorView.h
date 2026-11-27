@@ -17,6 +17,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #define __SIR_READONLYVECTORVIEW_H__
 
 #include <Core/SIRPCH.h>
+#include <iterator>
+#include <stddef.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -32,6 +34,78 @@ template <typename T>
 class SIRReadOnlyVectorView
 {
 public:
+	using size_type = uint32_t;
+
+	uint32_t size( void ) const noexcept
+	{
+		return getSize();
+	}
+
+	bool empty( void ) const noexcept
+	{
+		return getSize() == 0;
+	}
+
+	using value_type = T;
+	using difference_type = ptrdiff_t;
+	using const_reference = const T&;
+	using const_pointer = const T *;
+	using const_iterator = const T *;
+	using reference = const T&;
+	using pointer = const T *;
+	using iterator = pointer;
+	using reverse_iterator = std::reverse_iterator<iterator>;
+	using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+	reverse_iterator rbegin( void ) const noexcept
+	{
+		return reverse_iterator( end() );
+	}
+	reverse_iterator rend( void ) const noexcept
+	{
+		return reverse_iterator( begin() );
+	}
+	const_reverse_iterator crbegin( void ) const noexcept
+	{
+		return const_reverse_iterator( cend() );
+	}
+	const_reverse_iterator crend( void ) const noexcept
+	{
+		return const_reverse_iterator( cbegin() );
+	}
+
+
+	const_iterator cbegin( void ) const noexcept
+	{
+		return begin();
+	}
+
+	const_iterator cend( void ) const noexcept
+	{
+		return end();
+	}
+
+	const T *tryFront( void ) const noexcept
+	{
+		return tryGet( 0 );
+	}
+
+	const T *tryBack( void ) const noexcept
+	{
+		return empty() ? nullptr : tryGet( getSize() - 1 );
+	}
+
+	const T& front( void ) const noexcept
+	{
+		assert( !empty() );
+		return *tryFront();
+	}
+
+	const T& back( void ) const noexcept
+	{
+		assert( !empty() );
+		return *tryBack();
+	}
+
 	explicit SIRReadOnlyVectorView( void ) noexcept = default;
 
 	SIRReadOnlyVectorView( const T *pData, uint32_t nSize ) noexcept

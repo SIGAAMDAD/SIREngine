@@ -31,7 +31,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 typedef enum sirShaderCompiler_e : uint32_t
 {
 	SIR_SHADER_COMPILER_DXC = 1,
-	SIR_SHADER_COMPILER_FXC = 2
+	SIR_SHADER_COMPILER_FXC = 2,
+	SIR_SHADER_COMPILER_SLANG = 3
 } sirShaderCompiler_t;
 
 typedef struct sirShaderCookTarget_s

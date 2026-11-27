@@ -31,6 +31,23 @@ template <typename K, typename V, typename Less = std::less<K>>
 class SIRCompactSparseMultimap
 {
 public:
+	using size_type = uint32_t;
+
+	uint32_t size( void ) const noexcept
+	{
+		return getKeyCount();
+	}
+
+	bool empty( void ) const noexcept
+	{
+		return getKeyCount() == 0;
+	}
+
+	bool isEmpty( void ) const noexcept
+	{
+		return empty();
+	}
+
 	struct Entry
 	{
 		K key;
@@ -114,6 +131,41 @@ public:
 		return true;
 	}
 
+	using key_type = K;
+	using mapped_type = V;
+	using value_type = Entry;
+
+	bool contains( const K& rKey ) const
+	{
+		const V *pValues = nullptr;
+		uint32_t nCount = 0;
+		return find( rKey, &pValues, &nCount );
+	}
+
+	uint32_t count( const K& rKey ) const
+	{
+		const V *pValues = nullptr;
+		uint32_t nCount = 0;
+		return find( rKey, &pValues, &nCount ) ? nCount : 0;
+	}
+
+	SIRReadOnlyVectorView<K> keys( void ) const noexcept
+	{
+		return { m_keys.data(), m_keys.size() };
+	}
+
+	SIRReadOnlyVectorView<V> values( void ) const noexcept
+	{
+		return { m_values.data(), m_values.size() };
+	}
+
+	SIRReadOnlyVectorView<V> equalRange( const K& rKey ) const
+	{
+		const V *pValues = nullptr;
+		uint32_t nCount = 0;
+		return find( rKey, &pValues, &nCount ) ? SIRReadOnlyVectorView<V>( pValues, nCount ) : SIRReadOnlyVectorView<V>();
+	}
+
 	uint32_t getKeyCount( void ) const noexcept
 	{
 		return m_keys.getSize();
@@ -124,9 +176,8 @@ public:
 		return m_values.getSize();
 	}
 
-	publicprivate :
-
-	    const sirContainerAllocator_t *m_pAllocator;
+private:
+	const sirContainerAllocator_t *m_pAllocator;
 	SIRVector<K> m_keys;
 	SIRVector<uint32_t> m_offsets;
 	SIRVector<V> m_values;

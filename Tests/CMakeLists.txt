@@ -120,6 +120,7 @@ set_tests_properties(renderer.d3d11.texture-validation PROPERTIES LABELS "d3d11;
 sir_configure_owned_target(SIRD3D11TextureValidationTests)
 
 # -- Tests/Dependencies --
+# -- Tests/Dependencies --
 # Compile and link the actual optional dependency targets when enabled.
 if(SIR_WITH_MESHOPTIMIZER)
     add_executable(sir_meshoptimizer_dependency_smoke ${PROJECT_SOURCE_DIR}/Tests/Dependencies/MeshOptimizerSmoke.cpp)

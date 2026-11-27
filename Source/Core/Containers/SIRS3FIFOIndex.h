@@ -66,7 +66,7 @@ class SIRS3FIFOIndex
 	void unlink( uint32_t iEntry ) noexcept
 	{
 		Entry& entry = m_entries[iEntry];
-		List& list = m_lists[entry.eQueue];
+		List& list = m_lists[static_cast<uint8_t>( entry.eQueue )];
 		if ( entry.iPrevious == NONE ) {
 			list.iHead = entry.iNext;
 		} else {
@@ -83,7 +83,7 @@ class SIRS3FIFOIndex
 	void append( uint32_t iEntry, SIRQueue eQueue ) noexcept
 	{
 		Entry& entry = m_entries[iEntry];
-		List& list = m_lists[eQueue];
+		List& list = m_lists[static_cast<uint8_t>( eQueue )];
 		entry.eQueue = eQueue;
 		entry.iPrevious = list.iTail;
 		entry.iNext = NONE;
@@ -98,7 +98,7 @@ class SIRS3FIFOIndex
 
 	void dropOldestGhost( void ) noexcept
 	{
-		const uint32_t iEntry = m_lists[SIRQueue::GHOST].iHead;
+		const uint32_t iEntry = m_lists[static_cast<uint8_t>( SIRQueue::GHOST )].iHead;
 		if ( iEntry == NONE ) {
 			return;
 		}
@@ -111,9 +111,9 @@ class SIRS3FIFOIndex
 
 	void retireResident( void ) noexcept
 	{
-		uint32_t iEntry = m_lists[SIRQueue::SMALL].iHead;
+		uint32_t iEntry = m_lists[static_cast<uint8_t>( SIRQueue::SMALL )].iHead;
 		if ( iEntry == NONE ) {
-			iEntry = m_lists[SIRQueue::MAIN].iHead;
+			iEntry = m_lists[static_cast<uint8_t>( SIRQueue::MAIN )].iHead;
 		}
 		while ( iEntry != NONE ) {
 			Entry& entry = m_entries[iEntry];
@@ -121,9 +121,9 @@ class SIRS3FIFOIndex
 			if ( entry.nFrequency != 0 ) {
 				--entry.nFrequency;
 				append( iEntry, SIRQueue::MAIN );
-				iEntry = m_lists[SIRQueue::SMALL].iHead;
+				iEntry = m_lists[static_cast<uint8_t>( SIRQueue::SMALL )].iHead;
 				if ( iEntry == NONE ) {
-					iEntry = m_lists[SIRQueue::MAIN].iHead;
+					iEntry = m_lists[static_cast<uint8_t>( SIRQueue::MAIN )].iHead;
 				}
 				continue;
 			}
@@ -134,6 +134,23 @@ class SIRS3FIFOIndex
 	}
 
 public:
+	using size_type = uint32_t;
+
+	uint32_t size( void ) const noexcept
+	{
+		return getResidentCount();
+	}
+
+	bool empty( void ) const noexcept
+	{
+		return getResidentCount() == 0;
+	}
+
+	bool isEmpty( void ) const noexcept
+	{
+		return empty();
+	}
+
 	explicit SIRS3FIFOIndex( const sirContainerAllocator_t *pAllocator )
 	    : m_entries( pAllocator ),
 	      m_positions( pAllocator )
@@ -222,7 +239,7 @@ public:
 		entry.bLive = true;
 		append( iEntry, SIRQueue::SMALL );
 		++m_nResidents;
-		while ( m_lists[SIRQueue::GHOST].nCount > m_nGhostCapacity ) {
+		while ( m_lists[static_cast<uint8_t>( SIRQueue::GHOST )].nCount > m_nGhostCapacity ) {
 			dropOldestGhost();
 		}
 		return SIRContainerResult::SIR_CONTAINER_OK;
@@ -241,7 +258,7 @@ public:
 
 	uint32_t getGhostCount( void ) const noexcept
 	{
-		return m_lists[SIRQueue::GHOST].nCount;
+		return m_lists[static_cast<uint8_t>( SIRQueue::GHOST )].nCount;
 	}
 };
 #endif /* __SIR_S3FIFOINDEX_H__ */

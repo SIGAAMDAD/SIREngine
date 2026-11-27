@@ -41,6 +41,55 @@ public:
 		const SIRFrozenHashIndex<K, V, Hash, Equal> *m_pSnapshot = nullptr;
 
 	public:
+		using size_type = uint32_t;
+
+		uint32_t size( void ) const noexcept
+		{
+			return getSize();
+		}
+
+		bool empty( void ) const noexcept
+		{
+			return getSize() == 0;
+		}
+
+		bool isEmpty( void ) const noexcept
+		{
+			return empty();
+		}
+
+		using key_type = K;
+		using mapped_type = V;
+		using value_type = Entry;
+		using const_iterator = typename SIRFrozenHashIndex<K, V, Hash, Equal>::const_iterator;
+		using iterator = const_iterator;
+
+		iterator begin( void ) const noexcept
+		{
+			return m_pSnapshot == nullptr ? iterator() : m_pSnapshot->begin();
+		}
+
+		iterator end( void ) const noexcept
+		{
+			return m_pSnapshot == nullptr ? iterator() : m_pSnapshot->end();
+		}
+
+		const_iterator cbegin( void ) const noexcept
+		{
+			return begin();
+		}
+
+		const_iterator cend( void ) const noexcept
+		{
+			return end();
+		}
+
+
+		bool contains( const K& rKey ) const
+		{
+			return find( rKey ) != nullptr;
+		}
+
 		explicit ReadGuard( const SIRReadMostlyMap *pOwner ) noexcept
 		    : m_pOwner( pOwner )
 		{
@@ -122,9 +171,8 @@ public:
 		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
-	publicprivate :
-
-	    const sirContainerAllocator_t *m_pAllocator;
+private:
+	const sirContainerAllocator_t *m_pAllocator;
 	mutable std::atomic<uint32_t> m_nReaders{ 0 };
 	std::atomic<bool> m_bPublishing{ false };
 	std::atomic<SIRFrozenHashIndex<K, V, Hash, Equal> *> m_pSnapshot{ nullptr };

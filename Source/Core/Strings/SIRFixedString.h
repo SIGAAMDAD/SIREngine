@@ -24,7 +24,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-#include <Core/Containers/SIRString.h>
+#include <Core/Strings/SIRString.h>
 #include <Core/Strings/SIRStringOps.h>
 
 // Capacity counts payload bytes; one additional byte is reserved for the terminator.
@@ -94,7 +94,7 @@ SIR_FORCEINLINE constexpr SIRFixedString<nCapacity>::SIRFixedString( const SIRFi
 }
 
 template <uint32_t nCapacity>
-SIRFixedString<nCapacity>::SIRFixedString( SIRFixedString&& other ) noexcept
+constexpr SIRFixedString<nCapacity>::SIRFixedString( SIRFixedString&& other ) noexcept
     : SIRFixedString( static_cast<const SIRFixedString&>( other ) )
 {
 }

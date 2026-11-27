@@ -24,6 +24,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 #include <Core/Containers/SIRVector.h>
+#include <Core/Containers/SIRReadOnlyVectorView.h>
 #include <algorithm>
 #include <utility>
 
@@ -38,11 +39,49 @@ class SIRCSRGraph
 	uint32_t m_nVertices = 0;
 
 public:
+	using size_type = uint32_t;
+
+	uint32_t size( void ) const noexcept
+	{
+		return getEdgeCount();
+	}
+
+	bool empty( void ) const noexcept
+	{
+		return getEdgeCount() == 0;
+	}
+
+	bool isEmpty( void ) const noexcept
+	{
+		return empty();
+	}
+
 	explicit SIRCSRGraph( const sirContainerAllocator_t *pAllocator )
 	    : m_offsets( pAllocator ),
 	      m_destinations( pAllocator ),
 	      m_values( pAllocator )
 	{
+	}
+
+	using value_type = T;
+
+	uint32_t degree( uint32_t iVertex ) const noexcept
+	{
+		return iVertex < m_nVertices ? m_offsets[iVertex + 1] - m_offsets[iVertex] : 0;
+	}
+
+	SIRReadOnlyVectorView<uint32_t> destinations( uint32_t iVertex ) const noexcept
+	{
+		const uint32_t nDegree = degree( iVertex );
+		return nDegree == 0 ? SIRReadOnlyVectorView<uint32_t>()
+		                    : SIRReadOnlyVectorView<uint32_t>( m_destinations.data() + m_offsets[iVertex], nDegree );
+	}
+
+	SIRReadOnlyVectorView<T> values( uint32_t iVertex ) const noexcept
+	{
+		const uint32_t nDegree = degree( iVertex );
+		return nDegree == 0 ? SIRReadOnlyVectorView<T>()
+		                    : SIRReadOnlyVectorView<T>( m_values.data() + m_offsets[iVertex], nDegree );
 	}
 
 	uint32_t getVertexCount( void ) const noexcept
@@ -80,6 +119,23 @@ template <typename T>
 class SIRCSRBuilder
 {
 public:
+	using size_type = uint32_t;
+
+	uint32_t size( void ) const noexcept
+	{
+		return getPendingEdges();
+	}
+
+	bool empty( void ) const noexcept
+	{
+		return getPendingEdges() == 0;
+	}
+
+	bool isEmpty( void ) const noexcept
+	{
+		return empty();
+	}
+
 	struct Edge
 	{
 		uint32_t nSource;
@@ -167,14 +223,20 @@ public:
 		return SIRContainerResult::SIR_CONTAINER_OK;
 	}
 
+	using value_type = Edge;
+
+	void clear( void ) noexcept
+	{
+		m_edges.clear();
+	}
+
 	uint32_t getPendingEdges( void ) const noexcept
 	{
 		return m_edges.getSize();
 	}
 
-	publicprivate :
-
-	    const sirContainerAllocator_t *m_pAllocator;
+private:
+	const sirContainerAllocator_t *m_pAllocator;
 	SIRVector<Edge> m_edges;
 	uint32_t m_nVertices;
 };

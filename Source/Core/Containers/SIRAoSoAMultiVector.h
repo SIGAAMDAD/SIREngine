@@ -39,6 +39,23 @@ class SIRAoSoAMultiVector
 	static_assert( sizeof...( Fields ) > 0, "AoSoA requires at least one column" );
 
 public:
+	using size_type = uint32_t;
+
+	uint32_t size( void ) const noexcept
+	{
+		return getSize();
+	}
+
+	bool empty( void ) const noexcept
+	{
+		return getSize() == 0;
+	}
+
+	bool isEmpty( void ) const noexcept
+	{
+		return empty();
+	}
+
 	explicit SIRAoSoAMultiVector( const sirContainerAllocator_t *pAllocator ) noexcept
 	    : m_Blocks( pAllocator ),
 	      m_pAllocator( pAllocator )
@@ -113,6 +130,54 @@ public:
 		}
 		Block *pBlock = m_Blocks[iBlock];
 		return { std::get<I>( pBlock->Columns ).at( 0 ), pBlock->nUsed };
+	}
+
+	uint32_t capacity( void ) const noexcept
+	{
+		const uint64_t nCapacity = static_cast<uint64_t>( m_Blocks.size() ) * LANES;
+		return nCapacity > UINT32_MAX ? UINT32_MAX : static_cast<uint32_t>( nCapacity );
+	}
+
+	SIRContainerResult tryPopBack( void ) noexcept
+	{
+		if ( m_nSize == 0 )
+		{
+			return SIRContainerResult::SIR_CONTAINER_EMPTY;
+		}
+		Block *pBlock = m_Blocks[( m_nSize - 1 ) / LANES];
+		--pBlock->nUsed;
+		pBlock->destroyFields( pBlock->nUsed, sizeof...( Fields ) );
+		--m_nSize;
+		if ( pBlock->nUsed == 0 ) {
+			pBlock->~Block();
+			SIRRawStorage::deallocate( m_pAllocator, pBlock, sizeof( Block ), alignof( Block ) );
+			return m_Blocks.tryPopBack();
+		}
+		return SIRContainerResult::SIR_CONTAINER_OK;
+	}
+
+	void clear( void ) noexcept
+	{
+		while ( m_nSize != 0 )
+		{
+			tryPopBack();
+		}
+	}
+
+	template <size_t I, typename Visitor>
+	void forEachColumn( Visitor&& visitor )
+	{
+		for ( uint32_t iIndex = 0; iIndex < m_nSize; ++iIndex ) {
+			visitor( *tryGet<I>( iIndex ) );
+		}
+	}
+
+	template <size_t I, typename Visitor>
+	void forEachColumn( Visitor&& visitor ) const
+	{
+		for ( uint32_t iIndex = 0; iIndex < m_nSize; ++iIndex ) {
+			visitor( *tryGet<I>( iIndex ) );
+		}
 	}
 
 	uint32_t getSize( void ) const noexcept;

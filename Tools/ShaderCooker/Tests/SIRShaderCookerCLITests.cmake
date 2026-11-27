@@ -27,8 +27,13 @@ file(READ "${SIR_BIN}" SIR_FIRST_BINARY HEX)
 if(NOT SIR_FIRST_BINARY MATCHES "^03022307")
     message(FATAL_ERROR "ShaderCooker did not invoke SPIR-V target")
 endif()
+if(NOT EXISTS "${SIR_BIN}.reflection.json")
+    message(FATAL_ERROR "Slang reflection sidecar missing")
+endif()
 file(READ "${SIR_BIN}.manifest" SIR_FIRST_MANIFEST)
-if(NOT SIR_FIRST_MANIFEST MATCHES "PROFILE=cs_6_6")
+if(NOT SIR_FIRST_MANIFEST MATCHES "PROFILE=cs_6_6" OR
+        NOT SIR_FIRST_MANIFEST MATCHES "COMPILER_KIND=3" OR
+        NOT SIR_FIRST_MANIFEST MATCHES "REFLECTION=[1-9][0-9]*")
     message(FATAL_ERROR "Missing versioned source-bound compiler manifest")
 endif()
 execute_process(
@@ -39,6 +44,15 @@ execute_process(
 file(READ "${SIR_BIN}.manifest" SIR_SECOND_MANIFEST)
 if(NOT SIR_SECOND_RESULT EQUAL 0 OR NOT SIR_FIRST_MANIFEST STREQUAL SIR_SECOND_MANIFEST)
     message(FATAL_ERROR "Deterministic compiler manifest mismatch")
+endif()
+execute_process(
+    COMMAND "${SIR_COOKER}" --root "${SIR_FIXTURES}" --source valid.hlsl --entry main
+        --backend vulkan --stage compute --compiler "${SIR_MOCK_COMPILER}"
+        --output "${SIR_BIN}" --define TEST=2
+    RESULT_VARIABLE SIR_PERMUTATION_RESULT)
+file(READ "${SIR_BIN}.manifest" SIR_PERMUTATION_MANIFEST)
+if(NOT SIR_PERMUTATION_RESULT EQUAL 0 OR SIR_PERMUTATION_MANIFEST STREQUAL SIR_FIRST_MANIFEST)
+    message(FATAL_ERROR "Slang permutation failed to change source-bound manifest")
 endif()
 execute_process(
     COMMAND "${SIR_COOKER}" --root "${SIR_FIXTURES}" --source valid.hlsl --entry main
@@ -102,7 +116,7 @@ execute_process(
         --backend vulkan --stage compute --compiler "${SIR_MOCK_COMPILER}"
         --output "${SIR_BIN}" --define FAIL=1
     RESULT_VARIABLE SIR_FAILURE_RESULT)
-if(SIR_FAILURE_RESULT EQUAL 0 OR EXISTS "${SIR_BIN}" OR EXISTS "${SIR_BIN}.manifest")
+if(SIR_FAILURE_RESULT EQUAL 0 OR EXISTS "${SIR_BIN}" OR EXISTS "${SIR_BIN}.manifest" OR EXISTS "${SIR_BIN}.reflection.json")
     message(FATAL_ERROR "Compiler failure was accepted or stale artifact retained")
 endif()
 

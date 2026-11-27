@@ -17,6 +17,9 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #define __SIR_VIRTUALVECTOR_H__
 
 #include <Core/SIRPCH.h>
+#include <iterator>
+#include <stddef.h>
+#include <assert.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -35,6 +38,160 @@ template <typename T>
 class SIRVirtualVector
 {
 public:
+	using size_type = uint32_t;
+
+	uint32_t size( void ) const noexcept
+	{
+		return getSize();
+	}
+
+	bool empty( void ) const noexcept
+	{
+		return getSize() == 0;
+	}
+
+	bool isEmpty( void ) const noexcept
+	{
+		return empty();
+	}
+
+	size_type capacity( void ) const noexcept
+	{
+		return getCapacity();
+	}
+
+	T *tryGet( uint32_t iIndex ) noexcept
+	{
+		return iIndex < getSize() ? data() + iIndex : nullptr;
+	}
+
+	T& operator[]( uint32_t iIndex ) noexcept
+	{
+		assert( iIndex < getSize() );
+		return data()[iIndex];
+	}
+
+	const T *tryGet( uint32_t iIndex ) const noexcept
+	{
+		return iIndex < getSize() ? data() + iIndex : nullptr;
+	}
+
+	const T& operator[]( uint32_t iIndex ) const noexcept
+	{
+		assert( iIndex < getSize() );
+		return data()[iIndex];
+	}
+
+	using value_type = T;
+	using difference_type = ptrdiff_t;
+	using const_reference = const T&;
+	using const_pointer = const T *;
+	using const_iterator = const T *;
+	using reference = T&;
+	using pointer = T *;
+	using iterator = pointer;
+	using reverse_iterator = std::reverse_iterator<iterator>;
+	using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+	reverse_iterator rbegin( void ) noexcept
+	{
+		return reverse_iterator( end() );
+	}
+	reverse_iterator rend( void ) noexcept
+	{
+		return reverse_iterator( begin() );
+	}
+	const_reverse_iterator rbegin( void ) const noexcept
+	{
+		return const_reverse_iterator( end() );
+	}
+	const_reverse_iterator rend( void ) const noexcept
+	{
+		return const_reverse_iterator( begin() );
+	}
+	const_reverse_iterator crbegin( void ) const noexcept
+	{
+		return rbegin();
+	}
+	const_reverse_iterator crend( void ) const noexcept
+	{
+		return rend();
+	}
+
+
+	T *begin( void ) noexcept
+	{
+		return data();
+	}
+
+	T *end( void ) noexcept
+	{
+		return data() == nullptr ? nullptr : data() + getSize();
+	}
+
+	const T *begin( void ) const noexcept
+	{
+		return data();
+	}
+
+	const T *end( void ) const noexcept
+	{
+		return data() == nullptr ? nullptr : data() + getSize();
+	}
+
+	const_iterator cbegin( void ) const noexcept
+	{
+		return begin();
+	}
+
+	const_iterator cend( void ) const noexcept
+	{
+		return end();
+	}
+
+	T *tryFront( void ) noexcept
+	{
+		return tryGet( 0 );
+	}
+
+	T *tryBack( void ) noexcept
+	{
+		return empty() ? nullptr : tryGet( getSize() - 1 );
+	}
+
+	T& front( void ) noexcept
+	{
+		assert( !empty() );
+		return *tryFront();
+	}
+
+	T& back( void ) noexcept
+	{
+		assert( !empty() );
+		return *tryBack();
+	}
+
+	const T *tryFront( void ) const noexcept
+	{
+		return tryGet( 0 );
+	}
+
+	const T *tryBack( void ) const noexcept
+	{
+		return empty() ? nullptr : tryGet( getSize() - 1 );
+	}
+
+	const T& front( void ) const noexcept
+	{
+		assert( !empty() );
+		return *tryFront();
+	}
+
+	const T& back( void ) const noexcept
+	{
+		assert( !empty() );
+		return *tryBack();
+	}
+
 	explicit SIRVirtualVector( void ) noexcept = default;
 
 	~SIRVirtualVector() noexcept

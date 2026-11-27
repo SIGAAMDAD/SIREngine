@@ -1,0 +1,75 @@
+/*
+===========================================================================
+SIREngine MPLv2 Source Code
+Copyright (C) 2023-2027 Noah Van Til
+
+This Source Code Form is subject to the terms of the Mozilla Public
+License, v. 2.0. If a copy of the MPL was not distributed with this
+file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+This software is provided "as is", without warranty of any kind,
+express or implied, including but not limited to the warranties
+of merchantability, fitness for a particular purpose and noninfringement.
+===========================================================================
+*/
+
+#ifndef __SIR_PLATFORMFILEMAPPING_H__
+#define __SIR_PLATFORMFILEMAPPING_H__
+
+#include <Core/SIRPCH.h>
+
+// clang-format off
+#ifdef SIR_PRAGMA_ONCE_SUPPORTED
+	#pragma once
+#endif
+// clang-format on
+
+#include <Core/Platform/Shared/File/SIRPlatformFile.h>
+
+enum class sirFileMapMode : uint8_t {
+	SIR_FILE_MAP_READ_ONLY = 0,
+	SIR_FILE_MAP_READ_WRITE = 1,
+	SIR_FILE_MAP_COPY_ON_WRITE = 2
+};
+
+// A single OS mapping. No buffer copies or internal heap allocations.
+// Source file must remain open while map() runs, but may close afterward.
+// The file must not be truncated while any mapping accesses its pages.
+// Requested offsets are arbitrary; the OS view is aligned internally.
+// nBytes == 0 maps the remainder of the current file; empty views are rejected.
+// A read-write map changes the file; copy-on-write changes remain private.
+// Reclamation is by unmap() or destruction, never through the GRDG allocator.
+class SIRPlatformFileMapping final
+{
+public:
+	explicit SIRPlatformFileMapping( void ) noexcept;
+	explicit SIRPlatformFileMapping( const SIRPlatformFileMapping& ) = delete;
+	explicit SIRPlatformFileMapping( SIRPlatformFileMapping&& other ) noexcept;
+	~SIRPlatformFileMapping() noexcept;
+
+	SIRPlatformFileMapping& operator=( const SIRPlatformFileMapping& ) = delete;
+	SIRPlatformFileMapping& operator=( SIRPlatformFileMapping&& ) = delete;
+
+
+	[[nodiscard]] sirFileResult map( const SIRPlatformFile& rFile, uint64_t nOffset, uint64_t nBytes, sirFileMapMode eMode ) noexcept;
+	[[nodiscard]] sirFileResult unmap( void ) noexcept;
+	[[nodiscard]] sirFileResult flush( void ) const noexcept;
+	bool isMapped( void ) const noexcept;
+	const uint8_t *getData( void ) const noexcept;
+	uint8_t *getWritableData( void ) noexcept;
+	uint64_t getSize( void ) const noexcept;
+	uint64_t getOffset( void ) const noexcept;
+
+private:
+	void *m_pBase;
+	uint8_t *m_pData;
+	uint64_t m_nMappedBytes;
+	uint64_t m_nViewOffset;
+	uint64_t m_nViewBytes;
+#if defined( _WIN32 )
+	uintptr_t m_nNativeMapping;
+#endif
+	sirFileMapMode m_eMode;
+};
+
+#endif // __SIR_PLATFORMFILEMAPPING_H__

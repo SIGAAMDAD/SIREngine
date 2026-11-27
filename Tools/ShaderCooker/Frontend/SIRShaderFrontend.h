@@ -29,6 +29,37 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <string>
 #include <vector>
 
+// ShaderCooker uses the compact graphics vocabulary while the runtime RHI is
+// expressed with strongly typed enums. Keep this translation private to the
+// tool; it does not reintroduce a runtime compatibility API.
+using sirGraphicsBackend_t = SIRRenderBackend;
+using sirGraphicsPipelineModel_t = SIRGraphicsPipelineModel;
+using sirGraphicsShaderFormat_t = SIRGraphicsShaderFormat;
+constexpr SIRRenderBackend SIR_GRAPHICS_BACKEND_AUTO = SIRRenderBackend::SIR_RENDER_BACKEND_AUTO;
+constexpr SIRRenderBackend SIR_GRAPHICS_BACKEND_VULKAN = SIRRenderBackend::SIR_RENDER_BACKEND_VULKAN;
+constexpr SIRRenderBackend SIR_GRAPHICS_BACKEND_D3D12 = SIRRenderBackend::SIR_RENDER_BACKEND_D3D12;
+constexpr SIRRenderBackend SIR_GRAPHICS_BACKEND_D3D11 = SIRRenderBackend::SIR_RENDER_BACKEND_D3D11;
+constexpr SIRRenderBackend SIR_GRAPHICS_BACKEND_D3D10 = SIRRenderBackend::SIR_RENDER_BACKEND_D3D10;
+constexpr SIRRenderBackend SIR_GRAPHICS_BACKEND_D3D9 = SIRRenderBackend::SIR_RENDER_BACKEND_D3D9;
+constexpr SIRRenderBackend SIR_GRAPHICS_BACKEND_D3D8 = SIRRenderBackend::SIR_RENDER_BACKEND_D3D8;
+constexpr SIRRenderBackend SIR_GRAPHICS_BACKEND_D3D7 = SIRRenderBackend::SIR_RENDER_BACKEND_D3D7;
+constexpr SIRRenderBackend SIR_GRAPHICS_BACKEND_OPENGL = SIRRenderBackend::SIR_RENDER_BACKEND_OPENGL_PROGRAMMABLE;
+constexpr SIRGraphicsPipelineModel SIR_GRAPHICS_PIPELINE_MODEL_MODERN = SIRGraphicsPipelineModel::SIR_GRAPHICS_PIPELINE_MODEL_MODERN;
+constexpr SIRGraphicsPipelineModel SIR_GRAPHICS_PIPELINE_MODEL_PROGRAMMABLE = SIRGraphicsPipelineModel::SIR_GRAPHICS_PIPELINE_MODEL_PROGRAMMABLE;
+constexpr SIRGraphicsShaderFormat SIR_GRAPHICS_SHADER_DXIL = SIRGraphicsShaderFormat::SIR_GRAPHICS_SHADER_DXIL;
+constexpr SIRGraphicsShaderFormat SIR_GRAPHICS_SHADER_SPIRV = SIRGraphicsShaderFormat::SIR_GRAPHICS_SHADER_SPIRV;
+constexpr SIRGraphicsShaderFormat SIR_GRAPHICS_SHADER_GLSL = SIRGraphicsShaderFormat::SIR_GRAPHICS_SHADER_GLSL;
+constexpr SIRGraphicsShaderFormat SIR_GRAPHICS_SHADER_DXBC = SIRGraphicsShaderFormat::SIR_GRAPHICS_SHADER_DXBC;
+constexpr SIRGraphicsShaderFormat SIR_GRAPHICS_SHADER_D3D_LEGACY_TOKENS = SIRGraphicsShaderFormat::SIR_GRAPHICS_SHADER_D3D_LEGACY_TOKENS;
+constexpr uint32_t SIR_GRAPHICS_STAGE_VERTEX = 1U << 0;
+constexpr uint32_t SIR_GRAPHICS_STAGE_FRAGMENT = 1U << 1;
+constexpr uint32_t SIR_GRAPHICS_STAGE_COMPUTE = 1U << 2;
+constexpr uint32_t SIR_GRAPHICS_STAGE_GEOMETRY = 1U << 3;
+constexpr uint32_t SIR_GRAPHICS_STAGE_TESS_CONTROL = 1U << 4;
+constexpr uint32_t SIR_GRAPHICS_STAGE_TESS_EVALUATION = 1U << 5;
+constexpr uint32_t SIR_GRAPHICS_STAGE_MESH = 1U << 6;
+constexpr uint32_t SIR_GRAPHICS_STAGE_TASK = 1U << 7;
+
 typedef enum sirShaderCookResult_e : uint32_t
 {
 	SIR_SHADER_COOK_OK = 0,

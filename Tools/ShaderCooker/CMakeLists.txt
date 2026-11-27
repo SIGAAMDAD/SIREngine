@@ -112,8 +112,6 @@ if(SIR_BUILD_TESTS AND NOT SIR_SHADER_DXC_EXECUTABLE STREQUAL "")
         COMMAND "${CMAKE_COMMAND}"
             "-DSIR_COOKER=$<TARGET_FILE:SIRShaderCooker>"
             "-DSIR_DXC=${SIR_SHADER_DXC_EXECUTABLE}"
-            "-DSIR_SPIRV_VAL=${SIR_SHADER_SPIRV_VAL}"
-            "-DSIR_SPIRV_DIS=${SIR_SHADER_SPIRV_DIS}"
             "-DSIR_FIXTURES=${CMAKE_CURRENT_SOURCE_DIR}/Tests/Fixtures"
             "-DSIR_OUTPUT_DIR=${CMAKE_CURRENT_BINARY_DIR}/NativeDXCTest"
             -P "${CMAKE_CURRENT_SOURCE_DIR}/Tests/SIRShaderCookerNativeDXCTests.cmake")
@@ -131,4 +129,20 @@ if(SIR_BUILD_TESTS AND NOT SIR_SHADER_DXC_EXECUTABLE STREQUAL "")
             "-DSIR_OUTPUT_DIR=${CMAKE_CURRENT_BINARY_DIR}/MaterialIRNativeDXCTest"
             -P "${CMAKE_CURRENT_SOURCE_DIR}/Tests/SIRMaterialIREmitterNativeDXCTests.cmake")
 
+endif()
+
+# An explicit host slangc binary activates genuine Vulkan acceptance tests.
+set(SIR_SHADER_SLANG_EXECUTABLE "" CACHE FILEPATH "Pinned offline slangc executable for Vulkan shader acceptance")
+if(SIR_BUILD_TESTS AND NOT SIR_SHADER_SLANG_EXECUTABLE STREQUAL "")
+    find_program(SIR_SHADER_SPIRV_VAL NAMES spirv-val REQUIRED)
+    find_program(SIR_SHADER_SPIRV_DIS NAMES spirv-dis REQUIRED)
+    add_test(NAME shader.cooker.native-slang
+        COMMAND "${CMAKE_COMMAND}"
+            "-DSIR_COOKER=$<TARGET_FILE:SIRShaderCooker>"
+            "-DSIR_SLANG=${SIR_SHADER_SLANG_EXECUTABLE}"
+            "-DSIR_SPIRV_VAL=${SIR_SHADER_SPIRV_VAL}"
+            "-DSIR_SPIRV_DIS=${SIR_SHADER_SPIRV_DIS}"
+            "-DSIR_FIXTURES=${CMAKE_CURRENT_SOURCE_DIR}/Tests/Fixtures"
+            "-DSIR_OUTPUT_DIR=${CMAKE_CURRENT_BINARY_DIR}/NativeSlangTest"
+            -P "${CMAKE_CURRENT_SOURCE_DIR}/Tests/SIRShaderCookerNativeSlangTests.cmake")
 endif()

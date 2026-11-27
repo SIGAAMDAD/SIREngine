@@ -31,6 +31,23 @@ template <typename CellKey, typename Handle, typename Less = std::less<CellKey>>
 class SIRCellCSRIndex
 {
 public:
+	using size_type = uint32_t;
+
+	uint32_t size( void ) const noexcept
+	{
+		return getCellCount();
+	}
+
+	bool empty( void ) const noexcept
+	{
+		return getCellCount() == 0;
+	}
+
+	bool isEmpty( void ) const noexcept
+	{
+		return empty();
+	}
+
 	struct Entry
 	{
 		CellKey cell;
@@ -132,14 +149,47 @@ public:
 		return true;
 	}
 
+	using key_type = CellKey;
+	using mapped_type = Handle;
+	using value_type = Entry;
+
+	bool contains( const CellKey& rCell ) const
+	{
+		const Handle *pHandles = nullptr;
+		uint32_t nCount = 0;
+		return find( rCell, &pHandles, &nCount );
+	}
+
+	uint32_t count( const CellKey& rCell ) const
+	{
+		const Handle *pHandles = nullptr;
+		uint32_t nCount = 0;
+		return find( rCell, &pHandles, &nCount ) ? nCount : 0;
+	}
+
+	SIRReadOnlyVectorView<CellKey> cells( void ) const noexcept
+	{
+		return { m_cells.data(), m_cells.size() };
+	}
+	SIRReadOnlyVectorView<Handle> handles( void ) const noexcept
+	{
+		return { m_handles.data(), m_handles.size() };
+	}
+
+	SIRReadOnlyVectorView<Handle> equalRange( const CellKey& rCell ) const
+	{
+		const Handle *pHandles = nullptr;
+		uint32_t nCount = 0;
+		return find( rCell, &pHandles, &nCount ) ? SIRReadOnlyVectorView<Handle>( pHandles, nCount ) : SIRReadOnlyVectorView<Handle>();
+	}
+
 	uint32_t getCellCount( void ) const noexcept
 	{
 		return m_cells.getSize();
 	}
 
-	publicprivate :
-
-	    const sirContainerAllocator_t *m_pAllocator;
+private:
+	const sirContainerAllocator_t *m_pAllocator;
 	SIRVector<CellKey> m_cells;
 	SIRVector<uint32_t> m_offsets;
 	SIRVector<Handle> m_handles;

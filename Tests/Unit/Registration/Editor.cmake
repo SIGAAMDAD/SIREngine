@@ -173,6 +173,11 @@ target_link_libraries(SIREditorObjectInspectorTests PRIVATE SIR::EditorAuthoring
 add_test(NAME editor.objects.inherited-inspector COMMAND SIREditorObjectInspectorTests)
 sir_configure_owned_target(SIREditorObjectInspectorTests)
 
+add_executable(SIREditorAuthoringSessionTests ${PROJECT_SOURCE_DIR}/Tests/Unit/SIREditorAuthoringSessionTests.cpp)
+target_link_libraries(SIREditorAuthoringSessionTests PRIVATE SIR::EditorAuthoring)
+add_test(NAME editor.authoring.bound-session COMMAND SIREditorAuthoringSessionTests)
+sir_configure_owned_target(SIREditorAuthoringSessionTests)
+
 add_executable(SIREditorComplexWriterTests ${PROJECT_SOURCE_DIR}/Tests/Unit/SIREditorComplexWriterTests.cpp)
 target_link_libraries(SIREditorComplexWriterTests PRIVATE SIR::EditorAuthoring)
 add_test(NAME editor.scene.complex-source-writer COMMAND SIREditorComplexWriterTests)

@@ -28,6 +28,23 @@ of merchantability, fitness for a particular purpose and noninfringement.
 class SIRPackedIntegerVectorBuilder
 {
 public:
+	using size_type = uint32_t;
+
+	uint32_t size( void ) const noexcept
+	{
+		return getSize();
+	}
+
+	bool empty( void ) const noexcept
+	{
+		return getSize() == 0;
+	}
+
+	bool isEmpty( void ) const noexcept
+	{
+		return empty();
+	}
+
 	explicit SIRPackedIntegerVectorBuilder( const sirContainerAllocator_t *pAllocator ) noexcept
 	    : m_Values( pAllocator )
 	{
@@ -36,6 +53,35 @@ public:
 	SIRContainerResult tryAppend( uint64_t nValue )
 	{
 		return m_Values.tryPushBack( nValue );
+	}
+
+	using value_type = uint64_t;
+	using const_iterator = SIRVector<uint64_t>::const_iterator;
+	using iterator = const_iterator;
+
+	iterator begin( void ) const noexcept
+	{
+		return m_Values.begin();
+	}
+
+	iterator end( void ) const noexcept
+	{
+		return m_Values.end();
+	}
+
+	const_iterator cbegin( void ) const noexcept
+	{
+		return m_Values.cbegin();
+	}
+
+	const_iterator cend( void ) const noexcept
+	{
+		return m_Values.cend();
+	}
+
+	void clear( void ) noexcept
+	{
+		m_Values.clear();
 	}
 
 	uint32_t getSize( void ) const noexcept

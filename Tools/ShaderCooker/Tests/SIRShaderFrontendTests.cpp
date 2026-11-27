@@ -62,8 +62,9 @@ static bool sirCookRun( const std::filesystem::path& sRoot )
 		return false;
 	}
 	if ( !sirCookCheck( first.szFiles.size() == 2 && first.sProfile == "cs_6_6" && first.bSpirv &&
+	                        first.nCompilerKind == SIR_SHADER_COMPILER_SLANG &&
 	                        first.sExpandedSource.find( "float4 value()" ) != std::string::npos,
-	                    "flattened DXC input" ) ) {
+	                    "flattened Slang input" ) ) {
 		return false;
 	}
 	request.szDefines.clear();
@@ -170,10 +171,11 @@ static bool sirCookRun( const std::filesystem::path& sRoot )
 	if ( !sirCookCheck( sirShaderCookPreprocess( request, &second, &sError ) == SIR_SHADER_COOK_UNSUPPORTED, "reject D3D9 compute" ) ) {
 		return false;
 	}
-	request.nStage = SIR_GRAPHICS_STAGE_COMPUTE;
+	request.nStage = SIR_GRAPHICS_STAGE_VERTEX;
 	request.eBackend = SIR_GRAPHICS_BACKEND_OPENGL;
-	if ( !sirCookCheck( sirShaderCookPreprocess( request, &second, &sError ) == SIR_SHADER_COOK_UNSUPPORTED && second.szFiles.empty(),
-	                    "GL requires cross compiler" ) ) {
+	if ( !sirCookCheck( sirShaderCookPreprocess( request, &second, &sError ) == SIR_SHADER_COOK_OK && second.sProfile == "glsl_330" &&
+	                        second.eFormat == SIR_GRAPHICS_SHADER_GLSL && second.nCompilerKind == SIR_SHADER_COMPILER_SLANG,
+	                    "OpenGL GLSL 330 target" ) ) {
 		return false;
 	}
 	request.eBackend = SIR_GRAPHICS_BACKEND_VULKAN;

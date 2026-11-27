@@ -30,7 +30,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 class SIRGLTexture final : public SIRRenderTexture
 {
 public:
-	explicit SIRGLTexture( const SIRSharedPtr<SIRRenderDevice>& device, const SIRRenderTextureDesc& desc );
+	explicit SIRGLTexture( const SIRSharedPtr<SIRRenderDevice>& device, const SIRRenderTextureDesc& desc ) noexcept;
+	~SIRGLTexture() noexcept override;
 
 private:
 	GLuint m_hTextureID;

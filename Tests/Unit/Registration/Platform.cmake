@@ -110,6 +110,14 @@ add_test(NAME core.platform.window.native-host COMMAND SIRNativeWindowHostTests)
 set_tests_properties(core.platform.window.native-host PROPERTIES LABELS "core;platform;window;integration" TIMEOUT 60)
 sir_configure_owned_target(SIRNativeWindowHostTests)
 
+if(TARGET SIR::ImGuiOpenGL)
+    add_executable(SIRImGuiWindowBridgeTests ${PROJECT_SOURCE_DIR}/Tests/Unit/SIRImGuiWindowBridgeTests.cpp)
+    target_link_libraries(SIRImGuiWindowBridgeTests PRIVATE SIR::ImGuiOpenGL)
+    add_test(NAME core.platform.window.imgui-input COMMAND SIRImGuiWindowBridgeTests)
+    set_tests_properties(core.platform.window.imgui-input PROPERTIES LABELS "core;platform;window;input" TIMEOUT 60)
+    sir_configure_owned_target(SIRImGuiWindowBridgeTests)
+endif()
+
 # Window system registry and headless negative-path acceptance.
 add_executable(SIRWindowSystemTests ${PROJECT_SOURCE_DIR}/Tests/Unit/SIRWindowSystemTests.cpp)
 target_link_libraries(SIRWindowSystemTests PRIVATE SIR::Core)

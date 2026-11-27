@@ -14,6 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Core/Platform/Shared/Window/SIRNativeWindowHost.h>
+#include <Core/Input/SIRInputService.h>
 #include <stdio.h>
 
 class SIRNativeWindowHostTestDriver final : public SIRWindowDriver
@@ -59,8 +60,12 @@ public:
 			return sirWindowResult::SIR_WINDOW_INVALID_ARGUMENT;
 		}
 		++m_nPumps;
-		if ( m_bFailPump ) {
+		if ( m_bFailPump || m_nPumps == m_nFailPumpOn ) {
 			return sirWindowResult::SIR_WINDOW_NATIVE_FAILURE;
+		}
+		if ( m_bMinimizeBeforeClose && m_nPumps == 2 ) {
+			pCallback( pContext, { 0, 1, sirWindowEventKind::SIR_WINDOW_EVENT_MINIMIZED, 0, 0 } );
+			return sirWindowResult::SIR_WINDOW_OK;
 		}
 		if ( m_nPumps == 2 || m_nPumps == 3 ) {
 			for ( uint32_t i = 0; i < SIR_WINDOW_MAX_WINDOWS; ++i ) {
@@ -87,10 +92,72 @@ public:
 	bool m_bFailInit = false;
 	bool m_bFailCreate = false;
 	bool m_bFailPump = false;
+	bool m_bMinimizeBeforeClose = false;
+	uint32_t m_nFailPumpOn = 0;
 
 protected:
 private:
 };
+
+static sirNativeWindowFrameResult sirNativeWindowHostStopFrame( const sirNativeWindowFrame_t&, void * ) noexcept
+{
+	return sirNativeWindowFrameResult::STOP;
+}
+
+struct sirHostInputTest_t
+{
+	SIRNativeWindowHostTestDriver *pDriver;
+	uint32_t nFrames = 0;
+	uint32_t nReleases = 0;
+	bool bValid = true;
+};
+
+static bool sirHostBindInput( SIRInputService& input, const sirWindowNativeView_t& view, void *pContext ) noexcept
+{
+	auto& test = *static_cast<sirHostInputTest_t *>(pContext);
+	test.bValid &= view.nNativeWindow == 1 && test.pDriver->m_nPumps == 0;
+	input.text().setEnabled( true );
+	input.text().setFocused( true );
+	return true;
+}
+
+static bool sirHostCollectInput( SIRInputService& input, void * ) noexcept
+{
+	return input.text().appendCodepoint( 0x00e9 );
+}
+
+static sirNativeWindowFrameResult sirHostReadInput( const sirNativeWindowFrame_t& frame, void *pContext ) noexcept
+{
+	auto& test = *static_cast<sirHostInputTest_t *>(pContext);
+	++test.nFrames;
+	const sirInputFrame_t *pInputFrame = frame.pInput == nullptr ? nullptr : frame.pInput->frame();
+	test.bValid &= pInputFrame != nullptr && pInputFrame->nTick == test.nFrames && frame.nDeltaSeconds > 0.0f;
+	test.bValid &= frame.snapshot.bMinimized == ( test.nFrames == 2 ) && frame.native.nNativeWindow == 1;
+	if ( frame.pInput != nullptr ) {
+		const auto& text = frame.pInput->text().snapshot();
+		test.bValid &= text.nTick == test.nFrames && text.nCount == 1 && text.szCodepoints[0] == 0x00e9;
+	}
+	return sirNativeWindowFrameResult::CONTINUE;
+}
+
+static void sirHostReleaseFrame( void *pContext ) noexcept
+{
+	auto& test = *static_cast<sirHostInputTest_t *>(pContext);
+	test.bValid &= test.pDriver->m_bAlive[0] && test.pDriver->m_nDestroys == 0;
+	++test.nReleases;
+}
+
+static bool sirHostChecksInputAndTeardown( const sirWindowCreateDesc_t& desc, bool bPumpError )
+{
+	SIRNativeWindowHostTestDriver driver;
+	driver.m_bMinimizeBeforeClose = true;
+	driver.m_nFailPumpOn = bPumpError ? 3 : 0;
+	sirHostInputTest_t test{ &driver };
+	const sirNativeWindowFrameCallbacks_t callbacks{ sirHostReadInput, sirHostReleaseFrame, &test };
+	const sirNativeWindowInputHooks_t input{ sirHostBindInput, sirHostCollectInput, nullptr, nullptr, &test };
+	return SIRNativeWindowHost::runWithDriverFrame( driver, &desc, 1, callbacks, &input ) == ( bPumpError ? 1 : 0 ) &&
+	       test.bValid && test.nFrames == 2 && test.nReleases == 1 && driver.m_nDestroys == 1 && driver.m_nShutdowns == 1;
+}
 
 int main( void )
 {
@@ -99,6 +166,17 @@ int main( void )
 	if ( SIRNativeWindowHost::runWithDriver( successful, &single, 1 ) != 0 || successful.m_nInitializes != 1 ||
 	     successful.m_nCreates != 1 || successful.m_nDestroys != 1 || successful.m_nPumps != 2 || successful.m_nShutdowns != 1 ) {
 		fputs( "Editor native window: graceful close FAIL\n", stderr );
+		return 1;
+	}
+
+	SIRNativeWindowHostTestDriver callbackStop;
+	if ( SIRNativeWindowHost::runWithDriverFrame( callbackStop, &single, 1, { sirNativeWindowHostStopFrame } ) != 0 ||
+	     callbackStop.m_nDestroys != 1 || callbackStop.m_nShutdowns != 1 ) {
+		fputs( "Native frame callback cleanup FAIL\n", stderr );
+		return 1;
+	}
+	if ( !sirHostChecksInputAndTeardown( single, false ) || !sirHostChecksInputAndTeardown( single, true ) ) {
+		fputs( "Native input publication, minimized frame or terminal ordering FAIL\n", stderr );
 		return 1;
 	}
 

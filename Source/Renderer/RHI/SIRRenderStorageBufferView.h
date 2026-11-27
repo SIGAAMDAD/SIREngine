@@ -16,7 +16,6 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #ifndef __SIR_RENDER_STORAGE_BUFFER_VIEW_H__
 #define __SIR_RENDER_STORAGE_BUFFER_VIEW_H__
 
-#include "Renderer/RHI/SIRRenderTypes.h"
 #include <Core/SIRPCH.h>
 
 // clang-format off
@@ -40,35 +39,12 @@ public:
 	SIRRenderStorageBufferView& operator=( const SIRRenderStorageBufferView& ) = delete;
 	SIRRenderStorageBufferView& operator=( SIRRenderStorageBufferView&& ) = delete;
 
-	const SIRRenderStorageBuffer& getBuffer( void ) const noexcept
-	{
-		return *m_pBuffer;
-	}
+	const SIRResourcePtr<SIRRenderStorageBuffer>& getBuffer( void ) const noexcept;
+	uint64_t getOffset( void ) const noexcept;
+	uint64_t getSize( void ) const noexcept;
+	uint32_t getStride( void ) const noexcept;
 
-	uint64_t getOffset( void ) const noexcept
-	{
-		return m_nOffset;
-	}
-
-	uint64_t getSize( void ) const noexcept
-	{
-		return m_nSize;
-	}
-
-	uint32_t getStride( void ) const noexcept
-	{
-		return m_nStride;
-	}
-
-	uint64_t getUsage( void ) const noexcept
-	{
-		return m_nUsage;
-	}
-
-	const SIRRenderResource& getResource( void ) const noexcept override
-	{
-		return *m_pBuffer;
-	}
+	SIRRenderBufferUsage getUsage( void ) const noexcept;
 
 protected:
 	explicit SIRRenderStorageBufferView( const SIRSharedPtr<SIRRenderDevice>& device,
@@ -83,7 +59,7 @@ protected:
 	{
 	}
 
-	SIRSharedPtr<SIRRenderStorageBuffer> m_pBuffer;
+	SIRResourcePtr<SIRRenderStorageBuffer> m_pBuffer;
 	uint64_t m_nOffset{};
 	uint64_t m_nSize{};
 	uint32_t m_nStride{};

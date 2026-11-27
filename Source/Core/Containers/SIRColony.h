@@ -17,6 +17,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #define __SIR_COLONY_H__
 
 #include <Core/SIRPCH.h>
+#include <iterator>
+#include <type_traits>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -117,6 +119,121 @@ class SIRColony
 	}
 
 public:
+	using size_type = uint32_t;
+
+	uint32_t size( void ) const noexcept
+	{
+		return getSize();
+	}
+
+	bool empty( void ) const noexcept
+	{
+		return getSize() == 0;
+	}
+
+	bool isEmpty( void ) const noexcept
+	{
+		return empty();
+	}
+
+	using value_type = T;
+
+	using difference_type = ptrdiff_t;
+
+	template <bool IS_CONST>
+	class IteratorBase
+	{
+		template <bool> friend class IteratorBase;
+	public:
+		using value_type = T;
+		using difference_type = ptrdiff_t;
+		using iterator_category = std::forward_iterator_tag;
+		using pointer = typename std::conditional<IS_CONST, const T *, T *>::type;
+		using reference = typename std::conditional<IS_CONST, const T&, T&>::type;
+
+		IteratorBase( void ) noexcept = default;
+		IteratorBase( Block *pBlock, uint32_t iSlot ) noexcept : m_pBlock( pBlock ), m_iSlot( iSlot )
+		{
+			skipVacant();
+		}
+		template <bool OTHER_CONST, typename std::enable_if<IS_CONST && !OTHER_CONST, int>::type = 0>
+		IteratorBase( const IteratorBase<OTHER_CONST>& rOther ) noexcept : m_pBlock( rOther.m_pBlock ), m_iSlot( rOther.m_iSlot ) {}
+		reference operator*( void ) const noexcept
+		{
+			assert( m_pBlock != nullptr && m_iSlot < BLOCK_SIZE );
+			return *slot( m_pBlock, m_iSlot );
+		}
+		pointer operator->( void ) const noexcept
+		{
+			return &operator*();
+		}
+		IteratorBase& operator++( void ) noexcept
+		{
+			++m_iSlot;
+			skipVacant();
+			return *this;
+		}
+		IteratorBase operator++( int ) noexcept
+		{
+			IteratorBase old( *this );
+			++*this;
+			return old;
+		}
+		bool operator==( const IteratorBase& rOther ) const noexcept
+		{
+			return m_pBlock == rOther.m_pBlock && m_iSlot == rOther.m_iSlot;
+		}
+		bool operator!=( const IteratorBase& rOther ) const noexcept
+		{
+			return !( *this == rOther );
+		}
+
+	private:
+		Block *m_pBlock = nullptr;
+		uint32_t m_iSlot = 0;
+		void skipVacant( void ) noexcept
+		{
+			while ( m_pBlock != nullptr ) {
+				while ( m_iSlot < BLOCK_SIZE ) {
+					if ( ( m_pBlock->nOccupied & ( uint64_t( 1 ) << m_iSlot ) ) != 0 )
+					{
+						return;
+					}
+					++m_iSlot;
+				}
+				m_pBlock = m_pBlock->pNext;
+				m_iSlot = 0;
+			}
+		}
+	};
+
+	using iterator = IteratorBase<false>;
+	using const_iterator = IteratorBase<true>;
+	iterator begin( void ) noexcept
+	{
+		return { m_pFirst, 0 };
+	}
+	iterator end( void ) noexcept
+	{
+		return {};
+	}
+	const_iterator begin( void ) const noexcept
+	{
+		return { m_pFirst, 0 };
+	}
+	const_iterator end( void ) const noexcept
+	{
+		return {};
+	}
+	const_iterator cbegin( void ) const noexcept
+	{
+		return begin();
+	}
+	const_iterator cend( void ) const noexcept
+	{
+		return end();
+	}
+
 	struct Handle
 	{
 		T *pValue = nullptr;
@@ -280,14 +397,20 @@ public:
 	}
 
 	template <typename Visitor>
+	void forEach( Visitor&& visitor )
+	{
+		for ( T& rValue : *this )
+		{
+			visitor( rValue );
+		}
+	}
+
+	template <typename Visitor>
 	void forEach( Visitor&& visitor ) const
 	{
-		for ( Block *pBlock = m_pFirst; pBlock != nullptr; pBlock = pBlock->pNext ) {
-			uint64_t nLive = pBlock->nOccupied;
-			while ( nLive != 0 ) {
-				visitor( *slot( pBlock, firstOccupiedBit( nLive ) ) );
-				nLive &= nLive - 1;
-			}
+		for ( const T& rValue : *this )
+		{
+			visitor( rValue );
 		}
 	}
 

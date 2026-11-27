@@ -17,6 +17,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #define __SIR_PAGEDARRAY_H__
 
 #include <Core/SIRPCH.h>
+#include <Core/Containers/SIRIndexedContainerIterator.h>
+#include <iterator>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -33,6 +35,136 @@ template <typename T, uint32_t PAGE_ELEMENTS = 256>
 class SIRPagedArray
 {
 public:
+	using size_type = uint32_t;
+
+	uint32_t size( void ) const noexcept
+	{
+		return getSize();
+	}
+
+	bool empty( void ) const noexcept
+	{
+		return getSize() == 0;
+	}
+
+	bool isEmpty( void ) const noexcept
+	{
+		return empty();
+	}
+
+	using value_type = T;
+	using difference_type = ptrdiff_t;
+	using reference = T&;
+	using const_reference = const T&;
+	using pointer = T *;
+	using const_pointer = const T *;
+	using iterator = SIRIndexedContainerIterator<SIRPagedArray<T, PAGE_ELEMENTS>, false>;
+	using const_iterator = SIRIndexedContainerIterator<SIRPagedArray<T, PAGE_ELEMENTS>, true>;
+
+	iterator begin( void ) noexcept
+	{
+		return { this, 0 };
+	}
+	iterator end( void ) noexcept
+	{
+		return { this, size() };
+	}
+	const_iterator begin( void ) const noexcept
+	{
+		return { this, 0 };
+	}
+	const_iterator end( void ) const noexcept
+	{
+		return { this, size() };
+	}
+	const_iterator cbegin( void ) const noexcept
+	{
+		return begin();
+	}
+	const_iterator cend( void ) const noexcept
+	{
+		return end();
+	}
+
+	using reverse_iterator = std::reverse_iterator<iterator>;
+	using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+	reverse_iterator rbegin( void ) noexcept
+	{
+		return reverse_iterator( end() );
+	}
+	reverse_iterator rend( void ) noexcept
+	{
+		return reverse_iterator( begin() );
+	}
+	const_reverse_iterator rbegin( void ) const noexcept
+	{
+		return const_reverse_iterator( end() );
+	}
+	const_reverse_iterator rend( void ) const noexcept
+	{
+		return const_reverse_iterator( begin() );
+	}
+	const_reverse_iterator crbegin( void ) const noexcept
+	{
+		return rbegin();
+	}
+	const_reverse_iterator crend( void ) const noexcept
+	{
+		return rend();
+	}
+
+	T& operator[]( uint32_t iIndex ) noexcept
+	{
+		assert( iIndex < size() );
+		return *tryGet( iIndex );
+	}
+
+	const T& operator[]( uint32_t iIndex ) const noexcept
+	{
+		assert( iIndex < size() );
+		return *tryGet( iIndex );
+	}
+
+	T *tryAt( uint32_t iIndex ) noexcept
+	{
+		return tryGet( iIndex );
+	}
+	const T *tryAt( uint32_t iIndex ) const noexcept
+	{
+		return tryGet( iIndex );
+	}
+
+
+	T *tryFront( void ) noexcept
+	{
+		return tryGet( 0 );
+	}
+
+	T *tryBack( void ) noexcept
+	{
+		return empty() ? nullptr : tryGet( size() - 1 );
+	}
+
+	const T *tryFront( void ) const noexcept
+	{
+		return tryGet( 0 );
+	}
+
+	const T *tryBack( void ) const noexcept
+	{
+		return empty() ? nullptr : tryGet( size() - 1 );
+	}
+
+	SIRContainerResult tryPushBack( const T& rValue )
+	{
+		return tryEmplaceBack( rValue );
+	}
+
+	SIRContainerResult tryPushBack( T&& rValue )
+	{
+		return tryEmplaceBack( std::move( rValue ) );
+	}
+
 	explicit SIRPagedArray( const sirContainerAllocator_t *pAllocator ) noexcept
 	    : m_pages( pAllocator ),
 	      m_pAllocator( pAllocator )

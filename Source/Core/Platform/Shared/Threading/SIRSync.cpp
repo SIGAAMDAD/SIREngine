@@ -16,7 +16,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Platform/Shared/Threading/SIRSync.h>
 #include <Core/Platform/Shared/Threading/SIRThread.h>
 
-SIRSpinLock::SIRSpinLock( void ) noexcept : m_Lock( false )
+SIRSpinLock::SIRSpinLock( void ) noexcept
+    : m_Lock( false )
 {
 }
 

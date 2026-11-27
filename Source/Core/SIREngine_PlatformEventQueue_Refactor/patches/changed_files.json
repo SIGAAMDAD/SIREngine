@@ -1,0 +1,26 @@
+{
+  "original_archive_changed": [
+    "Linux/Window/SIRNativeInputDriverWayland.cpp",
+    "Linux/Window/SIRNativeInputDriverWayland.h",
+    "Linux/Window/SIRNativeInputDriverX11.cpp",
+    "Linux/Window/SIRNativeInputDriverX11.h",
+    "Linux/Window/SIRNativeInputEvdevGamepadDriver.cpp",
+    "Linux/Window/SIRNativeInputEvdevGamepadDriver.h",
+    "Linux/Window/SIRNativeWindowDriverX11.cpp",
+    "Linux/Window/SIRNativeWindowDriverX11.h",
+    "Shared/Window/SIRNativeInputDriver.h",
+    "Shared/Window/SIRNativeWindowDriver.h"
+  ],
+  "incremental_changed": [
+    "Linux/Window/SIRNativeInputDriverWayland.cpp",
+    "Linux/Window/SIRNativeInputDriverWayland.h",
+    "Linux/Window/SIRNativeInputDriverX11.cpp",
+    "Linux/Window/SIRNativeInputDriverX11.h",
+    "Linux/Window/SIRNativeInputEvdevGamepadDriver.cpp",
+    "Linux/Window/SIRNativeInputEvdevGamepadDriver.h",
+    "Linux/Window/SIRNativeWindowDriverX11.cpp",
+    "Linux/Window/SIRNativeWindowDriverX11.h",
+    "Shared/Window/SIRNativeInputDriver.h",
+    "Shared/Window/SIRNativeWindowDriver.h"
+  ]
+}

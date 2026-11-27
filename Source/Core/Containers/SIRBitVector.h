@@ -30,6 +30,23 @@ of merchantability, fitness for a particular purpose and noninfringement.
 class SIRBitVector
 {
 public:
+	using size_type = uint32_t;
+
+	uint32_t size( void ) const noexcept
+	{
+		return getSize();
+	}
+
+	bool empty( void ) const noexcept
+	{
+		return getSize() == 0;
+	}
+
+	bool isEmpty( void ) const noexcept
+	{
+		return empty();
+	}
+
 	explicit SIRBitVector( const sirContainerAllocator_t *pAllocator ) noexcept
 	    : m_words( pAllocator )
 	{
@@ -76,6 +93,65 @@ public:
 			m_words[iBit / 64] &= ~nMask;
 		}
 		return SIRContainerResult::SIR_CONTAINER_OK;
+	}
+
+	using value_type = bool;
+
+	bool any( void ) const noexcept
+	{
+		return findFirstSet() != UINT32_MAX;
+	}
+	bool none( void ) const noexcept
+	{
+		return !any();
+	}
+	bool all( void ) const noexcept
+	{
+		return count() == size();
+	}
+	bool contains( uint32_t iBit ) const noexcept
+	{
+		return test( iBit );
+	}
+
+	SIRContainerResult tryReset( uint32_t iBit ) noexcept
+	{
+		return trySet( iBit, false );
+	}
+	SIRContainerResult tryFlip( uint32_t iBit ) noexcept
+	{
+		if ( iBit >= size() )
+		{
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
+		}
+		return trySet( iBit, !test( iBit ) );
+	}
+
+	void setAll( void ) noexcept
+	{
+		for ( uint32_t iWord = 0; iWord < m_words.size(); ++iWord ) {
+			m_words[iWord] = UINT64_MAX;
+		}
+		if ( !m_words.empty() )
+		{
+			m_words.back() &= SIRBitWords::maskTail( m_nBits % 64 );
+		}
+	}
+
+	void flipAll( void ) noexcept
+	{
+		for ( uint32_t iWord = 0; iWord < m_words.size(); ++iWord ) {
+			m_words[iWord] = ~m_words[iWord];
+		}
+		if ( !m_words.empty() )
+		{
+			m_words.back() &= SIRBitWords::maskTail( m_nBits % 64 );
+		}
+	}
+
+	void reset( void ) noexcept
+	{
+		clear();
 	}
 
 	uint32_t count( void ) const noexcept

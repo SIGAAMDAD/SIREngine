@@ -22,7 +22,10 @@ int main( int nArgs, const char *const *pszArgs )
 	std::string sOutput;
 	std::string sInput;
 	std::string sProfile;
+	std::string sReflection;
+	std::string sStage;
 	bool bSpirv = false;
+	bool bSlang = false;
 	bool bCompilerFlags = false;
 	bool bFxc = false;
 	bool bForceCorrupt = false;
@@ -32,26 +35,46 @@ int main( int nArgs, const char *const *pszArgs )
 	bool bUnaligned = false;
 	for ( int iArg = 1; iArg < nArgs; ++iArg ) {
 		const std::string sArg = pszArgs[iArg];
-		if ( ( sArg == "-Fo" || sArg == "/Fo" ) && iArg + 1 < nArgs ) {
+		if ( ( sArg == "-Fo" || sArg == "/Fo" || sArg == "-o" ) && iArg + 1 < nArgs ) {
 			sOutput = pszArgs[++iArg];
+			bSlang |= sArg == "-o";
 		} else if ( ( sArg == "-T" || sArg == "/T" ) && iArg + 1 < nArgs ) {
 			sProfile = pszArgs[++iArg];
+		} else if ( sArg == "-profile" && iArg + 1 < nArgs ) {
+			bSlang = true;
+			sProfile = pszArgs[++iArg];
+		} else if ( sArg == "-target" && iArg + 1 < nArgs ) {
+			bSpirv = std::strcmp( pszArgs[++iArg], "spirv" ) == 0;
+		} else if ( sArg == "-stage" && iArg + 1 < nArgs ) {
+			sStage = pszArgs[++iArg];
+		} else if ( sArg == "-reflection-json" && iArg + 1 < nArgs ) {
+			sReflection = pszArgs[++iArg];
 		} else if ( sArg == "-spirv" ) {
 			bSpirv = true;
 		} else if ( sArg == "-HV" && iArg + 1 < nArgs ) {
 			bCompilerFlags = std::strcmp( pszArgs[++iArg], "2021" ) == 0;
 		} else if ( sArg == "-fspv-target-env=vulkan1.3" || sArg == "-O3" || sArg == "-nologo" || sArg == "/O3" || sArg == "/nologo" ) {
+			if ( sArg == "-O3" ) {
+				bCompilerFlags = true;
+			}
 			if ( sArg == "/O3" || sArg == "/nologo" ) {
 				bFxc = true;
 				bCompilerFlags = true;
 			}
 			continue;
-		} else if ( ( sArg == "-E" || sArg == "/E" ) && iArg + 1 < nArgs ) {
+		} else if ( ( sArg == "-E" || sArg == "/E" || sArg == "-entry" ) && iArg + 1 < nArgs ) {
 			if ( std::strcmp( pszArgs[++iArg], "main" ) != 0 ) {
 				return 4;
 			}
 		} else if ( ( sArg == "-D" || sArg == "/D" ) && iArg + 1 < nArgs ) {
 			const std::string sDefinition = pszArgs[++iArg];
+			bForceCorrupt |= sDefinition == "CORRUPT=1";
+			bForceFailure |= sDefinition == "FAIL=1";
+			bNoOutput |= sDefinition == "NO_OUTPUT=1";
+			bShortOutput |= sDefinition == "SHORT=1";
+			bUnaligned |= sDefinition == "UNALIGNED=1";
+		} else if ( sArg.rfind( "-D", 0 ) == 0 && sArg.size() > 2 ) {
+			const std::string sDefinition = sArg.substr( 2 );
 			bForceCorrupt |= sDefinition == "CORRUPT=1";
 			bForceFailure |= sDefinition == "FAIL=1";
 			bNoOutput |= sDefinition == "NO_OUTPUT=1";
@@ -65,7 +88,9 @@ int main( int nArgs, const char *const *pszArgs )
 	const bool bFxcProfile = bLegacy || sProfile == "vs_5_0" || sProfile == "ps_5_0" || sProfile == "cs_5_0" || sProfile == "gs_5_0" ||
 	                         sProfile == "hs_5_0" || sProfile == "ds_5_0" || sProfile == "vs_4_0" || sProfile == "ps_4_0" ||
 	                         sProfile == "gs_4_0";
-	if ( sOutput.empty() || sInput.empty() || !bCompilerFlags || ( bFxc ? !bFxcProfile || bSpirv : sProfile != "cs_6_6" ) ) {
+	if ( sOutput.empty() || sInput.empty() || !bCompilerFlags ||
+	     ( bSlang ? !bSpirv || sProfile != "sm_6_6" || sStage != "compute" || sReflection.empty()
+	              : bFxc ? !bFxcProfile || bSpirv : sProfile != "cs_6_6" ) ) {
 		return 2;
 	}
 	std::ifstream input( sInput, std::ios::binary );
@@ -77,6 +102,13 @@ int main( int nArgs, const char *const *pszArgs )
 	}
 	if ( bNoOutput ) {
 		return 0;
+	}
+	if ( bSlang ) {
+		std::ofstream reflection( sReflection, std::ios::binary );
+		reflection << "{\"entryPoints\":[{\"name\":\"main\"}]}\n";
+		if ( !reflection ) {
+			return 5;
+		}
 	}
 	std::ofstream output( sOutput, std::ios::binary );
 	const char szSpirvMagic[4] = { 3, 2, 0x23, 7 };

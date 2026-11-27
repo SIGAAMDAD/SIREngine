@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#ifndef __SIR_INPUTTYPES_H__
-#define __SIR_INPUTTYPES_H__
+#ifndef __SIR_INPUT_TYPES_H__
+#define __SIR_INPUT_TYPES_H__
 
 #include <Core/SIRPCH.h>
 
@@ -24,7 +24,12 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-// The platform-independent wire contract. Native device handles never cross here.
+#include <Core/Platform/Shared/Window/SIRInputCodes.h>
+
+// Engine input storage and device identity contracts.
+// Native input drivers publish SIREventData; Core/Input consumes it to build
+// these device records and frame snapshots. Virtual actions and keybindings
+// are resolved by Core/Input and are not part of this physical-input wire ABI.
 constexpr uint32_t SIR_INPUT_DEVICE_CAPACITY = 32;
 constexpr uint32_t SIR_INPUT_BACKEND_CAPACITY = 8;
 constexpr uint32_t SIR_INPUT_EVENT_CAPACITY = 2048;
@@ -34,13 +39,15 @@ constexpr uint32_t SIR_INPUT_AXIS_CAPACITY = 16;
 constexpr uint32_t SIR_INPUT_USER_CAPACITY = 8;
 constexpr uint32_t SIR_INPUT_NO_USER = UINT32_MAX;
 
-enum class SIRInputDeviceClass : uint8_t {
+enum class SIRInputDeviceClass : uint8_t
+{
 	SIR_INPUT_KEYBOARD = 0,
 	SIR_INPUT_POINTER = 1,
 	SIR_INPUT_CONTROLLER = 2
 };
 
-enum class SIRInputSignal : uint8_t {
+enum class SIRInputSignal : uint8_t
+{
 	SIR_INPUT_CONNECTED = 0,
 	SIR_INPUT_DISCONNECTED = 1,
 	SIR_INPUT_BUTTON = 2,
@@ -50,7 +57,8 @@ enum class SIRInputSignal : uint8_t {
 	SIR_INPUT_RESYNC = 6
 };
 
-enum class SIRInputBackendId : uint8_t {
+enum class SIRInputBackendId : uint8_t
+{
 	SIR_INPUT_WIN_RAW = 1,
 	SIR_INPUT_WIN_XINPUT = 2,
 	SIR_INPUT_WIN_GAMEINPUT = 3,
@@ -61,37 +69,6 @@ enum class SIRInputBackendId : uint8_t {
 	SIR_INPUT_LINUX_HIDRAW = 8,
 	SIR_INPUT_SDL3 = 9,
 	SIR_INPUT_TEST = 250
-};
-
-enum class SIRInputControllerControl : uint16_t {
-	SIR_INPUT_PAD_SOUTH = 0,
-	SIR_INPUT_PAD_EAST = 1,
-	SIR_INPUT_PAD_WEST = 2,
-	SIR_INPUT_PAD_NORTH = 3,
-	SIR_INPUT_PAD_LB = 4,
-	SIR_INPUT_PAD_RB = 5,
-	SIR_INPUT_PAD_BACK = 6,
-	SIR_INPUT_PAD_START = 7,
-	SIR_INPUT_PAD_GUIDE = 8,
-	SIR_INPUT_PAD_L3 = 9,
-	SIR_INPUT_PAD_R3 = 10,
-	SIR_INPUT_PAD_DPAD_UP = 11,
-	SIR_INPUT_PAD_DPAD_DOWN = 12,
-	SIR_INPUT_PAD_DPAD_LEFT = 13,
-	SIR_INPUT_PAD_DPAD_RIGHT = 14,
-	SIR_INPUT_PAD_LT_BUTTON = 15,
-	SIR_INPUT_PAD_RT_BUTTON = 16,
-	SIR_INPUT_PAD_BUTTON_COUNT = 17
-};
-
-enum class SIRInputAxisCode : uint16_t {
-	SIR_INPUT_AXIS_LX = 0,
-	SIR_INPUT_AXIS_LY = 1,
-	SIR_INPUT_AXIS_RX = 2,
-	SIR_INPUT_AXIS_RY = 3,
-	SIR_INPUT_AXIS_LT = 4,
-	SIR_INPUT_AXIS_RT = 5,
-	SIR_INPUT_AXIS_COUNT = 6
 };
 
 typedef struct sirInputDeviceId_s
@@ -108,7 +85,8 @@ typedef struct sirInputHardwareKey_s
 	SIRInputDeviceClass eClass;
 } sirInputHardwareKey_t;
 
-enum class SIRInputClockSource : uint8_t {
+enum class SIRInputClockSource : uint8_t
+{
 	SIR_INPUT_CLOCK_ENGINE_MONOTONIC = 0,
 	SIR_INPUT_CLOCK_EVDEV_MONOTONIC = 1,
 	SIR_INPUT_CLOCK_GAMEINPUT = 2
@@ -132,6 +110,10 @@ typedef struct sirInputEvent_s
 	uint64_t nReceivedNs;
 	int32_t nValue;
 	int32_t nValueY;
+	// Physical control ordinal in the domain selected by eClass/eSignal:
+	// keyboard = SIRScancode, pointer button = SIRMouseButton,
+	// controller button = SIRGamepadButton, axis = SIRGamepadAxis.
+	// SIRKeycode is 32-bit and MUST NOT be truncated into this field.
 	uint16_t nControl;
 	SIRInputSignal eSignal;
 	SIRInputDeviceClass eClass;
@@ -173,4 +155,10 @@ typedef struct sirInputFrame_s
 	uint32_t nUsers[SIR_INPUT_DEVICE_CAPACITY];
 } sirInputFrame_t;
 
-#endif // __SIR_INPUTTYPES_H__
+static_assert( sizeof( sirInputDeviceId_t ) == 8, "Input device handle ABI changed" );
+static_assert( sizeof( sirInputHardwareKey_t ) == 24, "Hardware key ABI changed" );
+static_assert( sizeof( sirInputTimestamp_t ) == 24, "Input timestamp ABI changed" );
+static_assert( SIR_INPUT_BUTTON_CAPACITY % 32 == 0, "Button bitmap capacity must be word-aligned" );
+static_assert( SIR_INPUT_BUTTON_CAPACITY >= static_cast<uint32_t>( SIRScancode::Count ), "Physical key bitmap is too small" );
+
+#endif // __SIR_INPUT_TYPES_H__

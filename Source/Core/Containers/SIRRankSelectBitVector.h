@@ -65,6 +65,23 @@ class SIRRankSelectBitVector
 	}
 
 public:
+	using size_type = uint32_t;
+
+	uint32_t size( void ) const noexcept
+	{
+		return getSize();
+	}
+
+	bool empty( void ) const noexcept
+	{
+		return getSize() == 0;
+	}
+
+	bool isEmpty( void ) const noexcept
+	{
+		return empty();
+	}
+
 	explicit SIRRankSelectBitVector( const sirContainerAllocator_t *pAllocator ) noexcept
 	    : m_pAllocator( pAllocator ),
 	      m_words( pAllocator ),
@@ -199,6 +216,42 @@ public:
 	bool contains( uint32_t iBit ) const noexcept
 	{
 		return iBit < m_nBits && ( m_words[iBit / 64] & ( uint64_t( 1 ) << ( iBit % 64 ) ) ) != 0;
+	}
+
+	using value_type = bool;
+
+	bool operator[]( uint32_t iIndex ) const noexcept
+	{
+		assert( iIndex < m_nBits );
+		return contains( iIndex );
+	}
+
+	uint64_t count( void ) const noexcept
+	{
+		return getOnes();
+	}
+
+	bool any( void ) const noexcept
+	{
+		return getOnes() != 0;
+	}
+
+	bool none( void ) const noexcept
+	{
+		return getOnes() == 0;
+	}
+
+	bool all( void ) const noexcept
+	{
+		return getOnes() == m_nBits;
+	}
+
+	template <typename Visitor>
+	void forEach( Visitor&& visitor ) const
+	{
+		for ( uint32_t iIndex = 0; iIndex < m_nBits; ++iIndex ) {
+			visitor( contains( iIndex ) );
+		}
 	}
 
 	uint32_t getSize( void ) const noexcept

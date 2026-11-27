@@ -23,8 +23,16 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 
 SIRFreeListAllocator::SIRFreeListAllocator( void )
-    : m_pSegment( nullptr ), m_pBase( nullptr ), m_nCommittedBytes( 0 ), m_nCapacityBytes( 0 ), m_nIncrementBytes( 0 ),
-      m_nNonemptyClasses( 0 ), m_nFreeHeads{}, m_nLastBlock( SIRHeapBlock::NONE ), m_nAllocatedBlockBytes( 0 ), m_nAllocationCount( 0 )
+    : m_pSegment( nullptr ),
+      m_pBase( nullptr ),
+      m_nCommittedBytes( 0 ),
+      m_nCapacityBytes( 0 ),
+      m_nIncrementBytes( 0 ),
+      m_nNonemptyClasses( 0 ),
+      m_nFreeHeads{},
+      m_nLastBlock( SIRHeapBlock::NONE ),
+      m_nAllocatedBlockBytes( 0 ),
+      m_nAllocationCount( 0 )
 {
 	for ( uint32_t i = 0; i < SIR_FREE_CLASSES; ++i ) {
 		m_nFreeHeads[i] = SIRHeapBlock::NONE;
@@ -33,8 +41,7 @@ SIRFreeListAllocator::SIRFreeListAllocator( void )
 
 bool SIRFreeListAllocator::init( SIRMemorySegment *pSegment, uint32_t nCommitIncrementBytes )
 {
-	if ( m_pSegment != nullptr || pSegment == nullptr || pSegment->getReservedBytes() >= UINT32_MAX - 15 ||
-	     pSegment->getReservedBytes() < SIRHeapBlock::MINIMUM ) {
+	if ( m_pSegment != nullptr || pSegment == nullptr || pSegment->getReservedBytes() >= UINT32_MAX - 15 || pSegment->getReservedBytes() < SIRHeapBlock::MINIMUM ) {
 		return false;
 	}
 	uint64_t nIncrement = 0;
@@ -49,15 +56,14 @@ bool SIRFreeListAllocator::init( SIRMemorySegment *pSegment, uint32_t nCommitInc
 		if ( nRoundValue > UINT64_MAX - nPadding ) {
 			return false;
 		}
-		nIncrement = nRoundValue <= UINT64_MAX - ( nRoundMultiple - 1 ) ? SIR_ROUND_UP_MULTIPLE( nRoundValue, nRoundMultiple )
-		                                                                : nRoundValue + nPadding;
+		nIncrement = nRoundValue <= UINT64_MAX - ( nRoundMultiple - 1 ) ? SIR_ROUND_UP_MULTIPLE( nRoundValue, nRoundMultiple ) : nRoundValue + nPadding;
 	}
 	if ( nIncrement > UINT32_MAX ) {
 		return false;
 	}
 	m_pSegment = pSegment;
-	m_pBase = static_cast<uint8_t *>(  pSegment->getBase()  );
-	m_nCapacityBytes = static_cast<uint32_t>(  pSegment->getReservedBytes()  );
+	m_pBase = static_cast<uint8_t *>( pSegment->getBase() );
+	m_nCapacityBytes = static_cast<uint32_t>( pSegment->getReservedBytes() );
 	m_nIncrementBytes = static_cast<uint32_t>( nIncrement );
 	return true;
 }
@@ -80,7 +86,7 @@ uint32_t SIRFreeListAllocator::classForSize( uint32_t nBytes )
 	_BitScanReverse( &nLeading, nValue );
 	const uint32_t nLog = static_cast<uint32_t>( nLeading );
 #else
-	const uint32_t nLog = 31u - ( static_cast<uint32_t>(  __builtin_clz( nValue )  ) );
+	const uint32_t nLog = 31u - ( static_cast<uint32_t>( __builtin_clz( nValue ) ) );
 #endif
 	const uint32_t nRangeBase = 1u << nLog;
 	const uint32_t nSubClass = ( nValue - nRangeBase ) >= ( nRangeBase >> 1 ) ? 1u : 0u;
@@ -94,7 +100,7 @@ uint32_t SIRFreeListAllocator::lowestSetBit( uint64_t nMask )
 	_BitScanForward64( &nBit, nMask );
 	return static_cast<uint32_t>( nBit );
 #else
-	return static_cast<uint32_t>(  __builtin_ctzll( nMask )  );
+	return static_cast<uint32_t>( __builtin_ctzll( nMask ) );
 #endif
 }
 
@@ -148,8 +154,7 @@ bool SIRFreeListAllocator::requiredBytes( uint32_t nBytes, uint32_t nAlignment, 
 	}
 	const uint64_t nWorst = ( static_cast<uint64_t>( SIRHeapBlock::HEADER ) ) + nBytes + ( nAlignment > 16 ? nAlignment - 16 : 0 );
 	uint64_t nRounded = 0;
-	if ( !SIR_IS_POWER_OF_TWO( 16 ) || static_cast<uint64_t>( 16 ) > UINTPTR_MAX ||
-	     static_cast<uint64_t>( nWorst ) > UINTPTR_MAX - ( static_cast<uint64_t>( 16 ) - 1 ) ) {
+	if ( !SIR_IS_POWER_OF_TWO( 16 ) || static_cast<uint64_t>( 16 ) > UINTPTR_MAX || static_cast<uint64_t>( nWorst ) > UINTPTR_MAX - ( static_cast<uint64_t>( 16 ) - 1 ) ) {
 		return false;
 	}
 	nRounded = SIR_ALIGN_UP( nWorst, 16 );
@@ -164,15 +169,14 @@ uint32_t SIRFreeListAllocator::usedBytes( uint32_t nOffset, uint32_t nBytes, uin
 {
 	uint64_t nUserAddress = 0;
 	if ( !SIR_IS_POWER_OF_TWO( nAlignment ) || static_cast<uint64_t>( nAlignment ) > UINTPTR_MAX ||
-	     ( uint64_t )( reinterpret_cast<uintptr_t>(m_pBase) + nOffset + 16 ) > UINTPTR_MAX - ( static_cast<uint64_t>( nAlignment )-1 ) ) {
+	     ( uint64_t )( reinterpret_cast<uintptr_t>( m_pBase ) + nOffset + 16 ) > UINTPTR_MAX - ( static_cast<uint64_t>( nAlignment ) - 1 ) ) {
 		return 0;
 	}
-	nUserAddress = SIR_ALIGN_UP( reinterpret_cast<uintptr_t>(m_pBase) + nOffset + 16, nAlignment );
-	const uint64_t nUserOffset = nUserAddress - reinterpret_cast<uintptr_t>(m_pBase);
+	nUserAddress = SIR_ALIGN_UP( reinterpret_cast<uintptr_t>( m_pBase ) + nOffset + 16, nAlignment );
+	const uint64_t nUserOffset = nUserAddress - reinterpret_cast<uintptr_t>( m_pBase );
 	const uint64_t nEnd = nUserOffset + nBytes - nOffset;
 	uint64_t nUsed = 0;
-	if ( !SIR_IS_POWER_OF_TWO( 16 ) || static_cast<uint64_t>( 16 ) > UINTPTR_MAX ||
-	     static_cast<uint64_t>( nEnd ) > UINTPTR_MAX - ( static_cast<uint64_t>( 16 ) - 1 ) ) {
+	if ( !SIR_IS_POWER_OF_TWO( 16 ) || static_cast<uint64_t>( 16 ) > UINTPTR_MAX || static_cast<uint64_t>( nEnd ) > UINTPTR_MAX - ( static_cast<uint64_t>( 16 ) - 1 ) ) {
 		return 0;
 	}
 	nUsed = SIR_ALIGN_UP( nEnd, 16 );
@@ -185,9 +189,7 @@ uint32_t SIRFreeListAllocator::usedBytes( uint32_t nOffset, uint32_t nBytes, uin
 
 bool SIRFreeListAllocator::grow( uint32_t nMinimumBytes )
 {
-	const uint32_t nTailFree = m_nLastBlock != SIRHeapBlock::NONE && SIRHeapBlock::isFree( block( m_nLastBlock ) )
-	                               ? SIRHeapBlock::size( block( m_nLastBlock ) )
-	                               : 0;
+	const uint32_t nTailFree = m_nLastBlock != SIRHeapBlock::NONE && SIRHeapBlock::isFree( block( m_nLastBlock ) ) ? SIRHeapBlock::size( block( m_nLastBlock ) ) : 0;
 	uint64_t nRequired = nMinimumBytes > nTailFree ? nMinimumBytes - nTailFree : m_pSegment->getPageSize();
 	const uint32_t nOld = m_nCommittedBytes;
 	if ( nRequired > m_nCapacityBytes - nOld ) {
@@ -206,10 +208,9 @@ bool SIRFreeListAllocator::grow( uint32_t nMinimumBytes )
 		if ( nRoundValue > UINT64_MAX - nPadding ) {
 			return false;
 		}
-		nGrow = nRoundValue <= UINT64_MAX - ( nRoundMultiple - 1 ) ? SIR_ROUND_UP_MULTIPLE( nRoundValue, nRoundMultiple )
-		                                                           : nRoundValue + nPadding;
+		nGrow = nRoundValue <= UINT64_MAX - ( nRoundMultiple - 1 ) ? SIR_ROUND_UP_MULTIPLE( nRoundValue, nRoundMultiple ) : nRoundValue + nPadding;
 	}
-	if ( !SIR_IS_POWER_OF_TWO( m_pSegment->getPageSize() ) || static_cast<uint64_t>(  m_pSegment->getPageSize()  ) > UINTPTR_MAX ||
+	if ( !SIR_IS_POWER_OF_TWO( m_pSegment->getPageSize() ) || static_cast<uint64_t>( m_pSegment->getPageSize() ) > UINTPTR_MAX ||
 	     ( uint64_t )( static_cast<uint64_t>( nOld ) + nGrow ) > UINTPTR_MAX - ( ( uint64_t )( m_pSegment->getPageSize() ) - 1 ) ) {
 		return false;
 	}
@@ -232,8 +233,7 @@ bool SIRFreeListAllocator::grow( uint32_t nMinimumBytes )
 			if ( nRoundValue > UINT64_MAX - nPadding ) {
 				return false;
 			}
-			nGrow = nRoundValue <= UINT64_MAX - ( nRoundMultiple - 1 ) ? SIR_ROUND_UP_MULTIPLE( nRoundValue, nRoundMultiple )
-			                                                           : nRoundValue + nPadding;
+			nGrow = nRoundValue <= UINT64_MAX - ( nRoundMultiple - 1 ) ? SIR_ROUND_UP_MULTIPLE( nRoundValue, nRoundMultiple ) : nRoundValue + nPadding;
 		}
 		if ( nGrow > m_nCapacityBytes - nOld || !m_pSegment->commit( nOld, nGrow ) ) {
 			return false;
@@ -293,7 +293,7 @@ void *SIRFreeListAllocator::alloc( uint32_t nBytes, uint32_t nAlignment )
 	}
 	// The 16 exact bins can use their head without scanning or alignment math.
 	// Coarse classes retain block-by-block checks for suitability.
-	const uint32_t nMinimum = nAlignment <= 16 ? nWorst : ( static_cast<uint32_t>(SIR_ALIGN_UP( static_cast<uint64_t>(nBytes) + 16ull, 16ull ) ));
+	const uint32_t nMinimum = nAlignment <= 16 ? nWorst : ( static_cast<uint32_t>( SIR_ALIGN_UP( static_cast<uint64_t>( nBytes ) + 16ull, 16ull ) ) );
 	const uint32_t nFirstClass = classForSize( nMinimum < SIRHeapBlock::MINIMUM ? SIRHeapBlock::MINIMUM : nMinimum );
 	for ( uint32_t nAttempt = 0; nAttempt < 2; ++nAttempt ) {
 		// Common exact-bin requests resolve at the class head in constant time.
@@ -311,8 +311,7 @@ void *SIRFreeListAllocator::alloc( uint32_t nBytes, uint32_t nAlignment )
 			const uint32_t nClass = lowestSetBit( nClasses );
 			for ( uint32_t nIndex = m_nFreeHeads[nClass]; nIndex != SIRHeapBlock::NONE; nIndex = block( nIndex )->nNextFreeOffset ) {
 				uint32_t nUserOffset = 0;
-				const uint32_t nUsed =
-				    nAlignment <= 16 ? ( nUserOffset = nIndex + 16, nMinimum ) : usedBytes( nIndex, nBytes, nAlignment, &nUserOffset );
+				const uint32_t nUsed = nAlignment <= 16 ? ( nUserOffset = nIndex + 16, nMinimum ) : usedBytes( nIndex, nBytes, nAlignment, &nUserOffset );
 				if ( nUsed != 0 && nUsed <= SIRHeapBlock::size( block( nIndex ) ) ) {
 					return allocateBlock( nIndex, nUsed, nUserOffset, nClass );
 				}
@@ -331,8 +330,8 @@ bool SIRFreeListAllocator::free( void *pMemory )
 	if ( m_pSegment == nullptr || pMemory == nullptr || m_nAllocationCount == 0 ) {
 		return false;
 	}
-	const uintptr_t nBase = reinterpret_cast<uintptr_t>(m_pBase);
-	const uintptr_t nUser = reinterpret_cast<uintptr_t>(pMemory);
+	const uintptr_t nBase = reinterpret_cast<uintptr_t>( m_pBase );
+	const uintptr_t nUser = reinterpret_cast<uintptr_t>( pMemory );
 	if ( nUser < nBase + 16 || nUser >= nBase + m_nCommittedBytes ) {
 		return false;
 	}
@@ -343,8 +342,7 @@ bool SIRFreeListAllocator::free( void *pMemory )
 	}
 	sirHeapBlock_t *pBlock = block( nOffset );
 	const uint32_t nSize = SIRHeapBlock::size( pBlock );
-	if ( SIRHeapBlock::isFree( pBlock ) || nSize < SIRHeapBlock::MINIMUM || nSize > m_nCommittedBytes - nOffset ||
-	     nOffset + pBlock->nPreviousFreeOffset != nUser - nBase ) {
+	if ( SIRHeapBlock::isFree( pBlock ) || nSize < SIRHeapBlock::MINIMUM || nSize > m_nCommittedBytes - nOffset || nOffset + pBlock->nPreviousFreeOffset != nUser - nBase ) {
 		return false;
 	}
 	m_nAllocatedBlockBytes -= nSize;
@@ -381,8 +379,8 @@ uint32_t SIRFreeListAllocator::getUsableSize( const void *pMemory ) const
 	if ( m_pSegment == nullptr || pMemory == nullptr || m_nAllocationCount == 0 ) {
 		return 0;
 	}
-	const uintptr_t nBase = reinterpret_cast<uintptr_t>(m_pBase);
-	const uintptr_t nUser = reinterpret_cast<uintptr_t>(pMemory);
+	const uintptr_t nBase = reinterpret_cast<uintptr_t>( m_pBase );
+	const uintptr_t nUser = reinterpret_cast<uintptr_t>( pMemory );
 	if ( nUser < nBase + SIRHeapBlock::HEADER || nUser >= nBase + m_nCommittedBytes ) {
 		return 0;
 	}
@@ -394,8 +392,8 @@ uint32_t SIRFreeListAllocator::getUsableSize( const void *pMemory ) const
 	const sirHeapBlock_t *pBlock = block( nOffset );
 	const uint32_t nSize = SIRHeapBlock::size( pBlock );
 	const uint32_t nUserOffset = static_cast<uint32_t>( nUser - nBase );
-	if ( SIRHeapBlock::isFree( pBlock ) || nSize < SIRHeapBlock::MINIMUM || nSize > m_nCommittedBytes - nOffset ||
-	     nOffset + pBlock->nPreviousFreeOffset != nUserOffset || nUserOffset >= nOffset + nSize ) {
+	if ( SIRHeapBlock::isFree( pBlock ) || nSize < SIRHeapBlock::MINIMUM || nSize > m_nCommittedBytes - nOffset || nOffset + pBlock->nPreviousFreeOffset != nUserOffset ||
+	     nUserOffset >= nOffset + nSize ) {
 		return 0;
 	}
 	return nOffset + nSize - nUserOffset;
@@ -412,7 +410,7 @@ bool SIRFreeListAllocator::trimUnusedPages( void )
 	const uint32_t nStart = m_nLastBlock;
 	uint64_t nKeep = 0;
 	const uint64_t nKeepStart = nStart % m_pSegment->getPageSize() == 0 ? nStart : static_cast<uint64_t>( nStart ) + SIRHeapBlock::MINIMUM;
-	if ( !SIR_IS_POWER_OF_TWO( m_pSegment->getPageSize() ) || static_cast<uint64_t>(  m_pSegment->getPageSize()  ) > UINTPTR_MAX ||
+	if ( !SIR_IS_POWER_OF_TWO( m_pSegment->getPageSize() ) || static_cast<uint64_t>( m_pSegment->getPageSize() ) > UINTPTR_MAX ||
 	     static_cast<uint64_t>( nKeepStart ) > UINTPTR_MAX - ( ( uint64_t )( m_pSegment->getPageSize() ) - 1 ) ) {
 		return false;
 	}
@@ -454,10 +452,12 @@ uint32_t SIRFreeListAllocator::getAllocationCount( void ) const
 {
 	return m_nAllocationCount;
 }
+
 uint32_t SIRFreeListAllocator::getCommittedBytes( void ) const
 {
 	return m_nCommittedBytes;
 }
+
 uint32_t SIRFreeListAllocator::getAllocatedBlockBytes( void ) const
 {
 	return m_nAllocatedBlockBytes;

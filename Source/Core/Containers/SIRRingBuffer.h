@@ -17,6 +17,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #define __SIR_RINGBUFFER_H__
 
 #include <Core/SIRPCH.h>
+#include <Core/Containers/SIRIndexedContainerIterator.h>
+#include <iterator>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -34,6 +36,121 @@ template <typename T>
 class SIRRingBuffer
 {
 public:
+	using size_type = uint32_t;
+
+	uint32_t size( void ) const noexcept
+	{
+		return getSize();
+	}
+
+	bool empty( void ) const noexcept
+	{
+		return getSize() == 0;
+	}
+
+	bool isEmpty( void ) const noexcept
+	{
+		return empty();
+	}
+
+	size_type capacity( void ) const noexcept
+	{
+		return getCapacity();
+	}
+
+	using value_type = T;
+	using difference_type = ptrdiff_t;
+	using reference = T&;
+	using const_reference = const T&;
+	using pointer = T *;
+	using const_pointer = const T *;
+	using iterator = SIRIndexedContainerIterator<SIRRingBuffer<T>, false>;
+	using const_iterator = SIRIndexedContainerIterator<SIRRingBuffer<T>, true>;
+
+	iterator begin( void ) noexcept
+	{
+		return { this, 0 };
+	}
+	iterator end( void ) noexcept
+	{
+		return { this, size() };
+	}
+	const_iterator begin( void ) const noexcept
+	{
+		return { this, 0 };
+	}
+	const_iterator end( void ) const noexcept
+	{
+		return { this, size() };
+	}
+	const_iterator cbegin( void ) const noexcept
+	{
+		return begin();
+	}
+	const_iterator cend( void ) const noexcept
+	{
+		return end();
+	}
+
+	using reverse_iterator = std::reverse_iterator<iterator>;
+	using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+	reverse_iterator rbegin( void ) noexcept
+	{
+		return reverse_iterator( end() );
+	}
+	reverse_iterator rend( void ) noexcept
+	{
+		return reverse_iterator( begin() );
+	}
+	const_reverse_iterator rbegin( void ) const noexcept
+	{
+		return const_reverse_iterator( end() );
+	}
+	const_reverse_iterator rend( void ) const noexcept
+	{
+		return const_reverse_iterator( begin() );
+	}
+	const_reverse_iterator crbegin( void ) const noexcept
+	{
+		return rbegin();
+	}
+	const_reverse_iterator crend( void ) const noexcept
+	{
+		return rend();
+	}
+
+	T& operator[]( uint32_t iIndex ) noexcept
+	{
+		assert( iIndex < size() );
+		return *tryGet( iIndex );
+	}
+
+	const T& operator[]( uint32_t iIndex ) const noexcept
+	{
+		assert( iIndex < size() );
+		return *tryGet( iIndex );
+	}
+
+	T *tryAt( uint32_t iIndex ) noexcept
+	{
+		return tryGet( iIndex );
+	}
+	const T *tryAt( uint32_t iIndex ) const noexcept
+	{
+		return tryGet( iIndex );
+	}
+
+
+	T *tryGet( uint32_t iIndex ) noexcept
+	{
+		return iIndex < getSize() ? m_pData + wrapIndex( static_cast<uint64_t>( m_iHead ) + iIndex ) : nullptr;
+	}
+
+	const T *tryGet( uint32_t iIndex ) const noexcept
+	{
+		return iIndex < getSize() ? m_pData + wrapIndex( static_cast<uint64_t>( m_iHead ) + iIndex ) : nullptr;
+	}
+
 	explicit SIRRingBuffer( const sirContainerAllocator_t *pAllocator ) noexcept
 	    : m_pAllocator( pAllocator )
 	{

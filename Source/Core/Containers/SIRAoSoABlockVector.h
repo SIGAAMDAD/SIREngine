@@ -37,6 +37,23 @@ class SIRAoSoABlockVector
 	               "AoSoA append requires nonthrowing column assignment for atomic element publication" );
 
 public:
+	using size_type = uint32_t;
+
+	uint32_t size( void ) const noexcept
+	{
+		return getSize();
+	}
+
+	bool empty( void ) const noexcept
+	{
+		return getSize() == 0;
+	}
+
+	bool isEmpty( void ) const noexcept
+	{
+		return empty();
+	}
+
 	explicit SIRAoSoABlockVector( const sirContainerAllocator_t *pAllocator )
 	    : m_blocks( pAllocator )
 	{
@@ -71,6 +88,58 @@ public:
 	B *tryGetSecond( uint32_t iIndex ) noexcept
 	{
 		return iIndex < m_nSize ? &m_blocks[iIndex / LANES].szSecond[iIndex % LANES] : nullptr;
+	}
+
+	const A *tryGetFirst( uint32_t iIndex ) const noexcept
+	{
+		return iIndex < m_nSize ? &m_blocks[iIndex / LANES].szFirst[iIndex % LANES] : nullptr;
+	}
+
+	const B *tryGetSecond( uint32_t iIndex ) const noexcept
+	{
+		return iIndex < m_nSize ? &m_blocks[iIndex / LANES].szSecond[iIndex % LANES] : nullptr;
+	}
+
+	uint32_t capacity( void ) const noexcept
+	{
+		const uint64_t nCapacity = static_cast<uint64_t>( m_blocks.capacity() ) * LANES;
+		return nCapacity > UINT32_MAX ? UINT32_MAX : static_cast<uint32_t>( nCapacity );
+	}
+
+	SIRContainerResult tryPopBack( void ) noexcept
+	{
+		if ( m_nSize == 0 )
+		{
+			return SIRContainerResult::SIR_CONTAINER_EMPTY;
+		}
+		--m_nSize;
+		if ( m_nSize % LANES == 0 )
+		{
+			return m_blocks.tryPopBack();
+		}
+		return SIRContainerResult::SIR_CONTAINER_OK;
+	}
+
+	void clear( void ) noexcept
+	{
+		m_blocks.clear();
+		m_nSize = 0;
+	}
+
+	template <typename Visitor>
+	void forEach( Visitor&& visitor )
+	{
+		for ( uint32_t iIndex = 0; iIndex < m_nSize; ++iIndex ) {
+			visitor( *tryGetFirst( iIndex ), *tryGetSecond( iIndex ) );
+		}
+	}
+
+	template <typename Visitor>
+	void forEach( Visitor&& visitor ) const
+	{
+		for ( uint32_t iIndex = 0; iIndex < m_nSize; ++iIndex ) {
+			visitor( *tryGetFirst( iIndex ), *tryGetSecond( iIndex ) );
+		}
 	}
 
 	uint32_t getSize( void ) const noexcept

@@ -30,6 +30,23 @@ template <typename T>
 class SIRPackedCSRGraph
 {
 public:
+	using size_type = uint32_t;
+
+	uint32_t size( void ) const noexcept
+	{
+		return getEdgeCount();
+	}
+
+	bool empty( void ) const noexcept
+	{
+		return getEdgeCount() == 0;
+	}
+
+	bool isEmpty( void ) const noexcept
+	{
+		return empty();
+	}
+
 	struct Edge
 	{
 		uint32_t nDestination;
@@ -139,6 +156,28 @@ public:
 		}
 	}
 
+	using value_type = Edge;
+
+	uint32_t degree( uint32_t iVertex ) const noexcept
+	{
+		return iVertex < m_sizes.size() ? m_sizes[iVertex] : 0;
+	}
+
+	bool containsEdge( uint32_t iSource, uint32_t iDestination ) const noexcept
+	{
+		if ( iSource >= m_sizes.size() )
+		{
+			return false;
+		}
+		for ( uint32_t iEdge = 0; iEdge < m_sizes[iSource]; ++iEdge ) {
+			if ( m_storage[m_offsets[iSource] + iEdge]->nDestination == iDestination )
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
 	uint32_t getEdgeCount( void ) const noexcept
 	{
 		return m_nEdges;
@@ -149,9 +188,8 @@ public:
 		return m_sizes.getSize();
 	}
 
-	publicprivate :
-
-	    const sirContainerAllocator_t *m_pAllocator;
+private:
+	const sirContainerAllocator_t *m_pAllocator;
 	SIRVector<std::optional<Edge>> m_storage;
 	SIRVector<uint32_t> m_offsets;
 	SIRVector<uint32_t> m_sizes;

@@ -29,6 +29,23 @@ of merchantability, fitness for a particular purpose and noninfringement.
 class SIRHierarchicalTimingWheel
 {
 public:
+	using size_type = uint32_t;
+
+	uint32_t size( void ) const noexcept
+	{
+		return getActiveCount();
+	}
+
+	bool empty( void ) const noexcept
+	{
+		return getActiveCount() == 0;
+	}
+
+	bool isEmpty( void ) const noexcept
+	{
+		return empty();
+	}
+
 	struct Handle
 	{
 		uint32_t nIndex;
@@ -148,9 +165,8 @@ public:
 		return m_nCurrent;
 	}
 
-	publicprivate :
-
-	    struct Timer
+private:
+	struct Timer
 	{
 		uint64_t nDeadline = 0;
 		uint64_t nPayload = 0;

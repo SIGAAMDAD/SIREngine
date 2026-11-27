@@ -45,6 +45,25 @@ class SIRSuccinctWaveletMatrix
 	uint32_t m_nBits = 0;
 
 public:
+	using size_type = uint32_t;
+
+	using value_type = uint32_t;
+
+	uint32_t size( void ) const noexcept
+	{
+		return getSize();
+	}
+
+	bool empty( void ) const noexcept
+	{
+		return getSize() == 0;
+	}
+
+	bool isEmpty( void ) const noexcept
+	{
+		return empty();
+	}
+
 	explicit SIRSuccinctWaveletMatrix( const sirContainerAllocator_t *pAllocator )
 	    : m_pAllocator( pAllocator ),
 	      m_levels( pAllocator )
@@ -207,6 +226,20 @@ public:
 			}
 		}
 		return iPosition;
+	}
+
+	uint32_t operator[]( uint32_t iIndex ) const noexcept
+	{
+		assert( iIndex < size() );
+		return access( iIndex );
+	}
+
+	template <typename Visitor>
+	void forEach( Visitor&& visitor ) const
+	{
+		for ( uint32_t iIndex = 0; iIndex < size(); ++iIndex ) {
+			visitor( access( iIndex ) );
+		}
 	}
 
 	uint32_t getSize( void ) const noexcept

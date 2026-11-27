@@ -38,6 +38,24 @@ template <typename T>
 class SIRLockFreeVector
 {
 public:
+	using value_type = T;
+	using size_type = uint32_t;
+
+	size_type capacity( void ) const noexcept
+	{
+		return getCapacity();
+	}
+
+	size_type size( void ) const noexcept
+	{
+		return getPublishedCount();
+	}
+
+	bool empty( void ) const noexcept
+	{
+		return size() == 0;
+	}
+
 	explicit SIRLockFreeVector( const sirContainerAllocator_t *pAllocator ) noexcept
 	    : m_pAllocator( pAllocator ),
 	      m_nClaimAndSeal( 0 ),

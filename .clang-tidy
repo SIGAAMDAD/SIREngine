@@ -31,8 +31,6 @@ CheckOptions:
   readability-identifier-naming.StructIgnoredRegexp: ".*"
   readability-identifier-naming.EnumCase: CamelCase
   readability-identifier-naming.EnumPrefix: 'SIR'
-  readability-identifier-naming.EnumConstantCase: UPPER_CASE
-  readability-identifier-naming.EnumConstantPrefix: 'SIR_'
   readability-identifier-naming.PrivateMemberPrefix: 'm_'
   readability-identifier-naming.ProtectedMemberPrefix: 'm_'
   readability-identifier-naming.TemplateTypeParameterCase: CamelCase

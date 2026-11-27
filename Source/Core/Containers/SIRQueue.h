@@ -32,6 +32,45 @@ template <typename T>
 class SIRQueue
 {
 public:
+	using size_type = uint32_t;
+
+	uint32_t size( void ) const noexcept
+	{
+		return getSize();
+	}
+
+	bool empty( void ) const noexcept
+	{
+		return getSize() == 0;
+	}
+
+	bool isEmpty( void ) const noexcept
+	{
+		return empty();
+	}
+
+	size_type capacity( void ) const noexcept
+	{
+		return getCapacity();
+	}
+
+	using value_type = T;
+
+	bool isFull( void ) const noexcept
+	{
+		return m_ring.isFull();
+	}
+
+	T *back( void ) noexcept
+	{
+		return m_ring.back();
+	}
+
+	const T *back( void ) const noexcept
+	{
+		return m_ring.back();
+	}
+
 	explicit SIRQueue( const sirContainerAllocator_t *pAllocator ) noexcept
 	    : m_ring( pAllocator )
 	{
@@ -96,6 +135,32 @@ public:
 	void clearAndRelease( void ) noexcept
 	{
 		m_ring.clearAndRelease();
+	}
+
+	// Non-owning peek; nullptr signifies an empty adapter.
+	T *tryPeek( void ) noexcept
+	{
+		return front();
+	}
+	const T *tryPeek( void ) const noexcept
+	{
+		return front();
+	}
+
+	SIRContainerResult tryPopValue( T *pOutput ) noexcept
+	{
+		static_assert( std::is_nothrow_move_assignable<T>::value, "Pop into value requires noexcept move assignment" );
+		if ( pOutput == nullptr )
+		{
+			return SIRContainerResult::SIR_CONTAINER_INVALID_ARGUMENT;
+		}
+		T *pValue = front();
+		if ( pValue == nullptr )
+		{
+			return SIRContainerResult::SIR_CONTAINER_EMPTY;
+		}
+		*pOutput = std::move( *pValue );
+		return tryPop();
 	}
 
 	void clear( void ) noexcept

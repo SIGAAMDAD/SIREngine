@@ -31,25 +31,25 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <type_traits>
 
 template <typename TPayload>
-struct sirEventReadSpan_s
+struct SIREventReadSpan
 {
 	const TPayload *pData;
 	uint32_t nCount;
 };
 
-typedef struct sirSPSCProducerState_s
+struct SIRSPSCProducerState
 {
 	std::atomic<uint64_t> nTail{ 0 };
 	uint64_t nHeadCache;
-} sirSPSCProducerState_t;
+};
 
-typedef struct sirSPSCConsumerState_s
+struct SIRSPSCConsumerState
 {
 	std::atomic<uint64_t> nHead{ 0 };
 	uint64_t nTailCache;
 	uint32_t nReserved;
 	bool bDraining;
-} sirSPSCConsumerState_t;
+};
 
 // Exactly one producer and one consumer. Publish producer/consumer cursors once
 // per batch. The producer must not touch the consumer's local cursor or vice
@@ -62,9 +62,13 @@ public:
 	static_assert( Capacity > 1 && ( Capacity & ( Capacity - 1 ) ) == 0, "Ring capacity must be a power of two" );
 	static_assert( std::is_trivially_copyable<TPayload>::value, "Ring payload must be trivially copyable" );
 
-	SIRSPSCEventRing( void ) noexcept : m_Producer{}, m_Consumer{}, m_bStopped( false )
+	SIRSPSCEventRing( void ) noexcept
+	    : m_Producer{},
+	      m_Consumer{},
+	      m_bStopped( false )
 	{
 	}
+
 	SIRSPSCEventRing( const SIRSPSCEventRing& ) = delete;
 	SIRSPSCEventRing& operator=( const SIRSPSCEventRing& ) = delete;
 
@@ -103,7 +107,7 @@ public:
 		if ( nAvailable == 0 ) {
 			return 0;
 		}
-		const uint32_t nStart = static_cast<uint32_t>(  nHead & ( Capacity - 1 )  );
+		const uint32_t nStart = static_cast<uint32_t>( nHead & ( Capacity - 1 ) );
 		const uint32_t nFirst = nAvailable < Capacity - nStart ? nAvailable : Capacity - nStart;
 		memcpy( pOutput, &m_Events[nStart], nFirst * sizeof( TPayload ) );
 		if ( nFirst < nAvailable ) {
@@ -135,8 +139,7 @@ public:
 	// Acquire up to two zero-copy contiguous spans. The data remain reserved
 	// until commitRead(). A partial commit releases only the consumed prefix.
 	// Only the consumer thread may hold a read lease.
-	uint32_t acquireReadSpans( sirEventReadSpan_s<TPayload>& first, sirEventReadSpan_s<TPayload>& second,
-	                           uint32_t nBudget = UINT32_MAX ) noexcept
+	uint32_t acquireReadSpans( SIREventReadSpan<TPayload>& first, SIREventReadSpan<TPayload>& second, uint32_t nBudget = UINT32_MAX ) noexcept
 	{
 		first = { nullptr, 0 };
 		second = { nullptr, 0 };
@@ -148,7 +151,7 @@ public:
 		if ( nAvailable == 0 ) {
 			return 0;
 		}
-		const uint32_t nStart = static_cast<uint32_t>(  nHead & ( Capacity - 1 )  );
+		const uint32_t nStart = static_cast<uint32_t>( nHead & ( Capacity - 1 ) );
 		const uint32_t nFirst = nAvailable < Capacity - nStart ? nAvailable : Capacity - nStart;
 		first = { &m_Events[nStart], nFirst };
 		if ( nFirst != nAvailable ) {
@@ -177,8 +180,8 @@ public:
 	template <typename TCallback>
 	uint32_t drainSpans( TCallback callback, uint32_t nBudget = UINT32_MAX ) noexcept
 	{
-		sirEventReadSpan_s<TPayload> first{};
-		sirEventReadSpan_s<TPayload> second{};
+		SIREventReadSpan<TPayload> first{};
+		SIREventReadSpan<TPayload> second{};
 		const uint32_t nCount = acquireReadSpans( first, second, nBudget );
 		if ( nCount != 0 ) {
 			callback( first.pData, first.nCount );
@@ -220,9 +223,9 @@ private:
 		if ( nUsed >= Capacity ) {
 			return 0;
 		}
-		const uint32_t nRoom = Capacity - static_cast<uint32_t>(nUsed);
+		const uint32_t nRoom = Capacity - static_cast<uint32_t>( nUsed );
 		const uint32_t nWritten = nCount < nRoom ? nCount : nRoom;
-		const uint32_t nStart = static_cast<uint32_t>(  nTail & ( Capacity - 1 )  );
+		const uint32_t nStart = static_cast<uint32_t>( nTail & ( Capacity - 1 ) );
 		const uint32_t nFirst = nWritten < Capacity - nStart ? nWritten : Capacity - nStart;
 		memcpy( &m_Events[nStart], pPayloads, nFirst * sizeof( TPayload ) );
 		if ( nFirst < nWritten ) {
@@ -239,11 +242,11 @@ private:
 			m_Consumer.nTailCache = m_Producer.nTail.load( std::memory_order_acquire );
 			nAvailable = m_Consumer.nTailCache - nHead;
 		}
-		return nAvailable < nLimit ? static_cast<uint32_t>(nAvailable) : nLimit;
+		return nAvailable < nLimit ? static_cast<uint32_t>( nAvailable ) : nLimit;
 	}
 
-	alignas( 64 ) sirSPSCProducerState_t m_Producer;
-	alignas( 64 ) sirSPSCConsumerState_t m_Consumer;
+	alignas( 64 ) SIRSPSCProducerState m_Producer;
+	alignas( 64 ) SIRSPSCConsumerState m_Consumer;
 	std::atomic<bool> m_bStopped;
 	// Slots are initialized only when published; skip eager payload zeroing.
 	TPayload m_Events[Capacity];

@@ -24,6 +24,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 #include <Core/Containers/SIRVector.h>
+#include <Core/Containers/SIRFrozenOptionalIterator.h>
 #include <optional>
 #include <functional>
 #include <utility>
@@ -32,11 +33,67 @@ template <typename K, typename V, typename Less = std::less<K>>
 class SIRFrozenSortedIndex
 {
 public:
+	using size_type = uint32_t;
+
+	uint32_t size( void ) const noexcept
+	{
+		return getSize();
+	}
+
+	bool empty( void ) const noexcept
+	{
+		return getSize() == 0;
+	}
+
+	bool isEmpty( void ) const noexcept
+	{
+		return empty();
+	}
+
+	using key_type = K;
+	using mapped_type = V;
+
+	bool contains( const K& rKey ) const
+	{
+		return find( rKey ) != nullptr;
+	}
+
+	size_type count( const K& rKey ) const
+	{
+		return contains( rKey ) ? 1 : 0;
+	}
+
 	struct Entry
 	{
 		K key;
 		V value;
 	};
+
+	using value_type = Entry;
+	using const_reference = const Entry&;
+	using const_iterator = SIRFrozenOptionalIterator<Entry>;
+	using iterator = const_iterator;
+
+	iterator begin( void ) const noexcept
+	{
+		return iterator( m_nodes.data(), m_nodes.size(), 0 );
+	}
+
+	iterator end( void ) const noexcept
+	{
+		return iterator( m_nodes.data(), m_nodes.size(), m_nodes.size() );
+	}
+
+	const_iterator cbegin( void ) const noexcept
+	{
+		return begin();
+	}
+
+	const_iterator cend( void ) const noexcept
+	{
+		return end();
+	}
+
 
 	explicit SIRFrozenSortedIndex( const sirContainerAllocator_t *pAllocator, Less less = Less() )
 	    : m_nodes( pAllocator ),
@@ -93,10 +150,8 @@ public:
 		return m_nodes.getFootprint();
 	}
 
-	publicprivate :
-
-	    SIRVector<std::optional<Entry>>
-	        m_nodes;
+private:
+	SIRVector<std::optional<Entry>> m_nodes;
 	uint32_t m_nSize = 0;
 	Less m_less;
 

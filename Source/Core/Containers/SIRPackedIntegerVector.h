@@ -24,6 +24,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 #include <Core/Containers/SIRVector.h>
+#include <Core/Containers/SIRValueIndexedIterator.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -71,6 +72,65 @@ public:
 class SIRPackedIntegerReadView
 {
 public:
+	using size_type = uint32_t;
+
+	uint32_t size( void ) const noexcept
+	{
+		return getSize();
+	}
+
+	bool empty( void ) const noexcept
+	{
+		return getSize() == 0;
+	}
+
+	bool isEmpty( void ) const noexcept
+	{
+		return empty();
+	}
+
+	using value_type = uint64_t;
+
+	using const_iterator = SIRValueIndexedIterator<SIRPackedIntegerReadView>;
+	using iterator = const_iterator;
+
+	uint64_t operator[]( uint32_t iIndex ) const noexcept
+	{
+		assert( iIndex < size() );
+		uint64_t nValue = 0;
+		const bool bFound = tryGet( iIndex, &nValue );
+		assert( bFound );
+		return nValue;
+	}
+
+	iterator begin( void ) const noexcept
+	{
+		return iterator( this, 0 );
+	}
+
+	iterator end( void ) const noexcept
+	{
+		return iterator( this, size() );
+	}
+
+	const_iterator cbegin( void ) const noexcept
+	{
+		return begin();
+	}
+
+	const_iterator cend( void ) const noexcept
+	{
+		return end();
+	}
+
+	template <typename Visitor>
+	void forEach( Visitor&& visitor ) const
+	{
+		for ( uint32_t iIndex = 0; iIndex < size(); ++iIndex ) {
+			visitor( ( *this )[iIndex] );
+		}
+	}
+
 	explicit SIRPackedIntegerReadView( void ) noexcept = default;
 
 	static SIRContainerResult tryDecode( const uint8_t *pBytes, uint64_t nBytes, SIRPackedIntegerReadView *pView ) noexcept
@@ -132,6 +192,65 @@ private:
 class SIRPackedIntegerVector
 {
 public:
+	using size_type = uint32_t;
+
+	uint32_t size( void ) const noexcept
+	{
+		return getSize();
+	}
+
+	bool empty( void ) const noexcept
+	{
+		return getSize() == 0;
+	}
+
+	bool isEmpty( void ) const noexcept
+	{
+		return empty();
+	}
+
+	using value_type = uint64_t;
+
+	using const_iterator = SIRValueIndexedIterator<SIRPackedIntegerVector>;
+	using iterator = const_iterator;
+
+	uint64_t operator[]( uint32_t iIndex ) const noexcept
+	{
+		assert( iIndex < size() );
+		uint64_t nValue = 0;
+		const bool bFound = tryGet( iIndex, &nValue );
+		assert( bFound );
+		return nValue;
+	}
+
+	iterator begin( void ) const noexcept
+	{
+		return iterator( this, 0 );
+	}
+
+	iterator end( void ) const noexcept
+	{
+		return iterator( this, size() );
+	}
+
+	const_iterator cbegin( void ) const noexcept
+	{
+		return begin();
+	}
+
+	const_iterator cend( void ) const noexcept
+	{
+		return end();
+	}
+
+	template <typename Visitor>
+	void forEach( Visitor&& visitor ) const
+	{
+		for ( uint32_t iIndex = 0; iIndex < size(); ++iIndex ) {
+			visitor( ( *this )[iIndex] );
+		}
+	}
+
 	explicit SIRPackedIntegerVector( const sirContainerAllocator_t *pAllocator ) noexcept
 	    : m_Words( pAllocator )
 	{
